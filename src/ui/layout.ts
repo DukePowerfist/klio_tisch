@@ -1,7 +1,7 @@
 // Geometrie des Tisches (ARCHITEKTUR.md 10): wo liegen Bögen, Zonen und Karten in der aktuellen Ansicht.
 // Reine Funktionen auf Inhalten + Stand; die Werte stammen aus layouts.yaml und der Haut (wie bisher).
 
-import { seatVisibleFor } from '../engine/zones';
+import { seatVisibleFor, seatZoneId } from '../engine/zones';
 import { SEATS, type AnchorId, type CardId, type FreePos, type SeatId, type TableState, type ZoneId } from '../engine/types';
 import type { KlioContent } from '../rules/klio/content/validate';
 
@@ -111,8 +111,9 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     for (const t of c.sheet.zones) {
       const r = c.skinPaper.zones[t]!;
       const shape = L.shapes[`seat.${t}`] ?? {};
-      zones[`${s}.${t}`] = {
-        id: `${s}.${t}`, x: sb.x + r.x * k, y: sb.y + r.y * k, w: r.w * k, h: r.h * k,
+      const id = seatZoneId(s, t);
+      zones[id] = {
+        id, x: sb.x + r.x * k, y: sb.y + r.y * k, w: r.w * k, h: r.h * k,
         scale: (shape.scale ?? 1) * sb.scale, fanX: (shape.fanX ?? 0) * sb.scale, fanY: (shape.fanY ?? 0) * sb.scale,
         owner: s, template: t, ...decor(shape),
       };

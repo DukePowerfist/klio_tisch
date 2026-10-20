@@ -1,10 +1,11 @@
 <script lang="ts">
   // Großansicht eines Trumpfs (beim Überfahren nach 650 ms oder per Klick angeheftet).
   import content from 'virtual:klio-content';
+  import { trumpById } from '../rules/klio/trumps';
   import TrumpCard from './TrumpCard.svelte';
   import { view } from './view.svelte';
 
-  const trump = $derived(view.bigTrump ? content.trumps.find((x) => x.id === view.bigTrump!.id) : undefined);
+  const trump = $derived(trumpById(content.trumps, view.bigTrump?.id));
 </script>
 
 <!-- Jeder Klick irgendwo schließt sie (wie bisher); der Klick auf einen Trumpf öffnet sie danach wieder. -->

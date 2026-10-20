@@ -2,10 +2,8 @@
   // Text- oder Zahlenfeld auf dem Bogen. Getippt wird lokal; gesendet ~300 ms nach der letzten Eingabe
   // und beim Verlassen. Solange das Feld den Fokus hat, ersetzen eingehende Änderungen es nicht (8.2).
   import type { SeatId } from '../engine/types';
+  import { submitOrSay } from './commands';
   import { fitFontSize } from './fitText';
-  import { session } from './session.svelte';
-  import { text as reason } from './texts';
-  import { view } from './view.svelte';
 
   let { seat, field, kind, value, x, y, w, h, font, struck = false, center = false }: {
     seat: SeatId; field: string; kind: 'text' | 'number'; value: string; x: number; y: number; w: number; h: number; font: number;
@@ -26,8 +24,7 @@
     const cmd = kind === 'text'
       ? { type: 'sheet.setText', seat, field, value: draft }
       : { type: 'sheet.setNumber', seat, field, value: draft === '' ? null : Number(draft) };
-    const r = await session.submit(cmd);
-    if (!r.ok) view.say(reason(r.reason), true);
+    await submitOrSay(cmd);
   }
 
   function onInput(e: Event) {
@@ -65,5 +62,5 @@
   input { position: absolute; box-sizing: border-box; background: transparent; border: 0; outline: 0; font: inherit; color: inherit; padding: 0 3px; margin: 0; }
   input:focus { background: rgba(255, 235, 150, 0.5); }
   .center, .number { text-align: center; font-weight: 700; padding: 0; }
-  .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: #b3261e; color: #666; font-style: italic; }
+  .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); color: #666; font-style: italic; }
 </style>

@@ -4,6 +4,9 @@ import { SEATS, type CardId, type SeatId, type TableState, type ZoneConfig, type
 
 export type ZoneTable = ReadonlyMap<ZoneId, ZoneConfig>;
 
+/** Platznummer für Anzeigen: seat1 → 1 */
+export const seatNo = (seat: SeatId): number => SEATS.indexOf(seat) + 1;
+
 /** Zone eines Platzes aus einer Vorlage: `seat1` + `damage` → `seat1.damage` */
 export const seatZoneId = (seat: SeatId, template: string): ZoneId => `${seat}.${template}`;
 

@@ -2,10 +2,10 @@
 
 import { z } from 'zod';
 import type { SeatId } from '../../../engine/types';
-import { ChoicesSchema, trumpCount } from '../blocks';
+import { ChoicesSchema } from '../blocks';
 import { Slot } from '../state';
 import { sheetOf, type KlioEvent, type KlioTable } from '../events';
-import { planChoice, planRandom, trumpProblem, type Plan } from '../trumps';
+import { fullReason, isFull, planChoice, planRandom, trumpById, trumpProblem, type Plan } from '../trumps';
 import { blockContext, command, reject, Seat, type Deps } from './common';
 
 
@@ -44,8 +44,8 @@ export function trumpCommands(deps: Deps) {
       (cmd, state) => {
         if (!cfg.freeChoice) return reject('reject.unknownSource');
         const ctx = blockContext(deps, state, cmd.seat);
-        if (trumpCount(ctx.sheet) >= cfg.maxTrumps) return reject('toast.maxTrumps', { max: cfg.maxTrumps });
-        const t = trumps.find((x) => x.id === cmd.trump);
+        if (isFull(cfg, ctx.sheet)) return { rejected: true, reason: fullReason(cfg) };
+        const t = trumpById(trumps, cmd.trump);
         if (!t) return reject('reject.unknownTrump');
         const why = trumpProblem(cfg, 'free', t, ctx, {});
         if (why) return { rejected: true, reason: why };

@@ -5,7 +5,9 @@ import { pick } from '../../../engine/rng';
 import { RANKS, type Rng, type SeatId } from '../../../engine/types';
 import type { KlioContent } from '../content/validate';
 import type { KlioEventOf } from '../events';
-import type { RolledAttributes } from '../state';
+import { sheetFieldInstances } from '../content/schema';
+import { getField } from '../fields';
+import type { KlioSheet, RolledAttributes } from '../state';
 type TableKey = keyof KlioContent['tables'];
 
 /**
@@ -20,6 +22,14 @@ export function rollAttributes(total: number, rng: Rng): RolledAttributes {
   const lo = Math.min(a, b);
   const hi = Math.max(a, b);
   return { K: lo, V: hi - lo - 1, P: total + 1 - hi };
+}
+
+/** Würde Auswürfeln vorhandene Einträge überschreiben? (Rückfrage „Überschreiben?“, A30)
+ *  Betroffen sind die Felder mit Zufallstabelle laut sheet.yaml und die Attribute. */
+export function rollOverwrites(content: KlioContent, sheet: KlioSheet): boolean {
+  const rolled = Object.entries(content.sheet.fields).filter(([, f]) => f.roll).map(([name]) => name);
+  const texts = sheetFieldInstances({ ...content.sheet, fields: Object.fromEntries(rolled.map((n) => [n, content.sheet.fields[n]!])) });
+  return texts.some((id) => getField(sheet, id) !== '') || Object.values(sheet.attributes).some((a) => a !== null);
 }
 
 export function rollSheet(content: KlioContent, seat: SeatId, rng: Rng): KlioEventOf<'sheetRolled'> {

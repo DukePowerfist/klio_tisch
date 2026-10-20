@@ -9,11 +9,32 @@ import {
   type BlockContext, type Change, type Choices, type StepImpl, type Trump,
 } from './blocks';
 import type { TrumpSourcesFile } from './content/schema';
+import type { KlioContent } from './content/validate';
+import type { Attr, KlioSheet } from './state';
 
 export type SourcesConfig = z.infer<typeof TrumpSourcesFile>;
 export type Source = SourcesConfig['trumpSources'][number];
 
-export type SourceStatus = { ok: true; improveOnly: boolean } | { ok: false; why: TextRef };
+type SourceStatus = { ok: true; improveOnly: boolean } | { ok: false; why: TextRef };
+
+/** Kontext für die Bausteine: Bogen und Anzeigenamen der Attribute (Host und Oberfläche). */
+export function contextFor(content: KlioContent, sheet: KlioSheet): BlockContext {
+  return { sheet, attrNames: content.texts['attributes'] as Record<Attr, string> };
+}
+
+/** Alle Trumpf-Plätze belegt? */
+export const isFull = (cfg: SourcesConfig, sheet: KlioSheet): boolean => trumpCount(sheet) >= cfg.maxTrumps;
+/** Grund „höchstens N Trümpfe“ */
+export const fullReason = (cfg: SourcesConfig): TextRef => ({ key: 'toast.maxTrumps', params: { max: cfg.maxTrumps } });
+
+const byId = new WeakMap<readonly Trump[], Map<string, Trump>>();
+/** Trumpf nach ID (Verzeichnis je Trumpfliste einmal gebaut). */
+export function trumpById(trumps: readonly Trump[], id: string | null | undefined): Trump | undefined {
+  if (!id) return undefined;
+  let map = byId.get(trumps);
+  if (!map) byId.set(trumps, (map = new Map(trumps.map((t) => [t.id, t]))));
+  return map.get(id);
+}
 
 const entry = <T>(block: T): [string, unknown] =>
   typeof block === 'string' ? [block, undefined] : (Object.entries(block as object)[0] as [string, unknown]);
@@ -26,8 +47,8 @@ export function sourceStatus(cfg: SourcesConfig, src: Source, ctx: BlockContext)
     const [name, param] = entry(b);
     return (requires as Record<string, (c: BlockContext, p: unknown) => boolean>)[name]!(ctx, param);
   });
-  if (trumpCount(ctx.sheet) >= cfg.maxTrumps) {
-    const full = { ok: false as const, why: { key: 'toast.maxTrumps', params: { max: cfg.maxTrumps } } };
+  if (isFull(cfg, ctx.sheet)) {
+    const full = { ok: false as const, why: fullReason(cfg) };
     if ((src.whenFull ?? cfg.whenFull) === 'blocked') return full;
     if (!met) return { ok: false, why: sourceText(src, 'why') };
     // Nur verbessern: geht nur, solange eine Stärke unverbessert ist
@@ -52,6 +73,12 @@ export function trumpProblem(cfg: SourcesConfig, src: Source | 'free', trump: Tr
 }
 
 export type StepName = keyof typeof steps;
+
+/** Ein Schritt entfällt, wenn es nichts zu entscheiden gibt (z. B. beide Schwächen leer, A29). */
+export const stepSkipped = (step: StepImpl, ctx: BlockContext): boolean => {
+  const opts = step.options(ctx);
+  return opts.length === 1 && Object.keys(opts[0]!).length === 0;
+};
 
 /** Die Schritte eines Wegs samt Baustein und Pflicht-Angabe (auch für den Dialog der Oberfläche). */
 export function stepsOf(src: Source, improveOnly: boolean): { name: StepName; step: StepImpl; required: boolean }[] {
@@ -87,9 +114,9 @@ export function planChoice(
 
   let trump: string | null = null;
   if (status.improveOnly) {
-    if (trumpId !== undefined) return { why: { key: 'toast.maxTrumps', params: { max: cfg.maxTrumps } } };
+    if (trumpId !== undefined) return { why: fullReason(cfg) };
   } else {
-    const t = trumps.find((x) => x.id === trumpId);
+    const t = trumpById(trumps, trumpId);
     if (!t) return { why: { key: 'reject.unknownTrump' } };
     const why = trumpProblem(cfg, src, t, ctx, choices);
     if (why) return { why };

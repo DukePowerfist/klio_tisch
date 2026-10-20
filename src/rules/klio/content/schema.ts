@@ -100,11 +100,13 @@ export const ZonesFile = z.record(z.string(), ZoneEntry);
 // roll: { attributeTotal: 4 }
 const TableKey = z.enum(['I', 'II', 'III', 'IV', 'V', 'VI', 'VIII']);
 export const SheetField = z.object({
-  kind: z.enum(['text', 'number', 'check', 'photo', 'trumpSlot', 'overlay']),
+  kind: z.enum(['text', 'number', 'check', 'counter', 'photo', 'trumpSlot', 'overlay']),
   count: z.number().int().positive().optional(),
   keys: z.array(z.string()).min(1).optional(),
   roll: z.array(TableKey).optional(),
   distinct: z.boolean().optional(),
+  /** nur bei check: streicht das Textfeld gleicher Nummer durch */
+  strikes: z.string().optional(),
 }).strict().refine((f) => !(f.count && f.keys), 'count und keys schließen sich aus');
 export const SheetFile = z.object({
   fields: z.record(z.string(), SheetField),
@@ -112,12 +114,23 @@ export const SheetFile = z.object({
   roll: z.object({ attributeTotal: z.number().int().nonnegative() }).strict(),
 }).strict();
 
-/** Alle Einzelfelder eines Bogens, z. B. `strengths.text.0`, `attributes.K`, `name`. */
-export function sheetFieldInstances(sheet: z.infer<typeof SheetFile>): string[] {
-  return Object.entries(sheet.fields).flatMap(([name, f]) =>
-    f.keys ? f.keys.map((k) => `${name}.${k}`) : f.count ? Array.from({ length: f.count }, (_, i) => `${name}.${i}`) : [name],
-  );
+export type SheetFieldKind = z.infer<typeof SheetField>['kind'];
+/** Ein Einzelfeld: `id` z. B. `strengths.text.0`; `strikes` = ID des durchgestrichenen Textfelds. */
+export type SheetFieldInstance = { id: string; kind: SheetFieldKind; strikes?: string };
+
+/** Alle Einzelfelder eines Bogens samt Art, z. B. `strengths.text.0`, `attributes.K`, `name`. */
+export function sheetFields(sheet: z.infer<typeof SheetFile>): SheetFieldInstance[] {
+  return Object.entries(sheet.fields).flatMap(([name, f]) => {
+    const suffixes = f.keys ?? (f.count ? Array.from({ length: f.count }, (_, i) => String(i)) : [null]);
+    return suffixes.map((s) => ({
+      id: s === null ? name : `${name}.${s}`,
+      kind: f.kind,
+      ...(f.strikes && s !== null ? { strikes: `${f.strikes}.${s}` } : {}),
+    }));
+  });
 }
+
+export const sheetFieldInstances = (sheet: z.infer<typeof SheetFile>): string[] => sheetFields(sheet).map((f) => f.id);
 
 // ---------- skins/paper.yaml (WIE der Bogen aussieht, Haut „Papier“) ----------
 // size: [662, 936]                       # Bildkoordinaten
@@ -127,12 +140,16 @@ export function sheetFieldInstances(sheet: z.infer<typeof SheetFile>): string[] 
 //   scars.heart: { x: 551, y: 93, size: 30 }             # Kästchen: Mittelpunkt + Größe
 // zones:
 //   damage: { x: 519.2, y: 125.4, w: 139.4, h: 195.1 }   # bisher 380er-Koordinaten, umgerechnet
-const Box = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number(), font: z.number().optional() }).strict();
-const Check = z.object({ x: z.number(), y: z.number(), size: z.number() }).strict();
+const Box = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number(), font: z.number().optional(), align: z.literal('center').optional() }).strict();
+const Check = z.object({ x: z.number(), y: z.number(), size: z.number(), font: z.number().optional(), tone: z.literal('danger').optional() }).strict();
+const Label = z.object({ x: z.number(), y: z.number(), font: z.number() }).strict();
+export type SkinBox = z.infer<typeof Box>;
+export type SkinCheck = z.infer<typeof Check>;
+export type SkinLabel = z.infer<typeof Label>;
 export const SkinFile = z.object({
   size: z.tuple([z.number(), z.number()]),
   images: z.object({ m: z.string(), w: z.string() }).strict(),
-  fields: z.record(z.string(), z.union([Box, Check])),
+  fields: z.record(z.string(), z.union([Box, Check, Label])),
   zones: z.record(z.string(), Box),
 }).strict();
 

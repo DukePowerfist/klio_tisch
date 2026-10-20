@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { reject } from '../../../engine/commands';
 import { seatVisible } from '../../../engine/zones';
 import type { Actor, Command, CommandDef, Event, Rejection, Rng, SeatId } from '../../../engine/types';
-import type { Attr, BlockContext } from '../blocks';
+import type { BlockContext } from '../blocks';
+import { contextFor } from '../trumps';
 import type { KlioContent } from '../content/validate';
 import { sheetOf, type KlioTable } from '../events';
 import type { KlioState } from '../state';
@@ -32,7 +33,4 @@ export function command<S extends z.ZodType<Command>>(
   };
 }
 
-export function blockContext(deps: Deps, state: KlioTable, seat: SeatId): BlockContext {
-  const names = deps.content.texts['attributes'] as Record<Attr, string>;
-  return { sheet: sheetOf(state, seat), attrNames: names };
-}
+export const blockContext = (deps: Deps, state: KlioTable, seat: SeatId): BlockContext => contextFor(deps.content, sheetOf(state, seat));

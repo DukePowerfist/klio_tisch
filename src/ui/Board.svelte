@@ -10,8 +10,9 @@
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
   import { cardSize, computeLayout, freePosAt, placeCards, zoneAt, type CardPlace } from './layout';
+  import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
-  import { t, text } from './texts';
+  import { t } from './texts';
   import { view } from './view.svelte';
 
   let { table }: { table: KlioTableState } = $props();
@@ -207,10 +208,7 @@
     view.open = view.open === zone ? null : zone;
   }
 
-  async function submit(cmd: object, drop?: PendingDrop) {
-    const r = await session.submit(cmd, drop);
-    if (!r.ok) view.say(text(r.reason), true);
-  }
+  const submit = (cmd: object, drop?: PendingDrop) => submitOrSay(cmd, drop);
 
   function onDblClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
@@ -227,7 +225,7 @@
     if (drag?.moved) for (const c of drag.cards) m.set(c, drag);
     return m;
   });
-  const shakingCards = $derived(new Set([...effects.shaking].flatMap((z) => table.zones[z] ?? [])));
+  const shakingCards = $derived(new Set(effects.shaking.values().flatMap((z) => table.zones[z] ?? [])));
 </script>
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
@@ -248,7 +246,7 @@
 
     {#each Object.values(layout.sheets) as box (box.seat)}
       {#if box.visible}
-        <Sheet {box} sheet={sheetOf(table, box.seat)} hit={effects.hit.has(box.seat)} />
+        <Sheet {box} sheet={sheetOf(table, box.seat)} />
       {/if}
     {/each}
 

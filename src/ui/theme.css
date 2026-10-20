@@ -10,6 +10,17 @@
   --panel-bg: #17332a;
   --button-hover: #2c5a47;
   --accent: #d6a828;
+  --accent-hint: #f5d76e;
+  --danger: #b3261e;       /* Narben, Tod, durchgestrichenes Rüstzeug */
+  --reason: #f0a090;       /* Begründung bei ausgegrauten Trümpfen */
+  --paper: #fffdf7;
+  /* Trumpfkarten: Attributfarben und Rahmenstärke je Stufe */
+  --attr-K: #a8412d;
+  --attr-V: #2d5aa8;
+  --attr-P: #7a3aa0;
+  --trump-border-1: 2px;
+  --trump-border-2: 3.5px;
+  --trump-border-3: 5px;
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */
   --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */

@@ -2,21 +2,32 @@
 // Dauern stehen in theme.css; bei „Bewegung reduzieren“ sind die Bewegungen aus.
 
 import content from 'virtual:klio-content';
-import { SEATS, type EngineEvent, type SeatId, type ZoneId } from '../engine/types';
-import { seatZoneId } from '../engine/zones';
+import type { EngineEvent, SeatId, ZoneId } from '../engine/types';
+import { seatNo, seatZoneId } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
+import { trumpById } from '../rules/klio/trumps';
 import { session } from './session.svelte';
 import { cardName, hasText, t } from './texts';
 import { view } from './view.svelte';
 
-const SHAKE_MS = 650;
-const seatNo = (seat: SeatId) => SEATS.indexOf(seat) + 1;
+const PULSE_MS = 650;
+
+/** Menge, deren Einträge nach kurzer Zeit von selbst wieder verschwinden (reaktiv). */
+class Pulse<K> {
+  private items = $state.raw<ReadonlySet<K>>(new Set());
+  has = (k: K): boolean => this.items.has(k);
+  values = (): K[] => [...this.items];
+  add(keys: K[]): void {
+    this.items = new Set([...this.items, ...keys]);
+    setTimeout(() => (this.items = new Set([...this.items].filter((k) => !keys.includes(k)))), PULSE_MS);
+  }
+}
 
 class Effects {
   /** Zonen, deren Karten gerade rucken */
-  shaking = $state.raw<ReadonlySet<ZoneId>>(new Set());
+  shaking = new Pulse<ZoneId>();
   /** Bögen, die gerade einen Treffer zeigen */
-  hit = $state.raw<ReadonlySet<SeatId>>(new Set());
+  hit = new Pulse<SeatId>();
 
   constructor() {
     session.onEvents((events) => {
@@ -30,32 +41,22 @@ class Effects {
         if (e.announce) view.say(t(drawnKey(e.to), { card: cardName(e.card) }));
         return;
       case 'zonesShuffled':
-        return this.shake(e.shuffled);
+        return this.shaking.add(e.shuffled);
       case 'damageTaken':
-        this.shake([seatZoneId(e.seat, 'damage')]);
-        this.flash(e.seat);
+        this.shaking.add([seatZoneId(e.seat, 'damage')]);
+        this.hit.add([e.seat]);
         return;
       case 'scarMarked':
-        return view.say(t('toast.scar', { seat: seatNo(e.seat), suit: t(`cards.suits.${e.scar === 'heart' ? 'H' : 'S'}`) }), true);
+        return view.say(t('toast.scar', { seat: seatNo(e.seat), suit: t(`scars.${e.scar}`) }), true);
       case 'characterDied':
         return view.say(t('toast.dead', { seat: seatNo(e.seat) }), true);
       case 'sheetRolled':
         return view.say(t('toast.rolled', { seat: seatNo(e.seat) }));
       case 'trumpChosen': {
-        const trump = e.trump ? content.trumps.find((x) => x.id === e.trump) : undefined;
+        const trump = trumpById(content.trumps, e.trump);
         return view.say(trump ? t('toast.trumpChosen', { seat: seatNo(e.seat), trump: trump.name }) : t('toast.strengthImproved', { seat: seatNo(e.seat) }));
       }
     }
-  }
-
-  private shake(zones: ZoneId[]): void {
-    this.shaking = new Set([...this.shaking, ...zones]);
-    setTimeout(() => (this.shaking = new Set([...this.shaking].filter((z) => !zones.includes(z)))), SHAKE_MS);
-  }
-
-  private flash(seat: SeatId): void {
-    this.hit = new Set([...this.hit, seat]);
-    setTimeout(() => (this.hit = new Set([...this.hit].filter((s) => s !== seat))), SHAKE_MS);
   }
 }
 

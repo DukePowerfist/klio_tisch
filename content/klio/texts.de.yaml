@@ -49,13 +49,20 @@ sheet:
 
 attributes: { K: Körper, V: Verstehen, P: Präsenz }
 
+numerals: { 1: I, 2: II, 3: III, 4: IV, 5: V }   # Stufen der Trümpfe, Nummern der Stärken
+
+scars: { heart: Herz, spade: Pik }
+
 trumps:
   categories: { K: Körper, V: Verstehen, P: Präsenz, X: Verschiedene }
   allAttributes: JEDES ATTRIBUT
-  levels: { 1: I, 2: II, 3: III }
 
 trumpDialog:
   title: "Trumpf wählen · Bogen {seat}"
+  steps:                                  # Überschrift je Schritt aus trump-sources.yaml
+    chooseWeaknessToRemove: Welche Schwäche entfällt?
+    improveStrength: Welche Stärke verbessern?
+    moveAttributePoint: Attributspunkt umverteilen
   count: "Trümpfe: {n} von {max}"
   random: Zufälliger Trumpf
   free: Freie Wahl
@@ -65,15 +72,12 @@ trumpDialog:
   chooseAttribute: Für welches Attribut?
   selectable: "({n} wählbar)"
   chooseFromCategory: "{category} · Trumpf wählen"
-  removeWeakness: Welche Schwäche entfällt?
   empty: (leer)
-  improveStrength: Welche Stärke verbessern?
   improveHint: Eine der fünf Stärken darf besser werden. Das Kästchen daneben wird markiert.
   alreadyImproved: bereits verbessert
   skipImprove: Ohne Verbesserung weiter
   newWording: Neue Formulierung
   newWordingHint: "Stärke {n} wird verbessert. Wie lautet sie jetzt? (Zum Beispiel wird aus „Peitsche“ eine „gute Peitsche“ oder eine „einschüchternde Peitsche“.)"
-  moveAttribute: Attributspunkt umverteilen
   lower: "Verringern um 1:"
   raise: "Erhöhen um 1 (der Trumpf muss dieses Attribut benötigen):"
   why:

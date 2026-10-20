@@ -27,6 +27,13 @@ export async function expectCount(page: Page, zoneLabel: string, n: number) {
   await expect(page.locator('.zone').filter({ hasText: new RegExp(`^${zoneLabel}`) }).first().locator('.n')).toHaveText(String(n));
 }
 
+/** Hineinzoomen um einen Punkt, bis die kleinen Bedienelemente sichtbar sind (wie bisher ab Zoom 1,6). */
+export async function zoomIn(page: Page, at = { x: 20, y: 20 }) {
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.wheel(0, -500);
+  await expect(page.locator('body.zoomed')).toHaveCount(1);
+}
+
 export async function ready(page: Page, reload = false) {
   if (reload) await page.reload();
   else await page.goto('./');

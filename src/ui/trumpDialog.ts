@@ -1,29 +1,24 @@
 // Ablauf des Trumpf-Dialogs (ARCHITEKTUR.md 6.2, 14): sammelt alle Entscheidungen lokal,
-// am Ende geht ein einziger Befehl an den Host. Reine Funktionen auf Inhalten und Bogen.
+// am Ende geht ein einziger Befehl an den Host. Die Regeln kommen aus rules/klio (Bausteine, Wege).
 
 import type { SeatId, TextRef } from '../engine/types';
-import { attrValue, ATTRS, filledWeaknesses, trumpCount, type Attr, type BlockContext, type Choices, type Trump } from '../rules/klio/blocks';
+import { attrValue, ATTRS, steps, type Attr, type BlockContext, type Choices, type Trump } from '../rules/klio/blocks';
 import type { KlioContent } from '../rules/klio/content/validate';
-import type { KlioSheet } from '../rules/klio/state';
-import { sourceStatus, stepsOf, trumpProblem, type Source, type StepName } from '../rules/klio/trumps';
+import { sourceStatus, stepSkipped, stepsOf, trumpProblem, type Source, type StepName } from '../rules/klio/trumps';
 
 export type Category = 'K' | 'V' | 'P' | 'X';
 export const CATEGORIES: Category[] = ['K', 'V', 'P', 'X'];
 
 /** Gewählter Weg: ein Eintrag aus trump-sources.yaml oder die freie Wahl. */
-export type Path = { kind: 'source'; source: Source; improveOnly: boolean } | { kind: 'free' };
+export type SourcePath = { kind: 'source'; source: Source; improveOnly: boolean };
+export type Path = SourcePath | { kind: 'free' };
 
 /** Der Dialog Schritt für Schritt; `choices` wächst mit jedem Schritt. */
 export type DialogStep =
   | { at: 'sources' }
-  | { at: StepName; path: Path & { kind: 'source' }; choices: Choices; index: number }
-  | { at: 'strengthText'; path: Path & { kind: 'source' }; choices: Choices; index: number; strength: number }
+  | { at: 'step'; name: StepName; required: boolean; path: SourcePath; choices: Choices; index: number }
   | { at: 'categories'; path: Path; choices: Choices }
   | { at: 'trumps'; path: Path; choices: Choices; category: Category };
-
-export function context(content: KlioContent, sheet: KlioSheet): BlockContext {
-  return { sheet, attrNames: content.texts['attributes'] as Record<Attr, string> };
-}
 
 export type SourceRow = { source: Source; ok: boolean; why: TextRef | null; improveOnly: boolean };
 
@@ -36,37 +31,33 @@ export function sourceRows(content: KlioContent, ctx: BlockContext): SourceRow[]
 }
 
 /** Ist irgendein Weg offen? (goldenes Plus am leeren Trumpf-Platz) */
-export const anySourceOpen = (content: KlioContent, ctx: BlockContext): boolean => sourceRows(content, ctx).some((r) => r.ok);
+export const anySourceOpen = (content: KlioContent, ctx: BlockContext): boolean =>
+  content.trumpSources.trumpSources.some((s) => sourceStatus(content.trumpSources, s, ctx).ok);
 
-export const isFull = (content: KlioContent, sheet: KlioSheet): boolean => trumpCount(sheet) >= content.trumpSources.maxTrumps;
-
-/** Nächster Schritt nach `index` (bzw. Kategorien, wenn ein Trumpf folgt; null = fertig ohne Trumpf). */
-export function nextStep(path: Path & { kind: 'source' }, choices: Choices, index: number, ctx: BlockContext): DialogStep | null {
+/** Nächster Schritt ab `index`; danach Kategorien, oder null, wenn kein Trumpf folgt (nur verbessern). */
+export function nextStep(path: SourcePath, choices: Choices, index: number, ctx: BlockContext): DialogStep | null {
   const list = stepsOf(path.source, path.improveOnly);
   for (let i = index; i < list.length; i++) {
     const s = list[i]!;
-    // Schwäche streichen entfällt, wenn beide leer sind (A29)
-    if (s.name === 'chooseWeaknessToRemove' && filledWeaknesses(ctx.sheet).length === 0) continue;
-    return { at: s.name, path, choices, index: i };
+    if (stepSkipped(s.step, ctx)) continue;
+    return { at: 'step', name: s.name, required: s.required, path, choices, index: i };
   }
   return path.improveOnly ? null : { at: 'categories', path, choices };
 }
 
-export function stepRequired(path: Path & { kind: 'source' }, name: StepName): boolean {
-  return stepsOf(path.source, path.improveOnly).find((s) => s.name === name)?.required ?? false;
-}
-
 export type TrumpRow = { trump: Trump; why: TextRef | null };
 
-export function trumpRows(content: KlioContent, ctx: BlockContext, path: Path, choices: Choices, category: Category): TrumpRow[] {
+export function trumpRows(content: KlioContent, ctx: BlockContext, path: Path, choices: Choices): TrumpRow[] {
   const src = path.kind === 'free' ? 'free' : path.source;
-  return content.trumps
-    .filter((t) => t.category === category)
-    .map((trump) => ({ trump, why: trumpProblem(content.trumpSources, src, trump, ctx, choices) }));
+  return content.trumps.map((trump) => ({ trump, why: trumpProblem(content.trumpSources, src, trump, ctx, choices) }));
 }
 
-export const selectableCount = (content: KlioContent, ctx: BlockContext, path: Path, choices: Choices, category: Category): number =>
-  trumpRows(content, ctx, path, choices, category).filter((r) => !r.why).length;
+/** Wählbare Trümpfe je Kategorie (in einem Durchgang). */
+export function selectableByCategory(rows: TrumpRow[]): Record<Category, number> {
+  const out: Record<Category, number> = { K: 0, V: 0, P: 0, X: 0 };
+  for (const r of rows) if (!r.why) out[r.trump.category]++;
+  return out;
+}
 
 /** Der Befehl am Ende des Dialogs. */
 export function finalCommand(seat: SeatId, path: Path, choices: Choices, trump: string | undefined): object {
@@ -74,12 +65,13 @@ export function finalCommand(seat: SeatId, path: Path, choices: Choices, trump: 
   return { type: 'trump.choose', seat, source: path.source.id, ...(trump ? { trump } : {}), ...choices };
 }
 
-/** Attribut-Knöpfe beim Umverteilen: Verringern nur ab 1, Erhöhen nicht auf das verringerte. */
+/** Attribut-Knöpfe beim Umverteilen, abgeleitet aus den gültigen Möglichkeiten des Bausteins. */
 export function attributeOptions(ctx: BlockContext, lowered: Attr | undefined) {
+  const pairs = steps.moveAttributePoint.options(ctx).flatMap((o) => (o.moveAttribute ? [o.moveAttribute] : []));
   return ATTRS.map((a) => ({
     attr: a,
     value: attrValue(ctx.sheet, a),
-    canLower: attrValue(ctx.sheet, a) >= 1,
-    canRaise: a !== lowered && attrValue(ctx.sheet, a) < 9,
+    canLower: pairs.some((p) => p.lowered === a),
+    canRaise: !!lowered && pairs.some((p) => p.lowered === lowered && p.raised === a),
   }));
 }
