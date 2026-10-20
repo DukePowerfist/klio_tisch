@@ -1,7 +1,7 @@
 // Bögen und Trümpfe im lokalen Betrieb (Schritt 3b).
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, ready, zoneCenter, zoomIn } from './helpers';
+import { dragFromTo, ready, setField as setSeatField, zoneCenter, zoomIn } from './helpers';
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
 
@@ -11,12 +11,7 @@ async function zoomOnSheet(page: Page) {
   await zoomIn(page);
 }
 
-async function setField(page: Page, field: string, value: string) {
-  const input = sheet1(page).locator(`[data-field="${field}"]`);
-  await input.click();
-  await input.fill(value);
-  await input.press('Enter');
-}
+const setField = (page: Page, field: string, value: string) => setSeatField(page, 'seat1', field, value);
 
 test.beforeEach(async ({ page }) => ready(page));
 

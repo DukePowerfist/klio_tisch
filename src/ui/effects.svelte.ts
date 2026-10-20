@@ -1,4 +1,4 @@
-// Ereignis → Effekt, an einer Stelle (ARCHITEKTUR.md 11): Meldungen, Rucken, Hervorhebung.
+// Ereignis → Effekt, an einer Stelle (ARCHITEKTUR.md 11): Meldungen, Rucken, Hervorhebung, Ergebnisfenster.
 // Dauern stehen in theme.css; bei „Bewegung reduzieren“ sind die Bewegungen aus.
 
 import content from 'virtual:klio-content';

@@ -243,7 +243,7 @@
 >
   <div class="board" style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
     <div class="panel" style:left="{layout.panel.x}px" style:top="{layout.panel.y}px" style:width="{layout.panel.w}px" style:height="{layout.panel.h}px"></div>
-    <GmControls panel={layout.panel} {players} />
+    <GmControls at={layout.gmControls} {players} />
     <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
     {#each Object.values(layout.sheets) as box (box.seat)}

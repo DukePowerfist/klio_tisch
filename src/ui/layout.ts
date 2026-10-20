@@ -32,6 +32,8 @@ export type Layout = {
   /** dieselben Zonen als Liste (Trefferprüfung beim Ziehen) */
   zoneList: ZoneBox[];
   resistTitle: { x: number; y: number };
+  /** rechte untere Ecke der SL-Leiste */
+  gmControls: { x: number; y: number };
   menu: { x: number; y: number };
   freeCardScale: number;
 };
@@ -128,6 +130,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     zones,
     zoneList: Object.values(zones),
     resistTitle: { x: v.resistTitle[0], y: v.resistTitle[1] },
+    gmControls: { x: panel.x + panel.w - L.gmControlsInset[0], y: panel.y + panel.h - L.gmControlsInset[1] },
     menu: { x: v.menu[0], y: v.menu[1] },
     freeCardScale: L.freeCardScale,
   };

@@ -12,6 +12,7 @@
   --accent: #d6a828;
   --accent-hint: #f5d76e;
   --danger: #b3261e;       /* Narben, Tod, durchgestrichenes Rüstzeug */
+  --warn-bg: #7a2a22;      /* Hintergrund für Warnungen und gefährliche Knöpfe */
   --reason: #f0a090;       /* Begründung bei ausgegrauten Trümpfen */
   --paper: #fffdf7;
   /* Trumpfkarten: Attributfarben und Rahmenstärke je Stufe */

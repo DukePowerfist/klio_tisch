@@ -5,7 +5,8 @@
   import Toast from './Toast.svelte';
   import BigTrump from './BigTrump.svelte';
   import TrumpDialog from './TrumpDialog.svelte';
-  import GmDialog from './GmDialog.svelte';
+  import ResetDialog from './ResetDialog.svelte';
+  import ResultDialog from './ResultDialog.svelte';
   import { view } from './view.svelte';
   import { session } from './session.svelte';
 
@@ -23,7 +24,10 @@
   <Toast />
   <BigTrump />
   {#if view.gmDialog}
-    <GmDialog />
+    {#key view.gmDialog}<ResultDialog kind={view.gmDialog} />{/key}
+  {/if}
+  {#if view.confirmReset}
+    <ResetDialog />
   {/if}
   {#if view.trumpDialog}
     {#key view.trumpDialog}<TrumpDialog seat={view.trumpDialog} />{/key}
@@ -34,5 +38,5 @@
 {/if}
 
 <style>
-  .error, .save-error { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); background: #7a2a22; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 3000000; }
+  .error, .save-error { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); background: var(--warn-bg); color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 3000000; }
 </style>

@@ -14,8 +14,9 @@ export default defineConfig({
     reducedMotion: 'reduce',
     launchOptions: executablePath ? { executablePath } : {},
   },
+  // In CI gegen den fertigen Build (genau das, was veröffentlicht wird), lokal gegen den Entwicklungsserver
   webServer: {
-    command: 'npx vite --port 5299 --strictPort',
+    command: process.env.CI ? 'npx vite preview --port 5299 --strictPort' : 'npx vite --port 5299 --strictPort',
     url: 'http://localhost:5299/klio_tisch/',
     reuseExistingServer: !process.env.CI,
   },

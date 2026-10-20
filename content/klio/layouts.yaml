@@ -4,6 +4,8 @@
 board: [ 1760, 990 ]
 card: [ 80, 112 ]
 freeCardScale: 0.6
+# SL-Leiste: Abstand ihrer rechten unteren Ecke von der rechten unteren Ecke des Spielbereichs
+gmControlsInset: [ 40, 26 ]
 # shapes: Größe, Kartenmaßstab, Fächerabstand; menu = Lage des Stapelmenüs (fixed = an `menu` der Ansicht,
 # left/right/below), menuInRole = abweichend in der Rollenansicht; label = Beschriftung (center, rotated, x = Anteil)
 shapes:

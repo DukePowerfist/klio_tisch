@@ -223,5 +223,5 @@
   :global(body.zoomed) .sbar { opacity: 0.4; pointer-events: auto; }
   :global(body.zoomed) .sbar:hover, .dead .sbar { opacity: 0.95; pointer-events: auto; }
   .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; padding: 2px 7px; cursor: pointer; }
-  .revive { background: #7a2a22 !important; }
+  .revive { background: var(--warn-bg) !important; }
 </style>

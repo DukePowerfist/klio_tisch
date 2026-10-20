@@ -1,23 +1,32 @@
 <script lang="ts">
   // SL-Leiste im Spielbereich (wie bisher unten rechts): Expedition, Orakel, Spielerzahl, Zurücksetzen.
-  import type { Rect } from './layout';
+  // Jeder Knopf nur mit dem passenden Recht (9.3).
   import { submitOrSay } from './commands';
+  import { session } from './session.svelte';
   import { t } from './texts';
   import { view } from './view.svelte';
 
-  let { panel, players }: { panel: Rect; players: number } = $props();
+  let { at, players }: { at: { x: number; y: number }; players: number } = $props();
 </script>
 
-<div class="ctl control" style:left="{panel.x + panel.w - 40}px" style:top="{panel.y + panel.h - 26}px">
-  <button title={t('gm.expeditionTitle')} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.expedition')}</button>
-  <button title={t('gm.oracleTitle')} onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.oracle')}</button>
-  <label>
-    {t('gm.players')}
-    <select value={players} onchange={(e) => submitOrSay({ type: 'table.setPlayers', players: Number((e.target as HTMLSelectElement).value) })}>
-      {#each [1, 2, 3, 4] as n (n)}<option value={n}>{n}</option>{/each}
-    </select>
-  </label>
-  <button onclick={() => (view.gmDialog = 'reset')}>{t('gm.reset')}</button>
+<div class="ctl control" style:left="{at.x}px" style:top="{at.y}px">
+  {#if session.can({ type: 'gm.expedition' })}
+    <button title={t('gm.expeditionTitle')} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.expedition')}</button>
+  {/if}
+  {#if session.can({ type: 'gm.oracle' })}
+    <button title={t('gm.oracleTitle')} onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.oracle')}</button>
+  {/if}
+  {#if session.can({ type: 'table.setPlayers' })}
+    <label>
+      {t('gm.players')}
+      <select value={players} onchange={(e) => submitOrSay({ type: 'table.setPlayers', players: Number(e.currentTarget.value) })}>
+        {#each [1, 2, 3, 4] as n (n)}<option value={n}>{n}</option>{/each}
+      </select>
+    </label>
+  {/if}
+  {#if session.can({ type: 'table.reset' })}
+    <button onclick={() => (view.confirmReset = true)}>{t('gm.reset')}</button>
+  {/if}
 </div>
 
 <style>

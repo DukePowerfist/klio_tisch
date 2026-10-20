@@ -1,23 +1,21 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, openMenuAndClick, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
-test('Expedition: vier Tabellen, einzeln neu würfelbar, bleibt nach Neuladen', async ({ page }) => {
+test('Expedition: vier Tabellen; „neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
   await page.getByRole('button', { name: 'Expedition starten' }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition starten' });
-  await expect(dialog.locator('.row')).toHaveCount(4);
+  const rows = dialog.locator('.row b');
+  await expect(rows).toHaveCount(4);
   await expect(dialog).toContainText('Diese Expedition führt euch …');
-  const first = await dialog.locator('.row b').first().textContent();
-  for (let i = 0; i < 5; i++) await dialog.getByRole('button', { name: 'neu' }).nth(3).click();
-  await expect(dialog.locator('.row b').first()).toHaveText(first!);
-  await dialog.getByRole('button', { name: 'Schließen' }).click();
+  const before = await rows.allTextContents();
+  await dialog.getByRole('button', { name: 'neu', exact: true }).last().click();
+  await expect.poll(async () => (await rows.allTextContents()).slice(0, 3)).toEqual(before.slice(0, 3));
+  await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
-  await ready(page, true);
-  await page.getByRole('button', { name: 'Expedition starten' }).click();
-  await expect(page.getByRole('dialog', { name: 'Expedition starten' }).locator('.row')).toHaveCount(4);
 });
 
 test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) => {
@@ -30,11 +28,7 @@ test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) 
 });
 
 test('Spielerzahl blendet Bögen und Dock-Knöpfe aus, nichts geht verloren', async ({ page }) => {
-  await page.keyboard.press('3');
-  const name = page.locator('[data-sheet=seat3] [data-field=name]');
-  await name.fill('Ida');
-  await name.press('Enter');
-  await page.keyboard.press('0');
+  await nameCharacter(page, 'seat3', 'Ida');
   await page.getByRole('combobox').selectOption('2');
   await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
   await expect(page.getByTitle('Ich bin Spieler 3')).toHaveCount(0);
@@ -45,11 +39,8 @@ test('Spielerzahl blendet Bögen und Dock-Knöpfe aus, nichts geht verloren', as
 test('Zurücksetzen: Karten auf Startplätze; Charaktere nur mit Häkchen', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expectCount(page, 'ABLAGE', 1);
-  await page.keyboard.press('1');
+  await nameCharacter(page, 'seat1', 'Ida');
   const name = page.locator('[data-sheet=seat1] [data-field=name]');
-  await name.fill('Ida');
-  await name.press('Enter');
-  await page.keyboard.press('0');
 
   await page.getByRole('button', { name: 'Zurücksetzen' }).click();
   const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
@@ -73,12 +64,14 @@ test('Frei liegende Karte am Bogen folgt dem Bogen in die Rollenansicht (A32)', 
   const sheet2 = (await page.locator('[data-sheet=seat2]').boundingBox())!;
   // unten am Bogen, außerhalb seiner Zonen: frei, Anker = Bogen 2
   await dragFromTo(page, deck, { x: sheet2.x + sheet2.width * 0.45, y: sheet2.y + sheet2.height * 0.93 });
-  await expect(page.locator('[data-card][style*="rotate(90deg)"]')).toHaveCount(1); // frei liegende Karten sind gedreht
   await expectCount(page, 'DECK', 26);
+  // Mitte der frei liegenden Karte liegt auf Bogen 2
+  const free = page.locator('[data-card][style*="rotate(90deg)"]');
   const inside = async () => {
     const s = (await page.locator('[data-sheet=seat2]').boundingBox())!;
-    const cards = await page.locator('[data-card]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 })));
-    return cards.some((c) => c.x > s.x && c.x < s.x + s.width && c.y > s.y && c.y < s.y + s.height);
+    const c = (await free.boundingBox())!; // frei liegende Karten sind gedreht
+    const [x, y] = [c.x + c.width / 2, c.y + c.height / 2];
+    return x > s.x && x < s.x + s.width && y > s.y && y < s.y + s.height;
   };
   expect(await inside()).toBe(true);
   await page.keyboard.press('2');

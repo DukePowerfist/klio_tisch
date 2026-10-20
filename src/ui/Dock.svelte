@@ -9,6 +9,8 @@
   function onKey(e: KeyboardEvent) {
     const target = e.target as HTMLElement;
     if (target.closest('input, textarea, select') || e.ctrlKey || e.metaKey || e.altKey) return;
+    // Bei offenem Fenster gehören die Tasten dem Fenster (Esc schließt es)
+    if (document.querySelector('[aria-modal="true"]')) return;
     if (e.key === '0' || e.key === 'Escape') view.setRole(null);
     else if (e.key >= '1' && e.key <= '4' && Number(e.key) <= players) view.setRole(SEATS[Number(e.key) - 1] as SeatId);
   }

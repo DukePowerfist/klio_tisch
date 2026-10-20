@@ -174,6 +174,7 @@ export const LayoutsFile = z.object({
   board: Point,
   card: Point,
   freeCardScale: z.number(),
+  gmControlsInset: Point,
   shapes: z.record(z.string(), Shape),
   overview: View(z.object({
     margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number(),

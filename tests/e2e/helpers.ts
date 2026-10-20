@@ -27,6 +27,21 @@ export async function expectCount(page: Page, zoneLabel: string, n: number) {
   await expect(page.locator('.zone').filter({ hasText: new RegExp(`^${zoneLabel}`) }).first().locator('.n')).toHaveText(String(n));
 }
 
+/** Feld eines Bogens ausfüllen und bestätigen. */
+export async function setField(page: Page, seat: string, field: string, value: string) {
+  const input = page.locator(`[data-sheet=${seat}] [data-field="${field}"]`);
+  await input.click();
+  await input.fill(value);
+  await input.press('Enter');
+}
+
+/** Einem Charakter einen Namen geben (über seine Rollenansicht, danach zurück zur Übersicht). */
+export async function nameCharacter(page: Page, seat: string, name: string) {
+  await page.keyboard.press(seat.slice(-1));
+  await setField(page, seat, 'name', name);
+  await page.keyboard.press('0');
+}
+
 /** Hineinzoomen um einen Punkt, bis die kleinen Bedienelemente sichtbar sind (wie bisher ab Zoom 1,6). */
 export async function zoomIn(page: Page, at = { x: 20, y: 20 }) {
   await page.mouse.move(at.x, at.y);

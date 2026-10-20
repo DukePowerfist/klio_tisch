@@ -3,9 +3,10 @@
 
 import content from 'virtual:klio-content';
 import { createEngine } from '../engine/dispatch';
+import { can } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
-import type { CardId, Event, SequencedEvent, TableState } from '../engine/types';
+import type { Actor, CardId, Event, SequencedEvent, TableState } from '../engine/types';
 import { Host } from '../net/host';
 import { localTransport } from '../net/local';
 import type { CommandResult } from '../net/protocol';
@@ -28,6 +29,8 @@ class Session {
   saveError = $state<string | null>(null);
   /** in Reihenfolge der Befehle; der älteste fällt weg, sobald sein Ergebnis da ist */
   pending = $state.raw<PendingDrop[]>([]);
+  /** wer hier bedient; im lokalen Betrieb die Spielleitung (Schritt 4: Platz oder Zuschauer) */
+  actor = $state<Actor>({ role: 'gm' });
   private host: Host<KlioState> | null = null;
   private listeners = new Set<Listener>();
 
@@ -48,6 +51,12 @@ class Session {
     // angenommen: schon in changed() entfernt, zusammen mit dem neuen Stand
     if (drop && this.pending.includes(drop)) this.pending = this.pending.filter((d) => d !== drop);
     return result;
+  }
+
+  /** Darf der aktuelle Nutzer diesen Befehl? Zum Ausblenden von Knöpfen (9.3); verbindlich prüft der Host. */
+  can(cmd: { type: string }): boolean {
+    const def = engine.commands[cmd.type];
+    return !!def && !!this.state && can(this.actor, def, cmd, this.state as TableState<unknown>, ruleset.permissions);
   }
 
   /** Ereignisse für Meldungen und Animationen. */
