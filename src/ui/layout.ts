@@ -198,6 +198,12 @@ const frac = (v: number) => Math.round(v * 10000) / 10000;
 /** Punkt als Anteil 0–1 eines Rechtecks (auf 4 Stellen) und zurück */
 const relIn = (r: Rect, x: number, y: number) => ({ x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) });
 const pointIn = (r: Rect, f: { x: number; y: number }) => ({ x: r.x + f.x * r.w, y: r.y + f.y * r.h });
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+/** Punkt in die Tischmitte geholt, Abstand `w`, `h` zum rechten und unteren Rand (6.1, A32) */
+const intoMiddle = (layout: Layout, x: number, y: number, w = 0, h = 0) => {
+  const m = layout.middle;
+  return relIn(m, clamp(x, m.x, m.x + m.w - w), clamp(y, m.y, m.y + m.h - h));
+};
 /** sichtbarer Bogen unter einem Punkt */
 const sheetAt = (layout: Layout, x: number, y: number) => SEATS.find((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
 const cardRect = (layout: Layout, p: CardPlace): Rect => ({ x: p.x, y: p.y, ...cardSize(layout, p) });
@@ -213,14 +219,19 @@ export function pointAt(layout: Layout, pos: FreePos): { x: number; y: number } 
   return r && pointIn(r, pos);
 }
 
-/** Anker für eine frei abgelegte Karte: Bogen unter dem Punkt, sonst Spielbereich (A32). Lage als Anteil 0–1. */
+/** Anker für eine frei abgelegte Karte (linke obere Ecke): Bogen unter dem Punkt, sonst Spielbereich (A32).
+ *  Lage als Anteil 0–1. Im Spielbereich liegt die ganze gedrehte Karte in der Tischmitte; was außerhalb von Bogen
+ *  und Tischmitte abgelegt wird, kommt an ihren Rand, damit es in jeder Ansicht an derselben Stelle liegt. */
 export function freePosAt(layout: Layout, x: number, y: number): FreePos {
-  const anchor: AnchorId = sheetAt(layout, x, y) ?? 'center';
-  return { anchor, ...relIn(anchorRect(layout, anchor)!, x, y) };
+  const seat = sheetAt(layout, x, y);
+  if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
+  const c = cardSize(layout, { scale: layout.freeCardScale, rotated: true });
+  return { anchor: 'center', ...intoMiddle(layout, x, y, c.w, c.h) };
 }
 
 /** Lage des Zeigers für die anderen (8.3), damit sie auch in einer anderen Ansicht über derselben Stelle steht:
- *  oberste frei liegende Karte (ohne `skip`, die gerade gezogenen), sonst Bogen, sonst Tischzone, sonst Spielbereich.
+ *  oberste frei liegende Karte (ohne `skip`, die gerade gezogenen), sonst Bogen, sonst Tischzone, sonst Spielbereich;
+ *  außerhalb von Bogen und Tischmitte am Rand der Tischmitte.
  *  Zonen auf einem Bogen brauchen keinen eigenen Anker, sie gehen mit dem Bogen. */
 export function pointerPosAt(layout: Layout, places: Places, free: readonly CardId[], x: number, y: number, skip: readonly CardId[] = []): PointerPos {
   for (let i = free.length - 1; i >= 0; i--) {
@@ -232,7 +243,7 @@ export function pointerPosAt(layout: Layout, places: Places, free: readonly Card
   const seat = sheetAt(layout, x, y);
   if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
   const zone = layout.zoneList.find((z) => !z.owner && inside(z, x, y));
-  return zone ? { zone: zone.id, ...relIn(zone, x, y) } : { anchor: 'center', ...relIn(layout.middle, x, y) };
+  return zone ? { zone: zone.id, ...relIn(zone, x, y) } : { anchor: 'center', ...intoMiddle(layout, x, y) };
 }
 
 /** Umkehrung von `pointerPosAt` in dieser Ansicht; null, wenn der Anker hier nicht zu sehen ist. */

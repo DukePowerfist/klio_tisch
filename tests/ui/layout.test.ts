@@ -100,6 +100,23 @@ describe('Karten und Ablegen', () => {
     expect(freePosAt(L, s.x + s.w / 4, s.y + s.h / 2)).toEqual({ anchor: 'seat2', x: 0.25, y: 0.5 });
     expect(freePosAt(L, 880, 900).anchor).toBe('center');
   });
+
+  it('außerhalb von Bogen und Tischmitte: ganz in der Tischmitte an ihrem Rand (A32)', () => {
+    const c = cardSize(computeLayout(content, 4, null, null), { scale: 0.6, rotated: true });
+    for (const L of [computeLayout(content, 4, null, null), computeLayout(content, 2, null, null), computeLayout(content, 4, 'seat2', null)]) {
+      const m = L.middle;
+      // links neben der Tischmitte, rechts darüber hinaus, unten heraus
+      expect(freePosAt(L, m.x - 5, 500)).toEqual({ anchor: 'center', x: 0, y: expect.closeTo((500 - m.y) / m.h, 4) });
+      const r = freePosAt(L, m.x + m.w - 10, m.y + m.h - 5);
+      expect(r.anchor).toBe('center');
+      expect(m.x + r.x * m.w + c.w).toBeCloseTo(m.x + m.w, 1);
+      expect(m.y + r.y * m.h + c.h).toBeCloseTo(m.y + m.h, 1);
+    }
+    // Rollenansicht: Lücke in der Spalte der kleinen Bögen
+    const role = computeLayout(content, 4, 'seat2', null);
+    const gap = role.sheets.seat1.x - 10;
+    expect(freePosAt(role, gap, 500)).toMatchObject({ anchor: 'center', x: expect.closeTo(1 - c.w / role.middle.w, 3) });
+  });
 });
 
 describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
@@ -163,6 +180,20 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
       expect(pt.x).toBeCloseTo(x + dx, 1); // Anteil auf 4 Stellen gerundet
       expect(pt.y).toBeCloseTo(y, 1);
     }
+  });
+
+  it('außerhalb von Bogen und Tischmitte: bei den anderen am Rand der Tischmitte', () => {
+    const s = fresh();
+    // Rollenansicht: Lücke in der Spalte der kleinen Bögen, oben über der Spalte
+    for (const [x, y] of [[role.sheets.seat1.x - 10, 500], [1500, 30]] as const) {
+      const pos = pointerPosAt(role, placeCards(s, role), s.free, x, y, []);
+      expect(pos).toMatchObject({ anchor: 'center', x: 1 });
+      within(pointerAt(over, placeCards(s, over), pos), over.middle);
+    }
+    // Draufsicht: zwischen Bogen und Tischmitte
+    const pos = pointerPosAt(over, placeCards(s, over), s.free, over.middle.x - 20, 400, []);
+    expect(pos).toMatchObject({ anchor: 'center', x: 0 });
+    within(pointerAt(role, placeCards(s, role), pos), role.middle);
   });
 
   it('gezogene Karten zählen nicht: darunter liegt die Zone bzw. der Spielbereich', () => {
