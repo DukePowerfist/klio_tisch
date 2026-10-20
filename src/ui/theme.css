@@ -29,6 +29,11 @@
   --who-seat3: #8fd16a;
   --who-seat4: #c98be8;
   --who-spectator: #bbbbbb;
+  /* Menü oben rechts: Zustandspunkt (10, Schritt 5b Teil 4) */
+  --menu-local: #8a8a8a;
+  --menu-ok: #5fbf6a;
+  --menu-trouble: #d9534a;
+  --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */
   --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */

@@ -49,6 +49,12 @@ export async function zoomIn(page: Page, at = { x: 20, y: 20 }) {
   await expect(page.locator('[data-sheet]:not(.tools)')).toHaveCount(0);
 }
 
+/** Eintrag im Menü oben rechts wählen (5b Teil 4). */
+export async function fromMenu(page: Page, entry: string) {
+  await page.getByRole('button', { name: 'Menü' }).click();
+  await page.getByRole('button', { name: entry, exact: true }).click();
+}
+
 export async function ready(page: Page, reload = false) {
   if (reload) await page.reload();
   else await page.goto('./');

@@ -1,13 +1,13 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, resetTable, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, nameCharacter, openMenuAndClick, ready, resetTable, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
 test('Expedition: vier Tabellen; „neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
   // Protokoll vorher öffnen: Daran sieht der Test, wann ein Ereignis angekommen ist
-  await page.getByRole('button', { name: 'Protokoll' }).click();
+  await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
   await page.getByRole('button', { name: 'Expedition starten' }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition starten' });
@@ -82,7 +82,7 @@ test('Frei liegende Karte am Bogen folgt dem Bogen in die Rollenansicht (A32)', 
 });
 
 test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach dem Neuladen', async ({ page }) => {
-  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await fromMenu(page, 'Einstellungen');
   const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
   const free = dialog.getByRole('combobox', { name: 'Trumpf frei wählen (ohne Regelprüfung)' });
   await expect(free).toHaveValue('deny');
@@ -93,12 +93,12 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await damage.uncheck();
   // Das Kästchen springt sofort um, der Stand erst nach dem Speichern: neu öffnen zeigt den Stand
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await fromMenu(page, 'Einstellungen');
   await expect(damage).not.toBeChecked();
 
   await page.reload();
   await ready(page);
-  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await fromMenu(page, 'Einstellungen');
   await expect(free).toHaveValue('allow');
   await expect(damage).not.toBeChecked();
   await dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' }).click();
@@ -112,7 +112,7 @@ test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', asy
   await resetTable(page, true);
   await expectCount(page, 'ABLAGE', 0);
 
-  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await fromMenu(page, 'Einstellungen');
   const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
   await expect(dialog.getByText(/vor dem Zurücksetzen/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Wiederherstellen', exact: true }).click();
@@ -125,7 +125,7 @@ test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', asy
 test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abgelehnt', async ({ page }) => {
   await nameCharacter(page, 'seat2', 'Ida');
   await openMenuAndClick(page, 'DECK', 'Ziehen');
-  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await fromMenu(page, 'Einstellungen');
   const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
   const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
   expect(download.suggestedFilename()).toMatch(/^klio-tisch-\d{4}-\d{2}-\d{2}\.json$/);
@@ -135,7 +135,7 @@ test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abg
   await resetTable(page, true);
   await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
 
-  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await fromMenu(page, 'Einstellungen');
   const input = dialog.locator('input[type=file]');
   await input.setInputFiles({ name: 'falsch.json', mimeType: 'application/json', buffer: Buffer.from('{"app":"etwas"}') });
   await expect(dialog.getByText('Diese Datei ist kein gültiger Spielstand des Kartentischs.')).toBeVisible();
@@ -144,20 +144,47 @@ test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abg
   await expectCount(page, 'ABLAGE', 1);
   await expect(dialog.getByText(/vor dem Laden einer Datei/)).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Protokoll' }).click();
+  await fromMenu(page, 'Protokoll');
   await expect(page.getByRole('list', { name: 'Protokoll' }).locator('li').first()).toHaveText(/Spielstand aus einer Datei geladen/);
 });
 
-test('Protokoll: einklappbar, neueste oben, bleibt nach Neuladen', async ({ page }) => {
+test('Protokoll: Spalte rechts über das Menü, neueste oben, offen oder zu bleibt nach Neuladen', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expectCount(page, 'ABLAGE', 1);
   await page.getByRole('button', { name: 'Mischen', exact: true }).click(); // Menü bleibt offen
   await expectCount(page, 'ABLAGE', 0);
-  await page.getByRole('button', { name: 'Protokoll' }).click();
+  await fromMenu(page, 'Protokoll');
   const log = page.getByRole('list', { name: 'Protokoll' });
   await expect(log.locator('li').first()).toContainText('Gemischt: DECK');
   await expect(log.locator('li').nth(1)).toContainText('Aufgedeckt:');
+  // bleibt beim Weiterspielen offen; der Tisch rückt zur Seite
+  await page.getByRole('button', { name: 'Ziehen', exact: true }).click(); // Stapelmenü ist noch offen
+  await expect(log.locator('li')).toHaveCount(3);
+  const column = (await page.locator('aside.log').boundingBox())!;
+  await expect.poll(async () => { const b = (await page.locator('.board').boundingBox())!; return b.x + b.width; }).toBeLessThanOrEqual(column.x + 1);
   await ready(page, true);
-  await page.getByRole('button', { name: 'Protokoll' }).click();
-  await expect(log.locator('li')).toHaveCount(2);
+  await expect(log.locator('li')).toHaveCount(3);
+  await page.locator('aside.log').getByRole('button', { name: 'Schließen' }).click();
+  await ready(page, true);
+  await expect(log).toHaveCount(0);
+});
+
+test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließt', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  const button = page.getByRole('button', { name: 'Menü' });
+  await expect(page.locator('.menu [data-health=local]')).toBeVisible();
+  // verdeckt weder Namensschild noch Attribute von Spieler 2
+  const b = (await button.boundingBox())!;
+  for (const target of ['[data-plate=seat2]', '[data-sheet=seat2] [data-field^="attributes."]']) {
+    for (const r of await page.locator(target).all()) {
+      const o = (await r.boundingBox())!;
+      expect(b.x > o.x + o.width || b.x + b.width < o.x || b.y > o.y + o.height || b.y + b.height < o.y, target).toBe(true);
+    }
+  }
+  // Einstellungen nur noch im Menü, nicht in der SL-Leiste
+  await expect(page.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
+  await button.click();
+  await expect(page.locator('.items button')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Protokoll']);
+  await page.locator('.panel').click({ position: { x: 20, y: 20 } });
+  await expect(page.locator('.items')).toHaveCount(0);
 });

@@ -1,17 +1,28 @@
 // Mehrspielerbetrieb über echte WebRTC-Verbindungen (Trystero/Nostr).
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
-import { expect, test } from '@playwright/test';
-import { expectCount, makePng, nameCharacter, openMenuAndClick, ready, setField, zoneCenter } from './helpers';
+import { expect, test, type Page } from '@playwright/test';
+import { expectCount, fromMenu, makePng, nameCharacter, openMenuAndClick, ready, setField, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
 
+/** Spieler sitzt auf Platz 2: sein Bogen ist beschreibbar (Rechte, 9.3) */
+const seated = (page: Page, timeout = 5_000) => expect(page.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout });
+
+/** Einträge im Menü oben rechts (danach wieder zu) */
+async function menuEntries(page: Page): Promise<string[]> {
+  await page.getByRole('button', { name: 'Menü' }).click();
+  const entries = await page.locator('.items button').allTextContents();
+  await page.getByRole('button', { name: 'Menü' }).click();
+  return entries;
+}
+
 test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async ({ browser }) => {
   const gm = await (await browser.newContext()).newPage();
   await ready(gm);
-  await gm.getByRole('button', { name: 'Mitspieler einladen' }).click();
-  await expect(gm.getByText(/Raum offen/)).toBeVisible();
+  await fromMenu(gm, 'Mitspieler einladen');
+  await expect(gm.locator('[data-health=ok]')).toBeVisible();
   const link = gm.url();
   expect(link).toMatch(/#[\w-]{22}\.[\w-]{22}$/);
 
@@ -19,10 +30,14 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.goto(link);
   const join = player.getByRole('dialog', { name: 'Platz wählen' });
   await expect(join).toBeVisible({ timeout: 60_000 });
-  await expect(gm.getByText('Raum offen · 1 verbunden')).toBeVisible();
+  await expect(gm.locator('.menu .count')).toHaveText('1');
   await join.getByRole('textbox').fill('Ida');
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
-  await expect(player.locator('.bar').getByText('Spieler 2', { exact: true })).toBeVisible();
+  await seated(player);
+  await expect(player.locator('[data-health=ok]')).toBeVisible();
+  // Menü je Rolle (10): Spieler nur Protokoll, SL Raum, Einstellungen, Protokoll
+  expect(await menuEntries(player)).toEqual(['Protokoll']);
+  expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Protokoll']);
   // Spieler startet in seiner Rollenansicht
   await expect.poll(async () => (await player.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
   await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
@@ -40,7 +55,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
 
   // Neu laden: derselbe Platz kommt von selbst zurück
   await player.reload();
-  await expect(player.locator('.bar').getByText('Spieler 2', { exact: true })).toBeVisible({ timeout: 60_000 });
+  await seated(player, 60_000);
   await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toHaveCount(0);
   // Mauszeiger mit Namen (8.3)
   await player.mouse.move(400, 300);
@@ -83,7 +98,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   // wer sich trennt, dessen Markierung verschwindet
   await player.reload();
   await expect(gm.locator('.zone.marked')).toHaveCount(0, { timeout: 30_000 });
-  await expect(player.locator('.bar').getByText('Spieler 2', { exact: true })).toBeVisible({ timeout: 60_000 });
+  await seated(player, 60_000);
 
   // Foto vom Spieler kommt bei der SL an (8.4)
   await player.locator('[data-sheet=seat2] input[type=file]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(player) });
@@ -99,17 +114,21 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(player.getByText(/von jemand anderem geändert/)).toBeVisible();
 
   // SL gibt den Platz frei: Spieler ist wieder Zuschauer und kann neu wählen
-  await gm.getByRole('button', { name: 'Raum …' }).click();
+  await fromMenu(gm, 'Raum …');
   const room = gm.getByRole('dialog', { name: 'Plätze und Einladungslink' });
   await expect(room.getByText('verbunden', { exact: true })).toBeVisible();
   await room.getByRole('button', { name: 'Freigeben' }).click();
   await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toBeVisible();
   await expect(room.getByText('frei', { exact: true })).toHaveCount(4);
+  await player.getByRole('button', { name: 'Nur zuschauen' }).click();
+  expect(await menuEntries(player)).toEqual(['Platz wählen', 'Protokoll']);
 
   // Link erneuern: der alte gilt nicht mehr
   await room.getByRole('button', { name: 'Link erneuern' }).click();
   await room.getByRole('button', { name: 'Erneuern' }).click();
   await expect.poll(() => gm.url()).not.toBe(link);
-  await expect(player.getByText('Warte auf Spielleitung …')).toBeVisible({ timeout: 30_000 });
+  // Störung ohne Öffnen des Menüs sichtbar, Punkt rot (10)
+  await expect(player.getByRole('alert').getByText('Warte auf Spielleitung …')).toBeVisible({ timeout: 30_000 });
+  await expect(player.locator('.menu [data-health=trouble]')).toBeVisible();
 });
 

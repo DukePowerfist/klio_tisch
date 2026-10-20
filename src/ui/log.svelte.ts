@@ -9,6 +9,7 @@ import { session } from './session.svelte';
 import { t } from './texts';
 
 const KEY = 'klio.log';
+const OPEN_KEY = 'klio.log.open';
 const MAX = 100;
 const SAVE_MS = 1000;
 
@@ -26,7 +27,7 @@ const stored = (): LogEntry[] => {
 class GameLog {
   /** neueste zuerst */
   entries = $state.raw<LogEntry[]>(stored());
-  open = $state(false);
+  #open = $state(localStorage.getItem(OPEN_KEY) === '1');
   private nextId = Math.max(0, ...this.entries.map((e) => e.id)) + 1;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -38,6 +39,15 @@ class GameLog {
     session.onReplaced((reason) => this.add([{ text: t(`log.replaced.${reason}`), warn: false }]));
     // beim Verlassen der Seite sofort speichern, damit nichts aus der Bündelung verloren geht
     addEventListener('pagehide', () => { if (this.saveTimer) this.save(); });
+  }
+
+  /** Spalte offen oder zu, je Browser gespeichert */
+  get open(): boolean {
+    return this.#open;
+  }
+  set open(v: boolean) {
+    this.#open = v;
+    localStorage.setItem(OPEN_KEY, v ? '1' : '0');
   }
 
   private save(): void {

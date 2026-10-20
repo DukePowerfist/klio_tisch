@@ -11,6 +11,7 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
+  import { gameLog } from './log.svelte';
   import { cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
@@ -256,6 +257,7 @@
 
 <div
   class="stage"
+  class:log={gameLog.open}
   bind:clientWidth={stageW}
   bind:clientHeight={stageH}
   onwheel={onWheel}
@@ -310,9 +312,12 @@
 
 <style>
   .stage { position: fixed; inset: 0; overflow: hidden; touch-action: none; background: var(--bg); }
+  /* offenes Protokoll: Tisch rückt zur Seite statt verdeckt zu werden */
+  .stage.log { right: var(--log-w); }
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--felt); border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
   .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift), top var(--shift); }
   .preview { position: fixed; right: 16px; bottom: 16px; pointer-events: none; z-index: 99; }
+  .stage.log .preview { right: calc(16px + var(--log-w)); }
   .preview :global(.card) { transition: none; }
 </style>

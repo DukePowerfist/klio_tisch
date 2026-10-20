@@ -5,9 +5,9 @@
   import Dock from './Dock.svelte';
   import JoinDialog from './JoinDialog.svelte';
   import LogPanel from './LogPanel.svelte';
+  import Menu from './Menu.svelte';
   import ResetDialog from './ResetDialog.svelte';
   import ResultDialog from './ResultDialog.svelte';
-  import RoomBar from './RoomBar.svelte';
   import RoomDialog from './RoomDialog.svelte';
   import SettingsDialog from './SettingsDialog.svelte';
   import Toast from './Toast.svelte';
@@ -62,7 +62,7 @@
 {:else if session.status !== 'starting'}
   <p class="center">{session.statusText}</p>
 {/if}
-<RoomBar onChooseSeat={() => (joinOpen = true)} />
+<Menu onChooseSeat={() => (joinOpen = true)} />
 
 <style>
   .error, .save-error { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); background: var(--warn-bg); color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 3000000; }

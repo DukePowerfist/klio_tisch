@@ -149,6 +149,7 @@ room:                                     # Mehrspielerbetrieb (neu)
 
 log:                                      # Spielprotokoll (neu)
   title: Protokoll
+  close: Schließen
   empty: Noch nichts passiert.
   shuffled: "Gemischt: {zones}"
   reset: Tisch zurückgesetzt
@@ -207,6 +208,9 @@ permissions:
   table.setSettings: Einstellungen ändern
   gm.expedition: Expedition starten
   gm.oracle: Orakel ziehen
+
+menu:                                     # Menü oben rechts (neu, Schritt 5b)
+  title: Menü
 
 dock:
   seat: "Ich bin Spieler {n}"
