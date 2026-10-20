@@ -1,0 +1,23 @@
+{
+  "name": "klio-tisch",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run check && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check": "tsc -p tsconfig.json && tsc -p tsconfig.node.json"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "@trystero-p2p/nostr": "0.26.0"
+  }
+}
