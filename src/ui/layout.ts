@@ -3,6 +3,7 @@
 
 import { seatVisibleFor, seatZoneId } from '../engine/zones';
 import { SEATS, type AnchorId, type CardId, type FreePos, type SeatId, type TableState, type ZoneId } from '../engine/types';
+import type { PointerPos } from '../net/presence';
 import type { KlioContent } from '../rules/klio/content/validate';
 
 export type Rect = { x: number; y: number; w: number; h: number };
@@ -206,4 +207,38 @@ export function freePosAt(layout: Layout, x: number, y: number): FreePos {
   const r = anchorRect(layout, anchor)!;
   const frac = (v: number) => Math.round(v * 10000) / 10000;
   return { anchor, x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) };
+}
+
+type Places = Partial<Record<CardId, CardPlace>>;
+
+/** Lage des Zeigers für die anderen (8.3), damit sie auch in einer anderen Ansicht über derselben Stelle steht:
+ *  oberste frei liegende Karte (ohne `skip`, die gerade gezogenen), sonst Bogen, sonst Tischzone, sonst Spielbereich. */
+export function pointerPosAt(layout: Layout, places: Places, free: readonly CardId[], x: number, y: number, skip: readonly CardId[]): PointerPos {
+  const frac = (v: number) => Math.round(v * 10000) / 10000;
+  const rel = (r: Rect) => ({ x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) });
+  for (let i = free.length - 1; i >= 0; i--) {
+    const card = free[i]!;
+    const p = places[card];
+    if (!p || skip.includes(card)) continue;
+    const r = { x: p.x, y: p.y, ...cardSize(layout, p) };
+    if (inside(r, x, y)) return { card, ...rel(r) };
+  }
+  const onSheet = SEATS.some((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
+  const zone = onSheet ? null : zoneAt(layout, x, y);
+  return zone ? { zone: zone.id, ...rel(zone) } : freePosAt(layout, x, y);
+}
+
+/** Umkehrung von `pointerPosAt` in dieser Ansicht; null, wenn der Anker hier nicht zu sehen ist. */
+export function pointerAt(layout: Layout, places: Places, pos: PointerPos): { x: number; y: number } | null {
+  if ('card' in pos) {
+    const p = places[pos.card];
+    if (!p) return null;
+    const s = cardSize(layout, p);
+    return { x: p.x + pos.x * s.w, y: p.y + pos.y * s.h };
+  }
+  if ('zone' in pos) {
+    const z = layout.zones[pos.zone];
+    return z ? { x: z.x + pos.x * z.w, y: z.y + pos.y * z.h } : null;
+  }
+  return pointAt(layout, pos);
 }

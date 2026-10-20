@@ -1,9 +1,9 @@
 // Was die anderen gerade tun (ARCHITEKTUR.md 8.3, Schritt 5b): gezogene Karten, die dem Zeiger folgen,
 // und angewählte Stapel. Reine Logik ohne Svelte; die Zeit kommt von außen (testbar).
 
-import type { CardId, FreePos, ZoneId } from '../engine/types';
+import type { CardId, ZoneId } from '../engine/types';
 import type { PeerId } from '../net/transport';
-import type { PresenceInfo } from '../net/presence';
+import type { PointerPos, PresenceInfo } from '../net/presence';
 
 /** Wie lange eine abgelegte Karte auf das Ereignis vom Host wartet, bevor sie zurückgleitet */
 export const HOLD_MS = 1000;
@@ -13,7 +13,7 @@ const SEEN = 20;
 export type Who = PresenceInfo['who'];
 
 /** Karten, die jemand zieht: Versatz = Zeiger jetzt − Zeiger beim Greifen (beides als Anker + Anteil) */
-export type RemoteDrag = { cards: CardId[]; who: Who; start: FreePos; last: FreePos };
+export type RemoteDrag = { cards: CardId[]; who: Who; start: PointerPos; last: PointerPos };
 
 type Tracked = RemoteDrag & {
   since: number;

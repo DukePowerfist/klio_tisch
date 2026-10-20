@@ -7,6 +7,10 @@ import { expectCount, fromMenu, makePng, menuEntries, nameCharacter, openMenuAnd
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
 
+/** Punkt innerhalb eines Rechtecks (Bildschirmkoordinaten) */
+const inBox = (p: { x: number; y: number } | null, r: { x: number; y: number; width: number; height: number }) =>
+  !!p && p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
+
 /** Spieler sitzt auf Platz 2: sein Bogen ist beschreibbar (Rechte, 9.3) */
 const seated = (page: Page, timeout = 5_000) => expect(page.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout });
 
@@ -72,6 +76,24 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.mouse.up();
   await expectCount(gm, 'ABLAGE', 2);
   await expect(ghost).toHaveCount(0);
+
+  // Andere Ansicht (8.3): Spieler in der Rollenansicht, SL in der Draufsicht; Zeiger und gezogene Karte
+  // stehen bei der SL über demselben Stapel, obwohl die Stapel dort woanders liegen
+  await player.keyboard.press('2');
+  await player.waitForTimeout(500); // Ansicht gleitet
+  const rDeck = await zoneCenter(player, 'DECK');
+  const rDiscard = await zoneCenter(player, 'ABLAGE');
+  const gDeck = (await zoneCenter(gm, 'DECK')).box;
+  const gDiscard = (await zoneCenter(gm, 'ABLAGE')).box;
+  const cursor = gm.locator('.cursor', { hasText: 'Ida' });
+  await player.mouse.move(rDeck.x, rDeck.y, { steps: 3 });
+  await expect.poll(async () => inBox(await cursor.boundingBox(), gDeck)).toBe(true);
+  await player.mouse.down();
+  await player.mouse.move(rDiscard.x, rDiscard.y, { steps: 6 });
+  await expect.poll(async () => { const b = await ghost.boundingBox(); return inBox(b && { x: b.x + b.width / 2, y: b.y + b.height / 2 }, gDiscard); }).toBe(true);
+  await player.mouse.up();
+  await expectCount(gm, 'ABLAGE', 3);
+  await player.keyboard.press('0');
 
   // Angewählter Stapel ist bei der SL in der Farbe des Spielers umrandet, bis das Menü zu ist
   const hard = await zoneCenter(player, 'SCHWIERIG');

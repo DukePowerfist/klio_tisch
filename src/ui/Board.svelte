@@ -1,9 +1,11 @@
 <script lang="ts">
   // Der Tisch: Zoom und Verschieben, Bögen, Zonen, Karten, Ziehen und Ablegen (ARCHITEKTUR.md 10, 14).
   // Zeigt nur den Stand an und schickt Befehle; Meldungen und Animationen kommen aus effects.svelte.ts.
+  import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { locate } from '../engine/zones';
-  import type { CardId, CardSource, FreePos, SeatId, ZoneId } from '../engine/types';
+  import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
+  import type { PointerPos } from '../net/presence';
   import { sheetOf } from '../rules/klio/events';
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
@@ -12,7 +14,7 @@
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
   import { gameLog } from './log.svelte';
-  import { cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
+  import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { t, whoColor } from './texts';
@@ -73,7 +75,7 @@
 
   // ---------- Ziehen und Ablegen ----------
   /** `grab`: Greifpunkt für die anderen (8.3), gesetzt, sobald die Karte bewegt wird */
-  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: FreePos };
+  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos };
   let drag = $state<Drag | null>(null);
   let pan: { x: number; y: number; moved: boolean } | null = null;
   let panned = false;
@@ -136,13 +138,22 @@
 
   /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
   function showPointer(clientX: number, clientY: number) {
-    const [bx, by] = toBoard(clientX, clientY);
-    session.pointer(freePosAt(layout, bx, by), drag?.moved ? drag.cards : [], drag?.grab ?? null);
+    const dragged = drag?.moved ? drag.cards : [];
+    session.pointer(pointerPosAt(layout, places, table.free, ...toBoard(clientX, clientY), dragged), dragged, drag?.grab ?? null);
   }
+  /** letzte Mausposition über dem Tisch: Ändert sich die Ansicht (Zoom, Verschieben, Rollenansicht, Fenstergröße),
+   *  liegt etwas anderes unter der Maus, auch ohne Bewegung */
+  let mouse: [number, number] | null = null;
+  $effect(() => {
+    void geo;
+    void layout;
+    untrack(() => { if (mouse && session.sharesPointer) showPointer(...mouse); });
+  });
   // eigenes offenes Stapelmenü für die anderen
   $effect(() => session.shareOpen(view.open));
 
   function onPointerMove(e: PointerEvent) {
+    if (e.pointerType === 'mouse') mouse = [e.clientX, e.clientY];
     if (session.sharesPointer && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
     if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && touches.size >= 2) {
@@ -161,7 +172,7 @@
       const dx = (e.clientX - drag.sx) / sc;
       const dy = (e.clientY - drag.sy) / sc;
       if (!drag.moved && Math.hypot(dx, dy) * sc < 4) return;
-      if (!drag.moved) drag.grab = freePosAt(layout, ...toBoard(drag.sx, drag.sy));
+      if (!drag.moved) drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy), []);
       drag.moved = true;
       drag.dx = dx;
       drag.dy = dy;
@@ -243,8 +254,8 @@
   const remoteOf = $derived.by(() => {
     const m = new Map<CardId, { dx: number; dy: number; color: string }>();
     for (const r of session.remoteDrags) {
-      const a = pointAt(layout, r.start);
-      const b = pointAt(layout, r.last);
+      const a = pointerAt(layout, places, r.start);
+      const b = pointerAt(layout, places, r.last);
       if (!a || !b) continue;
       for (const c of r.cards) if (!offsetOf.has(c)) m.set(c, { dx: b.x - a.x, dy: b.y - a.y, color: whoColor(r.who) });
     }
@@ -264,7 +275,7 @@
   onpointerdown={onPointerDown}
   onpointerover={onPointerOver}
   ondblclick={onDblClick}
-  onpointerleave={(e) => { if (e.pointerType === 'mouse') session.pointer(null, []); }}
+  onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; session.pointer(null, []); } }}
   role="application"
 >
   <div class="board" style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
@@ -300,7 +311,7 @@
         mark={remoteOf.get(card)?.color}
       />
     {/each}
-    <Cursors {layout} scale={sc} />
+    <Cursors {layout} {places} scale={sc} />
   </div>
   {#if preview}
     <div class="preview" style:width="{layout.card.w * 3}px" style:height="{layout.card.h * 3}px">

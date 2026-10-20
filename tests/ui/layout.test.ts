@@ -1,8 +1,8 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { computeLayout, freePosAt, placeCards, zoneAt } from '../../src/ui/layout';
-import { content, fresh, place } from '../helpers';
+import { computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
+import { content, fresh, place, type K } from '../helpers';
 
 describe('Ansichten', () => {
   it('Draufsicht mit 4 Spielern: Bögen 0,9-fach links und rechts, Spielbereich dazwischen', () => {
@@ -67,5 +67,77 @@ describe('Karten und Ablegen', () => {
     const s = L.sheets.seat2;
     expect(freePosAt(L, s.x + s.w / 4, s.y + s.h / 2)).toEqual({ anchor: 'seat2', x: 0.25, y: 0.5 });
     expect(freePosAt(L, 880, 900).anchor).toBe('center');
+  });
+});
+
+describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
+  const role = computeLayout(content, 4, 'seat2', null);
+  const over = computeLayout(content, 4, null, null);
+  const within = (pt: { x: number; y: number } | null, r: Rect) => {
+    expect(pt).not.toBeNull();
+    expect(pt!.x).toBeGreaterThanOrEqual(r.x);
+    expect(pt!.x).toBeLessThanOrEqual(r.x + r.w);
+    expect(pt!.y).toBeGreaterThanOrEqual(r.y);
+    expect(pt!.y).toBeLessThanOrEqual(r.y + r.h);
+  };
+  /** S5 frei im Spielbereich */
+  const withFree = (x: number, y: number) => {
+    const s: K = { ...fresh(), free: ['S5'], freePos: { S5: { anchor: 'center', x, y } } };
+    s.zones['deck'] = s.zones['deck']!.filter((c) => c !== 'S5');
+    return s;
+  };
+  const cardRect = (p: { x: number; y: number }) => ({ x: p.x, y: p.y, w: 112 * 0.6, h: 80 * 0.6 });
+
+  it('über dem Deck: Anker ist das Deck, der Zeiger steht auch in der Draufsicht darüber', () => {
+    const s = fresh();
+    const d = role.zones['deck']!;
+    const pos = pointerPosAt(role, placeCards(s, role), s.free, d.x + d.w * 0.25, d.y + d.h * 0.75, []);
+    expect(pos).toEqual({ zone: 'deck', x: 0.25, y: 0.75 });
+    const o = over.zones['deck']!;
+    expect(pointerAt(over, placeCards(s, over), pos)).toEqual({ x: o.x + o.w * 0.25, y: o.y + o.h * 0.75 });
+  });
+
+  it('auf dem Bogen wie bisher am Bogen', () => {
+    const s = fresh();
+    const b = role.sheets.seat2;
+    const pos = pointerPosAt(role, placeCards(s, role), s.free, b.x + b.w / 2, b.y + b.h / 4, []);
+    expect(pos).toEqual({ anchor: 'seat2', x: 0.5, y: 0.25 });
+    within(pointerAt(over, placeCards(s, over), pos), over.sheets.seat2);
+  });
+
+  it('über einer frei liegenden Karte: Anker ist die Karte', () => {
+    const s = withFree(0.3, 0.4);
+    const p = placeCards(s, role).S5!;
+    const pos = pointerPosAt(role, placeCards(s, role), s.free, p.x + 5, p.y + 40, []);
+    expect(pos).toMatchObject({ card: 'S5' });
+    within(pointerAt(over, placeCards(s, over), pos), cardRect(placeCards(s, over).S5!));
+  });
+
+  it('frei liegende Karte über einem Bogen: die Karte geht vor', () => {
+    // in der Draufsicht ragt S5 vom Spielbereich in den Bogen von Platz 1
+    const s = withFree(-30 / over.panel.w, 0.3);
+    const p = placeCards(s, over).S5!;
+    const x = p.x + 4;
+    expect(x).toBeLessThan(over.sheets.seat1.x + over.sheets.seat1.w);
+    const pos = pointerPosAt(over, placeCards(s, over), s.free, x, p.y + 20, []);
+    expect(pos).toMatchObject({ card: 'S5' });
+    within(pointerAt(role, placeCards(s, role), pos), cardRect(placeCards(s, role).S5!));
+  });
+
+  it('gezogene Karten zählen nicht: darunter liegt die Zone bzw. der Spielbereich', () => {
+    const s = withFree(0.3, 0.4);
+    const p = placeCards(s, role).S5!;
+    expect(pointerPosAt(role, placeCards(s, role), s.free, p.x + 5, p.y + 40, ['S5'])).toMatchObject({ anchor: 'center' });
+  });
+
+  it('Anker hier nicht zu sehen: kein Zeiger', () => {
+    const two = computeLayout(content, 2, null, null);
+    const s = fresh();
+    expect(pointerAt(two, placeCards(s, two), { anchor: 'seat3', x: 0.5, y: 0.5 })).toBeNull();
+    expect(pointerAt(two, placeCards(s, two), { zone: 'seat3.damage', x: 0.5, y: 0.5 })).toBeNull();
+    // Karte frei auf dem ausgeblendeten Bogen
+    const h: K = { ...s, free: ['S5'], freePos: { S5: { anchor: 'seat3', x: 0.5, y: 0.5 } } };
+    h.zones['deck'] = h.zones['deck']!.filter((c) => c !== 'S5');
+    expect(pointerAt(two, placeCards(h, two), { card: 'S5', x: 0.5, y: 0.5 })).toBeNull();
   });
 });

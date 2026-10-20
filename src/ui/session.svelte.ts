@@ -9,11 +9,11 @@ import { createEngine } from '../engine/dispatch';
 import { can } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
-import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
+import type { Actor, CardId, Event, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
 import { Host, type BackupInfo } from '../net/host';
 import { localTransport } from '../net/local';
-import { Presence, type PresenceInfo } from '../net/presence';
+import { Presence, type PointerPos, type PresenceInfo } from '../net/presence';
 import type { CommandResult, Role } from '../net/protocol';
 import { createRoomLink, formatHash, parseHash, randomToken, sameRoom, type RoomLink } from '../net/room-link';
 import { TrysteroRoom } from '../net/trystero';
@@ -98,7 +98,7 @@ class Session {
   private expiryTimer: ReturnType<typeof setTimeout> | undefined;
   private expiryAt: number | null = null;
   /** eigene flüchtige Lage (8.3); `dropped` bleibt bis zum nächsten Greifen, damit es die Bündelung übersteht */
-  private mine: { at: FreePos | null; drag: CardId[]; grab: FreePos | null; dropped: string | null; open: ZoneId | null } = { at: null, drag: [], grab: null, dropped: null, open: null };
+  private mine: { at: PointerPos | null; drag: CardId[]; grab: PointerPos | null; dropped: string | null; open: ZoneId | null } = { at: null, drag: [], grab: null, dropped: null, open: null };
   private listeners = new Set<Listener>();
   private commandListeners = new Set<CommandListener>();
   private replacedListeners = new Set<ReplacedListener>();
@@ -246,7 +246,7 @@ class Session {
 
   /** Eigener Mauszeiger und gezogene Karten für die anderen; `at` null = nicht über dem Tisch.
    *  Den Namen eines Spielers kennen alle aus dem Stand; mit geschickt wird er nur für Zuschauer. */
-  pointer(at: FreePos | null, drag: CardId[], grab: FreePos | null = null): void {
+  pointer(at: PointerPos | null, drag: CardId[], grab: PointerPos | null = null): void {
     this.mine = { ...this.mine, at, drag, grab, dropped: drag.length ? null : this.mine.dropped };
     this.sendMine();
   }

@@ -5,15 +5,25 @@ import { z } from 'zod';
 import { CardIdSchema, FreePosSchema, SeatSchema } from '../engine/schemas';
 import type { PeerId, Transport } from './transport';
 
+const frac = { x: z.number().finite(), y: z.number().finite() };
+/** Lage des Zeigers, Anteil 0–1 im Rechteck des Ankers: frei liegende Karte, Bogen bzw. Spielbereich (wie bei
+ *  frei liegenden Karten) oder Tischzone. Nur flüchtig; der gespeicherte Stand nutzt weiter `FreePosSchema`. */
+export const PointerPosSchema = z.union([
+  FreePosSchema,
+  z.object({ zone: z.string().max(40), ...frac }).strict(),
+  z.object({ card: CardIdSchema, ...frac }).strict(),
+]);
+export type PointerPos = z.infer<typeof PointerPosSchema>;
+
 export const PresenceMsg = z.object({
   /** für Farbe und Beschriftung */
   who: z.union([z.literal('gm'), z.literal('spectator'), SeatSchema]),
   name: z.string().max(40),
-  /** Lage wie bei frei liegenden Karten (Anker + Anteil), damit sie in jeder Ansicht passt; null = nicht über dem Tisch */
-  at: FreePosSchema.nullable(),
+  /** Anker + Anteil, damit sie in jeder Ansicht passt; null = nicht über dem Tisch */
+  at: PointerPosSchema.nullable(),
   drag: z.array(CardIdSchema).max(52),
   /** wo der Zeiger beim Greifen war (die erste Meldung kommt wegen der Bündelung erst nach etwas Bewegung) */
-  grab: FreePosSchema.nullable(),
+  grab: PointerPosSchema.nullable(),
   /** nach dem Loslassen: ID des abgeschickten Befehls (die anderen warten kurz auf dessen Ereignis); bis zum nächsten Greifen */
   dropped: z.string().max(64).nullable(),
   /** Stapel mit offenem Menü */
