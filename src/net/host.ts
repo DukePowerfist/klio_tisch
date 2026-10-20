@@ -3,6 +3,7 @@
 
 import { isRejection } from '../engine/commands';
 import type { Engine } from '../engine/dispatch';
+import { NewerFormatError } from '../engine/migrate';
 import { cryptoRng } from '../engine/rng';
 import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
 import { unpackPhoto, toBase64, type PhotoBank } from './photos';
@@ -149,7 +150,8 @@ export class Host<G> {
   /** Sicherungsdatei laden: ersetzt den Stand (vorher wird gesichert); ohne Raum in der Datei bleibt der bisherige. */
   importArchive(text: string): Promise<CommandResult> {
     return this.enqueue(async () => {
-      const read = await readArchive(this.engine, text).catch(() => null);
+      const read = await readArchive(this.engine, text).catch((e: unknown) => (e instanceof NewerFormatError ? 'newer' : null));
+      if (read === 'newer') return { ok: false, reason: { key: 'reject.importNewer' } };
       if (!read) return { ok: false, reason: { key: 'reject.importInvalid' } };
       await Promise.all([...read.photos].map(([hash, bytes]) => this.options.photos?.put(hash, bytes)));
       const { state, host } = read.saved;

@@ -1,6 +1,7 @@
 // Zod-Schemas für die Grundbausteine der Engine; Regelwerke bauen darauf auf.
 
 import { z } from 'zod';
+import { FORMAT } from './setup';
 import { RANKS, SEATS, SUITS, type CardId, type EngineEvent, type RankId, type SeatId, type SuitId, type TableState, type TextRef } from './types';
 
 export const SuitSchema = z.enum(SUITS);
@@ -43,7 +44,7 @@ const Zones = z.record(z.string(), z.array(CardIdSchema));
 /** Stand prüfen; den Spielteil prüft das Regelwerk (`parseGame`). */
 export function tableStateSchema<G>(parseGame: (x: unknown) => G): z.ZodType<TableState<G>> {
   return z.object({
-    format: z.number().int().positive(),
+    format: z.literal(FORMAT),
     ruleset: z.object({ id: z.string(), version: z.string() }).strict(),
     seq: z.number().int().nonnegative(),
     zones: Zones,

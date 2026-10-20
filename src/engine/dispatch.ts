@@ -5,6 +5,7 @@ import { applyEngineEvent, isEngineEvent } from './apply';
 import { ENGINE_EVENTS, EngineEventSchema, tableStateSchema } from './schemas';
 import { engineCommands, isRejection, reject } from './commands';
 import { can } from './permissions';
+import { migrate } from './migrate';
 import { expandZones } from './zones';
 import type { Actor, Command, CommandDef, DispatchResult, Event, Rng, Ruleset, SequencedEvent, TableState } from './types';
 
@@ -16,7 +17,8 @@ export type Engine<G> = {
   commands: Record<string, CommandDef<G, any>>;
   dispatch(state: TableState<G>, cmd: unknown, actor: Actor, rng: Rng): DispatchResult<G>;
   replay(state: TableState<G>, events: readonly SequencedEvent[]): TableState<G>;
-  /** Empfangenen oder geladenen Stand prüfen; wirft bei Fehlern */
+  /** Empfangenen oder geladenen Stand auf das aktuelle Format bringen und prüfen; wirft bei Fehlern
+   *  (`NewerFormatError`, wenn er aus einer neueren Fassung stammt) */
   parseState(input: unknown): TableState<G>;
   /** Empfangenes Ereignis prüfen; wirft bei Fehlern */
   parseEvent(input: unknown): Event;
@@ -91,5 +93,5 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
     return schema.parse(input);
   }
 
-  return { ruleset, commands, dispatch, replay, parseState: (input) => stateSchema.parse(input), parseEvent };
+  return { ruleset, commands, dispatch, replay, parseState: (input) => stateSchema.parse(migrate(input, ruleset.migrations)), parseEvent };
 }

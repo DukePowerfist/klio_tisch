@@ -498,6 +498,9 @@ describe('Sicherung (A34) und Datei (8.2)', () => {
     expect(a.client.state).toEqual(host.state);
     expect(replaced).toEqual(['import']);
     expect(await host.importArchive('kaputt')).toEqual({ ok: false, reason: { key: 'reject.importInvalid' } });
+    const newer = JSON.parse(file);
+    newer.state.format = 99;
+    expect(await host.importArchive(JSON.stringify(newer))).toEqual({ ok: false, reason: { key: 'reject.importNewer' } });
   });
 
   it('Datei: fremde, beschädigte oder unpassende Inhalte werden abgelehnt', async () => {

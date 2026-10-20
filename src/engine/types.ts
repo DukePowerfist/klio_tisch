@@ -182,7 +182,7 @@ export type PermissionTable = {
 };
 
 export type Migration = {
-  /** formt Format `from` in `from + 1` um */
+  /** formt Format `from` in `from + 1` um (die neue Nummer setzt die Engine) */
   from: number;
   migrate(stored: unknown): unknown;
 };
