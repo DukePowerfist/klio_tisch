@@ -3,6 +3,7 @@
 // Zustellung asynchron und je Absender-Empfänger-Paar in Reihenfolge, wie bei einem Datenkanal.
 
 import type { HostStore, Saved } from './host';
+import type { PhotoBank } from './photos';
 import type { PeerId, Transport } from './transport';
 
 type Member = { messageCbs: ((msg: unknown, from: PeerId) => void)[]; peerCbs: ((peers: PeerId[]) => void)[] };
@@ -75,5 +76,16 @@ export class MemoryStore<G> implements HostStore<G> {
       throw new Error('Speichern fehlgeschlagen');
     }
     this.saved = structuredClone(saved);
+  }
+}
+
+/** Foto-Ablage im Arbeitsspeicher. */
+export class MemoryPhotoBank implements PhotoBank {
+  photos = new Map<string, Uint8Array>();
+  async get(hash: string) {
+    return this.photos.get(hash) ?? null;
+  }
+  async put(hash: string, bytes: Uint8Array) {
+    this.photos.set(hash, bytes);
   }
 }

@@ -77,3 +77,25 @@ test('Frei liegende Karte am Bogen folgt dem Bogen in die Rollenansicht (A32)', 
   await page.keyboard.press('2');
   await expect.poll(inside).toBe(true);
 });
+
+test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach dem Neuladen', async ({ page }) => {
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  const free = dialog.getByRole('combobox', { name: 'Trumpf frei wählen (ohne Regelprüfung)' });
+  await expect(free).toHaveValue('deny');
+  await free.selectOption('allow');
+  await expect(free).toHaveValue('allow');
+  const damage = dialog.getByRole('checkbox', { name: /Schaden automatisch/ });
+  await expect(damage).toBeChecked();
+  await damage.uncheck();
+  await expect(damage).not.toBeChecked();
+
+  await page.reload();
+  await ready(page);
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await expect(free).toHaveValue('allow');
+  await expect(damage).not.toBeChecked();
+  await dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' }).click();
+  await expect(free).toHaveValue('deny');
+  await expect(dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' })).toBeDisabled();
+});

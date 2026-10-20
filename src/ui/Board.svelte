@@ -6,6 +6,7 @@
   import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
   import { sheetOf } from '../rules/klio/events';
   import Card from './Card.svelte';
+  import Cursors from './Cursors.svelte';
   import GmControls from './GmControls.svelte';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
@@ -132,7 +133,14 @@
     drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false };
   }
 
+  /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
+  function showPointer(clientX: number, clientY: number) {
+    const [bx, by] = toBoard(clientX, clientY);
+    session.pointer(freePosAt(layout, bx, by), drag?.moved ? drag.cards : []);
+  }
+
   function onPointerMove(e: PointerEvent) {
+    if (e.pointerType === 'mouse' || drag) showPointer(e.clientX, e.clientY);
     if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && touches.size >= 2) {
       const [a, b] = [...touches.values()] as [[number, number], [number, number]];
@@ -184,6 +192,7 @@
     const target = hot;
     drag = null;
     if (!d) return;
+    if (d.moved) showPointer(e.clientX, e.clientY);
     if (!d.moved) return click(d.cards[0]!);
 
     const zone = target ?? zoneAt(layout, ...toBoard(e.clientX, e.clientY))?.id;
@@ -228,6 +237,8 @@
     return m;
   });
   const shakingCards = $derived(new Set(effects.shaking.values().flatMap((z) => table.zones[z] ?? [])));
+  /** von anderen gerade gezogene Karten: Farbe der Rolle (nur ein Hinweis, 8.3) */
+  const marked = $derived(new Map(session.cursors.flatMap(([, p]) => p.drag.map((c) => [c, `var(--who-${p.who})`] as const))));
 </script>
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
@@ -240,6 +251,7 @@
   onpointerdown={onPointerDown}
   onpointerover={onPointerOver}
   ondblclick={onDblClick}
+  onpointerleave={(e) => { if (e.pointerType === 'mouse') session.pointer(null, []); }}
   role="application"
 >
   <div class="board" style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
@@ -271,8 +283,10 @@
         dragging={!!off}
         pending={!!off && off !== drag}
         shake={shakingCards.has(card)}
+        mark={marked.get(card)}
       />
     {/each}
+    <Cursors {layout} scale={sc} />
   </div>
 </div>
 

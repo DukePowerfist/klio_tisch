@@ -6,7 +6,9 @@ import type { SeatId } from '../../src/engine/types';
 import { Client, type ClientOptions } from '../../src/net/client';
 import type { CommandResult } from '../../src/net/protocol';
 import { Host } from '../../src/net/host';
-import { MemoryNetwork, MemoryStore } from '../../src/net/memory';
+import { MemoryNetwork, MemoryPhotoBank, MemoryStore } from '../../src/net/memory';
+import { sha256Hex } from '../../src/net/photos';
+import { Presence, type PresenceInfo } from '../../src/net/presence';
 import type { KlioState } from '../../src/rules/klio/state';
 import { engine, fresh, sheet } from '../helpers';
 
@@ -16,8 +18,9 @@ async function setup() {
   const net = new MemoryNetwork();
   const store = new MemoryStore<KlioState>();
   const saveErrors: unknown[] = [];
+  const photos = new MemoryPhotoBank();
   const startHost = () =>
-    Host.start(engine, net.connect(), store, () => fresh(), { build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e) });
+    Host.start(engine, net.connect(), store, () => fresh(), { build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e), photos });
   const host = await startHost();
   const ids: string[] = [];
   /** Neuer Client; `key` = Browser (Standard: je Wunschplatz ein eigener).
@@ -37,7 +40,7 @@ async function setup() {
     });
     return { client, transport, warnings, key, claimed: () => claimed };
   };
-  return { net, store, host, startHost, join, saveErrors, ids };
+  return { net, store, host, startHost, join, saveErrors, ids, photos };
 }
 
 const isMsg = (msg: unknown, t: string) => (msg as { t?: string }).t === t;
@@ -332,5 +335,101 @@ describe('Platz wählen nach dem Beitritt', () => {
     const r = a.client.submit({ type: 'zone.draw', zone: 'deck' });
     await settle(net, host);
     expect(await r).toEqual({ ok: true });
+  });
+});
+
+describe('Plätze freigeben (SL)', () => {
+  it('freigegebener Platz: Spieler wird Zuschauer, ein anderer Browser kann ihn nehmen', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat1');
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx' });
+    await settle(net, host);
+    expect(host.online).toContainEqual({ role: 'player', seat: 'seat1' });
+    expect(await host.submit({ type: 'table.setSeat', seat: 'seat1', occupied: false })).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'spectator' });
+    expect(a.client.status).toBe('ready');
+    expect(host.online).not.toContainEqual({ role: 'player', seat: 'seat1' });
+    const r = b.client.claim('seat1', 'Neues Gerät');
+    await settle(net, host);
+    expect(await r).toEqual({ ok: true });
+    expect(b.client.role).toEqual({ role: 'player', seat: 'seat1' });
+    // der alte Browser bekommt den Platz beim Wiederverbinden nicht zurück
+    net.disconnect(a.transport.self);
+    const again = join('spectator', { key: a.key });
+    await settle(net, host);
+    expect(again.client.role).toEqual({ role: 'spectator' });
+  });
+});
+
+describe('Fotos (8.4)', () => {
+  const bytes = new Uint8Array([255, 216, 255, 224, 1, 2, 3, 4, 5]);
+
+  it('Spieler lädt hoch, ein anderer fragt an und bekommt es', async () => {
+    const { net, host, join, photos } = await setup();
+    const a = join('seat1');
+    const got: [string, Uint8Array][] = [];
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx', onPhoto: (h, x) => void got.push([h, x]) });
+    await settle(net, host);
+    const hash = await sha256Hex(bytes);
+    const up = a.client.uploadPhoto(hash, bytes);
+    await settle(net, host);
+    expect(await up).toEqual({ ok: true });
+    expect(photos.photos.get(hash)).toEqual(bytes);
+    b.client.requestPhoto(hash);
+    await settle(net, host);
+    expect(got).toEqual([[hash, bytes]]);
+  });
+
+  it('Inhalt passt nicht zum Namen oder Zuschauer lädt hoch: abgelehnt', async () => {
+    const { net, host, join, photos } = await setup();
+    const a = join('seat1');
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx' });
+    await settle(net, host);
+    const wrong = a.client.uploadPhoto('0'.repeat(64), bytes);
+    const spectator = b.client.uploadPhoto(await sha256Hex(bytes), bytes);
+    await settle(net, host);
+    expect(await wrong).toEqual({ ok: false, reason: { key: 'reject.invalid' } });
+    expect(await spectator).toEqual({ ok: false, reason: { key: 'reject.invalid' } });
+    expect(photos.photos.size).toBe(0);
+  });
+
+  it('Anfrage ohne Host wird nach dem Wiederverbinden nachgeholt', async () => {
+    const { net, host, join, photos, startHost } = await setup();
+    const hash = await sha256Hex(bytes);
+    await photos.put(hash, bytes);
+    const got: string[] = [];
+    const a = join('seat1', { onPhoto: (h) => void got.push(h) });
+    await settle(net, host);
+    net.disconnect(host.peerId);
+    await settle(net, host);
+    a.client.requestPhoto(hash);
+    const host2 = await startHost();
+    await settle(net, host2);
+    expect(got).toEqual([hash]);
+  });
+});
+
+describe('Mauszeiger (8.3)', () => {
+  it('Lage kommt bei den anderen an, gebündelt; wer geht, verschwindet', async () => {
+    const net = new MemoryNetwork();
+    const ta = net.connect();
+    const tb = net.connect();
+    let seen: ReadonlyMap<string, PresenceInfo> = new Map();
+    const a = new Presence(ta, () => {});
+    new Presence(tb, (others) => (seen = new Map(others)));
+    const info = (x: number): PresenceInfo => ({ who: 'seat1', name: 'Ida', at: { anchor: 'center', x, y: 0.5 }, drag: [] });
+    a.set(info(0.1));
+    a.set(info(0.2));
+    await new Promise((r) => setTimeout(r, 80));
+    await net.deliver();
+    expect(seen.get(ta.self)).toEqual(info(0.2));
+    a.set({ ...info(0.3), drag: ['H2'] });
+    await new Promise((r) => setTimeout(r, 80));
+    await net.deliver();
+    expect(seen.get(ta.self)?.drag).toEqual(['H2']);
+    net.disconnect(ta.self);
+    await net.deliver();
+    expect(seen.has(ta.self)).toBe(false);
   });
 });

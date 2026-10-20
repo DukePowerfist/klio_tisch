@@ -42,6 +42,7 @@ sheet:
   rollTitle: Stärken und Schwächen per Zufallstabelle füllen
   rollConfirm: Überschreiben?
   revive: Wiederbeleben
+  photoUnreadable: Das Bild konnte nicht gelesen werden.   # neu
   strike: Untauglich markieren (durchstreichen)
   trumpChoose: Trumpf wählen
   trumpLocked: Trumpf (noch nicht freigeschaltet)
@@ -97,6 +98,7 @@ gm:
   close: Schließen
   players: Spieler
   reset: Zurücksetzen
+  settings: Einstellungen
 
 reset:
   title: Tisch zurücksetzen?
@@ -122,6 +124,22 @@ room:                                     # Mehrspielerbetrieb (neu)
   spectator: Zuschauer
   chooseSeat: Platz wählen
   secondHost: "Achtung: Ein zweiter Host hat sich gemeldet. Die Verbindung bleibt beim ersten."
+  manage: Raum …
+  manageTitle: Plätze und Einladungslink
+  seats: Plätze
+  free: frei
+  hidden: ausgeblendet
+  online: verbunden
+  offline: nicht verbunden
+  release: Freigeben
+  releaseTitle: Platz freigeben, z. B. für ein neues Gerät; der Spieler wird Zuschauer und kann neu wählen
+  spectators: "Zuschauer verbunden: {n}"
+  link: Einladungslink
+  renew: Link erneuern
+  renewText: Der alte Link funktioniert danach nicht mehr. Alle öffnen den neuen Link und bekommen ihren Platz zurück.
+  renewConfirm: Erneuern
+  renewed: Neuer Einladungslink kopiert
+  close: Schließen
   join:
     title: Platz wählen
     name: Dein Name
@@ -129,6 +147,41 @@ room:                                     # Mehrspielerbetrieb (neu)
     taken: "vergeben ({name})"
     takenNoName: vergeben
     watch: Nur zuschauen
+
+presence:                                 # Mauszeiger der anderen (neu)
+  gm: Spielleitung
+
+settings:                                 # Einstellungen der SL (neu)
+  title: Einstellungen
+  automation: Automatik
+  automationIds:
+    damage: Schaden automatisch auswerten (Narbe, Tod)
+  permissions: Rechte der Spieler
+  permissionsNote: Gilt für diese Kampagne; die Voreinstellung steht in permissions.yaml.
+  values: { allow: erlaubt, own: nur eigener Bogen, deny: verboten }
+  defaults: Voreinstellung wiederherstellen
+  close: Schließen
+  fieldChanged: "Bogen {seat}: Ein Feld, das du bearbeitet hast, wurde gerade von jemand anderem geändert."
+
+# Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL
+permissions:
+  cards.move: Karten bewegen
+  card.flip: Karten umdrehen
+  zone.shuffle: Stapel mischen
+  zone.draw: Karten ziehen
+  sheet.edit: Bogen bearbeiten
+  sheet.photo: Foto setzen
+  sheet.roll: Charakter auswürfeln
+  trump.choose: Trumpf wählen
+  trump.chooseFree: Trumpf frei wählen (ohne Regelprüfung)
+  trump.remove: Trumpf entfernen
+  character.revive: Charakter wiederbeleben
+  table.reset: Tisch zurücksetzen
+  table.setPlayers: Spielerzahl ändern
+  table.setSeat: Plätze vergeben und freigeben
+  table.setSettings: Einstellungen ändern
+  gm.expedition: Expedition starten
+  gm.oracle: Orakel ziehen
 
 dock:
   seat: "Ich bin Spieler {n}"

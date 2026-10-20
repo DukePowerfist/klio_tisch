@@ -17,6 +17,12 @@ export function t(key: string, params: Record<string, string | number> = {}): st
 
 export const text = (ref: TextRef): string => t(ref.key, ref.params);
 
+/** Bezeichnung eines Rechts (permissions.yaml); die Schlüssel enthalten Punkte und stehen flach unter `permissions`. */
+export const permissionLabel = (key: string): string => {
+  const labels = content.texts['permissions'];
+  return (typeof labels === 'object' && typeof labels[key] === 'string' ? labels[key] : key) as string;
+};
+
 /** Kurzbezeichnung auf der Karte: 2–10, B, D, K, A (13.1). */
 export const rankLabel = (card: CardId): string => lookup(`cards.ranks.${rankOf(card)}`) ?? rankOf(card);
 

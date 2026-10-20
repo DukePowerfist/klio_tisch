@@ -1,5 +1,5 @@
 <script lang="ts">
-  // SL-Leiste im Spielbereich (wie bisher unten rechts): Expedition, Orakel, Spielerzahl, Zurücksetzen.
+  // SL-Leiste im Spielbereich (wie bisher unten rechts): Expedition, Orakel, Spielerzahl, Einstellungen, Zurücksetzen.
   // Jeder Knopf nur mit dem passenden Recht (9.3).
   import { submitOrSay } from './commands';
   import { session } from './session.svelte';
@@ -23,6 +23,9 @@
         {#each [1, 2, 3, 4] as n (n)}<option value={n}>{n}</option>{/each}
       </select>
     </label>
+  {/if}
+  {#if session.can({ type: 'table.setSettings' })}
+    <button onclick={() => (view.gmPanel = 'settings')}>{t('gm.settings')}</button>
   {/if}
   {#if session.can({ type: 'table.reset' })}
     <button onclick={() => (view.confirmReset = true)}>{t('gm.reset')}</button>

@@ -112,4 +112,9 @@ function crossCheck(c: KlioContent, errors: string[]): void {
   for (const z of Object.keys(c.zones)) {
     if (typeof zoneTexts !== 'object' || typeof (zoneTexts as TextTree)[z] !== 'string') err(`texts: zones.${z} fehlt`);
   }
+  // Bezeichnung je Recht für den Rechte-Dialog der SL (9.2); die Schlüssel enthalten Punkte, stehen also flach
+  const permTexts = c.texts['permissions'];
+  for (const k of Object.keys(c.permissions.player)) {
+    if (typeof permTexts !== 'object' || typeof (permTexts as TextTree)[k] !== 'string') err(`texts: permissions["${k}"] fehlt`);
+  }
 }

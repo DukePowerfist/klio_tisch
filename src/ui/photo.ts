@@ -1,5 +1,7 @@
 // Foto für den Bogen: verkleinern (höchstens 220 px, JPEG wie bisher), nach Inhalt benennen (8.4).
 
+import { sha256Hex } from '../net/photos';
+
 const MAX = 220;
 const QUALITY = 0.75;
 
@@ -10,7 +12,5 @@ export async function preparePhoto(file: File): Promise<{ hash: string; blob: Bl
   canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: QUALITY });
-  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
-  const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-  return { hash, blob };
+  return { hash: await sha256Hex(new Uint8Array(await blob.arrayBuffer())), blob };
 }

@@ -3,6 +3,7 @@
   // und beim Verlassen. Solange das Feld den Fokus hat, ersetzen eingehende Änderungen es nicht (8.2).
   import type { SeatId } from '../engine/types';
   import { submitOrSay } from './commands';
+  import { effects } from './effects.svelte';
   import { fitFontSize } from './fitText';
 
   let { seat, field, kind, value, x, y, w, h, font, struck = false, center = false, readonly = false }: {
@@ -21,10 +22,9 @@
     clearTimeout(timer);
     timer = undefined;
     if (draft === value) return;
-    const cmd = kind === 'text'
-      ? { type: 'sheet.setText', seat, field, value: draft }
-      : { type: 'sheet.setNumber', seat, field, value: draft === '' ? null : Number(draft) };
-    await submitOrSay(cmd);
+    const v = kind === 'text' ? draft : draft === '' ? null : Number(draft);
+    effects.noteEdit(seat, field, v);
+    await submitOrSay({ type: kind === 'text' ? 'sheet.setText' : 'sheet.setNumber', seat, field, value: v });
   }
 
   function onInput(e: Event) {
@@ -43,6 +43,7 @@
   class:struck
   class:center
   class:number={kind === 'number'}
+  class:overwritten={effects.overwritten.has(`${seat}/${field}`)}
   style:left="{x}px"
   style:top="{y}px"
   style:width="{w}px"
@@ -62,6 +63,7 @@
 <style>
   input { position: absolute; box-sizing: border-box; background: transparent; border: 0; outline: 0; font: inherit; color: inherit; padding: 0 3px; margin: 0; }
   input:focus { background: rgba(255, 235, 150, 0.5); }
+  .overwritten { background: rgba(240, 160, 144, 0.55); transition: background 0.6s; }
   .center, .number { text-align: center; font-weight: 700; padding: 0; }
   .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); color: #666; font-style: italic; }
 </style>

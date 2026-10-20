@@ -9,22 +9,25 @@ import { createEngine } from '../engine/dispatch';
 import { can } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
-import type { Actor, CardId, Event, SeatId, TableState, TextRef } from '../engine/types';
+import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
 import { Host } from '../net/host';
 import { localTransport } from '../net/local';
+import { Presence, type PresenceInfo } from '../net/presence';
 import type { CommandResult, Role } from '../net/protocol';
 import { createRoomLink, formatHash, parseHash, randomToken, sameRoom, type RoomLink } from '../net/room-link';
 import { TrysteroRoom } from '../net/trystero';
 import type { Transport } from '../net/transport';
 import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
-import { IdbStore, PhotoStore } from './storage';
+import { photos } from './photos.svelte';
+import { IdbStore } from './storage';
 import { t } from './texts';
 import { view } from './view.svelte';
 
 export type KlioTableState = TableState<KlioState>;
-type Listener = (events: Event[]) => void;
+/** `own`: ausgelöst von einem Befehl aus diesem Browser */
+type Listener = (events: Event[], own: boolean) => void;
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
 export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
@@ -34,14 +37,14 @@ export type Mode = 'local' | 'host' | 'client';
 /** Verbindungszustand (nur für Mitspieler bzw. eine blockierte SL von Bedeutung) */
 export type Status = 'starting' | 'otherTab' | ClientStatus;
 
-const ruleset = createKlioRuleset(content);
+export const ruleset = createKlioRuleset(content);
 const engine = createEngine(ruleset);
-export const photos = new PhotoStore();
 
 const KEY = 'klio.key';
 const NAME = 'klio.name';
 const HOST_LOCK = 'klio-tisch-host';
 const CHANNEL = 'msg';
+const PRESENCE = 'presence';
 
 /** Geheimer Wiederverbindungs-Schlüssel dieses Browsers (8.2), einmalig erzeugt. */
 function reconnectKey(): string {
@@ -70,14 +73,19 @@ class Session {
   role = $state.raw<Role | null>(null);
   /** wer hier bedient: im lokalen Betrieb und als Host die Spielleitung */
   actor = $derived<Actor>(this.mode === 'client' ? (this.role ?? { role: 'spectator' }) : { role: 'gm' });
-  /** andere Teilnehmer im Raum */
-  peers = $state(0);
+  /** Host: Rollen der verbundenen Mitspieler und Zuschauer */
+  online = $state.raw<Role[]>([]);
   saveError = $state<string | null>(null);
   pending = $state.raw<Pending[]>([]);
+  /** Mauszeiger und gezogene Karten der anderen (8.3) */
+  cursors = $state.raw<[string, PresenceInfo][]>([]);
 
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
+  private presence: Presence | null = null;
   private listeners = new Set<Listener>();
+  /** eigene Befehle, deren Antwort noch aussteht */
+  private own = new Set<string>();
   private nextId = 0;
 
   /** Text zum Verbindungszustand (Raumleiste, Wartebildschirm) */
@@ -97,6 +105,8 @@ class Session {
       build: __BUILD_ID__,
       onSaveError: (e) => (this.saveError = String(e)),
       onChange: (state, events, cause) => this.changed(state, events.map((e) => e.event), cause),
+      onOnline: (online) => (this.online = online),
+      photos,
     });
     this.state = this.host.state;
     if (link) await this.openRoom(link);
@@ -109,6 +119,15 @@ class Session {
     if (!this.host.room) await this.host.setRoom(link);
     history.replaceState(null, '', formatHash(link));
     await this.openRoom(link);
+  }
+
+  /** Neuer Link (neue Raum-ID und neues Passwort): Der alte gilt nicht mehr, die Plätze bleiben (8.2). */
+  async renewLink(): Promise<void> {
+    if (!this.host || this.mode !== 'host') return;
+    const link = createRoomLink();
+    await this.host.setRoom(link);
+    history.replaceState(null, '', formatHash(link));
+    this.host.attach(this.connect(link));
   }
 
   /** Einladungslink zum Kopieren */
@@ -128,10 +147,21 @@ class Session {
     this.mode = 'host';
   }
 
+  /** Raum betreten: Spielkanal für Host bzw. Client, daneben die Mauszeiger. */
   private connect(link: RoomLink): Transport {
-    const channel = new TrysteroRoom(link).channel(CHANNEL);
-    channel.onPeers((p) => (this.peers = p.length));
-    return channel;
+    const room = new TrysteroRoom(link);
+    this.presence?.close();
+    this.presence = new Presence(room.channel(PRESENCE), (others) => (this.cursors = [...others]));
+    return room.channel(CHANNEL);
+  }
+
+  /** Eigener Mauszeiger und gezogene Karten für die anderen; `at` null = nicht über dem Tisch. */
+  pointer(at: FreePos | null, drag: CardId[]): void {
+    if (!this.presence) return;
+    const r = this.actor;
+    const who = r.role === 'gm' ? 'gm' : r.role === 'player' ? r.seat : 'spectator';
+    const name = r.role === 'player' ? (this.state?.seats[r.seat].name ?? '') : r.role === 'spectator' ? this.savedName : '';
+    this.presence.set({ who, name, at, drag });
   }
 
   private startClient(link: RoomLink): void {
@@ -146,12 +176,14 @@ class Session {
         if (client.state && client.state !== this.state) this.state = client.state;
       },
       onEvents: (events, cause) => this.changed(client.state!, events, cause),
+      onPhoto: (hash, bytes) => void photos.put(hash, bytes),
       onWarning: (w) => {
         if (w.kind === 'secondHost') view.say(t('room.secondHost'), true);
       },
     });
     this.client = client;
     this.status = client.status;
+    photos.request = (hash) => client.requestPhoto(hash);
   }
 
   get savedName(): string {
@@ -168,10 +200,19 @@ class Session {
   async submit(cmd: object, drop?: PendingDrop): Promise<CommandResult> {
     if (!this.host && !this.client) return { ok: false, reason: { key: 'reject.invalid' } };
     const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
+    this.own.add(id);
     if (drop) this.pending = [...this.pending, { ...drop, id }];
     const result = await (this.host ? this.host.submit(cmd, id) : this.client!.submit(cmd, id));
     if (drop) this.pending = this.pending.filter((d) => d.id !== id);
+    this.own.delete(id);
     return result;
+  }
+
+  /** Foto ablegen und (als Client) zum Host bringen, bevor ein Befehl es einträgt (8.4). */
+  async addPhoto(hash: string, blob: Blob): Promise<CommandResult> {
+    await photos.put(hash, blob);
+    if (!this.client) return { ok: true };
+    return this.client.uploadPhoto(hash, new Uint8Array(await blob.arrayBuffer()));
   }
 
   /** Darf der aktuelle Nutzer diesen Befehl? Zum Ausblenden von Knöpfen (9.3); verbindlich prüft der Host. */
@@ -197,7 +238,8 @@ class Session {
   private changed(state: KlioTableState, events: Event[], cause?: string): void {
     this.state = state;
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
-    if (events.length > 0) for (const cb of this.listeners) cb(events);
+    const own = !!cause && this.own.has(cause);
+    if (events.length > 0) for (const cb of this.listeners) cb(events, own);
   }
 }
 

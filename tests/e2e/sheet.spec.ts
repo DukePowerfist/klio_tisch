@@ -1,7 +1,7 @@
 // Bögen und Trümpfe im lokalen Betrieb (Schritt 3b).
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, ready, setField as setSeatField, zoneCenter, zoomIn } from './helpers';
+import { dragFromTo, makePng, ready, setField as setSeatField, zoneCenter, zoomIn } from './helpers';
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
 
@@ -125,16 +125,7 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
 
 test('Foto wird verkleinert gespeichert und bleibt nach Neuladen', async ({ page }) => {
   await page.keyboard.press('1');
-  // 400 × 300 PNG im Browser erzeugen und hochladen
-  const png = await page.evaluate(async () => {
-    const c = new OffscreenCanvas(400, 300);
-    const g = c.getContext('2d')!;
-    g.fillStyle = '#c33';
-    g.fillRect(0, 0, 400, 300);
-    const b = await c.convertToBlob({ type: 'image/png' });
-    return [...new Uint8Array(await b.arrayBuffer())];
-  });
-  await sheet1(page).locator('input[type=file]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+  await sheet1(page).locator('input[type=file]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(page) });
   await expect(sheet1(page).getByRole('button', { name: 'Foto' })).toHaveCSS('background-image', /^url\("blob:/);
   await ready(page, true);
   await expect(sheet1(page).getByRole('button', { name: 'Foto' })).toHaveCSS('background-image', /^url\("blob:/);

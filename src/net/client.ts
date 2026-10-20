@@ -3,7 +3,8 @@
 
 import type { Engine } from '../engine/dispatch';
 import type { Event, SeatId, SequencedEvent, TableState, TextRef } from '../engine/types';
-import { ToClient, type CommandResult, type ReceivedEvents, type Role } from './protocol';
+import { toBase64, unpackPhoto } from './photos';
+import { ToClient, type CommandResult, type ReceivedEvents, type Role, type ToHost } from './protocol';
 import type { PeerId, Transport } from './transport';
 
 export type ClientStatus =
@@ -25,9 +26,12 @@ export type ClientOptions = {
   /** bestätigte Ereignisse, nachdem sie angewendet wurden (Meldungen, Animationen); `cause` = auslösende Befehls-ID */
   onEvents?: (events: Event[], cause?: string) => void;
   onWarning?: (w: ClientWarning) => void;
+  /** angefragtes Foto ist da (Inhalt passt zum Namen) */
+  onPhoto?: (hash: string, bytes: Uint8Array) => void;
 };
 
-type Pending = { cmd: unknown; resolve: (r: CommandResult) => void };
+/** Unbeantwortete Nachricht mit ID (Befehl oder Foto); wird nach dem Wiederverbinden erneut geschickt. */
+type Pending = { msg: Extract<ToHost, { t: 'cmd' | 'photo' }>; resolve: (r: CommandResult) => void };
 
 export class Client<G> {
   status: ClientStatus = 'connecting';
@@ -38,6 +42,8 @@ export class Client<G> {
   private peers: PeerId[] = [];
   private pending = new Map<string, Pending>();
   private claims = new Map<string, (r: CommandResult) => void>();
+  /** angefragte, noch nicht erhaltene Fotos */
+  private wanted = new Set<string>();
   private newId: () => string;
 
   constructor(private engine: Engine<G>, private transport: Transport, private options: ClientOptions) {
@@ -60,9 +66,24 @@ export class Client<G> {
   /** Befehl schicken; Antwort kommt, sobald der Host ihn bearbeitet hat (auch nach Wiederverbinden).
    *  `id` (sonst neu erzeugt) kommt bei den ausgelösten Ereignissen als `cause` zurück. */
   submit(cmd: unknown, id: string = this.newId()): Promise<CommandResult> {
+    return this.request({ t: 'cmd', id, cmd });
+  }
+
+  /** Foto an den Host, bevor der Befehl es einträgt (8.4). */
+  uploadPhoto(hash: string, bytes: Uint8Array): Promise<CommandResult> {
+    return this.request({ t: 'photo', id: this.newId(), hash, data: toBase64(bytes) });
+  }
+
+  /** Foto beim Host anfragen; kommt über `onPhoto`, auch wenn die Verbindung zwischendurch abreißt. */
+  requestPhoto(hash: string): void {
+    this.wanted.add(hash);
+    if (this.status === 'ready' && this.host) this.transport.send({ t: 'photoGet', hash }, this.host);
+  }
+
+  private request(msg: Pending['msg']): Promise<CommandResult> {
     return new Promise((resolve) => {
-      this.pending.set(id, { cmd, resolve });
-      if (this.status === 'ready' && this.host) this.transport.send({ t: 'cmd', id, cmd }, this.host);
+      this.pending.set(msg.id, { msg, resolve });
+      if (this.status === 'ready' && this.host) this.transport.send(msg, this.host);
     });
   }
 
@@ -122,6 +143,8 @@ export class Client<G> {
       }
       case 'events':
         return this.apply(msg.events, msg.cause);
+      case 'photo':
+        return void this.photo(msg.hash, msg.data);
     }
   }
 
@@ -134,8 +157,17 @@ export class Client<G> {
     this.role = role;
     if (!this.adopt(state)) return;
     this.setStatus('ready');
-    // Unbeantwortete Befehle mit derselben ID erneut schicken; der Host erkennt Wiederholungen.
-    for (const [id, p] of this.pending) this.transport.send({ t: 'cmd', id, cmd: p.cmd }, from);
+    // Unbeantwortetes mit derselben ID erneut schicken; der Host erkennt Wiederholungen. Fotos erneut anfragen.
+    for (const p of this.pending.values()) this.transport.send(p.msg, from);
+    for (const hash of this.wanted) this.transport.send({ t: 'photoGet', hash }, from);
+  }
+
+  private async photo(hash: string, data: string): Promise<void> {
+    if (!this.wanted.has(hash)) return;
+    const bytes = await unpackPhoto(hash, data);
+    if (!bytes) return this.options.onWarning?.({ kind: 'invalidMessage' });
+    this.wanted.delete(hash);
+    this.options.onPhoto?.(hash, bytes);
   }
 
   /** Vollständigen Stand übernehmen (geprüft). */

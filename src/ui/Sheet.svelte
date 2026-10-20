@@ -14,8 +14,9 @@
   import { SHEET_FONT } from './fitText';
   import { SHEET_W, type SheetBox } from './layout';
   import { preparePhoto } from './photo';
-  import { photos, session } from './session.svelte';
-  import { t } from './texts';
+  import { photos } from './photos.svelte';
+  import { session } from './session.svelte';
+  import { t, text } from './texts';
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
 
@@ -66,22 +67,23 @@
     void submit({ type: 'sheet.roll', seat });
   }
 
-  // Foto: verkleinern, nach Inhalt benennen, lokal ablegen, dann am Bogen eintragen
+  // Foto: verkleinern, nach Inhalt benennen, ablegen (bzw. zum Host bringen), dann am Bogen eintragen
   let fileInput = $state<HTMLInputElement>();
-  let photoUrl = $state<string | null>(null);
   const photoHash = $derived(sheet.photo?.hash ?? null);
+  const photoUrl = $derived(photoHash ? photos.urls[photoHash] : undefined);
   $effect(() => {
-    const hash = photoHash;
-    if (!hash) photoUrl = null;
-    else void photos.url(hash).then((u) => (photoUrl = u));
+    if (photoHash) void photos.want(photoHash);
   });
   async function onPhoto() {
     const file = fileInput?.files?.[0];
     if (!file) return;
-    const { hash, blob } = await preparePhoto(file);
-    await photos.put(hash, blob);
-    await submit({ type: 'sheet.setPhoto', seat, photo: { hash, type: 'image/jpeg' } });
     fileInput!.value = '';
+    const prepared = await preparePhoto(file).catch(() => null);
+    if (!prepared) return view.say(t('sheet.photoUnreadable'), true);
+    const { hash, blob } = prepared;
+    const stored = await session.addPhoto(hash, blob);
+    if (!stored.ok) return view.say(text(stored.reason), true);
+    await submit({ type: 'sheet.setPhoto', seat, photo: { hash, type: 'image/jpeg' } });
   }
 
   // Großansicht eines Trumpfs: beim Überfahren nach 650 ms, beim Klick angeheftet

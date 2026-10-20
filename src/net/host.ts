@@ -5,6 +5,7 @@ import { isRejection } from '../engine/commands';
 import type { Engine } from '../engine/dispatch';
 import { cryptoRng } from '../engine/rng';
 import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
+import { unpackPhoto, toBase64, type PhotoBank } from './photos';
 import type { RoomLink } from './room-link';
 import { ToHost, type CommandResult, type Role, type ToClient } from './protocol';
 import type { PeerId, Transport } from './transport';
@@ -37,6 +38,10 @@ export type HostOptions<G> = {
   onSaveError?: (error: unknown) => void;
   /** nach jedem angenommenen Befehl (auch eigenen); `cause` = Befehls-ID, falls bekannt */
   onChange?: (state: TableState<G>, events: SequencedEvent[], cause?: string) => void;
+  /** wer verbunden ist, hat sich geändert (Beitritt, Abbruch, neue Rolle) */
+  onOnline?: (online: Role[]) => void;
+  /** Fotos (8.4); fehlt: Fotos werden weder angenommen noch verteilt */
+  photos?: PhotoBank;
 };
 
 type Hello = Extract<ToHost, { t: 'hello' }>;
@@ -67,6 +72,7 @@ export class Host<G> {
     transport.onPeers((list) => {
       if (transport !== this.transport) return;
       for (const p of this.peers.keys()) if (!list.includes(p)) this.peers.delete(p);
+      this.options.onOnline?.(this.online);
     });
   }
 
@@ -92,6 +98,11 @@ export class Host<G> {
     return this.saved.host.room;
   }
 
+  /** Rollen der verbundenen Clients (Raumfenster der SL) */
+  get online(): Role[] {
+    return [...this.peers.values()].map((key) => this.saved.host.keys[key]!);
+  }
+
   /** Raum festlegen bzw. erneuern; ein neuer Link macht den alten wertlos, die Plätze bleiben (8.2). */
   setRoom(room: RoomLink): Promise<CommandResult> {
     return this.enqueue(() => this.persist({ state: this.state, host: { ...this.saved.host, room } }));
@@ -103,6 +114,7 @@ export class Host<G> {
     this.transport = transport;
     this.peers.clear();
     this.listen();
+    this.options.onOnline?.(this.online);
   }
 
   /** Befehl der Spielleitung (im Browser des Hosts); `id` kommt in onChange als Auslöser zurück. */
@@ -131,6 +143,8 @@ export class Host<G> {
     if (!key) return; // erst hello
     if (msg.t === 'resync') return this.send({ t: 'state', state: this.state }, from);
     if (msg.t === 'claim') return this.claim(key, msg, from);
+    if (msg.t === 'photoGet') return this.sendPhoto(msg.hash, from);
+    if (msg.t === 'photo') return this.send({ t: 'result', id: msg.id, ...(await this.putPhoto(key, msg.hash, msg.data)) }, from);
 
     // Doppelt gesendet (z. B. nach Verbindungsabbruch): nur die Antwort wiederholen (8.2)
     const earlier = this.saved.host.answered[key]?.find(([id]) => id === msg.id);
@@ -161,16 +175,30 @@ export class Host<G> {
     }
     this.peers.set(from, msg.key);
     this.send({ t: 'welcome', role, state: this.state }, from);
+    this.options.onOnline?.(this.online);
   }
 
-  /** Zuschauer nimmt einen freien Platz (über den Engine-Befehl, als SL); bei Erfolg neues Willkommen. */
+  /** Zuschauer nimmt einen freien Platz (über den Engine-Befehl, als SL); die neue Rolle kommt per Willkommen. */
   private async claim(key: string, msg: Extract<ToHost, { t: 'claim' }>, from: PeerId): Promise<void> {
     const role: Role = { role: 'player', seat: msg.seat };
     const result: CommandResult = this.saved.host.keys[key]?.role !== 'spectator'
       ? { ok: false, reason: { key: 'reject.invalid' } }
       : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h) => withRole(h, key, role), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
-    if (result.ok) this.send({ t: 'welcome', role, state: this.state }, from);
+  }
+
+  /** Foto der SL bzw. eines Spielers annehmen (Zuschauer haben keinen Bogen); geprüft am Namen. */
+  private async putPhoto(key: string, hash: string, data: string): Promise<CommandResult> {
+    const photos = this.options.photos;
+    const bytes = await unpackPhoto(hash, data);
+    if (!photos || !bytes || this.saved.host.keys[key]?.role !== 'player') return { ok: false, reason: { key: 'reject.invalid' } };
+    await photos.put(hash, bytes);
+    return { ok: true };
+  }
+
+  private async sendPhoto(hash: string, to: PeerId): Promise<void> {
+    const bytes = await this.options.photos?.get(hash);
+    if (bytes) this.send({ t: 'photo', hash, data: toBase64(bytes) }, to);
   }
 
   /**
@@ -183,13 +211,23 @@ export class Host<G> {
     // Bei Ablehnung ohne etwas zu merken ändert sich nichts, also auch nichts zu speichern
     if (isRejection(r) && !updateHost) return result;
 
-    const host = updateHost ? updateHost(this.saved.host, result) : this.saved.host;
-    const saved = await this.persist({ state: isRejection(r) ? this.state : r.state, host });
+    const before = this.saved.host;
+    const state = isRejection(r) ? this.state : r.state;
+    const host = followSeats(updateHost ? updateHost(before, result) : before, state);
+    const saved = await this.persist({ state, host });
     if (!saved.ok) return saved;
     if (isRejection(r)) return result;
 
     for (const peer of this.peers.keys()) this.send({ t: 'events', events: r.events, ...(cause ? { cause } : {}) }, peer);
+    // Neue Rolle (Platz genommen oder von der SL freigegeben): neues Willkommen
+    let roles = false;
+    for (const [peer, key] of this.peers) {
+      if (host.keys[key] === before.keys[key]) continue;
+      this.send({ t: 'welcome', role: host.keys[key]!, state: this.state }, peer);
+      roles = true;
+    }
     this.options.onChange?.(this.state, r.events, cause);
+    if (roles) this.options.onOnline?.(this.online);
     return result;
   }
 
@@ -206,6 +244,13 @@ export class Host<G> {
 }
 
 const withRole = (host: HostData, key: string, role: Role): HostData => ({ ...host, keys: { ...host.keys, [key]: role } });
+
+/** Rollen folgen dem Stand: Wessen Platz frei geworden ist (die SL gibt ihn frei, 8.2), der ist wieder Zuschauer. */
+function followSeats<G>(host: HostData, state: TableState<G>): HostData {
+  const freed = Object.entries(host.keys).filter(([, r]) => r.role === 'player' && !state.seats[r.seat].occupied);
+  if (freed.length === 0) return host;
+  return { ...host, keys: { ...host.keys, ...Object.fromEntries(freed.map(([key]) => [key, { role: 'spectator' } as Role])) } };
+}
 
 /** Antwort merken; ändert nur die Liste dieses Schlüssels (die übrigen Teile werden geteilt). */
 function remember(host: HostData, key: string, id: string, result: CommandResult): HostData {

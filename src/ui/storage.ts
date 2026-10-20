@@ -57,26 +57,17 @@ export class IdbStore<G> implements HostStore<G> {
   }
 }
 
-/** Fotos, benannt nach ihrem Hash (8.4). */
+/** Fotos, benannt nach ihrem Hash (8.4); Anzeige und Austausch in photos.svelte.ts. */
 export class PhotoStore {
-  private urls = new Map<string, string>();
+  async get(hash: string): Promise<Blob | null> {
+    const db = await database();
+    return ((await request(db.transaction(PHOTOS).objectStore(PHOTOS).get(hash))) as Blob | undefined) ?? null;
+  }
 
   async put(hash: string, blob: Blob): Promise<void> {
     const db = await database();
     const tx = db.transaction(PHOTOS, 'readwrite');
     tx.objectStore(PHOTOS).put(blob, hash);
     await done(tx);
-  }
-
-  /** Objekt-URL zum Anzeigen; null, wenn das Foto (noch) fehlt. */
-  async url(hash: string): Promise<string | null> {
-    const known = this.urls.get(hash);
-    if (known) return known;
-    const db = await database();
-    const blob = (await request(db.transaction(PHOTOS).objectStore(PHOTOS).get(hash))) as Blob | undefined;
-    if (!blob) return null;
-    const url = URL.createObjectURL(blob);
-    this.urls.set(hash, url);
-    return url;
   }
 }

@@ -22,8 +22,9 @@
   {#if session.mode === 'local'}
     <button title={t('room.inviteTitle')} onclick={invite}>{t('room.invite')}</button>
   {:else if session.mode === 'host'}
-    <span>{t('room.open', { n: session.peers })}</span>
+    <span>{t('room.open', { n: session.online.length })}</span>
     <button onclick={copy}>{t('room.copy')}</button>
+    <button title={t('room.manageTitle')} onclick={() => (view.gmPanel = 'room')}>{t('room.manage')}</button>
   {:else if session.status === 'ready' && session.role}
     {#if session.role.role === 'player'}
       <span>{t('room.player', { n: seatNo(session.role.seat) })}</span>

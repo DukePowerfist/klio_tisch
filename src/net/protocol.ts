@@ -4,6 +4,7 @@
 import { z } from 'zod';
 import { SeatSchema, TextRefSchema } from '../engine/schemas';
 import type { Actor, Rejection } from '../engine/types';
+import { PhotoDataSchema, PhotoHashSchema } from './photos';
 
 // ---------- eingefroren ----------
 
@@ -25,7 +26,10 @@ const CommandMsg = z.object({ t: z.literal('cmd'), id: z.string().min(8).max(64)
 const ResyncMsg = z.object({ t: z.literal('resync') }).strict();
 /** Zuschauer möchte einen freien Platz nehmen (nach dem Beitritt); Antwort wie bei Befehlen per `result` mit derselben ID. */
 const ClaimMsg = z.object({ t: z.literal('claim'), id: z.string().min(8).max(64), seat: SeatSchema, name: z.string().max(40) }).strict();
-export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg]);
+/** Foto hochladen (vor dem Befehl, der es einträgt); Antwort per `result`. Fotos fragen Clients einzeln an (8.4). */
+const PhotoPutMsg = z.object({ t: z.literal('photo'), id: z.string().min(8).max(64), hash: PhotoHashSchema, data: PhotoDataSchema }).strict();
+const PhotoGetMsg = z.object({ t: z.literal('photoGet'), hash: PhotoHashSchema }).strict();
+export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg, PhotoPutMsg, PhotoGetMsg]);
 export type ToHost = z.infer<typeof ToHost>;
 
 // ---------- Host → Client ----------
@@ -54,6 +58,7 @@ export const ToClient = z.union([
   z.object({ t: z.literal('replaced') }).strict(),
   z.object({ t: z.literal('result'), id: z.string(), ok: z.boolean(), reason: TextRefSchema.exactOptional() }).strict(),
   EventsMsg,
+  z.object({ t: z.literal('photo'), hash: PhotoHashSchema, data: PhotoDataSchema }).strict(),
 ]);
 export type ToClient = z.infer<typeof ToClient>;
 

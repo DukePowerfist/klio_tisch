@@ -54,3 +54,16 @@ export async function ready(page: Page, reload = false) {
   else await page.goto('./');
   await expect(page.locator('.board')).toBeVisible();
 }
+
+/** Testbild: 400 × 300 PNG, im Browser erzeugt */
+export async function makePng(page: Page): Promise<Buffer> {
+  const png = await page.evaluate(async () => {
+    const c = new OffscreenCanvas(400, 300);
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#c33';
+    g.fillRect(0, 0, 400, 300);
+    const b = await c.convertToBlob({ type: 'image/png' });
+    return [...new Uint8Array(await b.arrayBuffer())];
+  });
+  return Buffer.from(png);
+}

@@ -7,6 +7,8 @@
   import ResetDialog from './ResetDialog.svelte';
   import ResultDialog from './ResultDialog.svelte';
   import RoomBar from './RoomBar.svelte';
+  import RoomDialog from './RoomDialog.svelte';
+  import SettingsDialog from './SettingsDialog.svelte';
   import Toast from './Toast.svelte';
   import TrumpDialog from './TrumpDialog.svelte';
   import { session } from './session.svelte';
@@ -40,6 +42,11 @@
   {/if}
   {#if view.confirmReset}
     <ResetDialog />
+  {/if}
+  {#if view.gmPanel === 'room'}
+    <RoomDialog />
+  {:else if view.gmPanel === 'settings'}
+    <SettingsDialog />
   {/if}
   {#if view.trumpDialog}
     {#key view.trumpDialog}<TrumpDialog seat={view.trumpDialog} />{/key}

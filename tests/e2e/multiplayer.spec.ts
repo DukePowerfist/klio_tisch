@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test } from '@playwright/test';
-import { expectCount, openMenuAndClick, ready } from './helpers';
+import { expectCount, makePng, nameCharacter, openMenuAndClick, ready, setField } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -42,4 +42,36 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.reload();
   await expect(player.getByText('Spieler 2', { exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toHaveCount(0);
+  // Mauszeiger mit Namen (8.3)
+  await player.mouse.move(400, 300);
+  await player.mouse.move(420, 320, { steps: 5 });
+  await expect(gm.locator('.cursor', { hasText: 'Ida' })).toBeVisible();
+
+  // Foto vom Spieler kommt bei der SL an (8.4)
+  await player.locator('[data-sheet=seat2] input[type=file]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(player) });
+  await expect(gm.locator('[data-sheet=seat2] .photo')).toHaveAttribute('style', /blob:/);
+
+  await gm.keyboard.press('Escape'); // Orakel schließen
+
+  // Textfeld: Spieler trägt ein, SL überschreibt; der Spieler bekommt einen kurzen Hinweis (8.2)
+  await setField(player, 'seat2', 'name', 'Ida');
+  await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('Ida');
+  await nameCharacter(gm, 'seat2', 'Ida Weber');
+  await expect(player.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('Ida Weber');
+  await expect(player.getByText(/von jemand anderem geändert/)).toBeVisible();
+
+  // SL gibt den Platz frei: Spieler ist wieder Zuschauer und kann neu wählen
+  await gm.getByRole('button', { name: 'Raum …' }).click();
+  const room = gm.getByRole('dialog', { name: 'Plätze und Einladungslink' });
+  await expect(room.getByText('verbunden', { exact: true })).toBeVisible();
+  await room.getByRole('button', { name: 'Freigeben' }).click();
+  await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toBeVisible();
+  await expect(room.getByText('frei', { exact: true })).toHaveCount(4);
+
+  // Link erneuern: der alte gilt nicht mehr
+  await room.getByRole('button', { name: 'Link erneuern' }).click();
+  await room.getByRole('button', { name: 'Erneuern' }).click();
+  await expect.poll(() => gm.url()).not.toBe(link);
+  await expect(player.getByText('Warte auf Spielleitung …')).toBeVisible({ timeout: 30_000 });
 });
+

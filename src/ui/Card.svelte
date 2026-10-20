@@ -4,9 +4,11 @@
   import type { CardId } from '../engine/types';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, dragging = false, pending = false, shake = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, dragging = false, pending = false, shake = false, mark }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number }; dragging?: boolean; pending?: boolean; shake?: boolean;
+    /** Farbe, wenn jemand anderes die Karte gerade zieht */
+    mark?: string | undefined;
   } = $props();
 
   const suit = $derived(SUIT_SYMBOL[suitOf(card)]);
@@ -15,7 +17,7 @@
   const transform = $derived(rotated ? `translate(${x + size.h * scale}px, ${y}px) rotate(90deg) scale(${scale})` : `translate(${x}px, ${y}px) scale(${scale})`);
 </script>
 
-<div class="card" class:dragging class:pending class:shake class:red={isRed(card)} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={dragging ? 400000 + z : z} data-card={card}>
+<div class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={dragging ? 400000 + z : z} data-card={card}>
   <div class="inner" class:down={!faceUp}>
     <div class="face front">
       <div class="corner">{rank}<br />{suit}</div>
@@ -34,6 +36,7 @@
   .inner.down { transform: rotateY(180deg); }
   .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); box-sizing: border-box; }
   .dragging .face { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5); }
+  .marked .face { box-shadow: 0 0 0 3px var(--mark), 0 1px 3px rgba(0, 0, 0, 0.55); }
   .front { background: var(--card); color: var(--card-black); }
   .red .front { color: var(--card-red); }
   .back { transform: rotateY(180deg); background: repeating-linear-gradient(45deg, #24457a 0 6px, #2d5799 6px 12px); border: 4px solid var(--card); }

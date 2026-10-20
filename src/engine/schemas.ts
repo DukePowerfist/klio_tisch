@@ -21,7 +21,7 @@ export const rankValue = (rank: RankId): number => FACE[rank] ?? Number(rank);
 // Damit Clients einen empfangenen Stand und empfangene Ereignisse prüfen können (6.3).
 
 const AnchorSchema = z.union([z.literal('center'), SeatSchema]);
-const FreePosSchema = z.object({ anchor: AnchorSchema, x: z.number().finite(), y: z.number().finite() }).strict();
+export const FreePosSchema = z.object({ anchor: AnchorSchema, x: z.number().finite(), y: z.number().finite() }).strict();
 export const CardSourceSchema = z.union([z.object({ zone: z.string() }).strict(), z.object({ free: z.literal(true) }).strict()]);
 export const CardTargetSchema = z.union([z.object({ zone: z.string() }).strict(), z.object({ free: FreePosSchema }).strict()]);
 export const PlayersSchema = z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]);

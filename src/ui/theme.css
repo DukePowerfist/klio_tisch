@@ -22,6 +22,13 @@
   --trump-border-1: 2px;
   --trump-border-2: 3.5px;
   --trump-border-3: 5px;
+  /* Mauszeiger und Markierung gezogener Karten je Rolle (8.3) */
+  --who-gm: #f5d76e;
+  --who-seat1: #e8735a;
+  --who-seat2: #5ab0e8;
+  --who-seat3: #8fd16a;
+  --who-seat4: #c98be8;
+  --who-spectator: #bbbbbb;
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */
   --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */
