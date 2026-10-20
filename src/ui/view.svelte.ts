@@ -20,6 +20,10 @@ class ViewState {
   ox = $state(0);
   oy = $state(0);
   open = $state<ZoneId | null>(null);
+  /** offener Trumpf-Dialog für diesen Bogen */
+  trumpDialog = $state<SeatId | null>(null);
+  /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
+  bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
   toast = $state<Toast | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
   private toastId = 0;

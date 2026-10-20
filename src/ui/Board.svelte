@@ -248,7 +248,7 @@
 
     {#each Object.values(layout.sheets) as box (box.seat)}
       {#if box.visible}
-        <Sheet {box} sheet={sheetOf(table, box.seat)} />
+        <Sheet {box} sheet={sheetOf(table, box.seat)} hit={effects.hit.has(box.seat)} />
       {/if}
     {/each}
 

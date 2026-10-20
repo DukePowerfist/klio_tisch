@@ -3,6 +3,9 @@
   import Board from './Board.svelte';
   import Dock from './Dock.svelte';
   import Toast from './Toast.svelte';
+  import BigTrump from './BigTrump.svelte';
+  import TrumpDialog from './TrumpDialog.svelte';
+  import { view } from './view.svelte';
   import { session } from './session.svelte';
 
   let error = $state<string | null>(null);
@@ -17,6 +20,10 @@
   <Board table={session.state} />
   <Dock players={session.state.settings.players} />
   <Toast />
+  <BigTrump />
+  {#if view.trumpDialog}
+    {#key view.trumpDialog}<TrumpDialog seat={view.trumpDialog} />{/key}
+  {/if}
   {#if session.saveError}
     <div class="save-error" role="alert">Speichern fehlgeschlagen: {session.saveError}</div>
   {/if}

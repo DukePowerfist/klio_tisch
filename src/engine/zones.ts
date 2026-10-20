@@ -4,6 +4,9 @@ import { SEATS, type CardId, type SeatId, type TableState, type ZoneConfig, type
 
 export type ZoneTable = ReadonlyMap<ZoneId, ZoneConfig>;
 
+/** Zone eines Platzes aus einer Vorlage: `seat1` + `damage` → `seat1.damage` */
+export const seatZoneId = (seat: SeatId, template: string): ZoneId => `${seat}.${template}`;
+
 /** `damage` mit perSeat wird zu `seat1.damage` … `seat4.damage` mit Besitzer und Vorlage. */
 export function expandZones(configs: readonly ZoneConfig[]): ZoneTable {
   const out = new Map<ZoneId, ZoneConfig>();
@@ -14,7 +17,7 @@ export function expandZones(configs: readonly ZoneConfig[]): ZoneTable {
     }
     const { perSeat: _, ...rest } = z;
     for (const seat of SEATS) {
-      const id = `${seat}.${z.id}`;
+      const id = seatZoneId(seat, z.id);
       out.set(id, { ...rest, id, owner: seat, template: z.id });
     }
   }

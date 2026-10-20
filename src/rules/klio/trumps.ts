@@ -13,7 +13,7 @@ import type { TrumpSourcesFile } from './content/schema';
 export type SourcesConfig = z.infer<typeof TrumpSourcesFile>;
 export type Source = SourcesConfig['trumpSources'][number];
 
-type SourceStatus = { ok: true; improveOnly: boolean } | { ok: false; why: TextRef };
+export type SourceStatus = { ok: true; improveOnly: boolean } | { ok: false; why: TextRef };
 
 const entry = <T>(block: T): [string, unknown] =>
   typeof block === 'string' ? [block, undefined] : (Object.entries(block as object)[0] as [string, unknown]);
@@ -51,12 +51,14 @@ export function trumpProblem(cfg: SourcesConfig, src: Source | 'free', trump: Tr
   return null;
 }
 
-/** Die Schritte eines Wegs samt Baustein und Pflicht-Angabe. */
-function stepsOf(src: Source, improveOnly: boolean): { step: StepImpl; required: boolean }[] {
+export type StepName = keyof typeof steps;
+
+/** Die Schritte eines Wegs samt Baustein und Pflicht-Angabe (auch für den Dialog der Oberfläche). */
+export function stepsOf(src: Source, improveOnly: boolean): { name: StepName; step: StepImpl; required: boolean }[] {
   return (src.steps ?? []).map((b) => {
     const [name, param] = entry(b);
-    const step = steps[name as keyof typeof steps];
-    return { step, required: step.required(param, improveOnly) };
+    const step = steps[name as StepName];
+    return { name: name as StepName, step, required: step.required(param, improveOnly) };
   });
 }
 
