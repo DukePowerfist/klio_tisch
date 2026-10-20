@@ -1,6 +1,8 @@
-// Verbindung im Speicher für Tests (Schritt 2b): mehrere Teilnehmer, Abbrüche, verlorene Nachrichten.
+// Verbindung und Speicher im Arbeitsspeicher für Tests (Schritt 2b): mehrere Teilnehmer, Abbrüche,
+// verlorene Nachrichten, fehlschlagendes Speichern.
 // Zustellung asynchron und je Absender-Empfänger-Paar in Reihenfolge, wie bei einem Datenkanal.
 
+import type { HostStore, Saved } from './host';
 import type { PeerId, Transport } from './transport';
 
 type Member = { messageCbs: ((msg: unknown, from: PeerId) => void)[]; peerCbs: ((peers: PeerId[]) => void)[] };
@@ -17,25 +19,23 @@ export class MemoryNetwork {
     const member: Member = { messageCbs: [], peerCbs: [] };
     this.members.set(self, member);
     this.announcePeers();
-    const net = this;
     return {
       self,
-      send(msg, to) {
-        if (!net.members.has(self)) return;
-        const targets = to ? [to] : [...net.members.keys()].filter((p) => p !== self);
-        // Wie über das Netz: eine Kopie, keine geteilten Objekte
-        const copy = JSON.parse(JSON.stringify(msg)) as unknown;
-        for (const t of targets) {
-          if (net.drop(msg, self, t)) continue;
-          net.queue.push(() => net.members.get(t)?.messageCbs.forEach((cb) => cb(structuredClone(copy), self)));
+      send: (msg, to) => {
+        if (!this.members.has(self)) return;
+        // Wie über das Netz: serialisiert, beim Empfang je Empfänger eine eigene Kopie
+        const json = JSON.stringify(msg);
+        for (const t of to ? [to] : this.othersOf(self)) {
+          if (this.drop(msg, self, t)) continue;
+          this.queue.push(() => this.members.get(t)?.messageCbs.forEach((cb) => cb(JSON.parse(json), self)));
         }
       },
       onMessage: (cb) => void member.messageCbs.push(cb),
-      onPeers(cb) {
+      onPeers: (cb) => {
         member.peerCbs.push(cb);
-        net.queue.push(() => cb(net.othersOf(self)));
+        this.queue.push(() => cb(this.othersOf(self)));
       },
-      leave: () => net.disconnect(self),
+      leave: () => this.disconnect(self),
     };
   }
 
@@ -44,16 +44,13 @@ export class MemoryNetwork {
     if (this.members.delete(peer)) this.announcePeers();
   }
 
-  /** Alle anstehenden Nachrichten zustellen, auch die dabei neu entstehenden. */
-  async flush(): Promise<void> {
-    for (let rounds = 0; rounds < 1000; rounds++) {
-      await new Promise((r) => setTimeout(r, 0));
-      if (this.queue.length === 0) return;
-      const batch = this.queue;
-      this.queue = [];
-      for (const deliver of batch) deliver();
-    }
-    throw new Error('Nachrichten kommen nicht zur Ruhe');
+  /** Eine Runde zustellen (auch was dabei neu entsteht, kommt in die nächste); gibt die Anzahl zurück. */
+  async deliver(): Promise<number> {
+    await new Promise((r) => setTimeout(r, 0));
+    const batch = this.queue;
+    this.queue = [];
+    for (const d of batch) d();
+    return batch.length;
   }
 
   private othersOf(self: PeerId): PeerId[] {
@@ -62,5 +59,21 @@ export class MemoryNetwork {
 
   private announcePeers(): void {
     for (const [id, m] of this.members) for (const cb of m.peerCbs) this.queue.push(() => cb(this.othersOf(id)));
+  }
+}
+
+/** Speicher im Arbeitsspeicher; `failNext` lässt das nächste Speichern fehlschlagen. */
+export class MemoryStore<G> implements HostStore<G> {
+  saved: Saved<G> | null = null;
+  failNext = false;
+  async load() {
+    return this.saved ? structuredClone(this.saved) : null;
+  }
+  async save(saved: Saved<G>) {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('Speichern fehlgeschlagen');
+    }
+    this.saved = structuredClone(saved);
   }
 }

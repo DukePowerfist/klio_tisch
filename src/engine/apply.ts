@@ -1,8 +1,7 @@
 // Engine-Ereignisse auf den Stand anwenden. Arbeitet auf einer Kopie (dispatch/replay klonen vorher).
 
+import { ENGINE_EVENTS } from './schemas';
 import type { CardId, EngineEvent, TableState } from './types';
-
-export const ENGINE_EVENTS = new Set<string>(['cardsMoved', 'cardsTurned', 'zonesShuffled', 'cardDrawn', 'settingsChanged', 'seatsChanged', 'cardsReset']);
 
 export function isEngineEvent(e: { type: string }): e is EngineEvent {
   return ENGINE_EVENTS.has(e.type);

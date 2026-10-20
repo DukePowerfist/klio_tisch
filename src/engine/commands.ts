@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import { shuffled } from './rng';
-import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayersSchema } from './schemas';
+import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayersSchema, SeatSchema } from './schemas';
 import { dealStart } from './setup';
 import { locate, seatVisible, zoneVisible, type ZoneTable } from './zones';
 import type { AnchorId, CardId, CommandDef, Event, EngineEvent, Rejection, Ruleset, SeatId, TableState, ZoneConfig, ZoneId } from './types';
@@ -28,6 +28,12 @@ const ZoneShuffleCmd = ZoneCmd('zone.shuffle');
 const ZoneDrawCmd = ZoneCmd('zone.draw');
 const ResetCmd = z.object({ type: z.literal('table.reset'), includeCharacters: z.boolean() }).strict();
 const PlayersCmd = z.object({ type: z.literal('table.setPlayers'), players: PlayersSchema }).strict();
+const SeatCmd = z.object({
+  type: z.literal('table.setSeat'),
+  seat: SeatSchema,
+  occupied: z.boolean(),
+  name: z.string().max(40).optional(),
+}).strict();
 const SettingsCmd = z.object({
   type: z.literal('table.setSettings'),
   automation: z.record(z.string(), z.boolean()).optional(),
@@ -215,6 +221,20 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
     handle: (cmd, state) => (cmd.players === state.settings.players ? [] : [{ type: 'settingsChanged', settings: { ...state.settings, players: cmd.players } }]),
   };
 
+  // Platz belegen oder freigeben. Belegt beim Beitritt der Host (als SL), freigeben kann die SL jederzeit (8.2).
+  const setSeat: CommandDef<unknown, z.infer<typeof SeatCmd>> = {
+    parse: (x) => SeatCmd.parse(x),
+    permission: 'table.setSeat',
+    handle(cmd, state) {
+      if (cmd.occupied) {
+        if (!seatVisible(cmd.seat, state)) return reject('reject.hiddenSeat');
+        if (state.seats[cmd.seat].occupied) return reject('reject.seatTaken');
+      }
+      const info = cmd.occupied ? { occupied: true, ...(cmd.name ? { name: cmd.name } : {}) } : { occupied: false };
+      return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: info } }];
+    },
+  };
+
   const setSettings: CommandDef<unknown, z.infer<typeof SettingsCmd>> = {
     parse: (x) => SettingsCmd.parse(x),
     permission: 'table.setSettings',
@@ -230,6 +250,6 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
 
   return {
     'cards.move': move, 'card.flip': cardFlip, 'zone.flip': zoneFlip, 'zone.draw': zoneDraw, 'zone.shuffle': zoneShuffle,
-    'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSettings': setSettings,
+    'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSeat': setSeat, 'table.setSettings': setSettings,
   };
 }

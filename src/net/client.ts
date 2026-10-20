@@ -3,7 +3,7 @@
 
 import type { Engine } from '../engine/dispatch';
 import type { SeatId, SequencedEvent, TableState, TextRef } from '../engine/types';
-import { ToClient, type CommandResult, type Role } from './protocol';
+import { ToClient, type CommandResult, type ReceivedEvents, type Role } from './protocol';
 import type { PeerId, Transport } from './transport';
 
 export type ClientStatus =
@@ -75,18 +75,20 @@ export class Client<G> {
     if (!parsed.success) return this.options.onWarning?.({ kind: 'invalidMessage' });
     const msg = parsed.data;
 
-    if (msg.t === 'reload') return this.setStatus('reload');
-    if (msg.t === 'welcome') return this.welcome(msg.role, msg.state, from);
-    // Absage kommt als Antwort auf hello, also bevor ein Host feststeht
-    if (msg.t === 'denied' && !this.host) {
-      this.denied = msg.reason;
-      return this.setStatus('denied');
+    // Antworten auf hello kommen, bevor ein Host feststeht; alles andere nur vom Host-Peer (8.2)
+    switch (msg.t) {
+      case 'reload':
+        return this.setStatus('reload');
+      case 'welcome':
+        return this.welcome(msg.role, msg.state, from);
+      case 'denied':
+        if (this.host) return;
+        this.denied = msg.reason;
+        return this.setStatus('denied');
     }
-    if (from !== this.host) return; // nur vom Host-Peer (8.2)
+    if (from !== this.host) return;
 
     switch (msg.t) {
-      case 'denied':
-        return;
       case 'replaced':
         this.host = null;
         return this.setStatus('replaced');
@@ -129,16 +131,16 @@ export class Client<G> {
     return true;
   }
 
-  private apply(raw: { seq: number; event: unknown }[]): void {
-    if (!this.state || !this.host) return;
-    const fresh = raw.filter((e) => e.seq > this.state!.seq);
+  private apply(raw: ReceivedEvents): void {
+    const state = this.state;
+    if (!state || !this.host) return;
+    const fresh = raw.filter((e) => e.seq > state.seq);
     if (fresh.length === 0) return;
-    // Lücke: Stand neu anfordern (8.2)
-    if (fresh[0]!.seq !== this.state.seq + 1) return this.transport.send({ t: 'resync' }, this.host);
-    let events: SequencedEvent[];
+    // Lücke: Stand still neu anfordern (8.2). replay würde sie auch finden, aber als Fehler melden.
+    if (fresh[0]!.seq !== state.seq + 1) return this.transport.send({ t: 'resync' }, this.host);
     try {
-      events = fresh.map((e) => ({ seq: e.seq, event: this.engine.parseEvent(e.event) }));
-      this.state = this.engine.replay(this.state, events);
+      const events: SequencedEvent[] = fresh.map((e) => ({ seq: e.seq, event: this.engine.parseEvent(e.event) }));
+      this.state = this.engine.replay(state, events);
     } catch {
       this.options.onWarning?.({ kind: 'invalidMessage' });
       return this.transport.send({ t: 'resync' }, this.host);

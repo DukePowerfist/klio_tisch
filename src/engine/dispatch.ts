@@ -1,8 +1,8 @@
 // Ablauf eines Befehls (ARCHITEKTUR.md 6.3): Rechte → Prüfen/Übersetzen → Anwenden → Reaktionen.
 // Alles oder nichts: gearbeitet wird auf einer Kopie, übernommen wird nur das fertige Ergebnis.
 
-import { applyEngineEvent, ENGINE_EVENTS, isEngineEvent } from './apply';
-import { EngineEventSchema, tableStateSchema } from './schemas';
+import { applyEngineEvent, isEngineEvent } from './apply';
+import { ENGINE_EVENTS, EngineEventSchema, tableStateSchema } from './schemas';
 import { engineCommands, isRejection, reject } from './commands';
 import { can } from './permissions';
 import { expandZones } from './zones';
@@ -84,14 +84,12 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
   }
 
   const stateSchema = tableStateSchema(ruleset.parseGame);
-  const parseState = (input: unknown) => stateSchema.parse(input);
   function parseEvent(input: unknown): Event {
-    const type = (input as Event | null)?.type;
-    if (typeof type === 'string' && ENGINE_EVENTS.has(type)) return EngineEventSchema.parse(input);
-    const def = typeof type === 'string' ? ruleset.events[type] : undefined;
-    if (!def) throw new Error(`unbekanntes Ereignis ${String(type)}`);
-    return def.parse(input);
+    const type = (input as { type?: unknown } | null)?.type;
+    const schema = typeof type !== 'string' ? undefined : ENGINE_EVENTS.has(type) ? EngineEventSchema : ruleset.events[type];
+    if (!schema) throw new Error(`unbekanntes Ereignis ${String(type)}`);
+    return schema.parse(input);
   }
 
-  return { ruleset, commands, dispatch, replay, parseState, parseEvent };
+  return { ruleset, commands, dispatch, replay, parseState: (input) => stateSchema.parse(input), parseEvent };
 }

@@ -2,13 +2,12 @@
 
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
-import { initialTable } from '../../src/engine/setup';
 import type { SeatId } from '../../src/engine/types';
 import { Client, type ClientOptions } from '../../src/net/client';
-import { Host, MemoryStore } from '../../src/net/host';
-import { MemoryNetwork } from '../../src/net/memory';
+import { Host } from '../../src/net/host';
+import { MemoryNetwork, MemoryStore } from '../../src/net/memory';
 import type { KlioState } from '../../src/rules/klio/state';
-import { engine, ruleset, sheet } from '../helpers';
+import { engine, fresh, sheet } from '../helpers';
 
 const BUILD = 'abc1234';
 
@@ -17,28 +16,33 @@ async function setup() {
   const store = new MemoryStore<KlioState>();
   const saveErrors: unknown[] = [];
   const startHost = () =>
-    Host.start(engine, net.connect(), store, () => initialTable(ruleset, seededRng(1)), { build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e) });
+    Host.start(engine, net.connect(), store, () => fresh(), { build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e) });
   const host = await startHost();
-  let ids = 0;
+  const ids: string[] = [];
+  /** Neuer Client; `key` = Browser (Standard: je Wunschplatz ein eigener). */
   const join = (want: SeatId | 'spectator', opts: Partial<ClientOptions> = {}) => {
     const transport = net.connect();
     const warnings: string[] = [];
+    const key = opts.key ?? `key-${want}-${'x'.repeat(16)}`;
     const client = new Client(engine, transport, {
-      build: BUILD, key: `key-${want}-${'x'.repeat(16)}`, name: `Name ${want}`, want,
-      newId: () => `cmd-${++ids}-${'0'.repeat(8)}`, onWarning: (w) => warnings.push(w.kind), ...opts,
+      build: BUILD, key, name: `Name ${want}`, want,
+      newId: () => ids[ids.push(`cmd-${ids.length + 1}-${'0'.repeat(8)}`) - 1]!, onWarning: (w) => warnings.push(w.kind), ...opts,
     });
-    return { client, transport, warnings };
+    return { client, transport, warnings, key };
   };
-  return { net, store, host, startHost, join, saveErrors };
+  return { net, store, host, startHost, join, saveErrors, ids };
 }
+
+const isMsg = (msg: unknown, t: string) => (msg as { t?: string }).t === t;
 
 /** Alles zustellen und den Host bis zur Ruhe arbeiten lassen. */
 async function settle(net: MemoryNetwork, ...hosts: Host<KlioState>[]) {
-  for (let i = 0; i < 5; i++) {
-    await net.flush();
+  for (let round = 0; round < 1000; round++) {
+    const delivered = await net.deliver();
     await Promise.all(hosts.map((h) => h.idle()));
+    if (delivered === 0) return;
   }
-  await net.flush();
+  throw new Error('Nachrichten kommen nicht zur Ruhe');
 }
 
 describe('Beitreten', () => {
@@ -56,9 +60,9 @@ describe('Beitreten', () => {
     const { net, host, join } = await setup();
     join('seat1');
     await settle(net, host);
-    const b = join('seat1', { key: 'other-key-xxxxxxxxxxxx' });
+    const b = join('seat1', { key: 'other-browser-xxxxxxxxx' });
     await host.submit({ type: 'table.setPlayers', players: 2 });
-    const c = join('seat3', { key: 'third-key-xxxxxxxxxxxx' });
+    const c = join('seat3', { key: 'third-browser-xxxxxxxxx' });
     const d = join('spectator');
     await settle(net, host);
     expect(b.client.status).toBe('denied');
@@ -103,14 +107,15 @@ describe('Befehle', () => {
   });
 
   it('doppelt gesendeter Befehl wird nur einmal ausgeführt (kein zweites Ziehen)', async () => {
-    const { net, host, join } = await setup();
+    const { net, host, join, ids } = await setup();
     const a = join('seat1');
     await settle(net, host);
-    const r = a.client.submit({ type: 'zone.draw', zone: 'deck' });
+    const cmd = { type: 'zone.draw', zone: 'deck' };
+    const r = a.client.submit(cmd);
     await settle(net, host);
     expect(await r).toEqual({ ok: true });
     // dieselbe Nachricht noch einmal, wie nach einem Verbindungsabbruch
-    a.transport.send({ t: 'cmd', id: 'cmd-1-00000000', cmd: { type: 'zone.draw', zone: 'deck' } }, host.peerId);
+    a.transport.send({ t: 'cmd', id: ids.at(-1), cmd }, host.peerId);
     await settle(net, host);
     expect(host.state.zones['discard']).toHaveLength(1);
     expect(host.state.zones['deck']).toHaveLength(26);
@@ -151,7 +156,7 @@ describe('Verbindung', () => {
     await host.submit({ type: 'zone.draw', zone: 'deck' });
     await settle(net, host);
     // gleicher Browser (gleicher Schlüssel), neue Verbindung
-    const again = join('seat3', { key: `key-seat1-${'x'.repeat(16)}` });
+    const again = join('seat3', { key: a.key });
     await settle(net, host);
     expect(again.client.role).toEqual({ role: 'player', seat: 'seat1' });
     expect(again.client.state).toEqual(host.state);
@@ -162,7 +167,7 @@ describe('Verbindung', () => {
     const a = join('seat1');
     await settle(net, host);
     // Antwort des Hosts geht verloren: Client weiß nicht, ob der Befehl ankam
-    net.drop = (msg, from) => from === host.peerId && (msg as { t: string }).t === 'result';
+    net.drop = (msg, from) => from === host.peerId && isMsg(msg, 'result');
     const r = a.client.submit({ type: 'zone.draw', zone: 'deck' });
     await settle(net, host);
     net.drop = () => false;
@@ -202,11 +207,8 @@ describe('Verbindung', () => {
     const { net, host, join } = await setup();
     const a = join('seat1');
     await settle(net, host);
-    let dropped = false;
-    net.drop = (msg) => {
-      if (!dropped && (msg as { t: string }).t === 'events') return (dropped = true);
-      return false;
-    };
+    let drops = 1;
+    net.drop = (msg) => isMsg(msg, 'events') && drops-- > 0;
     await host.submit({ type: 'zone.draw', zone: 'deck' });
     await host.submit({ type: 'zone.draw', zone: 'deck' });
     await settle(net, host);

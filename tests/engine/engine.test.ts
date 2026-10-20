@@ -217,6 +217,16 @@ describe('Ablauf', () => {
     expect('rejected' in r && r.reason.key).toBe('reject.reactionLoop');
   });
 
+  it('Plätze: belegen nur sichtbare freie, freigeben jederzeit; nur die SL', () => {
+    const s = run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Ida' }).state;
+    expect(s.seats.seat2).toEqual({ occupied: true, name: 'Ida' });
+    expectRejected(s, { type: 'table.setSeat', seat: 'seat2', occupied: true }, 'reject.seatTaken');
+    const two = run(s, { type: 'table.setPlayers', players: 2 }).state;
+    expectRejected(two, { type: 'table.setSeat', seat: 'seat3', occupied: true }, 'reject.hiddenSeat');
+    expect(run(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state.seats.seat2).toEqual({ occupied: false });
+    expectRejected(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }, 'reject.notAllowed', player('seat2'));
+  });
+
   it('Spieler eines ausgeblendeten Platzes sind Zuschauer', () => {
     const two = run(fresh(), { type: 'table.setPlayers', players: 2 }).state;
     expectRejected(two, { type: 'zone.draw', zone: 'deck' }, 'reject.notAllowed', player('seat3'));
