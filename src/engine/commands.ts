@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import { shuffled } from './rng';
-import { CardIdSchema, PermissionValueSchema, SeatSchema } from './schemas';
+import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayersSchema } from './schemas';
 import { dealStart } from './setup';
 import { locate, seatVisible, zoneVisible, type ZoneTable } from './zones';
 import type { AnchorId, CardId, CommandDef, Event, EngineEvent, Rejection, Ruleset, SeatId, TableState, ZoneConfig, ZoneId } from './types';
@@ -14,10 +14,6 @@ export const reject = (key: string, params?: Record<string, string | number>): R
 
 export const isRejection = (x: unknown): x is Rejection => typeof x === 'object' && x !== null && 'rejected' in x;
 
-const Anchor = z.union([z.literal('center'), SeatSchema]);
-const FreePosSchema = z.object({ anchor: Anchor, x: z.number().finite(), y: z.number().finite() }).strict();
-const Source = z.union([z.object({ zone: z.string() }).strict(), z.object({ free: z.literal(true) }).strict()]);
-const Target = z.union([z.object({ zone: z.string() }).strict(), z.object({ free: FreePosSchema }).strict()]);
 
 const MoveCmd = z.object({
   type: z.literal('cards.move'),
@@ -31,7 +27,7 @@ const ZoneFlipCmd = ZoneCmd('zone.flip');
 const ZoneShuffleCmd = ZoneCmd('zone.shuffle');
 const ZoneDrawCmd = ZoneCmd('zone.draw');
 const ResetCmd = z.object({ type: z.literal('table.reset'), includeCharacters: z.boolean() }).strict();
-const PlayersCmd = z.object({ type: z.literal('table.setPlayers'), players: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]) }).strict();
+const PlayersCmd = z.object({ type: z.literal('table.setPlayers'), players: PlayersSchema }).strict();
 const SettingsCmd = z.object({
   type: z.literal('table.setSettings'),
   automation: z.record(z.string(), z.boolean()).optional(),

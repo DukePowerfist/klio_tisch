@@ -125,3 +125,5 @@ reject:
   improveRequired: Bei vier Trümpfen muss eine Stärke verbessert werden.
   attributeMax: Ein Attribut kann höchstens 9 sein.
   slotEmpty: Dieser Platz ist leer.
+  seatTaken: Dieser Platz ist schon vergeben.
+  saveFailed: Speichern fehlgeschlagen, die Aktion wurde verworfen.

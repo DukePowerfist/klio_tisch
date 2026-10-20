@@ -9,7 +9,7 @@ import { tableCommands } from './commands/table';
 import { trumpCommands } from './commands/trump';
 import { klioEvents } from './events';
 import { damageReaction } from './reactions/damage';
-import { initialKlioState, type KlioState } from './state';
+import { initialKlioState, KlioState } from './state';
 
 export const KLIO_ID = 'klio';
 export const KLIO_VERSION = '1';
@@ -34,6 +34,7 @@ export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
     id: KLIO_ID,
     version: KLIO_VERSION,
     initialGame: () => initialKlioState(),
+    parseGame: (x) => KlioState.parse(x),
     resetGame: () => [{ type: 'charactersReset' }],
     deck: deckFrom(content),
     zones,

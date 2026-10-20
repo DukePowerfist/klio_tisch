@@ -189,6 +189,8 @@ export interface Ruleset<G> {
   id: string;
   version: string;
   initialGame(rng: Rng): G;
+  /** Spielteil eines empfangenen oder geladenen Stands prüfen (Zod); wirft bei Fehlern */
+  parseGame(input: unknown): G;
   /** Zusatz-Ereignisse für „Zurücksetzen inkl. Spielinhalten“ (Klio: Charaktere) */
   resetGame?(): Event[];
   deck: DeckConfig;

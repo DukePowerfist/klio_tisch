@@ -1,7 +1,8 @@
 // Ablauf eines Befehls (ARCHITEKTUR.md 6.3): Rechte → Prüfen/Übersetzen → Anwenden → Reaktionen.
 // Alles oder nichts: gearbeitet wird auf einer Kopie, übernommen wird nur das fertige Ergebnis.
 
-import { applyEngineEvent, isEngineEvent } from './apply';
+import { applyEngineEvent, ENGINE_EVENTS, isEngineEvent } from './apply';
+import { EngineEventSchema, tableStateSchema } from './schemas';
 import { engineCommands, isRejection, reject } from './commands';
 import { can } from './permissions';
 import { expandZones } from './zones';
@@ -15,6 +16,10 @@ export type Engine<G> = {
   commands: Record<string, CommandDef<G, any>>;
   dispatch(state: TableState<G>, cmd: unknown, actor: Actor, rng: Rng): DispatchResult<G>;
   replay(state: TableState<G>, events: readonly SequencedEvent[]): TableState<G>;
+  /** Empfangenen oder geladenen Stand prüfen; wirft bei Fehlern */
+  parseState(input: unknown): TableState<G>;
+  /** Empfangenes Ereignis prüfen; wirft bei Fehlern */
+  parseEvent(input: unknown): Event;
 };
 
 export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
@@ -78,5 +83,15 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
     return next;
   }
 
-  return { ruleset, commands, dispatch, replay };
+  const stateSchema = tableStateSchema(ruleset.parseGame);
+  const parseState = (input: unknown) => stateSchema.parse(input);
+  function parseEvent(input: unknown): Event {
+    const type = (input as Event | null)?.type;
+    if (typeof type === 'string' && ENGINE_EVENTS.has(type)) return EngineEventSchema.parse(input);
+    const def = typeof type === 'string' ? ruleset.events[type] : undefined;
+    if (!def) throw new Error(`unbekanntes Ereignis ${String(type)}`);
+    return def.parse(input);
+  }
+
+  return { ruleset, commands, dispatch, replay, parseState, parseEvent };
 }

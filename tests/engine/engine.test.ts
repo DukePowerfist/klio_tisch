@@ -204,7 +204,7 @@ describe('Ablauf', () => {
 
   it('Reaktionen, die sich endlos auslösen, brechen den ganzen Befehl ab', () => {
     const loop: Ruleset<null> = {
-      id: 'loop', version: '1', initialGame: () => null,
+      id: 'loop', version: '1', initialGame: () => null, parseGame: () => null,
       deck: { cards: [], start: {} }, zones: [{ id: 'a', actions: { draw: { to: 'a', faceUp: true, announce: false } } }],
       commands: {}, events: { ping: { parse: (x) => x as { type: 'ping' }, apply: (s) => s } }, migrations: [],
       reactions: [{ id: 'echo', react: () => [{ type: 'ping' }] }],
