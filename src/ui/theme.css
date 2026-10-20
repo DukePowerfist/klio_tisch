@@ -23,7 +23,7 @@
   --trump-border-2: 3.5px;
   --trump-border-3: 5px;
   /* Mauszeiger und Markierung gezogener Karten je Rolle (8.3) */
-  --who-gm: #f5d76e;
+  --who-gm: #f2f2f2;      /* weiß: nicht mit Gold (Bedienhinweis) zu verwechseln, 8.3 */
   --who-seat1: #e8735a;
   --who-seat2: #5ab0e8;
   --who-seat3: #8fd16a;

@@ -1,4 +1,4 @@
-// Flüchtige Anzeige (ARCHITEKTUR.md 8.3): Mauszeiger mit Namen und gerade gezogene Karten.
+// Flüchtige Anzeige (ARCHITEKTUR.md 8.3): Mauszeiger mit Namen, gerade gezogene Karten, angewählter Stapel.
 // Eigener Kanal, direkt an alle, nichts wird gespeichert. Die Markierung ist nur ein Hinweis, keine Sperre.
 
 import { z } from 'zod';
@@ -12,6 +12,12 @@ export const PresenceMsg = z.object({
   /** Lage wie bei frei liegenden Karten (Anker + Anteil), damit sie in jeder Ansicht passt; null = nicht über dem Tisch */
   at: FreePosSchema.nullable(),
   drag: z.array(CardIdSchema).max(52),
+  /** wo der Zeiger beim Greifen war (die erste Meldung kommt wegen der Bündelung erst nach etwas Bewegung) */
+  grab: FreePosSchema.nullable(),
+  /** beim Loslassen: wurde ein Befehl abgeschickt? (dann warten die anderen kurz auf das Ereignis) */
+  dropped: z.boolean(),
+  /** Stapel mit offenem Menü */
+  open: z.string().max(40).nullable(),
 }).strict();
 export type PresenceInfo = z.infer<typeof PresenceMsg>;
 
@@ -29,7 +35,8 @@ export class Presence {
     transport.onMessage((msg, from) => {
       const p = PresenceMsg.safeParse(msg);
       if (!p.success) return;
-      if (p.data.at || p.data.drag.length) this.others.set(from, p.data);
+      // anwesend ist, wer über dem Tisch ist, etwas zieht, gerade abgelegt hat oder ein Menü offen hat
+      if (p.data.at || p.data.drag.length || p.data.dropped || p.data.open) this.others.set(from, p.data);
       else this.others.delete(from);
       this.onChange(this.others);
     });

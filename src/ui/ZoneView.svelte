@@ -6,8 +6,11 @@
   import { session } from './session.svelte';
   import { hasText, t } from './texts';
 
-  let { zone, count, open, hot, fixedMenu, onToggle, onAction }: {
-    zone: ZoneBox; count: number; open: boolean; hot: boolean; fixedMenu: { x: number; y: number };
+  let { zone, count, open, hot, mark, fixedMenu, onToggle, onAction }: {
+    zone: ZoneBox; count: number; open: boolean; hot: boolean;
+    /** Farbe, wenn jemand anderes das Menü dieses Stapels offen hat (8.3) */
+    mark: string | undefined;
+    fixedMenu: { x: number; y: number };
     onToggle: () => void; onAction: (a: MenuAction) => void;
   } = $props();
 
@@ -37,6 +40,8 @@
   class:sheet={onSheet}
   class:fan={!onSheet && actions.length === 0 && (zone.fanX || zone.fanY)}
   class:hot
+  class:marked={!!mark}
+  style:--mark={mark}
   class:center={zone.label.center}
   class:rotated={zone.label.rotated}
   style:left="{zone.x}px"
@@ -63,6 +68,8 @@
 <style>
   .zone { position: absolute; border: 2px dashed var(--line); border-radius: 8px; box-sizing: border-box; background: rgba(255, 255, 255, 0.04); transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
   .zone.hot { border-color: #f5d76e; background: rgba(245, 215, 110, 0.1); }
+  /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
+  .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }
   .zone.fan { border-color: rgba(255, 255, 255, 0.2); background: none; }
   .label { position: absolute; left: 0; top: 100%; margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: #fff; background: rgba(0, 0, 0, 0.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 2px #000; pointer-events: none; }
   .center .label { left: 50%; transform: translateX(-50%); }

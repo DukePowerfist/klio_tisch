@@ -427,7 +427,7 @@ describe('Mauszeiger (8.3)', () => {
     let seen: ReadonlyMap<string, PresenceInfo> = new Map();
     const a = new Presence(ta, () => {});
     new Presence(tb, (others) => (seen = new Map(others)));
-    const info = (x: number): PresenceInfo => ({ who: 'seat1', name: 'Ida', at: { anchor: 'center', x, y: 0.5 }, drag: [] });
+    const info = (x: number): PresenceInfo => ({ who: 'seat1', name: 'Ida', at: { anchor: 'center', x, y: 0.5 }, drag: [], grab: null, dropped: false, open: null });
     a.set(info(0.1));
     a.set(info(0.2));
     await new Promise((r) => setTimeout(r, 80));

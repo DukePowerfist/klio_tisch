@@ -11,7 +11,7 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
-  import { cardSize, computeLayout, freePosAt, placeCards, zoneAt, type CardPlace } from './layout';
+  import { anchorRect, cardSize, computeLayout, freePosAt, placeCards, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { t, whoColor } from './texts';
@@ -134,10 +134,13 @@
   }
 
   /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
-  function showPointer(clientX: number, clientY: number) {
+  function showPointer(clientX: number, clientY: number, dropped?: boolean) {
     const [bx, by] = toBoard(clientX, clientY);
-    session.pointer(freePosAt(layout, bx, by), drag?.moved ? drag.cards : []);
+    const grab = drag?.moved ? freePosAt(layout, ...toBoard(drag.sx, drag.sy)) : null;
+    session.pointer(freePosAt(layout, bx, by), drag?.moved ? drag.cards : [], grab, dropped);
   }
+  // eigenes offenes Stapelmenü für die anderen
+  $effect(() => session.shareOpen(view.open));
 
   function onPointerMove(e: PointerEvent) {
     if (session.sharesPointer && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
@@ -192,9 +195,10 @@
     const target = hot;
     drag = null;
     if (!d) return;
-    if (d.moved && session.sharesPointer) showPointer(e.clientX, e.clientY);
     if (!d.moved) return click(d.cards[0]!);
 
+    // ein Befehl geht raus: die anderen halten die Karte an der Ablegestelle, bis das Ereignis kommt (8.3)
+    if (session.sharesPointer) showPointer(e.clientX, e.clientY, true);
     const zone = target ?? zoneAt(layout, ...toBoard(e.clientX, e.clientY))?.id;
     const p = places[d.cards[0]!]!;
     const to = zone ? { zone } : { free: freePosAt(layout, p.x + d.dx, p.y + d.dy) };
@@ -236,6 +240,19 @@
     if (drag?.moved) for (const c of drag.cards) m.set(c, drag);
     return m;
   });
+  /** Von anderen gezogen: Versatz = deren Zeiger jetzt − beim Greifen, in dieser Ansicht (8.3) */
+  const remoteOf = $derived.by(() => {
+    const m = new Map<CardId, { dx: number; dy: number; color: string }>();
+    for (const r of session.remoteDrags) {
+      const a = anchorRect(layout, r.start.anchor);
+      const b = anchorRect(layout, r.last.anchor);
+      if (!a || !b) continue;
+      const dx = b.x + r.last.x * b.w - (a.x + r.start.x * a.w);
+      const dy = b.y + r.last.y * b.h - (a.y + r.start.y * a.h);
+      for (const c of r.cards) if (!offsetOf.has(c)) m.set(c, { dx, dy, color: whoColor(r.who) });
+    }
+    return m;
+  });
   const shakingCards = $derived(new Set(effects.shaking.values().flatMap((z) => table.zones[z] ?? [])));
 </script>
 
@@ -264,11 +281,11 @@
     {/each}
 
     {#each layout.zoneList as zone (zone.id)}
-      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} mark={session.openZones.has(zone.id) ? whoColor(session.openZones.get(zone.id)!) : undefined} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
     {/each}
 
     {#each cards as [card, p] (card)}
-      {@const off = offsetOf.get(card)}
+      {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
       <Card
         {card}
         x={p.x + (off?.dx ?? 0)}
@@ -278,10 +295,10 @@
         z={p.z}
         size={layout.card}
         faceUp={!!table.faceUp[card]}
-        dragging={!!off}
-        pending={!!off && off !== drag}
+        dragging={offsetOf.has(card)}
+        pending={offsetOf.has(card) && off !== drag}
         shake={shakingCards.has(card)}
-        mark={session.dragged.has(card) ? whoColor(session.dragged.get(card)!) : undefined}
+        mark={remoteOf.get(card)?.color}
       />
     {/each}
     <Cursors {layout} scale={sc} />

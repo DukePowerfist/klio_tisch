@@ -9,7 +9,8 @@ import { createEngine } from '../engine/dispatch';
 import { can } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
-import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef } from '../engine/types';
+import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
+import { locate } from '../engine/zones';
 import { Client, type ClientStatus } from '../net/client';
 import { Host, type BackupInfo } from '../net/host';
 import { localTransport } from '../net/local';
@@ -22,6 +23,7 @@ import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
 import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
+import { RemoteDrags, type RemoteDrag, type Who } from './remoteDrags';
 import { saveFile } from './files';
 import { IdbBackups, IdbStore } from './storage';
 import { t } from './texts';
@@ -85,12 +87,18 @@ class Session {
   pending = $state.raw<Pending[]>([]);
   /** Mauszeiger der anderen (8.3) */
   cursors = $state.raw<[string, PresenceInfo][]>([]);
-  /** von anderen gerade gezogene Karten → Rolle; ändert sich nur, wenn jemand greift oder loslässt */
-  dragged = $state.raw<ReadonlyMap<CardId, PresenceInfo['who']>>(new Map());
+  /** von anderen gerade gezogene (bzw. abgelegte, noch nicht bestätigte) Karten, folgen deren Zeiger (8.3) */
+  remoteDrags = $state.raw<RemoteDrag[]>([]);
+  /** von anderen angewählte Stapel → wer */
+  openZones = $state.raw<ReadonlyMap<ZoneId, Who>>(new Map());
 
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
   private presence: Presence | null = null;
+  private remote = new RemoteDrags((cards) => JSON.stringify(this.state ? cards.map((c) => locate(this.state!, c)) : null));
+  private expiryTimer: ReturnType<typeof setTimeout> | undefined;
+  /** eigene flüchtige Lage (8.3); `dropped` bleibt bis zum nächsten Greifen, damit es die Bündelung übersteht */
+  private mine: { at: FreePos | null; drag: CardId[]; grab: FreePos | null; dropped: boolean; open: ZoneId | null } = { at: null, drag: [], grab: null, dropped: false, open: null };
   private listeners = new Set<Listener>();
   private commandListeners = new Set<CommandListener>();
   private replacedListeners = new Set<ReplacedListener>();
@@ -192,8 +200,23 @@ class Session {
 
   private othersMoved(others: ReadonlyMap<string, PresenceInfo>): void {
     this.cursors = [...others];
-    const dragged = new Map([...others.values()].flatMap((p) => p.drag.map((c) => [c, p.who] as const)));
-    if (JSON.stringify([...dragged]) !== JSON.stringify([...this.dragged])) this.dragged = dragged;
+    this.remote.update(others, Date.now());
+    this.showRemote();
+  }
+
+  /** Gezogene Karten und angewählte Stapel der anderen neu anzeigen; Zeitgeber für die nächste Haltefrist. */
+  private showRemote(): void {
+    this.remoteDrags = this.remote.drags();
+    const open = this.remote.openZones();
+    if (JSON.stringify([...open]) !== JSON.stringify([...this.openZones])) this.openZones = open;
+    clearTimeout(this.expiryTimer);
+    const next = this.remote.nextExpiry();
+    if (next !== null) {
+      this.expiryTimer = setTimeout(() => {
+        this.remote.expire(Date.now());
+        this.showRemote();
+      }, Math.max(0, next - Date.now()));
+    }
   }
 
   /** Wird der eigene Zeiger übertragen? (nur im Raum) */
@@ -203,10 +226,22 @@ class Session {
 
   /** Eigener Mauszeiger und gezogene Karten für die anderen; `at` null = nicht über dem Tisch.
    *  Den Namen eines Spielers kennen alle aus dem Stand; mit geschickt wird er nur für Zuschauer. */
-  pointer(at: FreePos | null, drag: CardId[]): void {
+  pointer(at: FreePos | null, drag: CardId[], grab: FreePos | null = null, dropped?: boolean): void {
+    this.mine = { ...this.mine, at, drag, grab: drag.length ? grab : null, dropped: drag.length ? false : (dropped ?? this.mine.dropped) };
+    this.sendMine();
+  }
+
+  /** Eigenes offenes Stapelmenü für die anderen (8.3). */
+  shareOpen(zone: ZoneId | null): void {
+    if (zone === this.mine.open) return;
+    this.mine = { ...this.mine, open: zone };
+    this.sendMine();
+  }
+
+  private sendMine(): void {
     const r = this.actor;
     const who = r.role === 'gm' ? 'gm' : r.role === 'player' ? r.seat : 'spectator';
-    this.presence?.set({ who, name: who === 'spectator' ? this.savedName : '', at, drag });
+    this.presence?.set({ who, name: who === 'spectator' ? this.savedName : '', ...this.mine });
   }
 
   private startClient(link: RoomLink): void {
@@ -301,6 +336,8 @@ class Session {
   /** Neuer Stand mit Ereignissen; die Ablage des auslösenden Befehls ist damit bestätigt. */
   private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean): void {
     this.state = state;
+    this.remote.stateChanged();
+    this.showRemote();
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
     if (events.length > 0) for (const cb of this.listeners) cb(events, own);
   }
