@@ -6,19 +6,17 @@ import type { PresenceInfo } from '../../src/net/presence';
 import { HOLD_MS, RemoteDrags } from '../../src/ui/remoteDrags';
 
 const at = (x: number): FreePos => ({ anchor: 'center', x, y: 0.5 });
-const info = (p: Partial<PresenceInfo>): PresenceInfo => ({ who: 'seat1', name: '', at: at(0.1), drag: [], grab: null, dropped: false, open: null, ...p });
+const info = (p: Partial<PresenceInfo>): PresenceInfo => ({ who: 'seat1', name: '', at: at(0.1), drag: [], grab: null, dropped: null, open: null, ...p });
 
-/** Lage der Karten im „Stand“: hier einfach eine veränderliche Zeichenkette */
 function setup() {
-  const where = { now: 'deck' };
-  const r = new RemoteDrags(() => where.now);
+  const r = new RemoteDrags();
   const others = new Map<string, PresenceInfo>();
   const send = (peer: string, p: PresenceInfo | null, now: number) => {
     if (p) others.set(peer, p);
     else others.delete(peer);
     r.update(others, now);
   };
-  return { r, where, send };
+  return { r, send };
 }
 
 describe('Gezogene Karten der anderen', () => {
@@ -44,43 +42,51 @@ describe('Gezogene Karten der anderen', () => {
   it('losgelassen ohne Befehl: sofort weg', () => {
     const { r, send } = setup();
     send('a', info({ drag: ['H2'] }), 0);
-    send('a', info({ drag: [], dropped: false }), 50);
+    send('a', info({ drag: [], dropped: null }), 50);
     expect(r.drags()).toEqual([]);
     expect(r.nextExpiry()).toBeNull();
   });
 
-  it('abgelegt mit Befehl: bleibt an der Ablegestelle, bis sich der Stand ändert', () => {
-    const { r, where, send } = setup();
+  it('abgelegt mit Befehl: bleibt an der Ablegestelle, bis das Ereignis zu diesem Befehl kommt', () => {
+    const { r, send } = setup();
     send('a', info({ drag: ['H2'], at: at(0.1) }), 0);
     send('a', info({ drag: ['H2'], at: at(0.4) }), 50);
-    send('a', info({ drag: [], dropped: true, at: at(0.4) }), 100);
+    send('a', info({ drag: [], dropped: 'ui-1', at: at(0.4) }), 100);
     expect(r.drags()).toEqual([{ cards: ['H2'], who: 'seat1', start: at(0.1), last: at(0.4) }]);
     // weitere Zeigerbewegung ändert die gehaltene Karte nicht
-    send('a', info({ drag: [], dropped: true, at: at(0.9) }), 150);
+    send('a', info({ drag: [], dropped: 'ui-1', at: at(0.9) }), 150);
     expect(r.drags()[0]!.last).toEqual(at(0.4));
-    // ein Stand ohne Bewegung dieser Karte (z. B. jemand anderes zieht) lässt sie liegen
-    r.stateChanged();
+    // Ereignisse zu anderen Befehlen lassen sie liegen
+    r.confirmed('ui-other');
     expect(r.drags()).toHaveLength(1);
-    where.now = 'discard';
-    r.stateChanged();
+    r.confirmed('ui-1');
+    expect(r.drags()).toEqual([]);
+    expect(r.nextExpiry()).toBeNull();
+  });
+
+  it('kam das Ereignis schon vor der Zeigermeldung, wird nicht gewartet', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'] }), 0);
+    r.confirmed('ui-1');
+    send('a', info({ drag: [], dropped: 'ui-1' }), 100);
     expect(r.drags()).toEqual([]);
   });
 
   it('abgelegt, aber kein Ereignis (abgelehnt): nach der Haltefrist zurück', () => {
     const { r, send } = setup();
     send('a', info({ drag: ['H2'] }), 0);
-    send('a', info({ drag: [], dropped: true }), 100);
+    send('a', info({ drag: [], dropped: 'ui-1' }), 100);
     expect(r.nextExpiry()).toBe(100 + HOLD_MS);
-    expect(r.expire(100 + HOLD_MS - 1)).toBe(false);
+    r.expire(100 + HOLD_MS - 1);
     expect(r.drags()).toHaveLength(1);
-    expect(r.expire(100 + HOLD_MS)).toBe(true);
+    r.expire(100 + HOLD_MS);
     expect(r.drags()).toEqual([]);
   });
 
   it('wer während der Haltefrist geht, dessen Karte bleibt bis zum Ereignis bzw. zur Frist', () => {
     const { r, send } = setup();
     send('a', info({ drag: ['H2'] }), 0);
-    send('a', info({ drag: [], dropped: true }), 100);
+    send('a', info({ drag: [], dropped: 'ui-1' }), 100);
     send('a', null, 120);
     expect(r.drags()).toHaveLength(1);
     r.expire(100 + HOLD_MS);
@@ -102,6 +108,22 @@ describe('Gezogene Karten der anderen', () => {
     // auch wenn der Zweite weiter meldet
     send('b', info({ who: 'seat2', drag: ['H2'], at: at(0.5) }), 60);
     expect(r.drags()).toEqual([expect.objectContaining({ who: 'seat1' })]);
+  });
+});
+
+describe('Änderungsmerker', () => {
+  it('meldet nur, was sich geändert hat', () => {
+    const { r, send } = setup();
+    send('a', info({}), 0);
+    expect(r.takeChanges()).toEqual({ drags: false, open: false });
+    send('a', info({ drag: ['H2'] }), 10);
+    expect(r.takeChanges()).toEqual({ drags: true, open: false });
+    send('a', info({ drag: ['H2'], open: 'deck' }), 20);
+    expect(r.takeChanges()).toEqual({ drags: true, open: true });
+    send('a', info({ drag: [], open: 'deck' }), 30);
+    expect(r.takeChanges()).toEqual({ drags: true, open: false });
+    send('a', info({ open: 'deck', at: at(0.9) }), 40);
+    expect(r.takeChanges()).toEqual({ drags: false, open: false });
   });
 });
 

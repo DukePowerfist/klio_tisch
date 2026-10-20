@@ -3,7 +3,7 @@
   // Zeigt nur den Stand an und schickt Befehle; Meldungen und Animationen kommen aus effects.svelte.ts.
   import content from 'virtual:klio-content';
   import { locate } from '../engine/zones';
-  import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
+  import type { CardId, CardSource, FreePos, SeatId, ZoneId } from '../engine/types';
   import { sheetOf } from '../rules/klio/events';
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
@@ -11,7 +11,7 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
-  import { anchorRect, cardSize, computeLayout, freePosAt, placeCards, zoneAt, type CardPlace } from './layout';
+  import { cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { t, whoColor } from './texts';
@@ -72,7 +72,8 @@
   }
 
   // ---------- Ziehen und Ablegen ----------
-  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean };
+  /** `grab`: Greifpunkt für die anderen (8.3), gesetzt, sobald die Karte bewegt wird */
+  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: FreePos };
   let drag = $state<Drag | null>(null);
   let pan: { x: number; y: number; moved: boolean } | null = null;
   let panned = false;
@@ -134,10 +135,9 @@
   }
 
   /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
-  function showPointer(clientX: number, clientY: number, dropped?: boolean) {
+  function showPointer(clientX: number, clientY: number) {
     const [bx, by] = toBoard(clientX, clientY);
-    const grab = drag?.moved ? freePosAt(layout, ...toBoard(drag.sx, drag.sy)) : null;
-    session.pointer(freePosAt(layout, bx, by), drag?.moved ? drag.cards : [], grab, dropped);
+    session.pointer(freePosAt(layout, bx, by), drag?.moved ? drag.cards : [], drag?.grab ?? null);
   }
   // eigenes offenes Stapelmenü für die anderen
   $effect(() => session.shareOpen(view.open));
@@ -161,6 +161,7 @@
       const dx = (e.clientX - drag.sx) / sc;
       const dy = (e.clientY - drag.sy) / sc;
       if (!drag.moved && Math.hypot(dx, dy) * sc < 4) return;
+      if (!drag.moved) drag.grab = freePosAt(layout, ...toBoard(drag.sx, drag.sy));
       drag.moved = true;
       drag.dx = dx;
       drag.dy = dy;
@@ -197,8 +198,6 @@
     if (!d) return;
     if (!d.moved) return click(d.cards[0]!);
 
-    // ein Befehl geht raus: die anderen halten die Karte an der Ablegestelle, bis das Ereignis kommt (8.3)
-    if (session.sharesPointer) showPointer(e.clientX, e.clientY, true);
     const zone = target ?? zoneAt(layout, ...toBoard(e.clientX, e.clientY))?.id;
     const p = places[d.cards[0]!]!;
     const to = zone ? { zone } : { free: freePosAt(layout, p.x + d.dx, p.y + d.dy) };
@@ -244,12 +243,10 @@
   const remoteOf = $derived.by(() => {
     const m = new Map<CardId, { dx: number; dy: number; color: string }>();
     for (const r of session.remoteDrags) {
-      const a = anchorRect(layout, r.start.anchor);
-      const b = anchorRect(layout, r.last.anchor);
+      const a = pointAt(layout, r.start);
+      const b = pointAt(layout, r.last);
       if (!a || !b) continue;
-      const dx = b.x + r.last.x * b.w - (a.x + r.start.x * a.w);
-      const dy = b.y + r.last.y * b.h - (a.y + r.start.y * a.h);
-      for (const c of r.cards) if (!offsetOf.has(c)) m.set(c, { dx, dy, color: whoColor(r.who) });
+      for (const c of r.cards) if (!offsetOf.has(c)) m.set(c, { dx: b.x - a.x, dy: b.y - a.y, color: whoColor(r.who) });
     }
     return m;
   });
@@ -281,7 +278,8 @@
     {/each}
 
     {#each layout.zoneList as zone (zone.id)}
-      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} mark={session.openZones.has(zone.id) ? whoColor(session.openZones.get(zone.id)!) : undefined} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+      {@const openedBy = session.openZones.get(zone.id)}
+      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
     {/each}
 
     {#each cards as [card, p] (card)}

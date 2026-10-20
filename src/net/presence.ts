@@ -14,8 +14,8 @@ export const PresenceMsg = z.object({
   drag: z.array(CardIdSchema).max(52),
   /** wo der Zeiger beim Greifen war (die erste Meldung kommt wegen der Bündelung erst nach etwas Bewegung) */
   grab: FreePosSchema.nullable(),
-  /** beim Loslassen: wurde ein Befehl abgeschickt? (dann warten die anderen kurz auf das Ereignis) */
-  dropped: z.boolean(),
+  /** nach dem Loslassen: ID des abgeschickten Befehls (die anderen warten kurz auf dessen Ereignis); bis zum nächsten Greifen */
+  dropped: z.string().max(64).nullable(),
   /** Stapel mit offenem Menü */
   open: z.string().max(40).nullable(),
 }).strict();
@@ -35,9 +35,8 @@ export class Presence {
     transport.onMessage((msg, from) => {
       const p = PresenceMsg.safeParse(msg);
       if (!p.success) return;
-      // anwesend ist, wer über dem Tisch ist, etwas zieht, gerade abgelegt hat oder ein Menü offen hat
-      if (p.data.at || p.data.drag.length || p.data.dropped || p.data.open) this.others.set(from, p.data);
-      else this.others.delete(from);
+      // wer verbunden ist, bleibt bis `onPeers` ihn entfernt; was die Felder bedeuten, entscheidet die Anzeige
+      this.others.set(from, p.data);
       this.onChange(this.others);
     });
     transport.onPeers((peers) => {

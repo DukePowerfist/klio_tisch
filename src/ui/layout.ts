@@ -167,8 +167,8 @@ export function placeCards(state: TableState<unknown>, layout: Layout): Partial<
   }
   state.free.forEach((card, i) => {
     const pos = state.freePos[card];
-    const r = pos && anchorRect(layout, pos.anchor);
-    if (r) out[card] = { x: r.x + pos.x * r.w, y: r.y + pos.y * r.h, scale: layout.freeCardScale, rotated: true, z: 1000 + i };
+    const p = pos && pointAt(layout, pos);
+    if (p) out[card] = { ...p, scale: layout.freeCardScale, rotated: true, z: 1000 + i };
   });
   return out;
 }
@@ -185,6 +185,12 @@ const inside = (r: Rect, x: number, y: number) => x >= r.x && x <= r.x + r.w && 
 /** Zone unter einem Punkt (Tischkoordinaten). */
 export function zoneAt(layout: Layout, x: number, y: number): ZoneBox | null {
   return layout.zoneList.find((z) => inside(z, x, y)) ?? null;
+}
+
+/** Umkehrung von `freePosAt`: Punkt auf dem Tisch in dieser Ansicht; null, wenn der Anker (Bogen) ausgeblendet ist. */
+export function pointAt(layout: Layout, pos: FreePos): { x: number; y: number } | null {
+  const r = anchorRect(layout, pos.anchor);
+  return r && { x: r.x + pos.x * r.w, y: r.y + pos.y * r.h };
 }
 
 /** Anker für eine frei abgelegte Karte: Bogen unter dem Punkt, sonst Spielbereich (A32). Lage als Anteil 0–1. */

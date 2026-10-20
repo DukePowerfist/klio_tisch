@@ -7,6 +7,8 @@ import type { PresenceInfo } from '../net/presence';
 
 /** Wie lange eine abgelegte Karte auf das Ereignis vom Host wartet, bevor sie zurückgleitet */
 export const HOLD_MS = 1000;
+/** so viele zuletzt bestätigte Befehls-IDs merken (das Ereignis kann vor der Zeigermeldung ankommen) */
+const SEEN = 20;
 
 export type Who = PresenceInfo['who'];
 
@@ -15,60 +17,81 @@ export type RemoteDrag = { cards: CardId[]; who: Who; start: FreePos; last: Free
 
 type Tracked = RemoteDrag & {
   since: number;
-  /** abgelegt: wartet bis dahin auf das Ereignis; Lage der Karten beim Ablegen */
-  heldUntil?: number;
-  heldAt?: string;
+  /** abgelegt: wartet bis dahin auf das Ereignis zu diesem Befehl */
+  held?: { until: number; cause: string };
 };
 
 export class RemoteDrags {
   private tracked = new Map<PeerId, Tracked>();
   private opened = new Map<PeerId, { zone: ZoneId; who: Who; since: number }>();
-
-  /** `where(cards)` beschreibt die Lage der Karten im Stand; ändert sie sich, ist die Bewegung angekommen. */
-  constructor(private where: (cards: CardId[]) => string) {}
+  private seen: string[] = [];
+  /** seit dem letzten `takeChanges` geändert */
+  private dragsChanged = false;
+  private openChanged = false;
 
   /** Neue Lage der anderen (vollständig). */
   update(others: ReadonlyMap<PeerId, PresenceInfo>, now: number): void {
     for (const [peer, t] of this.tracked) {
+      // gehaltene Karten lösen nur Ereignis oder Frist
+      if (t.held) continue;
       const p = others.get(peer);
-      if (p?.drag.length && p.at && !t.heldUntil) continue;
-      if (!t.heldUntil) {
-        // losgelassen: mit Befehl auf das Ereignis warten, sonst sofort zurück
-        if (p?.dropped) Object.assign(t, { heldUntil: now + HOLD_MS, heldAt: this.where(t.cards) });
-        else this.tracked.delete(peer);
-      }
+      if (p?.drag.length && p.at) continue;
+      // losgelassen: mit Befehl auf das Ereignis warten (sofern es nicht schon da war), sonst sofort zurück
+      if (p?.dropped && !this.seen.includes(p.dropped)) t.held = { until: now + HOLD_MS, cause: p.dropped };
+      else this.tracked.delete(peer);
+      this.dragsChanged = true;
     }
     for (const [peer, p] of others) {
       if (!p.drag.length || !p.at) continue;
       const t = this.tracked.get(peer);
-      if (t && !t.heldUntil && same(t.cards, p.drag)) t.last = p.at;
+      if (t && !t.held && same(t.cards, p.drag)) t.last = p.at;
       else this.tracked.set(peer, { cards: p.drag, who: p.who, start: p.grab ?? p.at, last: p.at, since: now });
+      this.dragsChanged = true;
     }
 
-    for (const peer of this.opened.keys()) if (!others.get(peer)?.open) this.opened.delete(peer);
+    for (const peer of this.opened.keys()) {
+      if (others.get(peer)?.open) continue;
+      this.opened.delete(peer);
+      this.openChanged = true;
+    }
     for (const [peer, p] of others) {
-      if (p.open && this.opened.get(peer)?.zone !== p.open) this.opened.set(peer, { zone: p.open, who: p.who, since: now });
+      if (!p.open || this.opened.get(peer)?.zone === p.open) continue;
+      this.opened.set(peer, { zone: p.open, who: p.who, since: now });
+      this.openChanged = true;
     }
   }
 
-  /** Stand hat sich geändert: abgelegte Karten, deren Lage sich geändert hat, sind angekommen. */
-  stateChanged(): void {
-    for (const [peer, t] of this.tracked) if (t.heldUntil && this.where(t.cards) !== t.heldAt) this.tracked.delete(peer);
+  /** Ereignisse zu einem Befehl sind angekommen: dazu abgelegte Karten liegen jetzt am Ziel. */
+  confirmed(cause: string): void {
+    this.seen = [...this.seen.slice(1 - SEEN), cause];
+    this.release((t) => t.held?.cause === cause);
   }
 
-  /** Abgelaufene Haltefristen beenden (Bewegung abgelehnt); ergibt, ob sich etwas geändert hat. */
-  expire(now: number): boolean {
-    let changed = false;
+  /** Abgelaufene Haltefristen beenden (Bewegung abgelehnt). */
+  expire(now: number): void {
+    this.release((t) => !!t.held && t.held.until <= now);
+  }
+
+  private release(done: (t: Tracked) => boolean): void {
     for (const [peer, t] of this.tracked) {
-      if (t.heldUntil !== undefined && t.heldUntil <= now) changed = this.tracked.delete(peer);
+      if (!done(t)) continue;
+      this.tracked.delete(peer);
+      this.dragsChanged = true;
     }
-    return changed;
   }
 
   /** nächste ablaufende Haltefrist (für den Zeitgeber) */
   nextExpiry(): number | null {
-    const times = [...this.tracked.values()].flatMap((t) => (t.heldUntil === undefined ? [] : [t.heldUntil]));
-    return times.length ? Math.min(...times) : null;
+    let next: number | null = null;
+    for (const t of this.tracked.values()) if (t.held && (next === null || t.held.until < next)) next = t.held.until;
+    return next;
+  }
+
+  /** Was hat sich seit dem letzten Aufruf geändert? Setzt die Merker zurück. */
+  takeChanges(): { drags: boolean; open: boolean } {
+    const changes = { drags: this.dragsChanged, open: this.openChanged };
+    this.dragsChanged = this.openChanged = false;
+    return changes;
   }
 
   /** Gezogene Karten; greifen zwei dieselbe Karte, gilt, wer sie zuerst gemeldet hat. */

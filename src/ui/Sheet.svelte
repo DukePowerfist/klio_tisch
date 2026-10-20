@@ -206,7 +206,7 @@
       <div
         class="plate"
         data-plate={seat}
-        title={names.person ? `${names.character} · ${names.person}` : names.character}
+        title={names.label}
         style:left="{plate.x}px" style:top="{plate.y}px" style:max-width="{plate.w}px" style:height="{plate.h}px" style:font-size="{plate.font}px"
       ><b>{names.character}</b>{#if names.person}<small>{names.person}</small>{/if}</div>
     {/if}

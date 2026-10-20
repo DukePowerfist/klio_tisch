@@ -11,12 +11,13 @@ export type SeatNames = {
   character: string;
   /** Name der Person am Platz; leer, wenn frei oder ohne Namen */
   person: string;
+  /** beides zusammen, z. B. für Tooltips */
+  label: string;
 };
 
 export function seatNames(state: KlioTable, seat: SeatId): SeatNames {
   const s = state.seats[seat];
-  return {
-    character: sheetOf(state, seat).name.trim() || t('room.player', { n: seatNo(seat) }),
-    person: s.occupied ? (s.name ?? '').trim() : '',
-  };
+  const character = sheetOf(state, seat).name.trim() || t('room.player', { n: seatNo(seat) });
+  const person = s.occupied ? (s.name ?? '').trim() : '';
+  return { character, person, label: person ? `${character} · ${person}` : character };
 }

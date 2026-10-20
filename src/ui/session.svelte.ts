@@ -10,7 +10,6 @@ import { can } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
 import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
-import { locate } from '../engine/zones';
 import { Client, type ClientStatus } from '../net/client';
 import { Host, type BackupInfo } from '../net/host';
 import { localTransport } from '../net/local';
@@ -95,10 +94,11 @@ class Session {
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
   private presence: Presence | null = null;
-  private remote = new RemoteDrags((cards) => JSON.stringify(this.state ? cards.map((c) => locate(this.state!, c)) : null));
+  private remote = new RemoteDrags();
   private expiryTimer: ReturnType<typeof setTimeout> | undefined;
+  private expiryAt: number | null = null;
   /** eigene flüchtige Lage (8.3); `dropped` bleibt bis zum nächsten Greifen, damit es die Bündelung übersteht */
-  private mine: { at: FreePos | null; drag: CardId[]; grab: FreePos | null; dropped: boolean; open: ZoneId | null } = { at: null, drag: [], grab: null, dropped: false, open: null };
+  private mine: { at: FreePos | null; drag: CardId[]; grab: FreePos | null; dropped: string | null; open: ZoneId | null } = { at: null, drag: [], grab: null, dropped: null, open: null };
   private listeners = new Set<Listener>();
   private commandListeners = new Set<CommandListener>();
   private replacedListeners = new Set<ReplacedListener>();
@@ -204,15 +204,18 @@ class Session {
     this.showRemote();
   }
 
-  /** Gezogene Karten und angewählte Stapel der anderen neu anzeigen; Zeitgeber für die nächste Haltefrist. */
+  /** Geändertes bei gezogenen Karten und angewählten Stapeln der anderen anzeigen; Zeitgeber für die nächste Haltefrist. */
   private showRemote(): void {
-    this.remoteDrags = this.remote.drags();
-    const open = this.remote.openZones();
-    if (JSON.stringify([...open]) !== JSON.stringify([...this.openZones])) this.openZones = open;
-    clearTimeout(this.expiryTimer);
+    const changes = this.remote.takeChanges();
+    if (changes.drags) this.remoteDrags = this.remote.drags();
+    if (changes.open) this.openZones = this.remote.openZones();
     const next = this.remote.nextExpiry();
+    if (next === this.expiryAt) return;
+    clearTimeout(this.expiryTimer);
+    this.expiryAt = next;
     if (next !== null) {
       this.expiryTimer = setTimeout(() => {
+        this.expiryAt = null;
         this.remote.expire(Date.now());
         this.showRemote();
       }, Math.max(0, next - Date.now()));
@@ -226,8 +229,8 @@ class Session {
 
   /** Eigener Mauszeiger und gezogene Karten für die anderen; `at` null = nicht über dem Tisch.
    *  Den Namen eines Spielers kennen alle aus dem Stand; mit geschickt wird er nur für Zuschauer. */
-  pointer(at: FreePos | null, drag: CardId[], grab: FreePos | null = null, dropped?: boolean): void {
-    this.mine = { ...this.mine, at, drag, grab: drag.length ? grab : null, dropped: drag.length ? false : (dropped ?? this.mine.dropped) };
+  pointer(at: FreePos | null, drag: CardId[], grab: FreePos | null = null): void {
+    this.mine = { ...this.mine, at, drag, grab, dropped: drag.length ? null : this.mine.dropped };
     this.sendMine();
   }
 
@@ -286,7 +289,12 @@ class Session {
     if (!this.host && !this.client) return NOT_READY;
     const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
     for (const cb of this.commandListeners) cb(cmd as { type: string });
-    if (drop) this.pending = [...this.pending, { ...drop, id }];
+    if (drop) {
+      this.pending = [...this.pending, { ...drop, id }];
+      // losgelassen: die anderen halten die Karte, bis das Ereignis zu dieser ID kommt (8.3)
+      this.mine = { ...this.mine, drag: [], grab: null, dropped: id };
+      this.sendMine();
+    }
     const result = await (this.host ? this.host.submit(cmd, id) : this.client!.submit(cmd, id));
     if (drop) this.pending = this.pending.filter((d) => d.id !== id);
     return result;
@@ -336,8 +344,10 @@ class Session {
   /** Neuer Stand mit Ereignissen; die Ablage des auslösenden Befehls ist damit bestätigt. */
   private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean): void {
     this.state = state;
-    this.remote.stateChanged();
-    this.showRemote();
+    if (cause) {
+      this.remote.confirmed(cause);
+      this.showRemote();
+    }
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
     if (events.length > 0) for (const cb of this.listeners) cb(events, own);
   }

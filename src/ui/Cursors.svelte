@@ -3,7 +3,7 @@
   // die Größe bleibt beim Zoomen gleich.
   import { seatNo } from '../engine/zones';
   import type { PresenceInfo } from '../net/presence';
-  import { anchorRect, type Layout } from './layout';
+  import { pointAt, type Layout } from './layout';
   import { session } from './session.svelte';
   import { t, whoColor } from './texts';
 
@@ -18,8 +18,8 @@
 
   const shown = $derived(session.cursors.flatMap(([peer, p]) => {
     if (!p.at) return [];
-    const r = anchorRect(layout, p.at.anchor);
-    return r ? [{ peer, x: r.x + p.at.x * r.w, y: r.y + p.at.y * r.h, color: whoColor(p.who), text: label(p) }] : [];
+    const pt = pointAt(layout, p.at);
+    return pt ? [{ peer, ...pt, color: whoColor(p.who), text: label(p) }] : [];
   }));
 </script>
 

@@ -29,7 +29,7 @@
       class:on={view.role === seat}
       data-dock={seat}
       style:--c={whoColor(seat)}
-      title={names ? `${t('dock.seat', { n: i + 1 })}: ${names.character}${names.person ? ` · ${names.person}` : ''}` : t('dock.seat', { n: i + 1 })}
+      title={names ? `${t('dock.seat', { n: i + 1 })}: ${names.label}` : t('dock.seat', { n: i + 1 })}
       onclick={() => view.setRole(seat)}
     >{i + 1}</button>
   {/each}
