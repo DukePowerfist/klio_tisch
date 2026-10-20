@@ -1,0 +1,43 @@
+# Zonen und Stapel-Aktionen (ARCHITEKTUR.md 7). Beschriftungen: texts.de.yaml (zones.*), Lage: layouts.yaml.
+# Ohne `fanned` ist eine Zone ein Stapel: greifbar ist nur die oberste Karte (mit Umschalt die darüberliegenden mit).
+
+deck:
+  actions:
+    shuffle: { gather: [ { from: discard, suit: D, to: home }, { from: discard } ] }  # Karo zurück in ihren Stapel (15.5), Rest ins Deck
+    draw: { to: discard, faceUp: true, announce: true }
+    flip: top
+
+clubs:
+  actions:
+    shuffle: {}
+    draw: { to: discard, faceUp: true, announce: true }
+    flip: draw                         # Menü „Umdrehen“ = Ziehen
+    cardDoubleClick: { faceDown: draw } # verdeckte Karte dieses Stapels: wie Ziehen
+
+diamonds_easy:
+  actions:
+    shuffle: { gather: [ { from: display, suit: D, to: home } ] }  # Karo aus der Auslage zurück in ihre Stapel
+    draw: { to: display, faceUp: true, announce: true }
+    flip: top
+
+diamonds_medium:
+  actions:
+    shuffle: { gather: [ { from: display, suit: D, to: home } ] }
+    draw: { to: display, faceUp: true, announce: true }
+    flip: top
+
+diamonds_hard:
+  actions:
+    shuffle: { gather: [ { from: display, suit: D, to: home } ] }
+    draw: { to: display, faceUp: true, announce: true }
+    flip: top
+
+discard: { onDrop: faceUp }
+display: { onDrop: faceUp }
+danger: { fanned: true }
+progress: { fanned: true }
+
+# Je Platz (seat1 … seat4) erzeugt, mit Besitzer
+damage: { perSeat: true, onDrop: faceUp }      # Auswertung: reactions/damage.ts
+notes: { perSeat: true, fanned: true, capacity: 3 }
+collect: { perSeat: true, fanned: true }

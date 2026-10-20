@@ -1,0 +1,108 @@
+# Oberflächentexte (A23). Platzhalter in geschweiften Klammern.
+# Texte aus der alten Datei wortgetreu; geänderte Stellen sind kommentiert.
+
+cards:
+  suits: { H: Herz, S: Pik, C: Kreuz, D: Karo }
+  ranks: { J: B, Q: D, K: K, A: A }      # 13.1: B/D/K/A statt J/Q/K
+  name: "{suit} {rank}"                   # z. B. „Herz B“ (bisher „♥ 11“, 13.1)
+
+zones:
+  deck: DECK
+  discard: ABLAGE
+  display: ""                             # Auslage hat keine Beschriftung (wie bisher)
+  diamonds_easy: LEICHT (2-6)
+  diamonds_medium: MITTEL (7-10)
+  diamonds_hard: SCHWIERIG (11-14)
+  clubs: KREUZ
+  danger: GEFAHR
+  progress: FORTSCHRITT
+  damage: SCHADEN
+  notes: NOTIZEN
+  collect: SAMMELN
+  collectTitle: Kartenablage am Bogen (bleibt beim Wechsel der Ansicht)
+  resistTitle: WIDERSTÄNDE
+  actions: { shuffle: Mischen, flip: Umdrehen, draw: Ziehen }
+
+toast:
+  drawn: "Aufgedeckt: {card}"
+  displayed: "Ausliegend: {card}"
+  notesFull: Bei den Notizen haben nur drei Karten Platz.
+  scar: "Bogen {seat}: Narbe markiert ({suit})"
+  dead: "Bogen {seat}: Der Charakter ist tot."
+  rolled: "Bogen {seat}: Charakter ausgewürfelt"
+  strengthImproved: "Bogen {seat}: Stärke verbessert"
+  trumpChosen: "Bogen {seat}: Trumpf „{trump}“ gewählt"
+  noSource: "Keine Voraussetzung erfüllt: Es ist gerade kein Trumpf wählbar."
+  noAttributeToLower: Kein Attribut kann verringert werden.
+  noTrumpLeft: Es ist kein passender Trumpf übrig.
+  maxTrumps: "Es sind höchstens {max} Trümpfe möglich."
+
+sheet:
+  roll: Auswürfeln
+  rollTitle: Stärken und Schwächen per Zufallstabelle füllen
+  rollConfirm: Überschreiben?
+  revive: Wiederbeleben
+  strike: Untauglich markieren (durchstreichen)
+  trumpChoose: Trumpf wählen
+  trumpLocked: Trumpf (noch nicht freigeschaltet)
+  trumpRemove: Trumpf entfernen
+
+attributes: { K: Körper, V: Verstehen, P: Präsenz }
+
+trumps:
+  categories: { K: Körper, V: Verstehen, P: Präsenz, X: Verschiedene }
+  allAttributes: JEDES ATTRIBUT
+  levels: { 1: I, 2: II, 3: III }
+
+trumpDialog:
+  title: "Trumpf wählen · Bogen {seat}"
+  count: "Trümpfe: {n} von {max}"
+  random: Zufälliger Trumpf
+  free: Freie Wahl
+  back: "← Zurück"
+  next: Weiter
+  close: "✕"
+  chooseAttribute: Für welches Attribut?
+  selectable: "({n} wählbar)"
+  chooseFromCategory: "{category} · Trumpf wählen"
+  removeWeakness: Welche Schwäche entfällt?
+  empty: (leer)
+  improveStrength: Welche Stärke verbessern?
+  improveHint: Eine der fünf Stärken darf besser werden. Das Kästchen daneben wird markiert.
+  alreadyImproved: bereits verbessert
+  skipImprove: Ohne Verbesserung weiter
+  newWording: Neue Formulierung
+  newWordingHint: "Stärke {n} wird verbessert. Wie lautet sie jetzt? (Zum Beispiel wird aus „Peitsche“ eine „gute Peitsche“ oder eine „einschüchternde Peitsche“.)"
+  moveAttribute: Attributspunkt umverteilen
+  lower: "Verringern um 1:"
+  raise: "Erhöhen um 1 (der Trumpf muss dieses Attribut benötigen):"
+  why:
+    duplicate: Schon gewählt.
+    startLevel: "Starttrumpf: nur Stufe I."
+    highest: "Muss zum höchsten Attribut ({attrs}) passen."
+    levelI: Nur Stufe I.
+    levelIorII: Nur Stufe I oder II.
+    needs: "Muss {attr} benötigen."
+
+gm:
+  expedition: Expedition starten
+  expeditionTitle: Expedition starten (Spielleitung)
+  oracle: Orakel
+  oracleTitle: "Orakel: zwei Begriffe ziehen"
+  reroll: neu
+  rerollAll: Alles neu
+  redraw: Neu ziehen
+  close: Schließen
+  players: Spieler
+  reset: Zurücksetzen
+
+reset:
+  title: Tisch zurücksetzen?
+  text: Alle Karten kommen zurück auf ihre Startplätze und werden neu gemischt.
+  characters: Auch die Charaktere zurücksetzen (Einträge, Narben, Fotos, Tod)
+  cancel: Abbrechen
+  confirm: Zurücksetzen
+
+dock:
+  seat: "Ich bin Spieler {n}"
+  overview: Zur Übersicht

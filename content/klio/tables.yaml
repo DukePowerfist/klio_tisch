@@ -1,0 +1,206 @@
+# Zufallstabellen für den Bogen. Je Tabelle Herz (H) und Pik (S), je Kartenwert ein Eintrag; m/w = er/sie-Form.
+# Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs), wortgetreu.
+
+I:
+  H:
+    "2": { m: Draufgänger, w: Draufgängerin }
+    "3": { m: Leibwächter, w: Leibwächterin }
+    "4": { m: Empath, w: Empathin }
+    "5": Nervenstarke
+    "6": { m: Archäologe, w: Archäologin }
+    "7": { m: Wildtierexperte, w: Wildtierexpertin }
+    "8": { m: Fluchtwagenfahrer, w: Fluchtwagenfahrerin }
+    "9": { m: Überlebenskünstler, w: Überlebenskünstlerin }
+    "10": { m: Performer, w: Performerin }
+    J: { m: Geschichtenerzähler, w: Geschichtenerzählerin }
+    Q: { m: Meteorologe, w: Meteorologin }
+    K: { m: Techniker, w: Technikerin }
+    A: { m: Hindernisbeseitiger, w: Hindernisbeseitigerin }
+  S:
+    "2": { m: Historiker, w: Historikerin }
+    "3": { m: Mechaniker, w: Mechanikerin }
+    "4": { m: Waffenexperte, w: Waffenexpertin }
+    "5": { m: Athlet, w: Athletin }
+    "6": { m: Anführer, w: Anführerin }
+    "7": { m: Charismatiker, w: Charismatikerin }
+    "8": { m: Geologe, w: Geologin }
+    "9": { m: Kartograf, w: Kartografin }
+    "10": { m: Kletterer, w: Kletterin }
+    J: Kraftpaket
+    Q: { m: Okkultist, w: Okkultistin }
+    K: Frohnatur
+    A: { m: Höhlenforscher, w: Höhlenforscherin }
+II:
+  H:
+    "2": Schnelligkeit
+    "3": Energie
+    "4": Seil
+    "5": Festem Schuhwerk
+    "6": Messer
+    "7": Revolver
+    "8": Affinität für das Okkulte
+    "9": Weitem Umhang
+    "10": Ruhigem Wesen
+    J: Reiseführer
+    Q: Dietrichen
+    K: Scharfem Verstand
+    A: Harter Schale
+  S:
+    "2": Notizblock
+    "3": Tageszeitung
+    "4": Werkzeugkasten
+    "5": Instinkt für Gefahr
+    "6": gewinnendem Lächeln
+    "7": imposanter Gestalt
+    "8": Dechiffrier-Gerät
+    "9": Atlas
+    "10": Kompass
+    J: Ausgrabungswerkzeug
+    Q: Robuster Kleidung
+    K: Fingerspitzengefühl
+    A: Weichem Kern
+III:
+  H:
+    "2": Eisernem Willen
+    "3": Taschenspielertricks
+    "4": Schlagring
+    "5": Bandagen
+    "6": Starkem Arm
+    "7": Impulsivität
+    "8": Kochgeschirr
+    "9": Öllampe
+    "10": Blick fürs Detail
+    J: Guter Planung
+    Q: Elitäre Bildung
+    K: Lexikon
+    A: Polsternder Kleidung
+  S:
+    "2": Misstrauen
+    "3": Wetterfühligkeit
+    "4": Selbstbewusstsein
+    "5": Wahrer Freundschaft
+    "6": Augen wie ein Falke
+    "7": Ohren wie ein Luchs
+    "8": Lupe
+    "9": Fernglas
+    "10": Beweglichkeit
+    J: Gutem Gedächtnis
+    Q: Neugier
+    K: Wortgewandtheit
+    A: Ruhiger Hand
+IV:
+  H:
+    "2": { m: Linguist, w: Linguistin }
+    "3": { m: Sanitäter, w: Sanitäterin }
+    "4": { m: Pflanzenkundler, w: Pflanzenkundlerin }
+    "5": { m: Träumer, w: Träumerin }
+    "6": Unscheinbare
+    "7": { m: Erfinder, w: Erfinderin }
+    "8": Fliegengewicht
+    "9": Sturkopf
+    "10": { m: Ehemaliger Boxer, w: Ehemalige Boxerin }
+    J: { m: Bergführer, w: Bergführerin }
+    Q: Langfinger
+    K: { m: Journalist, w: Journalistin }
+    A: { m: Gutachter, w: Gutachterin }
+  S:
+    "2": { m: Ausdauernder, w: Ausdauernde }
+    "3": { m: Koordinator, w: Koordinatorin }
+    "4": { m: Taktiker, w: Taktikerin }
+    "5": { m: Weitgereister, w: Weitgereiste }
+    "6": { m: Biochemiker, w: Biochemikerin }
+    "7": { m: Diplomat, w: Diplomatin }
+    "8": Schönling
+    "9": { m: Seemann, w: Seefrau }
+    "10": { m: Späher, w: Späherin }
+    J: { m: Rätselliebhaber, w: Rätselliebhaberin }
+    Q: { m: Pfadfinder, w: Pfadfinderin }
+    K: { m: Alleinunterhalter, w: Alleinunterhalterin }
+    A: { m: Tierfreund, w: Tierfreundin }
+V:
+  H:
+    "2": „Ein Lächeln bringt dich weiter.“
+    "3": „Brauchst du das noch?“
+    "4": „Es gibt kein schlechtes Wetter.“
+    "5": „Woooah, Explosionen!“
+    "6": „Nach oben geht’s immer“
+    "7": „Immer wachsam!“
+    "8": „Wo ein Wille ist, da ist ein Weg.“
+    "9": „Mit dem Kopf durch die Wand!“
+    "10": „Mir nach!“
+    J: „Solange mich niemand sieht …“
+    Q: „Ich glaube nicht an Magie.“
+    K: „Da habe ich mal was drüber gelesen.“
+    A: „Man kann alles reparieren.“
+  S:
+    "2": „Man muss nur durchhalten.“
+    "3": „Langsam und stetig!“
+    "4": „Was dich nicht umbringt …“
+    "5": „Man lernt nie aus.“
+    "6": „Notfalls mache ich mich zum Affen.“
+    "7": „Ich habe immer das letzte Wort.“
+    "8": „Sei ein Wolf im Schafspelz.“
+    "9": „Meine Weste ist weiß.“
+    "10": „Jeder hat seinen Preis.“
+    J: „Immer noch eine Schippe drauf!“
+    Q: „Ich kenne da jemanden.“
+    K: „Früher war alles besser.“
+    A: „Ich habe die Ruhe weg.“
+VI:
+  H:
+    "2": Unstillbarer Hunger
+    "3": Höhenangst
+    "4": Müde Knochen
+    "5": Gleichgewichtssinn
+    "6": mangelndes Rückgrat
+    "7": Schwache Schulter
+    "8": Raucherlunge
+    "9": Unangenehmer Geruch
+    "10": Vergesslichkeit
+    J: Kurzsichtigkeit
+    Q: Nischenwissen
+    K: Goldfieber
+    A: Schlechte Typografie
+  S:
+    "2": Hitze
+    "3": Kleptomanie
+    "4": Kälte
+    "5": Überheblichkeit
+    "6": Kugel im Knie
+    "7": Orientierungssinn
+    "8": Laute Geräusche
+    "9": Konzentrationsschwäche
+    "10": Dunkelheit
+    J: Enge Räume
+    Q: Egoismus
+    K: Angst vor Krabbeltier
+    A: Menschenansammlungen
+VIII:
+  H:
+    "2": Lüfte ein Geheimnis
+    "3": Verfolge eine Spur
+    "4": Berge einen Schatz
+    "5": Entdecke eine verborgene Stätte
+    "6": Entziffere eine fremde Sprache
+    "7": Gewinne einen Verbündeten
+    "8": Schmiede einen Plan
+    "9": Entlarve eine Lüge
+    "10": Priorisiere die Forschung
+    J: Betritt unbekanntes Terrain
+    Q: Baue eine Apparatur
+    K: Nutze ein Artefakt
+    A: Beschütze dein Team
+  S:
+    "2": Entkomme einer Falle
+    "3": Begib dich in Lebensgefahr
+    "4": Überliste einen Verfolger
+    "5": Stelle dich einem Rivalen
+    "6": Rette einen Gefährten
+    "7": Überschreite eine Grenze
+    "8": Trotze der Natur
+    "9": Bezwinge ein Tier
+    "10": Sei ein Hitzkopf
+    J: Setze alles aufs Spiel
+    Q: Kämpfe um einen Schatz
+    K: Zerstöre ein Hindernis
+    A: Zahle einen hohen Preis

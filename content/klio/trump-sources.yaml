@@ -1,0 +1,51 @@
+# Wege zum Trumpf (ARCHITEKTUR.md 7, Ebene 2). Texte wortgetreu aus der alten Datei.
+# Bausteine (requires, steps, filters, afterwards, always) sind feste TS-Funktionen in src/rules/klio/blocks/.
+
+maxTrumps: 4                  # muss zu sheet.yaml (trumps.count) passen
+always: [ noDuplicate ]       # gilt für jeden Weg, auch für die freie Wahl
+whenFull: blocked             # bei 4 Trümpfen; einzelne Wege können das überschreiben
+
+trumpSources:
+  - id: start
+    text:
+      name: Starttrumpf
+      desc: Stufe I, passend zu deinem höchsten Attribut.
+      why: Du hast schon einen Trumpf.
+    requires: [ noTrumpYet ]
+    levels: [ 1 ]
+    filters: [ matchesHighestAttribute ]
+
+  - id: weakness
+    text:
+      name: Schwäche überwunden
+      desc: "Alle drei Verbessern-Kästchen markiert: Schwäche streichen und Trumpf der Stufe I wählen."
+      why: Dafür zuerst alle drei Verbessern-Kästchen markieren.
+    requires: [ { allMarked: weaknessMarks } ]
+    steps: [ chooseWeaknessToRemove ]          # nur befüllte Schwächen; beide leer: Schritt entfällt (A29)
+    levels: [ 1 ]
+    afterwards: [ { clear: weaknessMarks } ]   # A1
+
+  - id: experience
+    text:
+      name: Erlebnis eingetroffen
+      desc: "Alle drei Lampenfelder markiert: eine Stärke verbessern und einen Trumpf der Stufe I oder II wählen."
+      why: Dafür zuerst alle drei Lampenfelder markieren.
+    requires: [ { allMarked: lamps } ]
+    steps: [ { improveStrength: optional } ]   # freiwillig, solange ein Trumpf folgt (A35)
+    levels: [ 1, 2 ]
+    whenFull: improveOnly                      # bei 4 Trümpfen nur verbessern (O8)
+    afterwards: [ { clear: lamps } ]           # A1
+
+  - id: scar
+    text:
+      name: Neue Narbe
+      desc: Einen Attributspunkt umverteilen und einen Trumpf der Stufe I bis III wählen, der das verbesserte Attribut benötigt.
+      why: Keine neue Narbe markiert.
+    requires: [ { atLeast: { newScars: 1 } } ]
+    steps: [ moveAttributePoint ]              # liefert { lowered, raised }
+    levels: [ 1, 2, 3 ]
+    filters: [ needsRaisedAttribute ]
+    afterwards: [ { decrement: newScars } ]
+
+freeChoice: true
+randomChoice: firstAvailableSource

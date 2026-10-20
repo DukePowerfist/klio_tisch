@@ -1,0 +1,201 @@
+// Engine: allgemeiner Kartentisch (ARCHITEKTUR.md 6). Kennt Klio nicht.
+// Nur Typen; die Laufzeitprüfung (Zod) liegt bei den Stellen, die Daten von außen annehmen.
+
+// ---------- Karten ----------
+
+export type SuitId = 'H' | 'S' | 'C' | 'D'; // Herz, Pik, Kreuz, Karo
+export type RankId = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+/** z. B. `H10`, `SQ`, `DA`. Anzeige (B/D/K/A, Farbnamen) kommt aus den Texten. */
+export type CardId = `${SuitId}${RankId}`;
+
+export type CardDef = {
+  id: CardId;
+  suit: SuitId;
+  rank: RankId;
+  /** Vergleichswert: 2–10, B=11, D=12, K=13, A=14 */
+  value: number;
+  /** Heimatstapel für `gather … to: home` */
+  home: ZoneId;
+};
+
+export type DeckConfig = {
+  cards: CardDef[];
+  /** Startaufteilung; jede Karte genau einmal. Reihenfolge wird beim Aufbau gemischt. */
+  start: Partial<Record<ZoneId, CardId[]>>;
+};
+
+// ---------- Plätze, Zonen, Anker ----------
+
+export type SeatId = 'seat1' | 'seat2' | 'seat3' | 'seat4';
+export const SEATS: readonly SeatId[] = ['seat1', 'seat2', 'seat3', 'seat4'];
+
+/** Tischzonen (`deck`) oder je Platz erzeugte Zonen (`seat1.damage`). */
+export type ZoneId = string;
+
+/** Bereich, an dem frei liegende Karten hängen (6.1, A32). */
+export type AnchorId = 'center' | SeatId;
+
+export type GatherRule = {
+  from: ZoneId;
+  suit?: SuitId;
+  /** fehlt: in den mischenden Stapel; `home`: in den Heimatstapel der Karte */
+  to?: 'home';
+};
+
+export type DrawRule = { to: ZoneId; faceUp: boolean; announce: boolean };
+
+export type ZoneActions = {
+  shuffle?: { gather?: GatherRule[] };
+  draw?: DrawRule;
+  /** `top`: oberste Karte umdrehen; `draw`: wirkt wie Ziehen */
+  flip?: 'top' | 'draw';
+  /** Doppelklick auf eine verdeckte Karte dieses Stapels wirkt wie Ziehen */
+  cardDoubleClick?: { faceDown: 'draw' };
+};
+
+export type ZoneConfig = {
+  id: ZoneId;
+  /** Vorlage: erzeugt `seat1.<id>` … `seat4.<id>` mit `owner` */
+  perSeat?: boolean;
+  /** gesetzt für erzeugte Platz-Zonen */
+  owner?: SeatId;
+  /** aufgefächert (alle Karten greifbar) oder Stapel (nur oberste) */
+  fanned?: boolean;
+  capacity?: number;
+  onDrop?: 'faceUp';
+  actions?: ZoneActions;
+};
+
+// ---------- Zustand ----------
+
+export type FreePos = { anchor: AnchorId; x: number; y: number };
+
+export type PermissionValue = 'allow' | 'deny' | 'own';
+export type PermissionOverrides = Partial<Record<'player' | 'spectator', Record<string, PermissionValue>>>;
+
+export type TableSettings = {
+  players: 1 | 2 | 3 | 4;
+  /** abschaltbare Reaktionen, Schlüssel = Reaction.id */
+  automation: Record<string, boolean>;
+  permissionOverrides: PermissionOverrides;
+};
+
+export type TableState<G> = {
+  format: number;
+  ruleset: { id: string; version: string };
+  seq: number;
+  /** einzige Quelle für „welche Karte liegt wo“; unten → oben */
+  zones: Record<ZoneId, CardId[]>;
+  /** frei liegende Karten; Reihenfolge = Stapelhöhe */
+  free: CardId[];
+  freePos: Partial<Record<CardId, FreePos>>;
+  faceUp: Partial<Record<CardId, boolean>>;
+  seats: Record<SeatId, { occupied: boolean; name?: string }>;
+  settings: TableSettings;
+  game: G;
+};
+
+// ---------- Wer handelt ----------
+
+export type Actor =
+  | { role: 'gm' }
+  | { role: 'player'; seat: SeatId }
+  | { role: 'spectator' };
+
+// ---------- Befehle ----------
+
+/** Woher Karten kommen: aus einer Zone oder frei. Voraussetzung für `cards.move` (6.2). */
+export type CardSource = { zone: ZoneId } | { free: true };
+export type CardTarget = { zone: ZoneId } | { free: FreePos };
+
+export type EngineCommand =
+  | { type: 'cards.move'; cards: CardId[]; from: CardSource; to: CardTarget }
+  | { type: 'card.flip'; card: CardId }
+  | { type: 'zone.flip'; zone: ZoneId }
+  | { type: 'zone.shuffle'; zone: ZoneId }
+  | { type: 'zone.draw'; zone: ZoneId };
+
+/** Regelwerk-Befehle haben dieselbe Hülle; `type` und Inhalt legt das Regelwerk fest. */
+export type Command = { type: string; [key: string]: unknown };
+
+/** Über das Netz: jeder Befehl trägt eine eindeutige ID (8.2, doppelt gesendete Befehle). */
+export type CommandEnvelope = { id: string; cmd: Command };
+
+// ---------- Ereignisse ----------
+
+export type EngineEvent =
+  | { type: 'cardsMoved'; cards: CardId[]; from: CardSource; to: CardTarget }
+  | { type: 'cardsTurned'; cards: CardId[]; faceUp: boolean }
+  /** neue vollständige Reihenfolge jeder betroffenen Zone (Zufall steckt im Ereignis) */
+  | { type: 'zonesShuffled'; zones: Record<ZoneId, CardId[]>; faceDown: CardId[] }
+  | { type: 'cardDrawn'; card: CardId; from: ZoneId; to: ZoneId; faceUp: boolean; announce: boolean }
+  | { type: 'settingsChanged'; settings: TableSettings }
+  | { type: 'seatsChanged'; seats: TableState<unknown>['seats'] }
+  /** alle Karten zurück auf ihre (neu gemischten) Startplätze, verdeckt, nichts frei */
+  | { type: 'cardsReset'; zones: Record<ZoneId, CardId[]> };
+
+export type Event = { type: string; [key: string]: unknown };
+
+/** Bestätigtes Ereignis mit fortlaufender Nummer (8.2: Lücke → Stand neu anfordern). */
+export type SequencedEvent = { seq: number; event: Event };
+
+// ---------- Regelwerk-Schnittstelle (7) ----------
+
+export interface Rng {
+  /** gleichverteilt in [0, n) */
+  int(n: number): number;
+}
+
+export type Rejection = { rejected: true; reason: TextRef };
+export type DispatchResult<G> = { state: TableState<G>; events: Event[] } | Rejection;
+
+/** Verweis auf einen Text in texts.de.yaml samt Platzhaltern. */
+export type TextRef = { key: string; params?: Record<string, string | number> };
+
+export type CommandDef<G, C extends Command = Command> = {
+  /** Zod-Schema des Befehls; hier nur als Prüffunktion typisiert, damit die Engine Zod nicht kennen muss */
+  parse(input: unknown): C;
+  /** Rechteschlüssel aus permissions.yaml */
+  permission: string;
+  /** Platz, dem der Befehl gehört (für `own`); fehlt: gehört niemandem */
+  owner?(cmd: C, state: TableState<G>): SeatId | null;
+  /** Prüfen und in Ereignisse übersetzen; ablehnen mit Grund */
+  handle(cmd: C, state: TableState<G>, actor: Actor, rng: Rng): Event[] | Rejection;
+};
+
+export type EventDef<G, E extends Event = Event> = {
+  parse(input: unknown): E;
+  apply(state: TableState<G>, event: E): TableState<G>;
+};
+
+export type Reaction<G> = {
+  /** Schlüssel für settings.automation */
+  id: string;
+  /** sieht den neuen Stand und das auslösende Ereignis; liefert Folgeereignisse */
+  react(state: TableState<G>, event: Event, rng: Rng): Event[];
+};
+
+export type PermissionTable = {
+  gm: 'all';
+  player: Record<string, PermissionValue>;
+  spectator: 'none' | Record<string, PermissionValue>;
+};
+
+export type Migration = {
+  /** formt Format `from` in `from + 1` um */
+  from: number;
+  migrate(stored: unknown): unknown;
+};
+
+export interface Ruleset<G> {
+  id: string;
+  version: string;
+  initialGame(rng: Rng): G;
+  deck: DeckConfig;
+  zones: ZoneConfig[];
+  commands: Record<string, CommandDef<G, any>>;
+  events: Record<string, EventDef<G, any>>;
+  reactions: Reaction<G>[];
+  permissions: PermissionTable;
+  migrations: Migration[];
+}

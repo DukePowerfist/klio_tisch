@@ -1,0 +1,50 @@
+# Ansichten: Tischgröße, Form der Tischzonen, Lage in Draufsicht und Rollenansicht.
+# Werte aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs).
+
+board: [ 1760, 990 ]
+card: [ 80, 112 ]
+freeCardScale: 0.6
+shapes:
+  deck: { w: 80, h: 112 }
+  discard: { w: 80, h: 112 }
+  display: { w: 80, h: 112 }
+  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
+  diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
+  diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
+  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
+  danger: { w: 330, h: 70, scale: 0.6, fanX: 26 }
+  progress: { w: 330, h: 70, scale: 0.6, fanX: 26 }
+  seat.damage: { scale: 1 }
+  seat.notes: { scale: 1, fanX: 40 }
+  seat.collect: { scale: 0.4, fanY: 12 }
+overview:
+  zones:
+    diamonds_easy: [ 651, 120 ]
+    diamonds_medium: [ 826, 120 ]
+    diamonds_hard: [ 1026, 120 ]
+    display: [ 810, 270 ]
+    deck: [ 760, 440 ]
+    discard: [ 880, 440 ]
+    danger: [ 600, 640 ]
+    progress: [ 600, 760 ]
+    clubs: [ 1010, 640 ]
+  menu: [ 1172, 120 ]
+  resistTitle: [ 600, 616 ]
+  sheets: { margin: 14, gap: 14, scaleUpTo2Players: 1.2, scaleFrom3Players: 0.9 }
+role:
+  zones:
+    diamonds_easy: [ 810, 40 ]
+    diamonds_medium: [ 980, 40 ]
+    diamonds_hard: [ 1185, 40 ]
+    display: [ 964, 200 ]
+    deck: [ 904, 350 ]
+    discard: [ 1024, 350 ]
+    clubs: [ 1480, 40 ]
+    danger: [ 1340, 200 ]
+    progress: [ 1340, 310 ]
+  menu: [ 1335, 40 ]
+  resistTitle: [ 1340, 176 ]
+  sheets:
+    own: { x: 14, y: 10, scale: fit }
+    others: { x: 745, gap: 8, bottomMargin: 10, scale: 0.85, opacity: 0.88 }
+    panel: { x: 735, y: 10 }

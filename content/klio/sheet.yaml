@@ -1,0 +1,24 @@
+# WAS auf dem Bogen steht (ARCHITEKTUR.md 10, Bogen-Häute). Lage und Aussehen: skins/*.yaml.
+# Feldnamen entsprechen KlioSheet (src/rules/klio/state.ts); `strengths.text` = Text der Stärken usw.
+# `roll`: welche Zufallstabelle das Feld beim Auswürfeln füllt; `distinct`: keine doppelten Einträge.
+
+fields:
+  name: { kind: text }
+  attributes: { kind: number, keys: [ K, V, P ] }
+  strengths.text: { kind: text, count: 5, roll: [ I, II, III, IV, V ] }
+  strengths.improved: { kind: check, count: 5 }
+  weaknesses: { kind: text, count: 2, roll: [ VI, VI ], distinct: true }
+  weaknessMarks: { kind: check, count: 3 }
+  scars: { kind: check, keys: [ heart, spade ] }
+  lamps: { kind: check, count: 3 }
+  experiences: { kind: text, count: 3, roll: [ VIII, VIII, VIII ], distinct: true }
+  gear.text: { kind: text, count: 7 }
+  gear.struck: { kind: check, count: 7 }       # Streichknopf („untauglich“)
+  photo: { kind: photo }
+  trumps: { kind: trumpSlot, count: 4 }
+  dead: { kind: overlay }                      # rotes Kreuz über dem ganzen Bogen
+
+zones: [ damage, notes, collect ]
+
+roll:
+  attributeTotal: 4     # gleichverteilt über alle Aufteilungen auf K/V/P (A6)

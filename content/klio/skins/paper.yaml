@@ -1,0 +1,57 @@
+# Haut „Papier“: Bogenbild je Variante, Lage jedes Felds und jeder Bogenzone in Bildkoordinaten.
+# Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs).
+
+size: [ 662, 936 ]
+images: { m: sheet/paper-m.jpg, w: sheet/paper-w.jpg }
+fields:
+  attributes.K: { x: 255, y: 57, w: 31, h: 31, font: 22 }
+  attributes.V: { x: 367, y: 57, w: 31, h: 31, font: 22 }
+  attributes.P: { x: 477, y: 57, w: 31, h: 31, font: 22 }
+  strengths.text.0: { x: 104, y: 171, w: 262, h: 28, font: 17 }
+  strengths.text.1: { x: 238, y: 207, w: 170, h: 26, font: 17 }
+  strengths.text.2: { x: 72, y: 238, w: 228, h: 27, font: 17 }
+  strengths.text.3: { x: 86, y: 269, w: 226, h: 27, font: 17 }
+  strengths.text.4: { x: 192, y: 304, w: 212, h: 27, font: 17 }
+  weaknesses.0: { x: 190, y: 339, w: 205, h: 26, font: 17 }
+  weaknesses.1: { x: 88, y: 371, w: 232, h: 24, font: 17 }
+  strengths.improved.0: { x: 388, y: 190, size: 20 }
+  strengths.improved.1: { x: 426, y: 220, size: 20 }
+  strengths.improved.2: { x: 317, y: 256, size: 20 }
+  strengths.improved.3: { x: 331, y: 281, size: 20 }
+  strengths.improved.4: { x: 419, y: 317, size: 20 }
+  weaknessMarks.0: { x: 340.5, y: 376, size: 13 }
+  weaknessMarks.1: { x: 356, y: 377, size: 13 }
+  weaknessMarks.2: { x: 370.5, y: 377, size: 13 }
+  name: { x: 146, y: 122, w: 112, h: 25, font: 21 }
+  gear.text.0: { x: 452, y: 445, w: 128, h: 19, font: 14 }
+  gear.struck.0: { x: 589.5, y: 454.5, size: 13 }
+  gear.text.1: { x: 452, y: 465, w: 128, h: 19, font: 14 }
+  gear.struck.1: { x: 589.5, y: 474.5, size: 13 }
+  gear.text.2: { x: 452, y: 487, w: 128, h: 19, font: 14 }
+  gear.struck.2: { x: 589.5, y: 496.5, size: 13 }
+  gear.text.3: { x: 452, y: 508, w: 128, h: 19, font: 14 }
+  gear.struck.3: { x: 589.5, y: 517.5, size: 13 }
+  gear.text.4: { x: 452, y: 527, w: 128, h: 19, font: 14 }
+  gear.struck.4: { x: 589.5, y: 536.5, size: 13 }
+  gear.text.5: { x: 452, y: 546, w: 128, h: 19, font: 14 }
+  gear.struck.5: { x: 589.5, y: 555.5, size: 13 }
+  gear.text.6: { x: 452, y: 565, w: 128, h: 19, font: 14 }
+  gear.struck.6: { x: 589.5, y: 574.5, size: 13 }
+  scars.heart: { x: 551, y: 93, size: 30 }
+  scars.spade: { x: 547, y: 351, size: 30 }
+  lamps.0: { x: 586, y: 864, size: 14 }
+  lamps.1: { x: 586, y: 879, size: 14 }
+  lamps.2: { x: 588, y: 891, size: 14 }
+  experiences.0: { x: 66, y: 876, w: 160, h: 21, font: 17 }
+  experiences.1: { x: 248, y: 876, w: 160, h: 21, font: 17 }
+  experiences.2: { x: 412, y: 876, w: 145, h: 21, font: 17 }
+  photo: { x: 62, y: 74, w: 70, h: 82 }
+  trumps.0: { x: 28, y: 690, w: 128, h: 152 }
+  trumps.1: { x: 186, y: 690, w: 128, h: 152 }
+  trumps.2: { x: 344, y: 690, w: 128, h: 152 }
+  trumps.3: { x: 503, y: 690, w: 128, h: 152 }
+  dead: { x: 0, y: 0, w: 662, h: 936 }
+zones:
+  damage: { x: 519.1, y: 125.4, w: 139.4, h: 195.1 }
+  notes: { x: 62.7, y: 435.5, w: 278.7, h: 195.1 }
+  collect: { x: 597.5, y: 456.4, w: 59.2, h: 188.1 }

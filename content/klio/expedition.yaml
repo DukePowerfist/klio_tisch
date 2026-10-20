@@ -1,0 +1,107 @@
+# Expedition (4 Tabellen, Reihenfolge wie in der alten Datei) und Orakel (Herz, Pik, Kreuz je Kartenwert).
+# Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs), wortgetreu.
+
+expedition:
+  - prompt: Diese Expedition führt euch …
+    entries:
+      - in eine eisige Bergwelt.
+      - in die Tiefen eines Dschungels.
+      - in eine überfüllte Hafenstadt.
+      - an einen urzeitlichen Ort.
+      - auf eine tropische Insel.
+      - in die Stadt eures eigenen Museums.
+      - in eine politisch zerrissene Metropole.
+      - in eine ländliche Gegend.
+      - auf das offene Meer.
+      - an einen heiligen Ort.
+      - in eine hitzeglühende Wüste.
+      - in ein unerforschtes Höhlensystem.
+      - in die Nähe eines Naturereignisses.
+  - prompt: Bekannt für …
+    entries:
+      - die gefährliche Tierwelt.
+      - das unerbittliche Wetter.
+      - tödliche Fallen und uralte Flüche.
+      - den erbarmungslosen Schwarzmarkt.
+      - das Verschwinden von Expeditionen.
+      - rivalisierende Expeditionsteams.
+      - die korrupten Verhältnisse.
+      - seltene Krankheiten.
+      - verbotene Ausgrabungen.
+      - religiöse Fanatiker und geheime Orden.
+      - uralte Maschinen, die ihrer Zeit voraus waren.
+      - das unberechenbare Terrain.
+      - alte Legenden, die niemand ernst nimmt.
+  - prompt: Ihr seid hier, weil …
+    entries:
+      - ihr auf der Suche nach eurem verschollenen Mentor seid.
+      - ihr eine rätselhafte Karte übersetzt habt.
+      - ein Artefakt aus dem Museum gestohlen worden ist.
+      - euer Patron verdammt gut bezahlt ... doch wisst ihr nicht, wieso.
+      - ihr einem Artefakt auf der Spur seid, das niemand in die Hände bekommen darf.
+      - ihr den Beweis für eine Legende finden wollt, um euren Ruf wiederherzustellen.
+      - ihr dem rätselhaften Hinweis aus dem Nachlass eines verstorbenen Forschers folgt.
+      - ihr den Fehler einer eurer vergangenen Expeditionen wiedergutmachen wollt. Welchen?
+      - ihr von einer höheren Instanz gezwungen werdet, ein Artefakt zu beschaffen. Welches Druckmittel hat die höhere Instanz gegen euch in der Hand?
+      - ihr euch mit einem geheimnisvollen Informanten treffen wollt. Wie habt ihr von diesem Treffen erfahren?
+      - einer von euch verflucht ist und ihr ein Heilmittel sucht. Was ist der Fluch?
+      - ihr euch im Wettstreit mit einer anderen Expedition befindet. Wer sind eure Konkurrenten?
+      - ihr einen Ort erreichen wollt, der noch nie erreicht worden ist. Wieso wurde der Ort bislang nie erreicht? Wieso erhofft ihr euch nun bessere Chancen?
+  - prompt: Doch ihr müsst schnell handeln, denn …
+    entries:
+      - euer Transportmittel versagt.
+      - das Wetter schlägt um.
+      - ihr seid geradewegs in eine Falle getappt.
+      - ein Objekt, das ihr dringend benötigt, wird gerade illegal versteigert.
+      - eure Spur wird kalt.
+      - ihr seid nachts im Lager aufgewacht, geweckt vom Geräusch sich nähernder Feinde.
+      - die lokalen Machthaber haben von eurer Anwesenheit erfahren.
+      - ein Verbündeter, Freund oder Informant ist plötzlich verschwunden.
+      - jemand oder etwas ist euch dicht auf den Fersen.
+      - eure Kontaktperson ist nicht aufgetaucht.
+      - eure geplante Reiseroute ist bald nicht mehr passierbar.
+      - die Landschaft um euch verändert sich zum Schlechten. Wie?
+      - jemand von euch ist schwer verletzt (ziehe eine Schadenskarte).
+oracle:
+  H:
+    "2": bunt
+    "3": informativ
+    "4": menschlich
+    "5": unerwartet
+    "6": natürlich
+    "7": bewegt
+    "8": mechanisch
+    "9": hinderlich
+    "10": tief
+    J: magisch
+    Q: eng
+    K: verbündet
+    A: animalisch
+  S:
+    "2": mühsam
+    "3": rätselhaft
+    "4": konstruiert
+    "5": traurig
+    "6": allein
+    "7": verdorben
+    "8": hoch
+    "9": kämpferisch
+    "10": verbunden
+    J: tödlich
+    Q: verlockend
+    K: ergiebig
+    A: zerstört
+  C:
+    "2": friedlich
+    "3": geheim
+    "4": weit
+    "5": defensiv
+    "6": schwer
+    "7": gruppiert
+    "8": legendär
+    "9": schützend
+    "10": schnell
+    J: vorteilhaft
+    Q: offen
+    K: natürlich
+    A: reich

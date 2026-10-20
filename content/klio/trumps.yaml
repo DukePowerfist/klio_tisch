@@ -1,0 +1,267 @@
+# Trümpfe. `id` ist fest und ändert sich nie, auch wenn der Name korrigiert wird.
+# Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs), wortgetreu.
+
+- id: schnelle-reflexe
+  category: K
+  attributes: [ K ]
+  level: 1
+  name: Schnelle Reflexe
+  text: Du hast Vorteil auf alle Körper-Reaktionen.
+- id: hinter-mich
+  category: K
+  attributes: [ K ]
+  level: 1
+  name: Hinter mich
+  text: Wenn ein naher Verbündeter eine Schadenskarte ziehen würde, darfst du sie stattdessen ziehen. Erhalte eine Forschungsnotiz.
+- id: standhaft
+  category: K
+  attributes: [ K ]
+  level: 1
+  name: Standhaft
+  text: Bevor du eine Schadenskarte ziehst, darfst du ihr Symbol erraten. Behältst du recht, legst du sie und ♣ auf die Ablage. Ansonsten nimmst du die Schadenskarte.
+- id: risikobewusst
+  category: K
+  attributes: [ K ]
+  level: 1
+  name: Risikobewusst
+  text: Erhalte Nachteil auf eine Aktion, um ihren Schwierigkeitsgrad zu erfahren. ♣ beendet diese Aktion nicht.
+- id: stoiker
+  category: K
+  attributes: [ K ]
+  level: 2
+  name: Stoiker
+  text: Während einer Rast kannst du Forschungsnotizen statt Rastpunkten für Rastaktionen ausgeben.
+- id: packesel
+  category: K
+  attributes: [ K ]
+  level: 2
+  name: Packesel
+  text: Während einer Rast, darfst du Rüstzeug aus deinem Inventar entfernen und freigewordenen Platz im Lauf der Expedition neu belegen.
+- id: fisch-im-wasser
+  category: K
+  attributes: [ K ]
+  level: 2
+  name: Fisch im Wasser
+  text: Wähle eine natürliche oder anthropogene Umgebung. Du hast Vorteil auf alle Aktionen zur Fortbewegung in dieser Umgebung.
+- id: momentum
+  category: K
+  attributes: [ K ]
+  level: 2
+  name: Momentum
+  text: Hast du bei einer Aktion drei oder mehr Karten mit demselben Symbol gezogen hast, darfst du ♣ auf die Ablage legen, um eine weitere Karte zu ziehen.
+- id: nur-ueber-meine-leiche
+  category: K
+  attributes: [ K ]
+  level: 3
+  name: Nur über meine Leiche
+  text: Du darfst eine Schadenskarte ziehen, um zu verhindern, dass das Rampenlicht zu der Welt und ihren Konsequenzen springt.
+- id: wahrer-held
+  category: K
+  attributes: [ K ]
+  level: 3
+  name: Wahrer Held
+  text: Einmal je Expedition, darfst du zwei Forschungsnotizen ausgeben, um eine nahezu übermenschliche, körperliche Tat zu beschreiben. Die Aktion ist automatisch erfolgreich.
+- id: leben-am-limit
+  category: K
+  attributes: [ K ]
+  level: 3
+  name: Leben am Limit
+  text: Du behältst gezogenes ♣, statt es aus dem Deck zu entfernen. Wenn eine deiner Aktionen scheitern würde, musst du eine dieser Karten als zuletzt gezogene Karte wählen.
+- id: luegendetektor
+  category: P
+  attributes: [ P ]
+  level: 1
+  name: Lügendetektor
+  text: Du hast Vorteil auf Aktionen, mit denen du andere Personen durchschauen und Lügen erkennen willst. ♣ beendet diese Aktionen nicht.
+- id: ich-kenne-da-jemanden
+  category: P
+  attributes: [ P ]
+  level: 1
+  name: Ich kenne da jemanden
+  text: Einmal je Expedition darfst du eine Kontaktperson in der Umgebung benennen, die euch helfen kann. Wer ist sie und woher kennst du sie?
+- id: alarmiert
+  category: P
+  attributes: [ P ]
+  level: 1
+  name: Alarmiert
+  text: Du hast Vorteil auf Aktionen, mit denen du herausfinden willst, ob etwas in der Umgebung unerkannt bleiben möchte. Zusätzlich darfst du während einer Rast Wache halten, ohne Rastpunkte für diese Aktion auszugeben.
+- id: punktlandung
+  category: P
+  attributes: [ P ]
+  level: 1
+  name: Punktlandung
+  text: Erhalte eine Forschungsnotiz, wenn du bei einer Aktion ihren Schwierigkeitsgrad genau triffst.
+- id: sprache-der-tiere
+  category: P
+  attributes: [ P ]
+  level: 2
+  name: Sprache der Tiere
+  text: Du hast Vorteil auf alle Aktionen, mit denen du das Verhalten eines Tieres verstehen oder beeinflussen willst. ♣ beendet diese Aktionen nicht.
+- id: erbstueck
+  category: P
+  attributes: [ P ]
+  level: 2
+  name: Erbstück
+  text: Deiner Familie gehört seit jeher ein Artefakt. Was bewirkt es? Artefakte sind mit Flüchen und Ritualen verbunden. Je mächtiger das Artefakt, desto gefährlicher sein Fluch.
+- id: huh
+  category: P
+  attributes: [ P ]
+  level: 2
+  name: Huh?
+  text: Du kannst jemanden unerkannt dazu bringen, eine unscheinbare, gedankenverlorene Handlung zu unterlassen, etwa einen Namen oder Schlüssel zu vergessen. Lege dafür ♣ auf die Ablage.
+- id: teamspieler
+  category: P
+  attributes: [ P ]
+  level: 2
+  name: Teamspieler
+  text: Aktiviere helfend deine Forschungsnotizen für ein Teammitglied, nachdem die letzte Karte bereits gezogen worden ist. Ziehe dafür eine Schadenskarte.
+- id: januskopf
+  category: P
+  attributes: [ P ]
+  level: 3
+  name: Januskopf
+  text: Ziehe eine Symbolprobe. Bei schwarz, hast du für die Szene Vorteil auf Aktionen, die bedrohlich wirken und Nachteil auf Aktionen, die wohlwollend wirken. Bei Rot gilt das Gegenteil. Wie zeigen sich deine hellen und dunklen Seiten?
+- id: goldene-vergangenheit
+  category: P
+  attributes: [ P ]
+  level: 3
+  name: Goldene Vergangenheit
+  text: Benenne eine Stärke, die du die restliche Expedition nutzen kannst. Was bringt dein vergessenes Talent zum Vorschein?
+- id: kampfgeister-wecken
+  category: P
+  attributes: [ P ]
+  level: 3
+  name: Kampfgeister wecken
+  text: "Je Expedition darfst du jeden dieser Boni einmal für dich oder andere einsetzen: Vorteil gewähren, ♠ oder ♣ als ♥ werten oder eine Schadenskarte heilen. Wie motivierst du deine Teammitglieder."
+- id: anatomie
+  category: V
+  attributes: [ V ]
+  level: 1
+  name: Anatomie
+  text: Beim Ziehen von Schadenskarten darfst du deine oberste Schadenskarte um eins unterschreiten.
+- id: feldforschung
+  category: V
+  attributes: [ V ]
+  level: 1
+  name: Feldforschung
+  text: Erfahre den Schwierigkeitsgrad einer Aktion. Gib dafür eine Forschungsnotiz aus. Wie hilft dir ein früheres Abenteuer bei diesem?
+- id: kuehler-kopf
+  category: V
+  attributes: [ V ]
+  level: 1
+  name: Kühler Kopf
+  text: Ziehst du in einer gefährlichen Situation ♣, darfst du der SL eine Frage stellen, die sie wahrheitsgemäß beantwortet. Erhalte zusätzlich eine Forschungsnotiz.
+- id: bastler
+  category: V
+  attributes: [ V ]
+  level: 1
+  name: Bastler
+  text: Während einer Rast darfst du ein Rüstzeug herstellen, ohne Rastpunkte für diese Aktion auszugeben. Es erhöht das Kartenbudget einer Aktion einmalig um drei und wird dann untauglich.
+- id: zusammenflicken
+  category: V
+  attributes: [ V ]
+  level: 2
+  name: Zusammenflicken
+  text: Du darfst auch außerhalb einer Rast Schadenskarten heilen. Lege dafür je geheilter Schadenskarte zwei ♣ auf die Ablage.
+- id: verbotenes-wissen
+  category: V
+  attributes: [ V ]
+  level: 2
+  name: Verbotenes Wissen
+  text: Findest du kryptische Sprache, darfst du eine Symbolprobe ziehen. Bei Rot verstehst du sie und erfährst den Schwierigkeitsgrad der nächsten Aktion. Bei Schwarz verstehst du sie nicht und legst ♣ auf die Ablage.
+- id: ass-im-aermel
+  category: V
+  attributes: [ V ]
+  level: 2
+  name: Ass im Ärmel
+  text: Ziehst du bei einer Aktion ein Ass, darfst du die Aktion beenden, als hättest du einen Misserfolg mit ♠ gezogen. Lege das Ass danach oben auf das Deck.
+- id: vertrauter-ort
+  category: V
+  attributes: [ V ]
+  level: 2
+  name: Vertrauter Ort
+  text: Wähle eine natürliche oder anthropogene Umgebung. Du hast Vorteil auf alle Aktionen zur Orientierung in dieser Umgebung. ♣ beendet diese Aktionen nicht.
+- id: schreib-das-auf
+  category: V
+  attributes: [ V ]
+  level: 3
+  name: Schreib das auf!
+  text: Du sammelst deine zuletzt gezogenen Karten. Hast du drei aufeinanderfolgende Zahlen, kannst du eine der Karten ausgeben, um ihren Wert oder ihr Symbol statt des Wertes oder des Symbols einer zuletzt gezogenen Karte zu verwenden.
+- id: prognose
+  category: V
+  attributes: [ V ]
+  level: 3
+  name: Prognose
+  text: Einmal je Expedition darfst du die nächsten sechs Karten des Decks ansehen, ein ♣ hinzufügen und dann mischen.
+- id: eine-frage-der-logik
+  category: V
+  attributes: [ V ]
+  level: 3
+  name: Eine Frage der Logik
+  text: Einmal je Expedition darfst du bei einem unerklärlichen Rätsel eine Hypothese äußern, wie alles zusammenhängt. Die SL sagt dir, welche Teile deiner Hypothese stimmen.
+- id: ritualmesser
+  category: X
+  attributes: [ K, P ]
+  level: 1
+  name: Ritualmesser
+  text: Du besitzt ein verfluchtes Ritualmesser. Erhöhe bei passenden Aktionen dein Kartenbudget um drei. Verursachst du dabei keinen Schaden, ziehst du selbst eine Schadenskarte.
+- id: geschaerfte-sinne
+  category: X
+  attributes: [ P, V ]
+  level: 1
+  name: Geschärfte Sinne
+  text: Einmal je Expedition schärfst du deine Sinne. Für den Rest der Szene hast du Vorteil auf passende Aktionen und Impulse. ♣ beendet diese Aktionen nicht.
+- id: denkzettel
+  category: X
+  attributes: [ V, K ]
+  level: 1
+  name: Denkzettel
+  text: Ziehst du eine 2 oder ein Ass als Schadenskarte, darfst du sie stattdessen zu deinen Forschungsnotizen legen.
+- id: stresstest
+  category: X
+  attributes: [ K, V, P ]
+  level: 1
+  name: Stresstest
+  text: Vor einer Aktion oder einem Impuls darfst du ein oder mehrere ♣ auf die Ablage legen, um dein Kartenbudget je abgelegter Karte um eins zu erhöhen.
+- id: imposant
+  category: X
+  attributes: [ K, P ]
+  level: 2
+  name: Imposant
+  text: Willst du jemanden einschüchtern, beruhigen oder beeinflussen, darfst du ♣ auf die Ablage legen, um das Kartenbudget um dein Körper-Attribut zu erhöhen.
+- id: chirurgie
+  category: X
+  attributes: [ P, V ]
+  level: 2
+  name: Chirurgie
+  text: Heile außerhalb einer Rast eine Schadenskarte, indem du eine Forschungsnotiz ausgibst. Jeder Einsatz erhöht die Kosten um eins. In einer gefährlichen Situation legst du zusätzlich ♣ auf die Ablage.
+- id: nie-wieder
+  category: X
+  attributes: [ V, K ]
+  level: 2
+  name: Nie wieder
+  text: Nach dem Scheitern einer Aktion darfst du eine Narbe markieren und beschreiben, wie daraus ein besonderer Erfolg wird. Wie hast du diese Narbe erhalten?
+- id: kraftakt
+  category: X
+  attributes: [ K, V, P ]
+  level: 2
+  name: Kraftakt
+  text: Erschöpfe eine Stärke, um das Kartenbudget einer Aktion um drei statt um eins zu erhöhen. Du kannst dies auch während der Aktion tun. Die Stärke bleibt für den Rest der Expedition untauglich.
+- id: glueck-im-unglueck
+  category: X
+  attributes: [ K, P ]
+  level: 3
+  name: Glück im Unglück
+  text: Alle Karten mit Wert 2 gelten für dich als ♥, auch bei Impulsen und Schadenskarten. Außerdem gilt das ♣ Ass für dich als ♥ Ass.
+- id: sprechende-tote
+  category: X
+  attributes: [ P, V ]
+  level: 3
+  name: Sprechende Tote
+  text: Einmal je Expedition darfst du eine Symbolprobe ziehen, um ein totes Wesen zu befragen. Bei ♥ stellst du drei Ja/Nein-Fragen, bei ♠ eine wahrscheinlich ehrlich beantwortete Frage. Bei ♣ erzürnst du die Toten. Woher rührt deine Gabe?
+- id: historischer-positivismus
+  category: X
+  attributes: [ V, K ]
+  level: 3
+  name: Historischer Positivismus
+  text: Wenn du einen Misserfolg mit ♠ ziehst, erhältst du zwei (statt eine) Forschungsnotizen.
