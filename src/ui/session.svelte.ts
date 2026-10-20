@@ -11,7 +11,6 @@ import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
 import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
-import { readArchive, writeArchive } from '../net/archive';
 import { Host, type BackupInfo } from '../net/host';
 import { localTransport } from '../net/local';
 import { Presence, type PresenceInfo } from '../net/presence';
@@ -32,6 +31,9 @@ export type KlioTableState = TableState<KlioState>;
 /** `own`: ausgelöst von einem Befehl aus diesem Browser */
 type Listener = (events: Event[], own: boolean) => void;
 type CommandListener = (cmd: { type: string; [key: string]: unknown }) => void;
+type ReplacedListener = (reason: string) => void;
+
+const NOT_READY: CommandResult = { ok: false, reason: { key: 'reject.invalid' } };
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
 export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
@@ -91,6 +93,7 @@ class Session {
   private presence: Presence | null = null;
   private listeners = new Set<Listener>();
   private commandListeners = new Set<CommandListener>();
+  private replacedListeners = new Set<ReplacedListener>();
   private nextId = 0;
 
   /** Text zum Verbindungszustand (Raumleiste, Wartebildschirm) */
@@ -113,7 +116,7 @@ class Session {
       onOnline: (online) => (this.online = online),
       photos,
       backups: new IdbBackups(),
-      backupBefore: ['table.reset'],
+      onReplaced: (reason) => this.replaced(reason),
     });
     this.state = this.host.state;
     if (link) await this.openRoom(link);
@@ -133,31 +136,17 @@ class Session {
 
   /** Ganzen Spielstand samt Fotos als Datei speichern. */
   async exportFile(): Promise<void> {
-    if (!this.host) return;
-    const saved = this.host.snapshot;
-    const hashes = saved.state.game.sheets.flatMap((s) => (s.photo ? [s.photo.hash] : []));
-    const found = await Promise.all(hashes.map(async (h) => [h, await photos.get(h)] as const));
-    const files = new Map(found.flatMap(([h, b]) => (b ? [[h, b] as const] : [])));
-    saveFile(`klio-tisch-${new Date().toISOString().slice(0, 10)}.json`, writeArchive(saved, files));
+    if (this.host) saveFile(`klio-tisch-${new Date().toISOString().slice(0, 10)}.json`, await this.host.exportArchive());
   }
 
-  /** Datei einlesen und den Stand ersetzen (vorher wird gesichert); Grund bei Fehlern. */
-  async importFile(file: File): Promise<TextRef | null> {
-    if (!this.host) return { key: 'reject.invalid' };
-    let read: Awaited<ReturnType<typeof readArchive<KlioState>>>;
-    try {
-      read = await readArchive(engine, await file.text());
-    } catch {
-      return { key: 'settings.importInvalid' };
-    }
-    await Promise.all([...read.photos].map(([h, b]) => photos.put(h, b)));
+  /** Datei laden und den Stand ersetzen (vorher wird gesichert); bringt sie einen anderen Raum mit, dorthin wechseln. */
+  async importFile(file: File): Promise<CommandResult> {
+    if (!this.host) return NOT_READY;
     const before = this.host.room;
-    const room = read.saved.host.room ?? before;
-    const r = await this.host.replace({ ...read.saved, host: { ...read.saved.host, ...(room ? { room } : {}) } }, 'import');
-    if (!r.ok) return r.reason;
-    // Im Raum und die Datei bringt einen anderen mit: dorthin wechseln
-    if (room && this.mode === 'host' && !sameRoom(before, room)) await this.useRoom(room);
-    return null;
+    const r = await this.host.importArchive(await file.text());
+    const room = this.host.room;
+    if (r.ok && room && this.mode === 'host' && !sameRoom(before, room)) await this.useRoom(room);
+    return r;
   }
 
   backups(): Promise<BackupInfo[]> {
@@ -165,7 +154,7 @@ class Session {
   }
 
   async restore(id: string): Promise<CommandResult> {
-    return this.host?.restore(id) ?? { ok: false, reason: { key: 'reject.invalid' } };
+    return this.host?.restore(id) ?? NOT_READY;
   }
 
   /** Einladungslink in die Zwischenablage; Meldung `done` nur bei Erfolg. */
@@ -233,6 +222,7 @@ class Session {
       },
       onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own),
       photos,
+      onReplaced: (reason) => this.replaced(reason),
       onWarning: (w) => {
         if (w.kind === 'secondHost') view.say(t('room.secondHost'), true);
       },
@@ -258,7 +248,7 @@ class Session {
   }
 
   async submit(cmd: { type: string }, drop?: PendingDrop): Promise<CommandResult> {
-    if (!this.host && !this.client) return { ok: false, reason: { key: 'reject.invalid' } };
+    if (!this.host && !this.client) return NOT_READY;
     const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
     for (const cb of this.commandListeners) cb(cmd as { type: string });
     if (drop) this.pending = [...this.pending, { ...drop, id }];
@@ -290,6 +280,16 @@ class Session {
   onSubmit(cb: CommandListener): () => void {
     this.commandListeners.add(cb);
     return () => this.commandListeners.delete(cb);
+  }
+
+  /** Die SL hat den ganzen Stand ersetzt (Datei, Sicherung); `reason` wie bei der Sicherung. */
+  onReplaced(cb: ReplacedListener): () => void {
+    this.replacedListeners.add(cb);
+    return () => this.replacedListeners.delete(cb);
+  }
+
+  private replaced(reason: string): void {
+    for (const cb of this.replacedListeners) cb(reason);
   }
 
   /** Ereignisse für Meldungen und Animationen. */

@@ -61,7 +61,7 @@ class Effects {
 
   private handle(e: EngineEvent | KlioEvent): void {
     const d = describe(e);
-    if (d?.toast) view.say(d.text, d.warn);
+    if (d && d.level !== 'log') view.say(d.text, d.level === 'warn');
     switch (e.type) {
       case 'zonesShuffled':
         return this.shaking.add(e.shuffled);

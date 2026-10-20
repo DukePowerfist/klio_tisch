@@ -36,6 +36,7 @@ export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
     initialGame: () => initialKlioState(),
     parseGame: (x) => KlioState.parse(x),
     resetGame: () => [{ type: 'charactersReset' }],
+    photosOf: (game) => game.sheets.flatMap((s) => (s.photo ? [s.photo.hash] : [])),
     deck: deckFrom(content),
     zones,
     commands: { ...sheetCommands(deps), ...trumpCommands(deps), ...tableCommands() },

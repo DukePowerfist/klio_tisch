@@ -155,6 +155,8 @@ export type CommandDef<G, C extends Command = Command> = {
   parse(input: unknown): C;
   /** Rechteschlüssel aus permissions.yaml */
   permission: string;
+  /** vor dem Ausführen sichert der Host den Stand (A34), z. B. beim Zurücksetzen */
+  backup?: true;
   /** Plätze, denen das Betroffene gehört (für `own`); leer oder fehlt: gehört niemandem */
   owners?(cmd: C, state: TableState<G>): SeatId[];
   /** Prüfen und in Ereignisse übersetzen; ablehnen mit Grund */
@@ -193,6 +195,8 @@ export interface Ruleset<G> {
   parseGame(input: unknown): G;
   /** Zusatz-Ereignisse für „Zurücksetzen inkl. Spielinhalten“ (Klio: Charaktere) */
   resetGame?(): Event[];
+  /** Fotos, auf die der Spielteil verweist (Hash); gehören in eine Sicherungsdatei */
+  photosOf?(game: G): string[];
   deck: DeckConfig;
   zones: ZoneConfig[];
   commands: Record<string, CommandDef<G, any>>;

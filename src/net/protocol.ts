@@ -56,7 +56,8 @@ export const ToClient = z.union([
   ReloadMsg,
   z.object({ t: z.literal('welcome'), role: RoleSchema, state: z.unknown() }).strict(),
   z.object({ t: z.literal('denied'), reason: TextRefSchema }).strict(),
-  z.object({ t: z.literal('state'), state: z.unknown() }).strict(),
+  /** vollständiger Stand: Antwort auf `resync` oder (mit Anlass) nach dem Ersetzen durch die SL */
+  z.object({ t: z.literal('state'), state: z.unknown(), reason: z.string().max(40).exactOptional() }).strict(),
   z.object({ t: z.literal('replaced') }).strict(),
   z.object({ t: z.literal('result'), id: z.string(), ok: z.boolean(), reason: TextRefSchema.exactOptional() }).strict(),
   EventsMsg,

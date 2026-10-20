@@ -3,15 +3,15 @@
   import { gameLog } from './log.svelte';
   import { t } from './texts';
 
-  const time = (at: number) => new Date(at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const clock = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
 </script>
 
 <div class="log control" class:open={gameLog.open}>
   <button class="toggle" aria-expanded={gameLog.open} onclick={() => (gameLog.open = !gameLog.open)}>{t('log.title')}</button>
   {#if gameLog.open}
     <ol aria-label={t('log.title')}>
-      {#each gameLog.entries as e, i (i)}
-        <li class:warn={e.warn}><time>{time(e.at)}</time> {e.text}</li>
+      {#each gameLog.entries as e (e.id)}
+        <li class:warn={e.warn}><time>{clock.format(e.at)}</time> {e.text}</li>
       {:else}
         <li class="empty">{t('log.empty')}</li>
       {/each}

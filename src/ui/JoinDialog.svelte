@@ -24,7 +24,7 @@
       </button>
     {/each}
   </div>
-  {#if refused}<p class="notice">{text(refused)}</p>{/if}
+  {#if refused}<p class="problem">{text(refused)}</p>{/if}
   <p><button class="watch" onclick={onclose}>{t('room.join.watch')}</button></p>
 </Modal>
 
@@ -33,5 +33,4 @@
   .seats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .seats button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
   small { font-size: 12px; opacity: 0.8; }
-  .notice { color: var(--reason); }
 </style>

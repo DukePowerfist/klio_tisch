@@ -207,7 +207,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
   const reset: CommandDef<unknown, z.infer<typeof ResetCmd>> = {
     parse: (x) => ResetCmd.parse(x),
     permission: 'table.reset',
-    // Sicherung vorher (A34) legt der Host an, nicht die Engine.
+    backup: true, // Sicherung vorher (A34) legt der Host an, nicht die Engine
     handle(cmd, _state, _actor, rng) {
       const cards: EngineEvent = { type: 'cardsReset', zones: dealStart(deck, zones.keys(), rng) };
       const game: Event[] = cmd.includeCharacters ? (ruleset.resetGame?.() ?? []) : [];

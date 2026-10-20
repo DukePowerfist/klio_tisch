@@ -157,6 +157,9 @@ log:                                      # Spielprotokoll (neu)
   trumpRemoved: "Bogen {seat}: Trumpf entfernt"
   expedition: "Expedition: {result}"
   oracle: "Orakel: {words}"
+  replaced:                               # die SL hat den ganzen Stand ersetzt
+    import: Spielstand aus einer Datei geladen
+    restore: Sicherung wiederhergestellt
 
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
@@ -174,7 +177,6 @@ settings:                                 # Einstellungen der SL (neu)
   export: Als Datei speichern
   import: Datei laden …
   importNote: Die Datei enthält Bögen, Karten, Plätze, Raum und Fotos (z. B. für einen anderen Browser). Laden ersetzt den Stand; vorher wird gesichert.
-  importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.
   imported: Spielstand geladen
   backups: Sicherungen
   noBackups: Noch keine Sicherung. Gesichert wird vor dem Zurücksetzen, Laden und Wiederherstellen.
@@ -233,3 +235,4 @@ reject:
   slotEmpty: Dieser Platz ist leer.
   seatTaken: Dieser Platz ist schon vergeben.
   saveFailed: Speichern fehlgeschlagen, die Aktion wurde verworfen.
+  importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.

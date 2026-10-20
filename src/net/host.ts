@@ -6,6 +6,7 @@ import type { Engine } from '../engine/dispatch';
 import { cryptoRng } from '../engine/rng';
 import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
 import { unpackPhoto, toBase64, type PhotoBank } from './photos';
+import { readArchive, writeArchive, type Photos } from './archive';
 import type { RoomLink } from './room-link';
 import { ToHost, type CommandResult, type Role, type ToClient } from './protocol';
 import type { PeerId, Transport } from './transport';
@@ -34,6 +35,9 @@ export interface HostStore<G> {
 /** Automatische Sicherung des Stands (A34): vor dem Zurücksetzen, vor einem Import, vor dem Wiederherstellen. */
 export type Backup<G> = { id: string; at: number; reason: string; state: TableState<G> };
 export type BackupInfo = Omit<Backup<unknown>, 'state'>;
+/** so viele Sicherungen bleiben */
+export const KEEP_BACKUPS = 5;
+export const backupInfo = ({ id, at, reason }: BackupInfo): BackupInfo => ({ id, at, reason });
 
 /** Ablage der Sicherungen; sie hebt nur die letzten auf. */
 export interface BackupStore<G> {
@@ -54,10 +58,10 @@ export type HostOptions<G> = {
   onOnline?: (online: Role[]) => void;
   /** Fotos (8.4); fehlt: Fotos werden weder angenommen noch verteilt */
   photos?: PhotoBank;
-  /** Sicherungen (A34); fehlt: keine */
+  /** Sicherungen (A34), vor Befehlen mit `backup` und vor dem Ersetzen des Stands; fehlt: keine */
   backups?: BackupStore<G>;
-  /** vor diesen Befehlen wird gesichert (z. B. `table.reset`) */
-  backupBefore?: readonly string[];
+  /** Stand wurde ersetzt (Datei geladen, Sicherung wiederhergestellt); `reason` wie bei der Sicherung */
+  onReplaced?: (reason: string) => void;
 };
 
 type Hello = Extract<ToHost, { t: 'hello' }>;
@@ -110,11 +114,6 @@ export class Host<G> {
     return this.transport.self;
   }
 
-  /** Stand mit Host-Daten, wie gespeichert (Export) */
-  get snapshot(): Saved<G> {
-    return this.saved;
-  }
-
   get room(): RoomLink | undefined {
     return this.saved.host.room;
   }
@@ -138,9 +137,26 @@ export class Host<G> {
     this.onlineChanged();
   }
 
-  /** Ganzen Stand ersetzen (Import einer Datei); vorher wird gesichert. Alle bekommen den neuen Stand. */
-  replace(next: Saved<G>, reason: string): Promise<CommandResult> {
-    return this.enqueue(() => this.swap(next, reason));
+  /** Sicherungsdatei: Stand, Plätze, Raum und die Fotos, auf die der Stand verweist (8.2). */
+  async exportArchive(): Promise<string> {
+    const saved = this.saved;
+    const photos: Photos = new Map();
+    for (const hash of this.engine.ruleset.photosOf?.(saved.state.game) ?? []) {
+      const bytes = await this.options.photos?.get(hash);
+      if (bytes) photos.set(hash, bytes);
+    }
+    return writeArchive(saved, photos);
+  }
+
+  /** Sicherungsdatei laden: ersetzt den Stand (vorher wird gesichert); ohne Raum in der Datei bleibt der bisherige. */
+  importArchive(text: string): Promise<CommandResult> {
+    return this.enqueue(async () => {
+      const read = await readArchive(this.engine, text).catch(() => null);
+      if (!read) return { ok: false, reason: { key: 'reject.importInvalid' } };
+      await Promise.all([...read.photos].map(([hash, bytes]) => this.options.photos?.put(hash, bytes)));
+      const room = read.saved.host.room ?? this.room;
+      return this.swap({ state: read.saved.state, host: { ...read.saved.host, ...(room ? { room } : {}) } }, 'import');
+    });
   }
 
   /** Sicherung wiederherstellen: nur der Stand, Plätze und Raum bleiben (wer keinen Platz mehr hat, wird Zuschauer). */
@@ -158,12 +174,14 @@ export class Host<G> {
     return this.options.backups?.list() ?? Promise.resolve([]);
   }
 
+  /** Ganzen Stand ersetzen; alle bekommen ihn samt Anlass (für das Protokoll). */
   private async swap(next: Saved<G>, reason: string): Promise<CommandResult> {
     await this.backup(reason);
     const saved = await this.persist(next);
     if (!saved.ok) return saved;
-    for (const peer of this.peers.keys()) this.send({ t: 'state', state: this.state }, peer);
+    this.broadcast({ t: 'state', state: this.state, reason });
     this.options.onChange?.(this.state, [], undefined, true);
+    this.options.onReplaced?.(reason);
     return saved;
   }
 
@@ -193,6 +211,11 @@ export class Host<G> {
 
   private send(msg: ToClient, to: PeerId): void {
     this.transport.send(msg, to);
+  }
+
+  /** an alle, die beigetreten sind */
+  private broadcast(msg: ToClient): void {
+    for (const peer of this.peers.keys()) this.send(msg, peer);
   }
 
   private async receive(msg: ToHost, from: PeerId): Promise<void> {
@@ -268,7 +291,8 @@ export class Host<G> {
     const result: CommandResult = isRejection(r) ? { ok: false, reason: r.reason } : { ok: true };
     // Bei Ablehnung ohne etwas zu merken ändert sich nichts, also auch nichts zu speichern
     if (isRejection(r) && !updateHost) return result;
-    if (!isRejection(r) && this.options.backupBefore?.includes((cmd as { type: string }).type)) await this.backup((cmd as { type: string }).type);
+    const type = (cmd as { type: string }).type;
+    if (!isRejection(r) && this.engine.commands[type]?.backup) await this.backup(type);
 
     const state = isRejection(r) ? this.state : r.state;
     const host = followSeats(updateHost ? updateHost(this.saved.host, result) : this.saved.host, state);
@@ -276,7 +300,7 @@ export class Host<G> {
     if (!saved.ok) return saved;
     if (isRejection(r)) return result;
 
-    for (const peer of this.peers.keys()) this.send({ t: 'events', events: r.events, ...(cause ? { cause } : {}) }, peer);
+    this.broadcast({ t: 'events', events: r.events, ...(cause ? { cause } : {}) });
     this.options.onChange?.(this.state, r.events, cause, own);
     return result;
   }

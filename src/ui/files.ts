@@ -1,4 +1,4 @@
-// Dateien speichern und öffnen (Export und Import der SL).
+// Datei speichern (Export der SL); geladen wird über ein Dateifeld im Fenster.
 
 export function saveFile(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));

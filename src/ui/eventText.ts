@@ -1,5 +1,5 @@
 // Ereignis → Text, an einer Stelle für Meldungen (Toast) und Spielprotokoll (ARCHITEKTUR.md 11).
-// `toast`: erscheint auch als Meldung; `warn`: rot.
+// Stufe: `log` nur im Protokoll, `toast` auch als Meldung, `warn` als rote Meldung.
 
 import content from 'virtual:klio-content';
 import type { EngineEvent, ZoneId } from '../engine/types';
@@ -8,14 +8,14 @@ import type { KlioEvent } from '../rules/klio/events';
 import { trumpById } from '../rules/klio/trumps';
 import { cardName, hasText, t } from './texts';
 
-export type EventText = { text: string; toast: boolean; warn: boolean };
+export type EventText = { text: string; level: 'log' | 'toast' | 'warn' };
 
-const say = (text: string, toast = false, warn = false): EventText => ({ text, toast, warn });
+const say = (text: string, level: EventText['level'] = 'log'): EventText => ({ text, level });
 
 export function describe(e: EngineEvent | KlioEvent): EventText | null {
   switch (e.type) {
     case 'cardDrawn':
-      return e.announce ? say(t(drawnKey(e.to), { card: cardName(e.card) }), true) : null;
+      return e.announce ? say(t(drawnKey(e.to), { card: cardName(e.card) }), 'toast') : null;
     case 'zonesShuffled':
       return say(t('log.shuffled', { zones: e.shuffled.map(zoneName).filter(Boolean).join(', ') }));
     case 'cardsReset':
@@ -23,16 +23,16 @@ export function describe(e: EngineEvent | KlioEvent): EventText | null {
     case 'charactersReset':
       return say(t('log.charactersReset'));
     case 'scarMarked':
-      return say(t('toast.scar', { seat: seatNo(e.seat), suit: t(`scars.${e.scar}`) }), true, true);
+      return say(t('toast.scar', { seat: seatNo(e.seat), suit: t(`scars.${e.scar}`) }), 'warn');
     case 'characterDied':
-      return say(t('toast.dead', { seat: seatNo(e.seat) }), true, true);
+      return say(t('toast.dead', { seat: seatNo(e.seat) }), 'warn');
     case 'characterRevived':
       return say(t('log.revived', { seat: seatNo(e.seat) }));
     case 'sheetRolled':
-      return say(t('toast.rolled', { seat: seatNo(e.seat) }), true);
+      return say(t('toast.rolled', { seat: seatNo(e.seat) }), 'toast');
     case 'trumpChosen': {
       const trump = trumpById(content.trumps, e.trump);
-      return say(trump ? t('toast.trumpChosen', { seat: seatNo(e.seat), trump: trump.name }) : t('toast.strengthImproved', { seat: seatNo(e.seat) }), true);
+      return say(trump ? t('toast.trumpChosen', { seat: seatNo(e.seat), trump: trump.name }) : t('toast.strengthImproved', { seat: seatNo(e.seat) }), 'toast');
     }
     case 'trumpRemoved':
       return say(t('log.trumpRemoved', { seat: seatNo(e.seat) }));

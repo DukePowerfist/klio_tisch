@@ -7,11 +7,11 @@ import type { Engine } from '../engine/dispatch';
 import type { HostData, Saved } from './host';
 import { PhotoDataSchema, toBase64, unpackPhoto } from './photos';
 import { RoleSchema } from './protocol';
+import { RoomLinkSchema } from './room-link';
 
 const APP = 'klio-tisch';
 const VERSION = 1;
 
-const RoomPart = z.string().regex(/^[A-Za-z0-9_-]{22}$/);
 const ArchiveSchema = z.object({
   app: z.literal(APP),
   version: z.literal(VERSION),
@@ -20,7 +20,7 @@ const ArchiveSchema = z.object({
   /** Plätze und Raum; gemerkte Antworten gehören nicht dazu */
   host: z.object({
     keys: z.record(z.string(), RoleSchema),
-    room: z.object({ room: RoomPart, secret: RoomPart }).strict().exactOptional(),
+    room: RoomLinkSchema.exactOptional(),
   }).strict(),
   photos: z.record(PhotoHashSchema, PhotoDataSchema),
 }).strict();
@@ -42,12 +42,11 @@ export function writeArchive<G>(saved: Saved<G>, photos: Photos, now = new Date(
 /** Datei einlesen und prüfen; wirft bei fremden, beschädigten oder unpassenden Dateien. */
 export async function readArchive<G>(engine: Engine<G>, text: string): Promise<{ saved: Saved<G>; photos: Photos }> {
   const a = ArchiveSchema.parse(JSON.parse(text));
-  const photos: Photos = new Map();
-  for (const [hash, data] of Object.entries(a.photos)) {
+  const photos: Photos = new Map(await Promise.all(Object.entries(a.photos).map(async ([hash, data]) => {
     const bytes = await unpackPhoto(hash, data);
     if (!bytes) throw new Error(`Foto ${hash.slice(0, 8)} passt nicht zu seinem Namen`);
-    photos.set(hash, bytes);
-  }
+    return [hash, bytes] as const;
+  })));
   const host: HostData = { keys: a.host.keys, answered: {}, ...(a.host.room ? { room: a.host.room } : {}) };
   return { saved: { state: engine.parseState(a.state), host }, photos };
 }

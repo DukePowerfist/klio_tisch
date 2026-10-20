@@ -1,41 +1,58 @@
 // Spielprotokoll (ARCHITEKTUR.md 5): die letzten Ereignisse als Text, je Browser ab dem Öffnen gesammelt.
 // Bleibt über ein Neuladen erhalten (localStorage); verdeckte Informationen gibt es nicht (A13).
 
+import { z } from 'zod';
 import type { EngineEvent } from '../engine/types';
 import type { KlioEvent } from '../rules/klio/events';
 import { describe } from './eventText';
 import { session } from './session.svelte';
+import { t } from './texts';
 
 const KEY = 'klio.log';
 const MAX = 100;
+const SAVE_MS = 1000;
 
-export type LogEntry = { at: number; text: string; warn: boolean };
+const LogEntry = z.object({ id: z.number(), at: z.number(), text: z.string(), warn: z.boolean() });
+export type LogEntry = z.infer<typeof LogEntry>;
 
-function stored(): LogEntry[] {
+const stored = (): LogEntry[] => {
   try {
-    const list = JSON.parse(localStorage.getItem(KEY) ?? '[]') as unknown;
-    return Array.isArray(list) ? (list as LogEntry[]).slice(0, MAX) : [];
+    return z.array(LogEntry).catch([]).parse(JSON.parse(localStorage.getItem(KEY) ?? '[]')).slice(0, MAX);
   } catch {
     return [];
   }
-}
+};
 
 class GameLog {
   /** neueste zuerst */
   entries = $state.raw<LogEntry[]>(stored());
   open = $state(false);
+  private nextId = Math.max(0, ...this.entries.map((e) => e.id)) + 1;
+  private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     session.onEvents((events) => {
-      const now = Date.now();
-      const added = (events as (EngineEvent | KlioEvent)[]).flatMap((e) => {
-        const d = describe(e);
-        return d ? [{ at: now, text: d.text, warn: d.warn }] : [];
-      });
-      if (added.length === 0) return;
-      this.entries = [...added.reverse(), ...this.entries].slice(0, MAX);
-      localStorage.setItem(KEY, JSON.stringify(this.entries));
+      const texts = (events as (EngineEvent | KlioEvent)[]).flatMap((e) => describe(e) ?? []);
+      this.add(texts.map((d) => ({ text: d.text, warn: d.level === 'warn' })));
     });
+    session.onReplaced((reason) => this.add([{ text: t(`log.replaced.${reason}`), warn: false }]));
+    // beim Verlassen der Seite sofort speichern, damit nichts aus der Bündelung verloren geht
+    addEventListener('pagehide', () => this.save());
+  }
+
+  private save(): void {
+    clearTimeout(this.saveTimer);
+    localStorage.setItem(KEY, JSON.stringify(this.entries));
+  }
+
+  private add(items: { text: string; warn: boolean }[]): void {
+    if (items.length === 0) return;
+    const at = Date.now();
+    const added = items.map((x) => ({ ...x, at, id: this.nextId++ })).reverse();
+    this.entries = [...added, ...this.entries].slice(0, MAX);
+    // gebündelt speichern, nicht bei jedem Ereignis
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.save(), SAVE_MS);
   }
 }
 

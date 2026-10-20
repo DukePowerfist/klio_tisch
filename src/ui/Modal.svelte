@@ -24,5 +24,6 @@
   .box :global(select) { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font: inherit; }
   /* gemeinsame Bausteine der Fenster: Hinweiszeile und Knopfreihe */
   .box :global(.note) { font-size: 13px; opacity: 0.75; }
+  .box :global(.problem) { color: var(--reason); }
   .box :global(.buttons) { display: flex; gap: 10px; margin: 8px 0; }
 </style>

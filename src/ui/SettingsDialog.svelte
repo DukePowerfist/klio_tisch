@@ -5,6 +5,7 @@
   import { permissionFor } from '../engine/permissions';
   import type { PermissionValue, TableState, TextRef } from '../engine/types';
   import type { BackupInfo } from '../net/host';
+  import type { CommandResult } from '../net/protocol';
   import Modal from './Modal.svelte';
   import { submitOrSay } from './commands';
   import { ruleset, session } from './session.svelte';
@@ -31,30 +32,31 @@
   let backups = $state<BackupInfo[]>([]);
   let confirm = $state<string | null>(null);
   let problem = $state<TextRef | null>(null);
-  let fileInput = $state<HTMLInputElement>();
+  let fileInput: HTMLInputElement | undefined;
   const refresh = async () => (backups = await session.backups());
   $effect(() => {
     if (isHost) void refresh();
   });
 
-  async function importFile() {
-    const file = fileInput?.files?.[0];
-    if (!file) return;
-    fileInput!.value = '';
-    problem = await session.importFile(file);
-    if (!problem) view.say(t('settings.imported'));
+  /** Ersetzen des Stands (Datei, Sicherung): Meldung oder Grund im Fenster */
+  async function done(r: CommandResult, ok: string) {
+    problem = r.ok ? null : r.reason;
+    if (r.ok) view.say(t(ok));
     await refresh();
+  }
+
+  async function importFile(e: Event & { currentTarget: HTMLInputElement }) {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = '';
+    if (file) await done(await session.importFile(file), 'settings.imported');
   }
 
   async function restore(id: string) {
     confirm = null;
-    const r = await session.restore(id);
-    if (r.ok) view.say(t('settings.restored'));
-    else problem = r.reason;
-    await refresh();
+    await done(await session.restore(id), 'settings.restored');
   }
 
-  const when = (at: number) => new Date(at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const when = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
   /** Nur Abweichungen von der Voreinstellung werden gespeichert. */
   function setPermission(key: string, value: PermissionValue) {
@@ -94,7 +96,7 @@
     <b class="gap">{t('settings.backups')}</b>
     {#each backups as b (b.id)}
       <div class="backup">
-        <span>{when(b.at)} · {t(`settings.backupReasons.${b.reason}`)}</span>
+        <span>{when.format(b.at)} · {t(`settings.backupReasons.${b.reason}`)}</span>
         {#if confirm === b.id}
           <button onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
           <button class="danger" onclick={() => restore(b.id)}>{t('settings.restore')}</button>
@@ -120,7 +122,6 @@
   .perms { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: center; }
   .changed { color: var(--accent-hint); }
   .gap { margin-top: 18px; }
-  .problem { color: var(--reason); }
   .backup { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
   .backup span { flex: 1; }
   .backup button { padding: 4px 10px; }

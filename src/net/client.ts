@@ -27,6 +27,8 @@ export type ClientOptions = {
    *  `own` = von einem eigenen, noch unbeantworteten Befehl */
   onEvents?: (events: Event[], cause: string | undefined, own: boolean) => void;
   onWarning?: (w: ClientWarning) => void;
+  /** die SL hat den ganzen Stand ersetzt (Datei geladen, Sicherung wiederhergestellt) */
+  onReplaced?: (reason: string) => void;
   /** Ablage für angefragte Fotos (8.4); der Inhalt ist am Namen geprüft */
   photos?: PhotoBank;
 };
@@ -129,7 +131,7 @@ export class Client<G> {
         this.host = null;
         return this.setStatus('replaced');
       case 'state':
-        this.adopt(msg.state);
+        if (this.adopt(msg.state) && msg.reason) this.options.onReplaced?.(msg.reason);
         return;
       case 'result': {
         const result: CommandResult = msg.ok ? { ok: true } : { ok: false, reason: msg.reason ?? { key: 'reject.invalid' } };

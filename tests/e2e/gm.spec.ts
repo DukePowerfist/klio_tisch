@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, resetTable, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -103,10 +103,7 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
 test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await nameCharacter(page, 'seat1', 'Ida');
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
-  const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
-  await reset.getByRole('checkbox').check();
-  await reset.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await resetTable(page, true);
   await expectCount(page, 'ABLAGE', 0);
 
   await page.getByRole('button', { name: 'Einstellungen' }).click();
@@ -129,10 +126,7 @@ test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abg
   const file = await download.path();
 
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
-  const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
-  await reset.getByRole('checkbox').check();
-  await reset.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await resetTable(page, true);
   await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
 
   await page.getByRole('button', { name: 'Einstellungen' }).click();
@@ -143,6 +137,9 @@ test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abg
   await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('Ida');
   await expectCount(page, 'ABLAGE', 1);
   await expect(dialog.getByText(/vor dem Laden einer Datei/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Protokoll' }).click();
+  await expect(page.getByRole('list', { name: 'Protokoll' }).locator('li').first()).toHaveText(/Spielstand aus einer Datei geladen/);
 });
 
 test('Protokoll: einklappbar, neueste oben, bleibt nach Neuladen', async ({ page }) => {

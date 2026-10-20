@@ -1,10 +1,14 @@
 // Einladungslink: …/#<raum>.<geheimnis> (ARCHITEKTUR.md 8.2, Raumschutz).
 // Beides zufällig und lang; das Geheimnis steht im Fragment und geht nie an einen Server.
 
+import { z } from 'zod';
+
 export type RoomLink = { room: string; secret: string };
 
 const BYTES = 16; // 128 Bit je Teil
 const PART = /^[A-Za-z0-9_-]{22}$/;
+/** Raum im gespeicherten Stand bzw. in einer Sicherungsdatei */
+export const RoomLinkSchema = z.object({ room: z.string().regex(PART), secret: z.string().regex(PART) }).strict();
 
 export function createRoomLink(random: (bytes: Uint8Array<ArrayBuffer>) => void = (b) => crypto.getRandomValues(b)): RoomLink {
   return { room: randomToken(random), secret: randomToken(random) };

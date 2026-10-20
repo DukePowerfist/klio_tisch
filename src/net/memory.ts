@@ -2,7 +2,7 @@
 // verlorene Nachrichten, fehlschlagendes Speichern.
 // Zustellung asynchron und je Absender-Empfänger-Paar in Reihenfolge, wie bei einem Datenkanal.
 
-import type { Backup, BackupStore, HostStore, Saved } from './host';
+import { backupInfo, KEEP_BACKUPS, type Backup, type BackupStore, type HostStore, type Saved } from './host';
 import type { PhotoBank } from './photos';
 import type { PeerId, Transport } from './transport';
 
@@ -90,15 +90,14 @@ export class MemoryPhotoBank implements PhotoBank {
   }
 }
 
-/** Sicherungen im Arbeitsspeicher, die letzten `keep`. */
+/** Sicherungen im Arbeitsspeicher, die letzten KEEP_BACKUPS. */
 export class MemoryBackups<G> implements BackupStore<G> {
   backups: Backup<G>[] = [];
-  constructor(private keep = 5) {}
   async add(b: Backup<G>) {
-    this.backups = [structuredClone(b), ...this.backups].slice(0, this.keep);
+    this.backups = [structuredClone(b), ...this.backups].slice(0, KEEP_BACKUPS);
   }
   async list() {
-    return this.backups.map(({ id, at, reason }) => ({ id, at, reason }));
+    return this.backups.map(backupInfo);
   }
   async get(id: string) {
     return structuredClone(this.backups.find((b) => b.id === id) ?? null);

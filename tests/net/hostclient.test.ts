@@ -23,7 +23,7 @@ async function setup() {
   const backups = new MemoryBackups<KlioState>();
   const startHost = () =>
     Host.start(engine, net.connect(), store, () => fresh(), {
-      build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e), photos, backups, backupBefore: ['table.reset'],
+      build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e), photos, backups,
     });
   const host = await startHost();
   const ids: string[] = [];
@@ -472,25 +472,32 @@ describe('Sicherung (A34) und Datei (8.2)', () => {
     expect(await backups.list()).toHaveLength(5);
   });
 
-  it('Datei: Stand, Plätze, Raum und Fotos hin und zurück; Import ersetzt den Stand bei allen', async () => {
-    const { net, host, join, photos, store } = await setup();
+  it('Datei: Stand, Plätze, Raum und Fotos hin und zurück; Laden ersetzt den Stand bei allen', async () => {
+    const { net, host, join, photos } = await setup();
     const bytes = new Uint8Array([1, 2, 3]);
     const hash = await sha256Hex(bytes);
+    await photos.put(hash, bytes);
+    await photos.put('f'.repeat(64), bytes); // nicht verwendet: gehört nicht in die Datei
     await host.setRoom({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
     await host.submit({ type: 'sheet.setText', seat: 'seat2', field: 'name', value: 'Ida' });
-    const file = writeArchive(store.saved!, new Map([[hash, bytes]]));
-    await host.submit({ type: 'table.reset', includeCharacters: true });
-    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
-    await settle(net, host);
+    await host.submit({ type: 'sheet.setPhoto', seat: 'seat2', photo: { hash, type: 'image/jpeg' } });
+    const file = await host.exportArchive();
+    expect(Object.keys(JSON.parse(file).photos)).toEqual([hash]);
 
-    const read = await readArchive(engine, file);
-    expect(read.photos.get(hash)).toEqual(bytes);
-    expect(read.saved.host.room).toEqual({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
-    expect(await host.replace(read.saved, 'import')).toEqual({ ok: true });
+    await host.submit({ type: 'table.reset', includeCharacters: true });
+    await host.setRoom({ room: 'n'.repeat(22), secret: 'n'.repeat(22) });
+    photos.photos.clear();
+    const replaced: string[] = [];
+    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx', onReplaced: (r) => void replaced.push(r) });
+    await settle(net, host);
+    expect(await host.importArchive(file)).toEqual({ ok: true });
     await settle(net, host);
     expect(sheet(host.state, 'seat2').name).toBe('Ida');
+    expect(host.room).toEqual({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
+    expect(photos.photos.get(hash)).toEqual(bytes);
     expect(a.client.state).toEqual(host.state);
-    expect(photos.photos.size).toBe(0); // Fotos legt die Oberfläche ab, nicht der Host
+    expect(replaced).toEqual(['import']);
+    expect(await host.importArchive('kaputt')).toEqual({ ok: false, reason: { key: 'reject.importInvalid' } });
   });
 
   it('Datei: fremde, beschädigte oder unpassende Inhalte werden abgelehnt', async () => {
