@@ -33,7 +33,7 @@ trumpSources:
     requires: [ { allMarked: lamps } ]
     steps: [ { improveStrength: optional } ]   # freiwillig, solange ein Trumpf folgt (A35)
     levels: [ 1, 2 ]
-    whenFull: improveOnly                      # bei 4 Trümpfen nur verbessern (O8)
+    whenFull: improveOnly                      # bei 4 Trümpfen: nur verbessern, dann Pflicht (15.5)
     afterwards: [ { clear: lamps } ]           # A1
 
   - id: scar
