@@ -265,3 +265,50 @@ describe('Speichern', () => {
     expect(store.saved!.state).toEqual(host.state);
   });
 });
+
+describe('Platz wählen nach dem Beitritt', () => {
+  it('Zuschauer sieht den Tisch und nimmt dann einen freien Platz', async () => {
+    const { net, host, join } = await setup();
+    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
+    const events: string[] = [];
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx', onEvents: (e) => events.push(...e.map((x) => x.type)) });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'spectator' });
+    a.client.claim('seat2', 'Ida');
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat2' });
+    expect(host.state.seats.seat2).toEqual({ occupied: true, name: 'Ida' });
+    expect(b.client.state!.seats.seat2.occupied).toBe(true);
+    expect(events).toContain('seatsChanged');
+  });
+
+  it('vergebener Platz: Absage, bleibt Zuschauer und verbunden', async () => {
+    const { net, host, join } = await setup();
+    join('seat1');
+    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
+    await settle(net, host);
+    a.client.claim('seat1', 'Ida');
+    await settle(net, host);
+    expect(a.client.status).toBe('ready');
+    expect(a.client.role).toEqual({ role: 'spectator' });
+    expect(a.client.denied).toEqual({ key: 'reject.seatTaken' });
+  });
+
+  it('Raum wird beim Host gespeichert; Wechsel der Verbindung behält Stand und Plätze', async () => {
+    const { net, host, join, store } = await setup();
+    await host.setRoom({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
+    expect(store.saved!.host.room).toEqual({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
+    const a = join('seat1');
+    await settle(net, host);
+    const before = host.peerId;
+    host.attach(net.connect());
+    await settle(net, host);
+    // neue Peer-ID des Hosts: Client findet ihn von selbst wieder und behält seinen Platz
+    expect(host.peerId).not.toBe(before);
+    expect(a.client.status).toBe('ready');
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat1' });
+    const r = a.client.submit({ type: 'zone.draw', zone: 'deck' });
+    await settle(net, host);
+    expect(await r).toEqual({ ok: true });
+  });
+});

@@ -14,7 +14,7 @@
   import { SHEET_FONT } from './fitText';
   import { SHEET_W, type SheetBox } from './layout';
   import { preparePhoto } from './photo';
-  import { photos } from './session.svelte';
+  import { photos, session } from './session.svelte';
   import { t } from './texts';
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
@@ -44,6 +44,15 @@
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
 
   const submit = (cmd: object) => submitOrSay(cmd);
+
+  // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
+  const may = (type: string) => session.can({ type, seat } as { type: string });
+  const canEdit = $derived(may('sheet.toggle'));
+  const canRoll = $derived(may('sheet.roll'));
+  const canPhoto = $derived(may('sheet.photo'));
+  const canChooseTrump = $derived(may('trump.choose'));
+  const canRemoveTrump = $derived(may('trump.remove'));
+  const canRevive = $derived(may('character.revive'));
 
   // „Auswürfeln“ fragt nach, wenn schon Einträge da sind (wie bisher 3,5 s)
   let confirmTimer = $state<ReturnType<typeof setTimeout>>();
@@ -106,6 +115,7 @@
         font={f.pos.font ?? 17}
         struck={struck(f.id)}
         center={f.pos.align === 'center'}
+        readonly={!canEdit}
       />
     {/each}
 
@@ -114,6 +124,7 @@
       {#if c.strikes}
         <button
           class="strike control"
+          disabled={!canEdit}
           class:on
           style:left="{c.pos.x - c.pos.size / 2}px"
           style:top="{c.pos.y - c.pos.size / 2}px"
@@ -122,6 +133,7 @@
       {:else}
         <button
           class="cb control"
+          disabled={!canEdit}
           class:on
           class:danger={c.pos.tone === 'danger'}
           data-check={c.id}
@@ -149,6 +161,7 @@
         aria-label="Foto"
         style:left="{photoBox.x}px" style:top="{photoBox.y}px" style:width="{photoBox.w}px" style:height="{photoBox.h}px"
         style:background-image={photoUrl ? `url(${photoUrl})` : undefined}
+        disabled={!canPhoto}
         onclick={() => fileInput?.click()}
       ></button>
       <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={onPhoto} />
@@ -159,7 +172,7 @@
       <div
         class="slot control"
         class:empty={!trump}
-        class:go={!trump && canChoose}
+        class:go={!trump && canChoose && canChooseTrump}
         data-slot={s.index}
         style:left="{s.pos.x}px" style:top="{s.pos.y}px" style:width="{s.pos.w}px" style:height="{s.pos.h}px"
         title={trump ? undefined : canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLocked')}
@@ -170,13 +183,13 @@
         onclick={(e) => {
           e.stopPropagation();
           if (trump) view.bigTrump = { id: trump.id, pinned: true };
-          else view.trumpDialog = seat;
+          else if (canChooseTrump) view.trumpDialog = seat;
         }}
-        onkeydown={(e) => { if (e.key === 'Enter' && !trump) view.trumpDialog = seat; }}
+        onkeydown={(e) => { if (e.key === 'Enter' && !trump && canChooseTrump) view.trumpDialog = seat; }}
       >
         {#if trump}
           <TrumpCard {trump} />
-          <button class="rmv" title={t('sheet.trumpRemove')} onclick={(e) => { e.stopPropagation(); void submit({ type: 'trump.remove', seat, slot: s.index }); }}>✕</button>
+          {#if canRemoveTrump}<button class="rmv" title={t('sheet.trumpRemove')} onclick={(e) => { e.stopPropagation(); void submit({ type: 'trump.remove', seat, slot: s.index }); }}>✕</button>{/if}
         {:else}
           ＋
         {/if}
@@ -191,8 +204,10 @@
   </div>
 
   <div class="sbar control">
-    <button onclick={roll} title={t('sheet.rollTitle')}>{confirmTimer !== undefined ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
-    {#if sheet.dead}
+    {#if canRoll}
+      <button onclick={roll} title={t('sheet.rollTitle')}>{confirmTimer !== undefined ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
+    {/if}
+    {#if sheet.dead && canRevive}
       <button class="revive" onclick={() => submit({ type: 'character.revive', seat })}>{t('sheet.revive')}</button>
     {/if}
   </div>
@@ -202,7 +217,8 @@
   .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background: #fff; color: #1b1b1b; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift), opacity var(--shift); }
   .sheet.hit { outline: 3px solid rgba(190, 40, 30, 0.75); outline-offset: -3px; }
   .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift); }
-  .cb { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; }
+  .cb { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; color: inherit; }
+  .cb:disabled, .photo:disabled, .strike:disabled { cursor: default; }
   .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: #111; }
   .cb.danger.on::after { color: var(--danger); }
   .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: #333; }

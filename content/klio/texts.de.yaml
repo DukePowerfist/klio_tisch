@@ -105,6 +105,31 @@ reset:
   cancel: Abbrechen
   confirm: Zurücksetzen
 
+room:                                     # Mehrspielerbetrieb (neu)
+  invite: Mitspieler einladen
+  inviteTitle: Raum öffnen und Einladungslink kopieren
+  copy: Link kopieren
+  copied: Einladungslink kopiert
+  open: "Raum offen · {n} verbunden"
+  connecting: Verbinde mit der Spielleitung …
+  waiting: Warte auf Spielleitung …
+  reload: Neue Version – bitte Seite neu laden
+  reloadButton: Neu laden
+  replaced: In einem anderen Tab geöffnet
+  otherTab: Die Spielleitung ist in diesem Browser schon in einem anderen Tab geöffnet.
+  denied: Beitritt nicht möglich
+  player: "Spieler {n}"
+  spectator: Zuschauer
+  chooseSeat: Platz wählen
+  secondHost: "Achtung: Ein zweiter Host hat sich gemeldet. Die Verbindung bleibt beim ersten."
+  join:
+    title: Platz wählen
+    name: Dein Name
+    seat: "Spieler {n}"
+    taken: "vergeben ({name})"
+    takenNoName: vergeben
+    watch: Nur zuschauen
+
 dock:
   seat: "Ich bin Spieler {n}"
   overview: Zur Übersicht

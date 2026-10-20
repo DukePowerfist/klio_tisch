@@ -23,7 +23,9 @@ export const ReloadMsg = z.object({ t: z.literal('reload'), build: z.string().ma
 
 const CommandMsg = z.object({ t: z.literal('cmd'), id: z.string().min(8).max(64), cmd: z.unknown() }).strict();
 const ResyncMsg = z.object({ t: z.literal('resync') }).strict();
-export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg]);
+/** Zuschauer möchte einen freien Platz nehmen (nach dem Beitritt, wenn er den Tisch sieht). */
+const ClaimMsg = z.object({ t: z.literal('claim'), seat: SeatSchema, name: z.string().max(40) }).strict();
+export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg]);
 export type ToHost = z.infer<typeof ToHost>;
 
 // ---------- Host → Client ----------

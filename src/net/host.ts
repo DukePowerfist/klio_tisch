@@ -4,7 +4,8 @@
 import { isRejection } from '../engine/commands';
 import type { Engine } from '../engine/dispatch';
 import { cryptoRng } from '../engine/rng';
-import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
+import type { Actor, Rng, SeatId, SequencedEvent, TableState } from '../engine/types';
+import type { RoomLink } from './room-link';
 import { ToHost, type CommandResult, type Role, type ToClient } from './protocol';
 import type { PeerId, Transport } from './transport';
 
@@ -17,6 +18,8 @@ export type HostData = {
   keys: Record<string, Role>;
   /** je Schlüssel die zuletzt beantworteten Befehle, älteste zuerst */
   answered: Record<string, [id: string, result: CommandResult][]>;
+  /** dauerhafter Raum der Kampagne (ehem. O10); fehlt: noch keiner angelegt */
+  room?: RoomLink;
 };
 
 export type Saved<G> = { state: TableState<G>; host: HostData };
@@ -51,11 +54,18 @@ export class Host<G> {
     private options: HostOptions<G>,
   ) {
     this.rng = options.rng ?? cryptoRng();
+    this.listen();
+  }
+
+  private listen(): void {
+    const transport = this.transport;
     transport.onMessage((msg, from) => {
+      if (transport !== this.transport) return; // alte Verbindung
       const parsed = ToHost.safeParse(msg);
       if (parsed.success) void this.enqueue(() => this.receive(parsed.data, from));
     });
     transport.onPeers((list) => {
+      if (transport !== this.transport) return;
       for (const p of this.peers.keys()) if (!list.includes(p)) this.peers.delete(p);
     });
   }
@@ -76,6 +86,23 @@ export class Host<G> {
 
   get peerId(): PeerId {
     return this.transport.self;
+  }
+
+  get room(): RoomLink | undefined {
+    return this.saved.host.room;
+  }
+
+  /** Raum festlegen bzw. erneuern; ein neuer Link macht den alten wertlos, die Plätze bleiben (8.2). */
+  setRoom(room: RoomLink): Promise<CommandResult> {
+    return this.enqueue(() => this.persist({ state: this.state, host: { ...this.saved.host, room } }));
+  }
+
+  /** Wechselt die Verbindung (z. B. lokal → Raum); Stand und Plätze bleiben. */
+  attach(transport: Transport): void {
+    this.transport.leave();
+    this.transport = transport;
+    this.peers.clear();
+    this.listen();
   }
 
   /** Befehl der Spielleitung (im Browser des Hosts). */
@@ -103,6 +130,7 @@ export class Host<G> {
     const key = this.peers.get(from);
     if (!key) return; // erst hello
     if (msg.t === 'resync') return this.send({ t: 'state', state: this.state }, from);
+    if (msg.t === 'claim') return this.claim(key, msg.seat, msg.name, from);
 
     // Doppelt gesendet (z. B. nach Verbindungsabbruch): nur die Antwort wiederholen (8.2)
     const earlier = this.saved.host.answered[key]?.find(([id]) => id === msg.id);
@@ -137,6 +165,16 @@ export class Host<G> {
       role = claimed;
     }
     this.peers.set(from, msg.key);
+    this.send({ t: 'welcome', role, state: this.state }, from);
+  }
+
+  /** Zuschauer nimmt einen freien Platz; Antwort ist ein neues Willkommen mit der neuen Rolle. */
+  private async claim(key: string, seat: SeatId, name: string, from: PeerId): Promise<void> {
+    if (this.saved.host.keys[key]?.role !== 'spectator') return;
+    const role: Role = { role: 'player', seat };
+    const withKey = (host: HostData): HostData => ({ ...host, keys: { ...host.keys, [key]: role } });
+    const result = await this.execute({ type: 'table.setSeat', seat, occupied: true, ...(name ? { name } : {}) }, { role: 'gm' }, withKey);
+    if (!result.ok) return this.send({ t: 'denied', reason: result.reason }, from);
     this.send({ t: 'welcome', role, state: this.state }, from);
   }
 

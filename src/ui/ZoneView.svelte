@@ -3,6 +3,7 @@
   // Lage von Menü und Beschriftung kommt aus layouts.yaml (ZoneBox.menu, ZoneBox.label).
   import content from 'virtual:klio-content';
   import type { ZoneBox } from './layout';
+  import { session } from './session.svelte';
   import { hasText, t } from './texts';
 
   let { zone, count, open, hot, fixedMenu, onToggle, onAction }: {
@@ -14,7 +15,8 @@
   /** Reihenfolge im Menü wie bisher; angezeigt wird, was die Zone kann */
   const MENU: MenuAction[] = ['shuffle', 'flip', 'draw'];
 
-  const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined));
+  // nur Aktionen, die die Zone kann und die man darf (9.3)
+  const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined && session.can({ type: `zone.${a}`, zone: zone.id } as { type: string })));
   const onSheet = $derived(zone.owner !== null);
   const label = $derived(t(`zones.${zone.template}`));
   const title = $derived(hasText(`zones.${zone.template}Title`) ? t(`zones.${zone.template}Title`) : undefined);

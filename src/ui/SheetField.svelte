@@ -5,9 +5,9 @@
   import { submitOrSay } from './commands';
   import { fitFontSize } from './fitText';
 
-  let { seat, field, kind, value, x, y, w, h, font, struck = false, center = false }: {
+  let { seat, field, kind, value, x, y, w, h, font, struck = false, center = false, readonly = false }: {
     seat: SeatId; field: string; kind: 'text' | 'number'; value: string; x: number; y: number; w: number; h: number; font: number;
-    struck?: boolean; center?: boolean;
+    struck?: boolean; center?: boolean; readonly?: boolean;
   } = $props();
 
   const SEND_MS = 300;
@@ -49,6 +49,7 @@
   style:height="{h}px"
   style:font-size="{size}px"
   value={shown}
+  {readonly}
   spellcheck="false"
   inputmode={kind === 'number' ? 'numeric' : undefined}
   data-field={field}

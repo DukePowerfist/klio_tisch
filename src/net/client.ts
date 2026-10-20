@@ -2,7 +2,7 @@
 // Übernimmt Stand und Ereignisse nur vom Host-Peer; würfelt nie selbst.
 
 import type { Engine } from '../engine/dispatch';
-import type { SeatId, SequencedEvent, TableState, TextRef } from '../engine/types';
+import type { Event, SeatId, SequencedEvent, TableState, TextRef } from '../engine/types';
 import { ToClient, type CommandResult, type ReceivedEvents, type Role } from './protocol';
 import type { PeerId, Transport } from './transport';
 
@@ -24,6 +24,8 @@ export type ClientOptions = {
   want: SeatId | 'spectator' | null;
   newId?: () => string;
   onChange?: () => void;
+  /** bestätigte Ereignisse, nachdem sie angewendet wurden (für Meldungen und Animationen) */
+  onEvents?: (events: Event[]) => void;
   onWarning?: (w: ClientWarning) => void;
 };
 
@@ -43,6 +45,11 @@ export class Client<G> {
     this.newId = options.newId ?? (() => crypto.randomUUID());
     transport.onMessage((msg, from) => this.receive(msg, from));
     transport.onPeers((peers) => this.peersChanged(peers));
+  }
+
+  /** Als Zuschauer einen freien Platz nehmen; der Host antwortet mit neuem Willkommen bzw. Absage. */
+  claim(seat: SeatId, name: string): void {
+    if (this.status === 'ready' && this.host) this.transport.send({ t: 'claim', seat, name }, this.host);
   }
 
   /** Befehl schicken; Antwort kommt, sobald der Host ihn bearbeitet hat (auch nach Wiederverbinden). */
@@ -82,8 +89,10 @@ export class Client<G> {
       case 'welcome':
         return this.welcome(msg.role, msg.state, from);
       case 'denied':
-        if (this.host) return;
+        if (this.host && from !== this.host) return;
         this.denied = msg.reason;
+        // vor dem Beitritt: keine Verbindung; danach (Platzwunsch abgelehnt): weiter als Zuschauer
+        if (this.host) return this.options.onChange?.();
         return this.setStatus('denied');
     }
     if (from !== this.host) return;
@@ -138,14 +147,16 @@ export class Client<G> {
     if (fresh.length === 0) return;
     // Lücke: Stand still neu anfordern (8.2). replay würde sie auch finden, aber als Fehler melden.
     if (fresh[0]!.seq !== state.seq + 1) return this.transport.send({ t: 'resync' }, this.host);
+    let events: SequencedEvent[];
     try {
-      const events: SequencedEvent[] = fresh.map((e) => ({ seq: e.seq, event: this.engine.parseEvent(e.event) }));
+      events = fresh.map((e) => ({ seq: e.seq, event: this.engine.parseEvent(e.event) }));
       this.state = this.engine.replay(state, events);
     } catch {
       this.options.onWarning?.({ kind: 'invalidMessage' });
       return this.transport.send({ t: 'resync' }, this.host);
     }
     this.options.onChange?.();
+    this.options.onEvents?.(events.map((e) => e.event));
   }
 
   private setStatus(s: ClientStatus): void {

@@ -107,7 +107,8 @@
     }
     if (e.button > 0) return;
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
-    if (el) return grab(el.dataset.card as CardId, e);
+    // Karten greifen nur mit Recht (Zuschauer sehen nur zu); verbindlich prüft der Host
+    if (el && session.can({ type: 'cards.move' })) return grab(el.dataset.card as CardId, e);
     if ((e.target as HTMLElement).closest('input, textarea, button, select, .control')) return;
     pan = { x: e.clientX, y: e.clientY, moved: false };
   }
