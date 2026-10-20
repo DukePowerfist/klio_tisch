@@ -190,7 +190,7 @@ export const TrumpSourcesFile = z.object({
   whenFull: z.enum(['blocked', 'improveOnly']),
   trumpSources: z.array(z.object({
     id: z.string(),
-    text: z.object({ name: z.string(), desc: z.string(), why: z.string() }).strict(),
+    text: z.object({ name: z.string(), desc: z.string(), why: z.string(), levelWhy: z.string().optional() }).strict(),
     requires: z.array(Requires),
     steps: z.array(Step).optional(),
     levels: z.array(z.union([z.literal(1), z.literal(2), z.literal(3)])).min(1),

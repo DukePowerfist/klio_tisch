@@ -116,7 +116,7 @@ export type EngineCommand =
   | { type: 'zone.draw'; zone: ZoneId };
 
 /** Regelwerk-Befehle haben dieselbe Hülle; `type` und Inhalt legt das Regelwerk fest. */
-export type Command = { type: string; [key: string]: unknown };
+export type Command = { type: string };
 
 /** Über das Netz: jeder Befehl trägt eine eindeutige ID (8.2, doppelt gesendete Befehle). */
 export type CommandEnvelope = { id: string; cmd: Command };
@@ -126,15 +126,15 @@ export type CommandEnvelope = { id: string; cmd: Command };
 export type EngineEvent =
   | { type: 'cardsMoved'; cards: CardId[]; from: CardSource; to: CardTarget }
   | { type: 'cardsTurned'; cards: CardId[]; faceUp: boolean }
-  /** neue vollständige Reihenfolge jeder betroffenen Zone (Zufall steckt im Ereignis) */
-  | { type: 'zonesShuffled'; zones: Record<ZoneId, CardId[]>; faceDown: CardId[] }
+  /** neuer vollständiger Inhalt jeder betroffenen Zone, auch der geleerten (Zufall steckt im Ereignis) */
+  | { type: 'zonesShuffled'; shuffled: ZoneId[]; zones: Record<ZoneId, CardId[]>; faceDown: CardId[] }
   | { type: 'cardDrawn'; card: CardId; from: ZoneId; to: ZoneId; faceUp: boolean; announce: boolean }
   | { type: 'settingsChanged'; settings: TableSettings }
   | { type: 'seatsChanged'; seats: TableState<unknown>['seats'] }
   /** alle Karten zurück auf ihre (neu gemischten) Startplätze, verdeckt, nichts frei */
   | { type: 'cardsReset'; zones: Record<ZoneId, CardId[]> };
 
-export type Event = { type: string; [key: string]: unknown };
+export type Event = { type: string };
 
 /** Bestätigtes Ereignis mit fortlaufender Nummer (8.2: Lücke → Stand neu anfordern). */
 export type SequencedEvent = { seq: number; event: Event };
@@ -147,18 +147,19 @@ export interface Rng {
 }
 
 export type Rejection = { rejected: true; reason: TextRef };
-export type DispatchResult<G> = { state: TableState<G>; events: Event[] } | Rejection;
+/** Angenommen: neuer Stand und alle Ereignisse samt Nummer (Befehl + Reaktionen). */
+export type DispatchResult<G> = { state: TableState<G>; events: SequencedEvent[] } | Rejection;
 
 /** Verweis auf einen Text in texts.de.yaml samt Platzhaltern. */
 export type TextRef = { key: string; params?: Record<string, string | number> };
 
 export type CommandDef<G, C extends Command = Command> = {
-  /** Zod-Schema des Befehls; hier nur als Prüffunktion typisiert, damit die Engine Zod nicht kennen muss */
+  /** Prüft Form und Werte des Befehls (Zod); wirft bei ungültiger Eingabe */
   parse(input: unknown): C;
   /** Rechteschlüssel aus permissions.yaml */
   permission: string;
-  /** Platz, dem der Befehl gehört (für `own`); fehlt: gehört niemandem */
-  owner?(cmd: C, state: TableState<G>): SeatId | null;
+  /** Plätze, denen das Betroffene gehört (für `own`); leer oder fehlt: gehört niemandem */
+  owners?(cmd: C, state: TableState<G>): SeatId[];
   /** Prüfen und in Ereignisse übersetzen; ablehnen mit Grund */
   handle(cmd: C, state: TableState<G>, actor: Actor, rng: Rng): Event[] | Rejection;
 };

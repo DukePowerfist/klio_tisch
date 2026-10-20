@@ -26,7 +26,6 @@ zones:
 toast:
   drawn: "Aufgedeckt: {card}"
   displayed: "Ausliegend: {card}"
-  notesFull: Bei den Notizen haben nur drei Karten Platz.
   scar: "Bogen {seat}: Narbe markiert ({suit})"
   dead: "Bogen {seat}: Der Charakter ist tot."
   rolled: "Bogen {seat}: Charakter ausgewürfelt"
@@ -78,11 +77,9 @@ trumpDialog:
   raise: "Erhöhen um 1 (der Trumpf muss dieses Attribut benötigen):"
   why:
     duplicate: Schon gewählt.
-    startLevel: "Starttrumpf: nur Stufe I."
     highest: "Muss zum höchsten Attribut ({attrs}) passen."
-    levelI: Nur Stufe I.
-    levelIorII: Nur Stufe I oder II.
     needs: "Muss {attr} benötigen."
+    # Gründe für falsche Stufe stehen beim jeweiligen Weg (trump-sources.yaml, levelWhy)
 
 gm:
   expedition: Expedition starten
@@ -106,3 +103,25 @@ reset:
 dock:
   seat: "Ich bin Spieler {n}"
   overview: Zur Übersicht
+
+# Gründe für abgelehnte Befehle. Neu (gab es in der alten Datei nicht), außer wo vermerkt.
+reject:
+  unknownCommand: Unbekannte Aktion.
+  invalid: Ungültige Angaben.
+  notAllowed: Dafür fehlt dir die Berechtigung.
+  stale: Die Karte liegt nicht mehr dort.
+  unknownZone: Unbekannter Stapel.
+  hiddenSeat: Dieser Platz ist gerade ausgeblendet.
+  noAction: Das geht bei diesem Stapel nicht.
+  noHome: Für diese Karte gibt es keinen Heimatstapel.
+  reactionLoop: Zu viele Folgeaktionen, die Aktion wurde abgebrochen.
+  capacity:
+    notes: Bei den Notizen haben nur drei Karten Platz.   # wie bisher
+  unknownField: Unbekanntes Feld auf dem Bogen.
+  unknownTrump: Unbekannter Trumpf.
+  unknownSource: Unbekannter Weg zum Trumpf.
+  missingChoice: Es fehlt noch eine Auswahl.
+  invalidChoice: Diese Auswahl ist nicht möglich.
+  improveRequired: Bei vier Trümpfen muss eine Stärke verbessert werden.
+  attributeMax: Ein Attribut kann höchstens 9 sein.
+  slotEmpty: Dieser Platz ist leer.

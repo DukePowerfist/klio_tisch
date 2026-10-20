@@ -38,3 +38,26 @@ export const KlioState = z.object({
   oracle: z.tuple([OracleDraw, OracleDraw]).nullable(),
 }).strict();
 export type KlioState = z.infer<typeof KlioState>;
+
+export function emptySheet(): KlioSheet {
+  return {
+    variant: 'm',
+    name: '',
+    photo: null,
+    attributes: { K: null, V: null, P: null },
+    strengths: Array.from({ length: 5 }, () => ({ text: '', improved: false })),
+    weaknesses: ['', ''],
+    weaknessMarks: [false, false, false],
+    scars: { heart: false, spade: false },
+    newScars: 0,
+    lamps: [false, false, false],
+    experiences: ['', '', ''],
+    gear: Array.from({ length: 7 }, () => ({ text: '', struck: false })),
+    trumps: [null, null, null, null],
+    dead: false,
+  };
+}
+
+export function initialKlioState(): KlioState {
+  return { sheets: [emptySheet(), emptySheet(), emptySheet(), emptySheet()], expedition: null, oracle: null };
+}

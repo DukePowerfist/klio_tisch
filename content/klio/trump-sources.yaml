@@ -1,4 +1,5 @@
 # Wege zum Trumpf (ARCHITEKTUR.md 7, Ebene 2). Texte wortgetreu aus der alten Datei.
+# text: name/desc im Auswahldialog, why = Grund, wenn der Weg gesperrt ist, levelWhy = Grund bei falscher Stufe.
 # Bausteine (requires, steps, filters, afterwards, always) sind feste TS-Funktionen in src/rules/klio/blocks/.
 
 maxTrumps: 4                  # muss zu sheet.yaml (trumps.count) passen
@@ -11,6 +12,7 @@ trumpSources:
       name: Starttrumpf
       desc: Stufe I, passend zu deinem höchsten Attribut.
       why: Du hast schon einen Trumpf.
+      levelWhy: "Starttrumpf: nur Stufe I."
     requires: [ noTrumpYet ]
     levels: [ 1 ]
     filters: [ matchesHighestAttribute ]
@@ -20,6 +22,7 @@ trumpSources:
       name: Schwäche überwunden
       desc: "Alle drei Verbessern-Kästchen markiert: Schwäche streichen und Trumpf der Stufe I wählen."
       why: Dafür zuerst alle drei Verbessern-Kästchen markieren.
+      levelWhy: Nur Stufe I.
     requires: [ { allMarked: weaknessMarks } ]
     steps: [ chooseWeaknessToRemove ]          # nur befüllte Schwächen; beide leer: Schritt entfällt (A29)
     levels: [ 1 ]
@@ -30,6 +33,7 @@ trumpSources:
       name: Erlebnis eingetroffen
       desc: "Alle drei Lampenfelder markiert: eine Stärke verbessern und einen Trumpf der Stufe I oder II wählen."
       why: Dafür zuerst alle drei Lampenfelder markieren.
+      levelWhy: Nur Stufe I oder II.
     requires: [ { allMarked: lamps } ]
     steps: [ { improveStrength: optional } ]   # freiwillig, solange ein Trumpf folgt (A35)
     levels: [ 1, 2 ]
