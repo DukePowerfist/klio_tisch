@@ -72,7 +72,11 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(gm.locator('.zone.marked', { hasText: 'SCHWIERIG' })).toBeVisible();
   await player.mouse.move(5, 5); // Maus weg vom Tisch: Markierung bleibt
   await expect(gm.locator('.zone.marked', { hasText: 'SCHWIERIG' })).toBeVisible();
-  // anderer Stapel: die Markierung wandert mit
+  // Menü schließen (zweiter Klick, langsamer als ein Doppelklick): Markierung verschwindet
+  await player.waitForTimeout(400);
+  await player.mouse.click(hard.x, hard.y);
+  await expect(gm.locator('.zone.marked')).toHaveCount(0);
+  // anderer Stapel: wieder markiert
   await openMenuAndClick(player, 'DECK', 'Ziehen');
   await expect(gm.locator('.zone.marked')).toHaveCount(1);
   await expect(gm.locator('.zone.marked', { hasText: 'DECK' })).toBeVisible();
