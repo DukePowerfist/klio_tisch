@@ -7,8 +7,11 @@ const BYTES = 16; // 128 Bit je Teil
 const PART = /^[A-Za-z0-9_-]{22}$/;
 
 export function createRoomLink(random: (bytes: Uint8Array<ArrayBuffer>) => void = (b) => crypto.getRandomValues(b)): RoomLink {
-  return { room: randomPart(random), secret: randomPart(random) };
+  return { room: randomToken(random), secret: randomToken(random) };
 }
+
+export const sameRoom = (a: RoomLink | null | undefined, b: RoomLink | null | undefined): boolean =>
+  !!a && !!b && a.room === b.room && a.secret === b.secret;
 
 export function formatHash(link: RoomLink): string {
   return `#${link.room}.${link.secret}`;
@@ -21,7 +24,8 @@ export function parseHash(hash: string): RoomLink | null {
   return { room, secret };
 }
 
-function randomPart(random: (bytes: Uint8Array<ArrayBuffer>) => void): string {
+/** 128 Bit Zufall, URL-sicher (22 Zeichen). */
+export function randomToken(random: (bytes: Uint8Array<ArrayBuffer>) => void = (b) => crypto.getRandomValues(b)): string {
   const bytes = new Uint8Array(BYTES);
   random(bytes);
   return btoa(String.fromCharCode(...bytes))

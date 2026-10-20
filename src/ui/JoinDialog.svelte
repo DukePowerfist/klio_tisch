@@ -1,6 +1,6 @@
 <script lang="ts">
   // Platz wählen (8.2): Name und einer der freien, sichtbaren Plätze; oder nur zuschauen.
-  import { SEATS } from '../engine/types';
+  import { SEATS, type TextRef } from '../engine/types';
   import { seatNo, seatVisible } from '../engine/zones';
   import Modal from './Modal.svelte';
   import { session } from './session.svelte';
@@ -8,6 +8,7 @@
 
   let { onclose }: { onclose: () => void } = $props();
   let name = $state(session.savedName);
+  let refused = $state<TextRef | null>(null);
   const table = $derived(session.state!);
 </script>
 
@@ -17,13 +18,13 @@
   <div class="seats">
     {#each SEATS.filter((s) => seatVisible(s, table)) as seat (seat)}
       {@const info = table.seats[seat]}
-      <button disabled={info.occupied} onclick={() => session.claim(seat, name.trim())}>
+      <button disabled={info.occupied} onclick={async () => (refused = await session.claim(seat, name.trim()))}>
         {t('room.join.seat', { n: seatNo(seat) })}
         {#if info.occupied}<small>{info.name ? t('room.join.taken', { name: info.name }) : t('room.join.takenNoName')}</small>{/if}
       </button>
     {/each}
   </div>
-  {#if session.notice}<p class="notice">{text(session.notice)}</p>{/if}
+  {#if refused}<p class="notice">{text(refused)}</p>{/if}
   <p><button class="watch" onclick={onclose}>{t('room.join.watch')}</button></p>
 </Modal>
 

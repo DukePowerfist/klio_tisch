@@ -46,7 +46,7 @@
   const submit = (cmd: object) => submitOrSay(cmd);
 
   // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
-  const may = (type: string) => session.can({ type, seat } as { type: string });
+  const may = (type: string) => session.can({ type, seat });
   const canEdit = $derived(may('sheet.toggle'));
   const canRoll = $derived(may('sheet.roll'));
   const canPhoto = $derived(may('sheet.photo'));

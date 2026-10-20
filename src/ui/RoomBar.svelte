@@ -1,21 +1,20 @@
 <script lang="ts">
   // Raumleiste oben rechts (ARCHITEKTUR.md 10, RoomBar): Verbindungsstatus, Einladungslink, eigener Platz.
   import { seatNo } from '../engine/zones';
+  import { copyText } from './clipboard';
   import { session } from './session.svelte';
   import { t } from './texts';
   import { view } from './view.svelte';
 
   let { onChooseSeat }: { onChooseSeat: () => void } = $props();
 
+  async function copy() {
+    const url = session.inviteUrl();
+    if (url && (await copyText(url))) view.say(t('room.copied'));
+  }
   async function invite() {
     await session.invite();
     await copy();
-  }
-  async function copy() {
-    const url = session.inviteUrl();
-    if (!url) return;
-    await navigator.clipboard.writeText(url).catch(() => {});
-    view.say(t('room.copied'));
   }
 </script>
 
@@ -25,18 +24,16 @@
   {:else if session.mode === 'host'}
     <span>{t('room.open', { n: session.peers })}</span>
     <button onclick={copy}>{t('room.copy')}</button>
-  {:else if session.status === 'ready'}
-    {#if session.role?.role === 'player'}
+  {:else if session.status === 'ready' && session.role}
+    {#if session.role.role === 'player'}
       <span>{t('room.player', { n: seatNo(session.role.seat) })}</span>
     {:else}
       <span>{t('room.spectator')}</span>
       <button onclick={onChooseSeat}>{t('room.chooseSeat')}</button>
     {/if}
-  {:else if session.status === 'reload'}
-    <span>{t('room.reload')}</span>
-    <button onclick={() => location.reload()}>{t('room.reloadButton')}</button>
   {:else}
-    <span>{t(`room.${session.status === 'starting' ? 'connecting' : session.status}`)}</span>
+    <span>{session.statusText}</span>
+    {#if session.status === 'reload'}<button onclick={() => location.reload()}>{t('room.reloadButton')}</button>{/if}
   {/if}
 </div>
 

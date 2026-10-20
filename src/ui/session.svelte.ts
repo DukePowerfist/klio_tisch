@@ -10,27 +10,29 @@ import { can } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
 import type { Actor, CardId, Event, SeatId, TableState, TextRef } from '../engine/types';
-import { locate } from '../engine/zones';
 import { Client, type ClientStatus } from '../net/client';
 import { Host } from '../net/host';
 import { localTransport } from '../net/local';
 import type { CommandResult, Role } from '../net/protocol';
-import { createRoomLink, formatHash, parseHash, type RoomLink } from '../net/room-link';
+import { createRoomLink, formatHash, parseHash, randomToken, sameRoom, type RoomLink } from '../net/room-link';
 import { TrysteroRoom } from '../net/trystero';
+import type { Transport } from '../net/transport';
 import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
 import { IdbStore, PhotoStore } from './storage';
+import { t } from './texts';
+import { view } from './view.svelte';
 
 export type KlioTableState = TableState<KlioState>;
 type Listener = (events: Event[]) => void;
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
 export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
-type Pending = PendingDrop & { where: string };
+type Pending = PendingDrop & { id: string };
 
 export type Mode = 'local' | 'host' | 'client';
-/** Verbindungszustand für die Anzeige */
-export type Status = 'starting' | 'local' | 'hosting' | 'otherTab' | ClientStatus;
+/** Verbindungszustand (nur für Mitspieler bzw. eine blockierte SL von Bedeutung) */
+export type Status = 'starting' | 'otherTab' | ClientStatus;
 
 const ruleset = createKlioRuleset(content);
 const engine = createEngine(ruleset);
@@ -39,14 +41,12 @@ export const photos = new PhotoStore();
 const KEY = 'klio.key';
 const NAME = 'klio.name';
 const HOST_LOCK = 'klio-tisch-host';
+const CHANNEL = 'msg';
 
 /** Geheimer Wiederverbindungs-Schlüssel dieses Browsers (8.2), einmalig erzeugt. */
 function reconnectKey(): string {
   let key = localStorage.getItem(KEY);
-  if (!key) {
-    key = createRoomLink().secret + createRoomLink().secret;
-    localStorage.setItem(KEY, key);
-  }
+  if (!key) localStorage.setItem(KEY, (key = randomToken()));
   return key;
 }
 
@@ -61,135 +61,129 @@ function acquireHostLock(): Promise<boolean> {
   });
 }
 
-/** Wo liegen die Karten gerade? (für unbestätigte Ablagen) */
-const whereOf = (state: KlioTableState | null, cards: CardId[]) => JSON.stringify(cards.map((c) => (state ? locate(state, c) : null)));
+const sameRole = (a: Role | null, b: Role | null) => JSON.stringify(a) === JSON.stringify(b);
 
 class Session {
   mode = $state<Mode>('local');
   status = $state<Status>('starting');
   state = $state.raw<KlioTableState | null>(null);
-  role = $state<Role | null>(null);
+  role = $state.raw<Role | null>(null);
   /** wer hier bedient: im lokalen Betrieb und als Host die Spielleitung */
   actor = $derived<Actor>(this.mode === 'client' ? (this.role ?? { role: 'spectator' }) : { role: 'gm' });
   /** andere Teilnehmer im Raum */
   peers = $state(0);
-  room = $state<RoomLink | null>(null);
   saveError = $state<string | null>(null);
-  /** Hinweis des Hosts, z. B. warum ein Platz nicht frei war */
-  notice = $state<TextRef | null>(null);
-  warning = $state<'secondHost' | null>(null);
   pending = $state.raw<Pending[]>([]);
 
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
-  private trystero: TrysteroRoom | null = null;
   private listeners = new Set<Listener>();
+  private nextId = 0;
+
+  /** Text zum Verbindungszustand (Raumleiste, Wartebildschirm) */
+  get statusText(): string {
+    const key = this.status === 'starting' || this.status === 'ready' ? 'connecting' : this.status;
+    return t(`room.${key}`);
+  }
 
   async start(): Promise<void> {
     const link = parseHash(location.hash);
     const store = new IdbStore<KlioState>();
-    const saved = link ? await store.load() : null;
-    const ownRoom = link && saved?.host.room && saved.host.room.room === link.room && saved.host.room.secret === link.secret;
-    if (link && !ownRoom) return this.startClient(link);
-    if (ownRoom && !(await acquireHostLock())) {
-      this.status = 'otherTab';
-      return;
-    }
-    this.host = await Host.start(engine, localTransport(), store, () => initialTable(ruleset, cryptoRng()), {
+    const saved = await store.load();
+    if (link && !sameRoom(saved?.host.room, link)) return this.startClient(link);
+
+    // Spielstand nur einmal laden: Host.start bekommt das schon Gelesene
+    this.host = await Host.start(engine, localTransport(), { load: async () => saved, save: (s) => store.save(s) }, () => initialTable(ruleset, cryptoRng()), {
       build: __BUILD_ID__,
       onSaveError: (e) => (this.saveError = String(e)),
-      onChange: (state, events) => this.changed(state, events.map((e) => e.event)),
+      onChange: (state, events, cause) => this.changed(state, events.map((e) => e.event), cause),
     });
     this.state = this.host.state;
-    this.room = this.host.room ?? null;
-    this.status = 'local';
-    if (ownRoom) this.openRoom(link);
+    if (link) await this.openRoom(link);
   }
 
   /** Spielleitung: Mitspieler einladen. Nutzt den gespeicherten Raum der Kampagne oder legt einen an (ehem. O10). */
-  async invite(): Promise<RoomLink | null> {
-    if (!this.host) return null;
-    if (!(await acquireHostLock())) {
-      this.status = 'otherTab';
-      return null;
-    }
+  async invite(): Promise<void> {
+    if (!this.host) return;
     const link = this.host.room ?? createRoomLink();
     if (!this.host.room) await this.host.setRoom(link);
-    this.room = link;
     history.replaceState(null, '', formatHash(link));
-    this.openRoom(link);
-    return link;
+    await this.openRoom(link);
   }
 
   /** Einladungslink zum Kopieren */
   inviteUrl(): string | null {
-    return this.room ? `${location.origin}${location.pathname}${formatHash(this.room)}` : null;
+    const room = this.host?.room;
+    return room ? `${location.origin}${location.pathname}${formatHash(room)}` : null;
   }
 
-  private openRoom(link: RoomLink): void {
-    this.trystero?.leave();
-    this.trystero = new TrysteroRoom(link);
-    const channel = this.trystero.channel('msg');
-    channel.onPeers((p) => (this.peers = p.length));
-    this.host!.attach(channel);
+  /** Host im Raum: eine Sperre je Browser, dann die Verbindung umstellen. */
+  private async openRoom(link: RoomLink): Promise<void> {
+    if (!(await acquireHostLock())) {
+      this.state = null;
+      this.status = 'otherTab';
+      return;
+    }
+    this.host!.attach(this.connect(link));
     this.mode = 'host';
-    this.status = 'hosting';
+  }
+
+  private connect(link: RoomLink): Transport {
+    const channel = new TrysteroRoom(link).channel(CHANNEL);
+    channel.onPeers((p) => (this.peers = p.length));
+    return channel;
   }
 
   private startClient(link: RoomLink): void {
     this.mode = 'client';
-    this.room = link;
-    this.trystero = new TrysteroRoom(link);
-    const channel = this.trystero.channel('msg');
-    channel.onPeers((p) => (this.peers = p.length));
-    const client: Client<KlioState> = new Client(engine, channel, {
+    const client: Client<KlioState> = new Client(engine, this.connect(link), {
       build: __BUILD_ID__,
       key: reconnectKey(),
-      name: localStorage.getItem(NAME) ?? '',
-      want: null,
+      name: this.savedName,
       onChange: () => {
         this.status = client.status;
-        this.role = client.role;
-        this.notice = client.denied;
-        if (client.state !== this.state) this.changed(client.state!, []);
+        if (!sameRole(this.role, client.role)) this.role = client.role;
+        if (client.state && client.state !== this.state) this.state = client.state;
       },
-      onEvents: (events) => this.emit(events),
+      onEvents: (events, cause) => this.changed(client.state!, events, cause),
       onWarning: (w) => {
-        if (w.kind === 'secondHost') this.warning = 'secondHost';
+        if (w.kind === 'secondHost') view.say(t('room.secondHost'), true);
       },
     });
     this.client = client;
     this.status = client.status;
   }
 
-  /** Als Zuschauer einen freien Platz nehmen. */
-  claim(seat: SeatId, name: string): void {
-    localStorage.setItem(NAME, name);
-    this.client?.claim(seat, name);
-  }
-
   get savedName(): string {
     return localStorage.getItem(NAME) ?? '';
   }
 
+  /** Als Zuschauer einen freien Platz nehmen; Ergebnis für die Anzeige im Beitrittsfenster. */
+  async claim(seat: SeatId, name: string): Promise<TextRef | null> {
+    localStorage.setItem(NAME, name);
+    const r = await this.client?.claim(seat, name);
+    return r && !r.ok ? r.reason : null;
+  }
+
   async submit(cmd: object, drop?: PendingDrop): Promise<CommandResult> {
-    const target = this.host ?? this.client;
-    if (!target) return { ok: false, reason: { key: 'reject.invalid' } };
-    const entry = drop && { ...drop, where: whereOf(this.state, drop.cards) };
-    if (entry) this.pending = [...this.pending, entry];
-    const result = await target.submit(cmd);
-    if (entry) this.pending = this.pending.filter((d) => d !== entry);
+    if (!this.host && !this.client) return { ok: false, reason: { key: 'reject.invalid' } };
+    const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
+    if (drop) this.pending = [...this.pending, { ...drop, id }];
+    const result = await (this.host ? this.host.submit(cmd, id) : this.client!.submit(cmd, id));
+    if (drop) this.pending = this.pending.filter((d) => d.id !== id);
     return result;
   }
 
   /** Darf der aktuelle Nutzer diesen Befehl? Zum Ausblenden von Knöpfen (9.3); verbindlich prüft der Host. */
-  can(cmd: { type: string }): boolean {
+  can(cmd: { type: string; [key: string]: unknown }): boolean {
     const def = engine.commands[cmd.type];
     if (!def || !this.state) return false;
+    if (this.actor.role === 'gm') return true;
     try {
       return can(this.actor, def, cmd, this.state as TableState<unknown>, ruleset.permissions);
     } catch {
-      return true; // unvollständige Angaben (z. B. noch kein Ziel): anzeigen, der Host prüft beim Absenden
+      // Angaben für „nur das Eigene“ fehlen noch (z. B. das Ziel beim Greifen): anzeigen, der Host prüft beim Absenden
+      return true;
     }
   }
 
@@ -199,16 +193,11 @@ class Session {
     return () => this.listeners.delete(cb);
   }
 
-  private changed(state: KlioTableState, events: Event[]): void {
+  /** Neuer Stand mit Ereignissen; die Ablage des auslösenden Befehls ist damit bestätigt. */
+  private changed(state: KlioTableState, events: Event[], cause?: string): void {
     this.state = state;
-    // Unbestätigte Ablage endet, sobald die Karten woanders liegen (der Befehl ist angewendet)
-    this.pending = this.pending.filter((d) => whereOf(state, d.cards) === d.where);
-    this.emit(events);
-  }
-
-  private emit(events: Event[]): void {
-    if (events.length === 0) return;
-    for (const cb of this.listeners) cb(events);
+    if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
+    if (events.length > 0) for (const cb of this.listeners) cb(events);
   }
 }
 

@@ -13,7 +13,7 @@ export const HelloMsg = z.object({
   build: z.string().max(64),
   /** geheimer Wiederverbindungs-Schlüssel des Browsers, geht nur an den Host */
   key: z.string().min(16).max(128),
-  /** gewünschter Platz beim ersten Beitritt; bekannte Schlüssel bekommen ihren alten Platz */
+  /** Relikt (eingefroren): seit Schritt 4a immer null; neue Browser treten als Zuschauer bei und wählen per `claim` */
   want: z.union([SeatSchema, z.literal('spectator')]).nullable(),
   name: z.string().max(40),
 });
@@ -23,8 +23,8 @@ export const ReloadMsg = z.object({ t: z.literal('reload'), build: z.string().ma
 
 const CommandMsg = z.object({ t: z.literal('cmd'), id: z.string().min(8).max(64), cmd: z.unknown() }).strict();
 const ResyncMsg = z.object({ t: z.literal('resync') }).strict();
-/** Zuschauer möchte einen freien Platz nehmen (nach dem Beitritt, wenn er den Tisch sieht). */
-const ClaimMsg = z.object({ t: z.literal('claim'), seat: SeatSchema, name: z.string().max(40) }).strict();
+/** Zuschauer möchte einen freien Platz nehmen (nach dem Beitritt); Antwort wie bei Befehlen per `result` mit derselben ID. */
+const ClaimMsg = z.object({ t: z.literal('claim'), id: z.string().min(8).max(64), seat: SeatSchema, name: z.string().max(40) }).strict();
 export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg]);
 export type ToHost = z.infer<typeof ToHost>;
 
@@ -41,6 +41,8 @@ const RoleSchema = z.union([
 const EventsMsg = z.object({
   t: z.literal('events'),
   events: z.array(z.object({ seq: z.number().int().positive(), event: z.unknown() }).strict()).min(1),
+  /** ID des Befehls, der die Ereignisse ausgelöst hat (damit der Absender seine Anzeige abschließen kann) */
+  cause: z.string().exactOptional(),
 }).strict();
 export type ReceivedEvents = z.infer<typeof EventsMsg>['events'];
 

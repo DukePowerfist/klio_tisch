@@ -1,6 +1,8 @@
 // Verbindungstest (ARCHITEKTUR.md 12, Schritt 0).
 // Eigenständige Seite: Raum beitreten, Mitspieler sehen, eine Karte gemeinsam bewegen.
 // Zeigt an, an welcher Stelle eine Verbindung scheitert, und erzeugt einen Bericht zum Kopieren.
+// Bewusst eigenständig (nutzt Trystero direkt, nicht net/trystero.ts): Als Diagnosewerkzeug soll es auch
+// funktionieren, wenn an der eigentlichen App etwas kaputt ist.
 
 import { getRelaySockets, joinRoom, selfId } from '@trystero-p2p/nostr';
 import { connectionKind, type ConnectionKind } from '../net/connection-kind';

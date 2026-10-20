@@ -10,7 +10,6 @@
   import Toast from './Toast.svelte';
   import TrumpDialog from './TrumpDialog.svelte';
   import { session } from './session.svelte';
-  import { t } from './texts';
   import { view } from './view.svelte';
 
   let error = $state<string | null>(null);
@@ -23,15 +22,9 @@
   const chooseSeat = $derived(joinOpen && session.mode === 'client' && session.status === 'ready' && session.role?.role === 'spectator');
 
   // Wer einen Platz bekommt, startet in seiner Rollenansicht (10)
-  let lastSeat: string | null = null;
+  const mySeat = $derived(session.role?.role === 'player' ? session.role.seat : null);
   $effect(() => {
-    const seat = session.role?.role === 'player' ? session.role.seat : null;
-    if (seat && seat !== lastSeat) view.setRole(seat);
-    lastSeat = seat;
-  });
-
-  $effect(() => {
-    if (session.warning === 'secondHost') view.say(t('room.secondHost'), true);
+    if (mySeat) view.setRole(mySeat);
   });
 </script>
 
@@ -57,10 +50,8 @@
   {#if session.saveError}
     <div class="save-error" role="alert">Speichern fehlgeschlagen: {session.saveError}</div>
   {/if}
-{:else if session.status === 'otherTab' || session.status === 'denied'}
-  <p class="center">{t(session.status === 'otherTab' ? 'room.otherTab' : 'room.denied')}</p>
 {:else if session.status !== 'starting'}
-  <p class="center">{t(`room.${session.status === 'ready' || session.status === 'hosting' || session.status === 'local' ? 'connecting' : session.status}`)}</p>
+  <p class="center">{session.statusText}</p>
 {/if}
 <RoomBar onChooseSeat={() => (joinOpen = true)} />
 

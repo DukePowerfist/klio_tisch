@@ -11,8 +11,8 @@ export class TrysteroRoom {
   private peers: PeerId[] = [];
   private peerCbs: ((peers: PeerId[]) => void)[] = [];
 
-  constructor(link: RoomLink, onError?: (error: string) => void) {
-    this.room = joinRoom(roomConfig(link), link.room, { onJoinError: (e) => onError?.(e.error) });
+  constructor(link: RoomLink) {
+    this.room = joinRoom(roomConfig(link), link.room);
     this.room.onPeerJoin = (p) => this.setPeers([...this.peers.filter((x) => x !== p), p]);
     this.room.onPeerLeave = (p) => this.setPeers(this.peers.filter((x) => x !== p));
   }
@@ -23,12 +23,9 @@ export class TrysteroRoom {
     return {
       self: selfId,
       send: (msg, to) => void action.send(msg as never, to ? { target: to } : {}),
+      // je Kanal ein Empfänger (Host bzw. Client)
       onMessage: (cb) => {
-        const previous = action.onMessage;
-        action.onMessage = (data, ctx) => {
-          void previous?.(data, ctx);
-          cb(data, ctx.peerId);
-        };
+        action.onMessage = (data, ctx) => cb(data, ctx.peerId);
       },
       onPeers: (cb) => {
         this.peerCbs.push(cb);
@@ -36,10 +33,6 @@ export class TrysteroRoom {
       },
       leave: () => void this.room.leave(),
     };
-  }
-
-  leave(): void {
-    void this.room.leave();
   }
 
   private setPeers(peers: PeerId[]): void {

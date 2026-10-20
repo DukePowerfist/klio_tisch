@@ -16,7 +16,7 @@
   const MENU: MenuAction[] = ['shuffle', 'flip', 'draw'];
 
   // nur Aktionen, die die Zone kann und die man darf (9.3)
-  const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined && session.can({ type: `zone.${a}`, zone: zone.id } as { type: string })));
+  const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined && session.can({ type: `zone.${a}`, zone: zone.id })));
   const onSheet = $derived(zone.owner !== null);
   const label = $derived(t(`zones.${zone.template}`));
   const title = $derived(hasText(`zones.${zone.template}Title`) ? t(`zones.${zone.template}Title`) : undefined);

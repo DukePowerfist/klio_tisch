@@ -35,8 +35,8 @@ export type HostOptions<G> = {
   rng?: Rng;
   /** Speichern fehlgeschlagen: Befehl verworfen, SL bekommt eine deutliche Warnung (8.2) */
   onSaveError?: (error: unknown) => void;
-  /** nach jedem angenommenen Befehl (auch eigenen) */
-  onChange?: (state: TableState<G>, events: SequencedEvent[]) => void;
+  /** nach jedem angenommenen Befehl (auch eigenen); `cause` = Befehls-ID, falls bekannt */
+  onChange?: (state: TableState<G>, events: SequencedEvent[], cause?: string) => void;
 };
 
 type Hello = Extract<ToHost, { t: 'hello' }>;
@@ -105,9 +105,9 @@ export class Host<G> {
     this.listen();
   }
 
-  /** Befehl der Spielleitung (im Browser des Hosts). */
-  submit(cmd: unknown): Promise<CommandResult> {
-    return this.enqueue(() => this.execute(cmd, { role: 'gm' }));
+  /** Befehl der Spielleitung (im Browser des Hosts); `id` kommt in onChange als Auslöser zurück. */
+  submit(cmd: unknown, id?: string): Promise<CommandResult> {
+    return this.enqueue(() => this.execute(cmd, { role: 'gm' }, undefined, id));
   }
 
   /** Wartet, bis alle bisher eingegangenen Befehle bearbeitet sind. */
@@ -130,14 +130,14 @@ export class Host<G> {
     const key = this.peers.get(from);
     if (!key) return; // erst hello
     if (msg.t === 'resync') return this.send({ t: 'state', state: this.state }, from);
-    if (msg.t === 'claim') return this.claim(key, msg.seat, msg.name, from);
+    if (msg.t === 'claim') return this.claim(key, msg, from);
 
     // Doppelt gesendet (z. B. nach Verbindungsabbruch): nur die Antwort wiederholen (8.2)
     const earlier = this.saved.host.answered[key]?.find(([id]) => id === msg.id);
     if (earlier) return this.send({ t: 'result', id: msg.id, ...earlier[1] }, from);
 
     const role = this.saved.host.keys[key]!;
-    const result = await this.execute(msg.cmd, role, (host, r) => remember(host, key, msg.id, r));
+    const result = await this.execute(msg.cmd, role, (host, r) => remember(host, key, msg.id, r), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
   }
 
@@ -152,37 +152,32 @@ export class Host<G> {
       }
     }
 
+    // Bekannte Schlüssel bekommen ihre Rolle zurück; neue treten als Zuschauer bei und wählen dann (claim)
     let role = this.saved.host.keys[msg.key];
     if (!role) {
-      // Neuer Schlüssel: Platz nehmen (über den Engine-Befehl, als SL) oder zuschauen
-      const claimed: Role = msg.want === 'spectator' || msg.want === null ? { role: 'spectator' } : { role: 'player', seat: msg.want };
-      const withKey = (host: HostData): HostData => ({ ...host, keys: { ...host.keys, [msg.key]: claimed } });
-      const seatCmd = claimed.role === 'player' ? { type: 'table.setSeat', seat: claimed.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) } : null;
-      const result = seatCmd
-        ? await this.execute(seatCmd, { role: 'gm' }, withKey)
-        : await this.persist({ state: this.state, host: withKey(this.saved.host) });
+      role = { role: 'spectator' };
+      const result = await this.persist({ state: this.state, host: withRole(this.saved.host, msg.key, role) });
       if (!result.ok) return this.send({ t: 'denied', reason: result.reason }, from);
-      role = claimed;
     }
     this.peers.set(from, msg.key);
     this.send({ t: 'welcome', role, state: this.state }, from);
   }
 
-  /** Zuschauer nimmt einen freien Platz; Antwort ist ein neues Willkommen mit der neuen Rolle. */
-  private async claim(key: string, seat: SeatId, name: string, from: PeerId): Promise<void> {
-    if (this.saved.host.keys[key]?.role !== 'spectator') return;
-    const role: Role = { role: 'player', seat };
-    const withKey = (host: HostData): HostData => ({ ...host, keys: { ...host.keys, [key]: role } });
-    const result = await this.execute({ type: 'table.setSeat', seat, occupied: true, ...(name ? { name } : {}) }, { role: 'gm' }, withKey);
-    if (!result.ok) return this.send({ t: 'denied', reason: result.reason }, from);
-    this.send({ t: 'welcome', role, state: this.state }, from);
+  /** Zuschauer nimmt einen freien Platz (über den Engine-Befehl, als SL); bei Erfolg neues Willkommen. */
+  private async claim(key: string, msg: Extract<ToHost, { t: 'claim' }>, from: PeerId): Promise<void> {
+    const role: Role = { role: 'player', seat: msg.seat };
+    const result: CommandResult = this.saved.host.keys[key]?.role !== 'spectator'
+      ? { ok: false, reason: { key: 'reject.invalid' } }
+      : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h) => withRole(h, key, role), msg.id);
+    this.send({ t: 'result', id: msg.id, ...result }, from);
+    if (result.ok) this.send({ t: 'welcome', role, state: this.state }, from);
   }
 
   /**
    * Der einzige Weg für Änderungen: ausführen → Host-Daten nachführen → speichern → verteilen.
    * Gemerkte Antworten werden auch für abgelehnte Befehle gespeichert, damit eine Wiederholung dieselbe Antwort bekommt.
    */
-  private async execute(cmd: unknown, actor: Actor, updateHost?: (host: HostData, result: CommandResult) => HostData): Promise<CommandResult> {
+  private async execute(cmd: unknown, actor: Actor, updateHost?: (host: HostData, result: CommandResult) => HostData, cause?: string): Promise<CommandResult> {
     const r = this.engine.dispatch(this.state, cmd, actor, this.rng);
     const result: CommandResult = isRejection(r) ? { ok: false, reason: r.reason } : { ok: true };
     // Bei Ablehnung ohne etwas zu merken ändert sich nichts, also auch nichts zu speichern
@@ -193,8 +188,8 @@ export class Host<G> {
     if (!saved.ok) return saved;
     if (isRejection(r)) return result;
 
-    for (const peer of this.peers.keys()) this.send({ t: 'events', events: r.events }, peer);
-    this.options.onChange?.(this.state, r.events);
+    for (const peer of this.peers.keys()) this.send({ t: 'events', events: r.events, ...(cause ? { cause } : {}) }, peer);
+    this.options.onChange?.(this.state, r.events, cause);
     return result;
   }
 
@@ -209,6 +204,8 @@ export class Host<G> {
     }
   }
 }
+
+const withRole = (host: HostData, key: string, role: Role): HostData => ({ ...host, keys: { ...host.keys, [key]: role } });
 
 /** Antwort merken; ändert nur die Liste dieses Schlüssels (die übrigen Teile werden geteilt). */
 function remember(host: HostData, key: string, id: string, result: CommandResult): HostData {

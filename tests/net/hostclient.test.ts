@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
 import type { SeatId } from '../../src/engine/types';
 import { Client, type ClientOptions } from '../../src/net/client';
+import type { CommandResult } from '../../src/net/protocol';
 import { Host } from '../../src/net/host';
 import { MemoryNetwork, MemoryStore } from '../../src/net/memory';
 import type { KlioState } from '../../src/rules/klio/state';
@@ -19,16 +20,22 @@ async function setup() {
     Host.start(engine, net.connect(), store, () => fresh(), { build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e) });
   const host = await startHost();
   const ids: string[] = [];
-  /** Neuer Client; `key` = Browser (Standard: je Wunschplatz ein eigener). */
+  /** Neuer Client; `key` = Browser (Standard: je Wunschplatz ein eigener).
+   *  Wie in der App: Beitritt als Zuschauer, dann (bei Wunschplatz) Platz wählen; `claimed` = Antwort darauf. */
   const join = (want: SeatId | 'spectator', opts: Partial<ClientOptions> = {}) => {
     const transport = net.connect();
     const warnings: string[] = [];
     const key = opts.key ?? `key-${want}-${'x'.repeat(16)}`;
-    const client = new Client(engine, transport, {
-      build: BUILD, key, name: `Name ${want}`, want,
+    let claimed: Promise<CommandResult> | null = null;
+    const client: Client<KlioState> = new Client(engine, transport, {
+      build: BUILD, key, name: `Name ${want}`,
       newId: () => ids[ids.push(`cmd-${ids.length + 1}-${'0'.repeat(8)}`) - 1]!, onWarning: (w) => warnings.push(w.kind), ...opts,
+      onChange: () => {
+        if (want !== 'spectator' && !claimed && client.status === 'ready' && client.role?.role === 'spectator') claimed = client.claim(want, `Name ${want}`);
+        opts.onChange?.();
+      },
     });
-    return { client, transport, warnings, key };
+    return { client, transport, warnings, key, claimed: () => claimed };
   };
   return { net, store, host, startHost, join, saveErrors, ids };
 }
@@ -56,7 +63,7 @@ describe('Beitreten', () => {
     expect(host.state.seats.seat1).toEqual({ occupied: true, name: 'Name seat1' });
   });
 
-  it('besetzter oder ausgeblendeter Platz wird verweigert, Zuschauen geht immer', async () => {
+  it('besetzter oder ausgeblendeter Platz wird abgelehnt, Zuschauen geht immer', async () => {
     const { net, host, join } = await setup();
     join('seat1');
     await settle(net, host);
@@ -65,9 +72,11 @@ describe('Beitreten', () => {
     const c = join('seat3', { key: 'third-browser-xxxxxxxxx' });
     const d = join('spectator');
     await settle(net, host);
-    expect(b.client.status).toBe('denied');
-    expect(b.client.denied).toEqual({ key: 'reject.seatTaken' });
-    expect(c.client.denied).toEqual({ key: 'reject.hiddenSeat' });
+    // Platzwunsch abgelehnt: bleibt verbunden als Zuschauer, Grund in der Antwort
+    expect(b.client.status).toBe('ready');
+    expect(b.client.role).toEqual({ role: 'spectator' });
+    expect(await b.claimed()).toEqual({ ok: false, reason: { key: 'reject.seatTaken' } });
+    expect(await c.claimed()).toEqual({ ok: false, reason: { key: 'reject.hiddenSeat' } });
     expect(d.client.status).toBe('ready');
     expect(d.client.role).toEqual({ role: 'spectator' });
   });
@@ -93,6 +102,18 @@ describe('Befehle', () => {
     expect(sheet(host.state, 'seat1').name).toBe('Ida');
     expect(a.client.state).toEqual(host.state);
     expect(b.client.state).toEqual(host.state);
+  });
+
+  it('Ereignisse nennen die auslösende Befehls-ID (Absender schließt seine Anzeige ab)', async () => {
+    const { net, host, join } = await setup();
+    const causes: (string | undefined)[] = [];
+    const a = join('seat1', { onEvents: (_e, cause) => void causes.push(cause) });
+    await settle(net, host);
+    causes.length = 0;
+    const r = a.client.submit({ type: 'zone.draw', zone: 'deck' }, 'meine-id-123');
+    await settle(net, host);
+    expect(await r).toEqual({ ok: true });
+    expect(causes).toEqual(['meine-id-123']);
   });
 
   it('abgelehnt: Grund kommt zurück, nichts ändert sich', async () => {
@@ -271,11 +292,12 @@ describe('Platz wählen nach dem Beitritt', () => {
     const { net, host, join } = await setup();
     const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
     const events: string[] = [];
-    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx', onEvents: (e) => events.push(...e.map((x) => x.type)) });
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx', onEvents: (e) => void events.push(...e.map((x) => x.type)) });
     await settle(net, host);
     expect(a.client.role).toEqual({ role: 'spectator' });
-    a.client.claim('seat2', 'Ida');
+    const r = a.client.claim('seat2', 'Ida');
     await settle(net, host);
+    expect(await r).toEqual({ ok: true });
     expect(a.client.role).toEqual({ role: 'player', seat: 'seat2' });
     expect(host.state.seats.seat2).toEqual({ occupied: true, name: 'Ida' });
     expect(b.client.state!.seats.seat2.occupied).toBe(true);
@@ -287,11 +309,11 @@ describe('Platz wählen nach dem Beitritt', () => {
     join('seat1');
     const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
     await settle(net, host);
-    a.client.claim('seat1', 'Ida');
+    const r = a.client.claim('seat1', 'Ida');
     await settle(net, host);
+    expect(await r).toEqual({ ok: false, reason: { key: 'reject.seatTaken' } });
     expect(a.client.status).toBe('ready');
     expect(a.client.role).toEqual({ role: 'spectator' });
-    expect(a.client.denied).toEqual({ key: 'reject.seatTaken' });
   });
 
   it('Raum wird beim Host gespeichert; Wechsel der Verbindung behält Stand und Plätze', async () => {

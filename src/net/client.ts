@@ -20,12 +20,10 @@ export type ClientOptions = {
   build: string;
   key: string;
   name: string;
-  /** gewünschter Platz beim ersten Beitritt */
-  want: SeatId | 'spectator' | null;
   newId?: () => string;
   onChange?: () => void;
-  /** bestätigte Ereignisse, nachdem sie angewendet wurden (für Meldungen und Animationen) */
-  onEvents?: (events: Event[]) => void;
+  /** bestätigte Ereignisse, nachdem sie angewendet wurden (Meldungen, Animationen); `cause` = auslösende Befehls-ID */
+  onEvents?: (events: Event[], cause?: string) => void;
   onWarning?: (w: ClientWarning) => void;
 };
 
@@ -39,6 +37,7 @@ export class Client<G> {
   private host: PeerId | null = null;
   private peers: PeerId[] = [];
   private pending = new Map<string, Pending>();
+  private claims = new Map<string, (r: CommandResult) => void>();
   private newId: () => string;
 
   constructor(private engine: Engine<G>, private transport: Transport, private options: ClientOptions) {
@@ -47,14 +46,20 @@ export class Client<G> {
     transport.onPeers((peers) => this.peersChanged(peers));
   }
 
-  /** Als Zuschauer einen freien Platz nehmen; der Host antwortet mit neuem Willkommen bzw. Absage. */
-  claim(seat: SeatId, name: string): void {
-    if (this.status === 'ready' && this.host) this.transport.send({ t: 'claim', seat, name }, this.host);
+  /** Als Zuschauer einen freien Platz nehmen; bei Erfolg folgt ein neues Willkommen mit der neuen Rolle. */
+  claim(seat: SeatId, name: string): Promise<CommandResult> {
+    if (this.status !== 'ready' || !this.host) return Promise.resolve({ ok: false, reason: { key: 'reject.invalid' } });
+    const id = this.newId();
+    const host = this.host;
+    return new Promise((resolve) => {
+      this.claims.set(id, resolve);
+      this.transport.send({ t: 'claim', id, seat, name }, host);
+    });
   }
 
-  /** Befehl schicken; Antwort kommt, sobald der Host ihn bearbeitet hat (auch nach Wiederverbinden). */
-  submit(cmd: unknown): Promise<CommandResult> {
-    const id = this.newId();
+  /** Befehl schicken; Antwort kommt, sobald der Host ihn bearbeitet hat (auch nach Wiederverbinden).
+   *  `id` (sonst neu erzeugt) kommt bei den ausgelösten Ereignissen als `cause` zurück. */
+  submit(cmd: unknown, id: string = this.newId()): Promise<CommandResult> {
     return new Promise((resolve) => {
       this.pending.set(id, { cmd, resolve });
       if (this.status === 'ready' && this.host) this.transport.send({ t: 'cmd', id, cmd }, this.host);
@@ -62,8 +67,8 @@ export class Client<G> {
   }
 
   private hello(to?: PeerId): void {
-    const { build, key, name, want } = this.options;
-    this.transport.send({ t: 'hello', build, key, name, want }, to);
+    const { build, key, name } = this.options;
+    this.transport.send({ t: 'hello', build, key, name, want: null }, to);
   }
 
   private peersChanged(peers: PeerId[]): void {
@@ -89,10 +94,9 @@ export class Client<G> {
       case 'welcome':
         return this.welcome(msg.role, msg.state, from);
       case 'denied':
-        if (this.host && from !== this.host) return;
+        // Beitritt verweigert (Antwort auf hello, also bevor ein Host feststeht)
+        if (this.host) return;
         this.denied = msg.reason;
-        // vor dem Beitritt: keine Verbindung; danach (Platzwunsch abgelehnt): weiter als Zuschauer
-        if (this.host) return this.options.onChange?.();
         return this.setStatus('denied');
     }
     if (from !== this.host) return;
@@ -105,13 +109,19 @@ export class Client<G> {
         this.adopt(msg.state);
         return;
       case 'result': {
+        const result: CommandResult = msg.ok ? { ok: true } : { ok: false, reason: msg.reason ?? { key: 'reject.invalid' } };
+        const claim = this.claims.get(msg.id);
+        if (claim) {
+          this.claims.delete(msg.id);
+          return claim(result);
+        }
         const p = this.pending.get(msg.id);
         if (!p) return;
         this.pending.delete(msg.id);
-        return p.resolve(msg.ok ? { ok: true } : { ok: false, reason: msg.reason ?? { key: 'reject.invalid' } });
+        return p.resolve(result);
       }
       case 'events':
-        return this.apply(msg.events);
+        return this.apply(msg.events, msg.cause);
     }
   }
 
@@ -140,7 +150,7 @@ export class Client<G> {
     return true;
   }
 
-  private apply(raw: ReceivedEvents): void {
+  private apply(raw: ReceivedEvents, cause?: string): void {
     const state = this.state;
     if (!state || !this.host) return;
     const fresh = raw.filter((e) => e.seq > state.seq);
@@ -156,7 +166,7 @@ export class Client<G> {
       return this.transport.send({ t: 'resync' }, this.host);
     }
     this.options.onChange?.();
-    this.options.onEvents?.(events.map((e) => e.event));
+    this.options.onEvents?.(events.map((e) => e.event), cause);
   }
 
   private setStatus(s: ClientStatus): void {
