@@ -1,13 +1,12 @@
-# Ansichten: Tischgröße, Form der Tischzonen, Lage in Draufsicht und Rollenansicht.
-# Werte aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs).
+# Ansichten: Tischgröße, Form der Tischzonen, Tischmitte, Lage in Draufsicht und Rollenansicht.
+# Ursprünglich aus „Kartentisch (3).html“ (scripts/extract-legacy.mjs); seit Schritt 5d eine gemeinsame Tischmitte
+# (ARCHITEKTUR.md 10): beide Ansichten zeigen sie gleich und verschieben sie nur.
 
 board: [ 1760, 990 ]
 card: [ 80, 112 ]
 freeCardScale: 0.6
-# SL-Leiste: Abstand ihrer rechten unteren Ecke von der rechten unteren Ecke des Spielbereichs
-gmControlsInset: [ 40, 26 ]
-# shapes: Größe, Kartenmaßstab, Fächerabstand; menu = Lage des Stapelmenüs (fixed = an `menu` der Ansicht,
-# left/right/below), menuInRole = abweichend in der Rollenansicht; label = Beschriftung (center, rotated, x = Anteil)
+# shapes: Größe, Kartenmaßstab, Fächerabstand; menu = Lage des Stapelmenüs (fixed = an `menu` der Tischmitte,
+# left/right/below); label = Beschriftung (center, rotated, x = Anteil)
 shapes:
   deck: { w: 80, h: 112, menu: left }
   discard: { w: 80, h: 112 }
@@ -15,40 +14,36 @@ shapes:
   diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
   diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
   diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
-  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: below, menuInRole: right, label: { center: true } }
+  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: below, label: { center: true } }
   danger: { w: 330, h: 70, scale: 0.6, fanX: 26 }
   progress: { w: 330, h: 70, scale: 0.6, fanX: 26 }
   seat.damage: { scale: 1, label: { rotated: true, x: 0.22 } }
   seat.notes: { scale: 1, fanX: 40 }
   seat.collect: { scale: 0.4, fanY: 12, label: { rotated: true } }
-overview:
+# Tischmitte: Größe; darin alles relativ zu ihrer linken oberen Ecke. Sie ist zugleich der Spielbereich (Filz,
+# Anker frei liegender Karten). gmControlsInset = Abstand der rechten unteren Ecke der SL-Leiste von ihrer rechten unteren Ecke.
+middle:
+  size: [ 700, 970 ]
   zones:
-    diamonds_easy: [ 651, 120 ]
-    diamonds_medium: [ 826, 120 ]
-    diamonds_hard: [ 1026, 120 ]
-    display: [ 810, 270 ]
-    deck: [ 760, 440 ]
-    discard: [ 880, 440 ]
-    danger: [ 600, 640 ]
-    progress: [ 600, 760 ]
-    clubs: [ 1010, 640 ]
-  menu: [ 1172, 120 ]
-  resistTitle: [ 600, 616 ]
+    diamonds_easy: [ 73, 110 ]
+    diamonds_medium: [ 248, 110 ]
+    diamonds_hard: [ 448, 110 ]
+    display: [ 232, 260 ]
+    deck: [ 182, 430 ]
+    discard: [ 302, 430 ]
+    danger: [ 22, 630 ]
+    progress: [ 22, 750 ]
+    clubs: [ 432, 630 ]
+  menu: [ 572, 110 ]
+  resistTitle: [ 22, 606 ]
+  gmControlsInset: [ 40, 26 ]
+overview:
+  middle: [ 530, 10 ]
   sheets: { margin: 14, gap: 14, scaleUpTo2Players: 1.2, scaleFrom3Players: 0.9, columns: [ [ seat1, seat3 ], [ seat2, seat4 ] ] }
 role:
-  zones:
-    diamonds_easy: [ 810, 40 ]
-    diamonds_medium: [ 980, 40 ]
-    diamonds_hard: [ 1185, 40 ]
-    display: [ 964, 200 ]
-    deck: [ 904, 350 ]
-    discard: [ 1024, 350 ]
-    clubs: [ 1480, 40 ]
-    danger: [ 1340, 200 ]
-    progress: [ 1340, 310 ]
-  menu: [ 1335, 40 ]
-  resistTitle: [ 1340, 176 ]
+  middle: [ 710, 10 ]
   sheets:
     own: { x: 14, y: 10, scale: fit }
-    others: { x: 745, gap: 8, bottomMargin: 10, scale: 0.85, opacity: 0.88 }
-    panel: { x: 735, y: 10 }
+    # Spalte rechts: andere Bögen untereinander, mittig; oben 60 Reserve für den Menüknopf (y 10 + 60).
+    # Maßstab: höchstens maxScale, sonst so groß, wie alle in die Höhe passen.
+    others: { x: 1420, w: 330, top: 70, gap: 8, bottomMargin: 10, maxScale: 0.85, opacity: 0.88 }

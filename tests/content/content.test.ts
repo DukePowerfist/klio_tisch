@@ -59,7 +59,7 @@ describe('Prüfungen schlagen an', () => {
     ['maxTrumps passt nicht', (r) => (r.trumpSources.maxTrumps = 5), /maxTrumps 5/],
     ['Tabelle mit 12 Einträgen', (r) => delete r.tables.VI.H.A, /tables/],
     ['Zonenbeschriftung fehlt', (r) => delete r.texts.zones.clubs, /zones\.clubs fehlt/],
-    ['Tischzone ohne Lage', (r) => delete r.layouts.role.zones.danger, /danger fehlt in der Rollenansicht/],
+    ['Tischzone ohne Lage', (r) => delete r.layouts.middle.zones.danger, /danger fehlt in der Tischmitte/],
     ['unbekanntes Recht', (r) => (r.permissions.player['cards.move'] = 'maybe'), /permissions/],
   ])('%s', (_, change, expected) => {
     expect(errorsOf(mutated(change)).join('\n')).toMatch(expected);

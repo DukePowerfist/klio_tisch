@@ -30,6 +30,7 @@ export type Layout = {
   board: { w: number; h: number };
   card: { w: number; h: number };
   sheets: Record<SeatId, SheetBox>;
+  /** Tischmitte = Spielbereich (Filz, Anker `center`); in beiden Ansichten gleich groß */
   panel: Rect;
   zones: Record<ZoneId, ZoneBox>;
   /** dieselben Zonen als Liste (Trefferprüfung beim Ziehen) */
@@ -50,7 +51,8 @@ export const CONTROLS_ZOOM = 1.3;
 
 const hiddenSheet = (seat: SeatId): SheetBox => ({ seat, x: 0, y: 0, w: 0, h: 0, scale: 0, visible: false, opacity: 0 });
 
-/** `role` = Rollenansicht dieses Platzes, null = Draufsicht. */
+/** `role` = Rollenansicht dieses Platzes, null = Draufsicht.
+ *  Die Tischmitte ist in beiden Ansichten gleich und nur verschoben (ARCHITEKTUR.md 10, Schritt 5d). */
 export function computeLayout(c: KlioContent, players: number, viewRole: SeatId | null, open: ZoneId | null): Layout {
   const L = c.layouts;
   const [BW, BH] = L.board;
@@ -58,21 +60,25 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
   const visible = (s: SeatId) => seatVisibleFor(s, players);
   const role = viewRole && visible(viewRole) ? viewRole : null;
 
+  const M = L.middle;
+  const [mx, my] = role ? L.role.middle : L.overview.middle;
+  const panel: Rect = { x: mx, y: my, w: M.size[0], h: M.size[1] };
+
   const sheets = {} as Record<SeatId, SheetBox>;
-  let panel: Rect;
   if (role) {
     const own = (BH - 2 * L.role.sheets.own.y) / SHEET_H;
     const o = L.role.sheets.others;
-    const sw = SHEET_W * o.scale;
-    const sh = SHEET_H * o.scale;
+    // Spalte rechts: so groß, wie alle in die Höhe passen, höchstens maxScale
+    const n = SEATS.filter((s) => s !== role && visible(s)).length;
+    const m = Math.min(o.maxScale, (BH - o.top - o.bottomMargin - (n - 1) * o.gap) / (n * SHEET_H));
+    const sw = SHEET_W * m;
+    const sh = SHEET_H * m;
     let k = 0;
     for (const s of SEATS) {
       if (s === role) sheets[s] = { seat: s, x: L.role.sheets.own.x, y: L.role.sheets.own.y, w: SHEET_W * own, h: SHEET_H * own, scale: own, visible: true, opacity: 1 };
-      else if (visible(s)) sheets[s] = { seat: s, x: o.x + k++ * (sw + o.gap), y: BH - o.bottomMargin - sh, w: sw, h: sh, scale: o.scale, visible: true, opacity: o.opacity };
+      else if (visible(s)) sheets[s] = { seat: s, x: o.x + (o.w - sw) / 2, y: o.top + k++ * (sh + o.gap), w: sw, h: sh, scale: m, visible: true, opacity: o.opacity };
       else sheets[s] = hiddenSheet(s);
     }
-    const p = L.role.sheets.panel;
-    panel = { x: p.x, y: p.y, w: BW - p.x - 10, h: BH - sh - 32 };
   } else {
     const o = L.overview.sheets;
     const m = players <= 2 ? o.scaleUpTo2Players : o.scaleFrom3Players;
@@ -88,23 +94,20 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
           : { seat: s, x: ci ? BW - o.margin - ww : o.margin, y: (BH - total) / 2 + j * (hh + o.gap), w: ww, h: hh, scale: m, visible: true, opacity: 1 };
       }
     });
-    const left = o.margin + ww + 16;
-    panel = { x: left, y: 10, w: BW - 2 * left, h: BH - 20 };
   }
 
-  const v = role ? L.role : L.overview;
   const zones: Record<ZoneId, ZoneBox> = {};
   const decor = (shape: (typeof L.shapes)[string] | undefined) => ({
-    menu: (role ? shape?.menuInRole : undefined) ?? shape?.menu ?? 'below',
+    menu: shape?.menu ?? 'below',
     label: { center: !!shape?.label?.center, rotated: !!shape?.label?.rotated, x: shape?.label?.x ?? null },
   });
   for (const [id, z] of Object.entries(c.zones)) {
     if (z.perSeat) continue;
     const shape = L.shapes[id] ?? {};
     const grow = shape.growOnOpen && open === id;
-    const [x, y] = v.zones[id] ?? [0, 0];
+    const [x, y] = M.zones[id] ?? [0, 0];
     zones[id] = {
-      id, x, y,
+      id, x: mx + x, y: my + y,
       w: grow ? CW : (shape.w ?? CW), h: grow ? CH : (shape.h ?? CH),
       scale: grow ? 1 : (shape.scale ?? 1), fanX: shape.fanX ?? 0, fanY: shape.fanY ?? 0,
       owner: null, template: id, ...decor(shape),
@@ -136,9 +139,9 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     panel,
     zones,
     zoneList: Object.values(zones),
-    resistTitle: { x: v.resistTitle[0], y: v.resistTitle[1] },
-    gmControls: { x: panel.x + panel.w - L.gmControlsInset[0], y: panel.y + panel.h - L.gmControlsInset[1] },
-    menu: { x: v.menu[0], y: v.menu[1] },
+    resistTitle: { x: mx + M.resistTitle[0], y: my + M.resistTitle[1] },
+    gmControls: { x: panel.x + panel.w - M.gmControlsInset[0], y: panel.y + panel.h - M.gmControlsInset[1] },
+    menu: { x: mx + M.menu[0], y: my + M.menu[1] },
     freeCardScale: L.freeCardScale,
   };
 }

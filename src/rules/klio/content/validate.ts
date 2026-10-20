@@ -100,11 +100,10 @@ function crossCheck(c: KlioContent, errors: string[]): void {
   for (const f of Object.keys(c.skinPaper.fields)) if (!instances.has(f)) err(`skins/paper: unbekanntes Feld ${f}`);
   for (const z of c.sheet.zones) if (!(z in c.skinPaper.zones)) err(`skins/paper: Bogenzone ${z} hat keine Position`);
 
-  // Ansichten: jede Tischzone hat Form und Lage in beiden Ansichten
+  // Ansichten: jede Tischzone hat Form und Lage in der Tischmitte
   for (const z of tableZones) {
     if (!(z in c.layouts.shapes)) err(`layouts: Tischzone ${z} hat keine Form`);
-    if (!(z in c.layouts.overview.zones)) err(`layouts: Tischzone ${z} fehlt in der Draufsicht`);
-    if (!(z in c.layouts.role.zones)) err(`layouts: Tischzone ${z} fehlt in der Rollenansicht`);
+    if (!(z in c.layouts.middle.zones)) err(`layouts: Tischzone ${z} fehlt in der Tischmitte`);
   }
   for (const z of seatZones) if (!(`seat.${z}` in c.layouts.shapes)) err(`layouts: Platz-Zone ${z} hat keine Form (seat.${z})`);
 

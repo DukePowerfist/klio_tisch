@@ -158,7 +158,8 @@ export const SkinFile = z.object({
 }).strict();
 
 // ---------- layouts.yaml ----------
-// Siehe Datei; Werte aus der alten Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`.
+// Siehe Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`. Tischzonen, festes Menü, Überschrift und SL-Leiste liegen
+// relativ zur Tischmitte (`middle`), die beide Ansichten nur verschieben (ARCHITEKTUR.md 10, Schritt 5d).
 const Point = z.tuple([z.number(), z.number()]);
 const MenuSide = z.enum(['fixed', 'left', 'right', 'below']);
 const Shape = z.object({
@@ -169,26 +170,32 @@ const Shape = z.object({
   fanY: z.number().optional(),
   growOnOpen: z.boolean().optional(),
   menu: MenuSide.optional(),
-  menuInRole: MenuSide.optional(),
   label: z.object({ center: z.boolean().optional(), rotated: z.boolean().optional(), x: z.number().optional() }).strict().optional(),
 }).strict();
-const View = <S extends z.ZodType>(sheets: S) =>
-  z.object({ zones: z.record(z.string(), Point), menu: Point, resistTitle: Point, sheets }).strict();
 export const LayoutsFile = z.object({
   board: Point,
   card: Point,
   freeCardScale: z.number(),
-  gmControlsInset: Point,
   shapes: z.record(z.string(), Shape),
-  overview: View(z.object({
-    margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number(),
-    columns: z.tuple([z.array(SeatSchema), z.array(SeatSchema)]),
-  }).strict()),
-  role: View(z.object({
-    own: z.object({ x: z.number(), y: z.number(), scale: z.literal('fit') }).strict(),
-    others: z.object({ x: z.number(), gap: z.number(), bottomMargin: z.number(), scale: z.number(), opacity: z.number() }).strict(),
-    panel: z.object({ x: z.number(), y: z.number() }).strict(),
-  }).strict()),
+  middle: z.object({
+    size: Point, zones: z.record(z.string(), Point), menu: Point, resistTitle: Point, gmControlsInset: Point,
+  }).strict(),
+  overview: z.object({
+    middle: Point,
+    sheets: z.object({
+      margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number(),
+      columns: z.tuple([z.array(SeatSchema), z.array(SeatSchema)]),
+    }).strict(),
+  }).strict(),
+  role: z.object({
+    middle: Point,
+    sheets: z.object({
+      own: z.object({ x: z.number(), y: z.number(), scale: z.literal('fit') }).strict(),
+      others: z.object({
+        x: z.number(), w: z.number(), top: z.number(), gap: z.number(), bottomMargin: z.number(), maxScale: z.number(), opacity: z.number(),
+      }).strict(),
+    }).strict(),
+  }).strict(),
 }).strict();
 
 // ---------- trump-sources.yaml ----------

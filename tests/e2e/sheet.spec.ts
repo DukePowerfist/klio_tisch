@@ -73,7 +73,7 @@ test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) =>
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await sheet1(page).locator('[data-slot="0"]').click();
   await expect(page.locator('.big .tcard')).toContainText('Anatomie');
-  await page.locator('.panel').click(); // ein Klick irgendwo schließt die Großansicht
+  await page.locator('.panel').click({ position: { x: 40, y: 40 } }); // ein Klick irgendwo schließt die Großansicht
   await expect(page.locator('.big')).toHaveCount(0);
   await sheet1(page).getByTitle('Trumpf entfernen').click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toHaveCount(0);
