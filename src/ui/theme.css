@@ -1,0 +1,20 @@
+/* Gestaltungswerte (ARCHITEKTUR.md 10): Farben und Dauern zentral. Werte wie bisher. */
+:root {
+  --bg: #10201a;
+  --felt: #1f4a39;
+  --ink: #f3efe3;
+  --line: rgba(255, 255, 255, 0.5);
+  --card: #fffdf7;
+  --card-red: #c0392b;
+  --card-black: #222;
+  --panel-bg: #17332a;
+  --button-hover: #2c5a47;
+  --accent: #d6a828;
+  --glide: 0.3s;
+  --flip: 0.35s;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --glide: 0s; --flip: 0s; }
+}
+html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
+button { font: inherit; }

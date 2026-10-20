@@ -1,6 +1,8 @@
 import { execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vitest/config';
+import { klioContent } from './content-plugin';
 
 // Build-Kennung (ARCHITEKTUR.md 7, Versionierung): Git-Commit des Builds.
 // In GitHub Actions steht er in GITHUB_SHA, lokal fragen wir Git.
@@ -19,6 +21,7 @@ function tryGit(): string | undefined {
 
 export default defineConfig({
   base: '/klio_tisch/',
+  plugins: [svelte(), klioContent(resolve(import.meta.dirname, 'content/klio'))],
   define: {
     __BUILD_ID__: JSON.stringify(buildId()),
   },
