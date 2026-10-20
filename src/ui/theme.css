@@ -33,6 +33,8 @@
   --menu-local: #8a8a8a;
   --menu-ok: #5fbf6a;
   --menu-trouble: #d9534a;
+  --menu-size: 30px;
+  --menu-inset: 12px;
   --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */

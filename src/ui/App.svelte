@@ -22,7 +22,7 @@
 
   // Mitspieler ohne Platz: Platzwahl anbieten, bis gewählt oder „Nur zuschauen“
   let joinOpen = $state(true);
-  const chooseSeat = $derived(joinOpen && session.mode === 'client' && session.status === 'ready' && session.role?.role === 'spectator');
+  const chooseSeat = $derived(joinOpen && session.seatless);
 
   // Wer einen Platz bekommt, startet in seiner Rollenansicht (10)
   const mySeat = $derived(session.role?.role === 'player' ? session.role.seat : null);

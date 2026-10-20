@@ -2,21 +2,13 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, fromMenu, makePng, nameCharacter, openMenuAndClick, ready, setField, zoneCenter } from './helpers';
+import { expectCount, fromMenu, makePng, menuEntries, nameCharacter, openMenuAndClick, ready, setField, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
 
 /** Spieler sitzt auf Platz 2: sein Bogen ist beschreibbar (Rechte, 9.3) */
 const seated = (page: Page, timeout = 5_000) => expect(page.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout });
-
-/** Einträge im Menü oben rechts (danach wieder zu) */
-async function menuEntries(page: Page): Promise<string[]> {
-  await page.getByRole('button', { name: 'Menü' }).click();
-  const entries = await page.locator('.items button').allTextContents();
-  await page.getByRole('button', { name: 'Menü' }).click();
-  return entries;
-}
 
 test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async ({ browser }) => {
   const gm = await (await browser.newContext()).newPage();

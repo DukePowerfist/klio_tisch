@@ -49,10 +49,20 @@ export async function zoomIn(page: Page, at = { x: 20, y: 20 }) {
   await expect(page.locator('[data-sheet]:not(.tools)')).toHaveCount(0);
 }
 
+const menuButton = (page: Page) => page.getByRole('button', { name: 'Menü' });
+
 /** Eintrag im Menü oben rechts wählen (5b Teil 4). */
 export async function fromMenu(page: Page, entry: string) {
-  await page.getByRole('button', { name: 'Menü' }).click();
+  await menuButton(page).click();
   await page.getByRole('button', { name: entry, exact: true }).click();
+}
+
+/** Einträge im Menü oben rechts (danach wieder zu) */
+export async function menuEntries(page: Page): Promise<string[]> {
+  await menuButton(page).click();
+  const entries = await page.locator('.items button').allTextContents();
+  await menuButton(page).click();
+  return entries;
 }
 
 export async function ready(page: Page, reload = false) {

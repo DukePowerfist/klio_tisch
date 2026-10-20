@@ -104,10 +104,27 @@ class Session {
   private replacedListeners = new Set<ReplacedListener>();
   private nextId = 0;
 
-  /** Text zum Verbindungszustand (Raumleiste, Wartebildschirm) */
+  /** Text zum Verbindungszustand (Hinweis am Menü, Wartebildschirm) */
   get statusText(): string {
     const key = this.status === 'starting' || this.status === 'ready' ? 'connecting' : this.status;
     return t(`room.${key}`);
+  }
+
+  /** Störung: alles außer Starten, Verbinden und Verbunden (Hinweis am Menü, 10) */
+  get trouble(): boolean {
+    return !['starting', 'connecting', 'ready'].includes(this.status);
+  }
+
+  /** Punkt am Menüknopf: lokal grau, verbunden grün, gestört rot; beim Verbinden noch grau (10) */
+  get health(): 'local' | 'ok' | 'trouble' {
+    if (this.mode === 'local') return 'local';
+    if (this.trouble) return 'trouble';
+    return this.mode === 'host' || this.status === 'ready' ? 'ok' : 'local';
+  }
+
+  /** Mitspieler ohne Platz: darf einen wählen (Platzwahl, Menü) */
+  get seatless(): boolean {
+    return this.mode === 'client' && this.status === 'ready' && this.role?.role === 'spectator';
   }
 
   async start(): Promise<void> {
