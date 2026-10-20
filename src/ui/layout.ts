@@ -42,6 +42,9 @@ export type Layout = {
 export const SHEET_W = 380;
 export const SHEET_H = 537;
 
+/** Ab diesem Zoom zeigen die Bögen ihre kleinen Bedienelemente; am eigenen Bogen der Rollenansicht immer (ARCHITEKTUR.md 10). */
+export const CONTROLS_ZOOM = 1.3;
+
 const hiddenSheet = (seat: SeatId): SheetBox => ({ seat, x: 0, y: 0, w: 0, h: 0, scale: 0, visible: false, opacity: 0 });
 
 /** `role` = Rollenansicht dieses Platzes, null = Draufsicht. */

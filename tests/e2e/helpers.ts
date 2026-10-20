@@ -42,11 +42,11 @@ export async function nameCharacter(page: Page, seat: string, name: string) {
   await page.keyboard.press('0');
 }
 
-/** Hineinzoomen um einen Punkt, bis die kleinen Bedienelemente sichtbar sind (wie bisher ab Zoom 1,6). */
+/** Hineinzoomen um einen Punkt, bis alle Bögen ihre kleinen Bedienelemente zeigen (ab Zoom 1,3, ARCHITEKTUR.md 10). */
 export async function zoomIn(page: Page, at = { x: 20, y: 20 }) {
   await page.mouse.move(at.x, at.y);
   await page.mouse.wheel(0, -500);
-  await expect(page.locator('body.zoomed')).toHaveCount(1);
+  await expect(page.locator('[data-sheet]:not(.tools)')).toHaveCount(0);
 }
 
 export async function ready(page: Page, reload = false) {

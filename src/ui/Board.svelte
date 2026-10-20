@@ -11,7 +11,7 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
-  import { cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
+  import { CONTROLS_ZOOM, cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { t, whoColor } from './texts';
@@ -42,7 +42,6 @@
     return { tx, ty, ox: (stageW / 2 - tx) / s - BW / 2, oy: (stageH / 2 - ty) / s - BH / 2 };
   }
   const geo = $derived(offsets(view.zoom, view.ox, view.oy));
-  $effect(() => document.body.classList.toggle('zoomed', view.zoom >= 1.6));
 
   function clampView() {
     const o = offsets(view.zoom, view.ox, view.oy);
@@ -273,7 +272,8 @@
 
     {#each Object.values(layout.sheets) as box (box.seat)}
       {#if box.visible}
-        <Sheet {box} sheet={sheetOf(table, box.seat)} mark={view.role === null ? 'plate' : box.seat === view.role ? null : 'strip'} />
+        {@const own = box.seat === view.role}
+        <Sheet {box} sheet={sheetOf(table, box.seat)} mark={view.role === null ? 'plate' : own ? null : 'strip'} tools={own || view.zoom >= CONTROLS_ZOOM} quiet={!own} />
       {/if}
     {/each}
 

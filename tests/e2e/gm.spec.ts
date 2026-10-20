@@ -6,13 +6,19 @@ import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, resetT
 test.beforeEach(async ({ page }) => ready(page));
 
 test('Expedition: vier Tabellen; „neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
+  // Protokoll vorher öffnen: Daran sieht der Test, wann ein Ereignis angekommen ist
+  await page.getByRole('button', { name: 'Protokoll' }).click();
+  const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
   await page.getByRole('button', { name: 'Expedition starten' }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition starten' });
   const rows = dialog.locator('.row b');
   await expect(rows).toHaveCount(4);
   await expect(dialog).toContainText('Diese Expedition führt euch …');
   const before = await rows.allTextContents();
+  await expect(logged).toHaveCount(1);
   await dialog.getByRole('button', { name: 'neu', exact: true }).last().click();
+  // erst weiter, wenn das Ereignis da ist (es öffnet das Fenster bei allen, also auch nach Esc wieder)
+  await expect(logged).toHaveCount(2);
   await expect.poll(async () => (await rows.allTextContents()).slice(0, 3)).toEqual(before.slice(0, 3));
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -85,6 +91,9 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   const damage = dialog.getByRole('checkbox', { name: /Schaden automatisch/ });
   await expect(damage).toBeChecked();
   await damage.uncheck();
+  // Das Kästchen springt sofort um, der Stand erst nach dem Speichern: neu öffnen zeigt den Stand
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
   await expect(damage).not.toBeChecked();
 
   await page.reload();

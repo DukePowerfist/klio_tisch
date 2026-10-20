@@ -5,10 +5,9 @@ import { dragFromTo, makePng, ready, setField as setSeatField, zoneCenter, zoomI
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
 
-/** Rollenansicht von Platz 1, hineingezoomt (kleine Bedienelemente sichtbar, wie bisher ab Zoom 1,6). */
-async function zoomOnSheet(page: Page) {
+/** Rollenansicht von Platz 1: am eigenen Bogen sind die kleinen Bedienelemente ohne Zoom sichtbar (5b). */
+async function ownSheet(page: Page) {
   await page.keyboard.press('1');
-  await zoomIn(page);
 }
 
 const setField = (page: Page, field: string, value: string) => setSeatField(page, 'seat1', field, value);
@@ -31,7 +30,7 @@ test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page 
 });
 
 test('Auswürfeln füllt den Bogen; bei Einträgen erst „Überschreiben?“', async ({ page }) => {
-  await zoomOnSheet(page);
+  await ownSheet(page);
   const roll = sheet1(page).getByRole('button', { name: 'Auswürfeln' });
   await roll.click();
   await expect(page.getByRole('status')).toHaveText('Bogen 1: Charakter ausgewürfelt');
@@ -43,7 +42,7 @@ test('Auswürfeln füllt den Bogen; bei Einträgen erst „Überschreiben?“', 
 });
 
 test('Kästchen, Narbe mit Zähler, Rüstzeug streichen', async ({ page }) => {
-  await zoomOnSheet(page);
+  await ownSheet(page);
   const lamp = sheet1(page).locator('[data-check="lamps.1"]');
   await lamp.click();
   await expect(lamp).toHaveAttribute('aria-pressed', 'true');
@@ -81,8 +80,6 @@ test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) =>
   await expect(page.locator('.big .tcard')).toContainText('Anatomie');
   await page.locator('.panel').click(); // ein Klick irgendwo schließt die Großansicht
   await expect(page.locator('.big')).toHaveCount(0);
-  // Entfernen-Knopf erscheint erst gezoomt (wie bisher)
-  await zoomIn(page, { x: 100, y: 700 });
   await sheet1(page).getByTitle('Trumpf entfernen').click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toHaveCount(0);
 });
@@ -129,4 +126,39 @@ test('Foto wird verkleinert gespeichert und bleibt nach Neuladen', async ({ page
   await expect(sheet1(page).getByRole('button', { name: 'Foto' })).toHaveCSS('background-image', /^url\("blob:/);
   await ready(page, true);
   await expect(sheet1(page).getByRole('button', { name: 'Foto' })).toHaveCSS('background-image', /^url\("blob:/);
+});
+
+test('Bedienelemente: „Auswürfeln“ immer, kleine erst ab Zoom 1,3, am eigenen Bogen der Rollenansicht immer', async ({ page }) => {
+  for (const seat of ['seat1', 'seat2']) {
+    await page.keyboard.press(seat.slice(-1));
+    await setSeatField(page, seat, 'gear.text.0', 'Seil');
+  }
+  await page.keyboard.press('0');
+  const strike = (seat: string) => page.locator(`[data-sheet=${seat}]`).getByTitle('Untauglich markieren (durchstreichen)').first();
+  const roll = (seat: string) => page.locator(`[data-sheet=${seat}]`).getByRole('button', { name: 'Auswürfeln' });
+  // Draufsicht bei Zoom 1: „Auswürfeln“ dezent sichtbar, kleine verborgen
+  for (const seat of ['seat1', 'seat2', 'seat3', 'seat4']) await expect(roll(seat)).toBeVisible();
+  await expect(roll('seat1').locator('..')).toHaveCSS('opacity', '0.4');
+  await expect(strike('seat1')).toBeHidden();
+  // bei 2 wie bei 4 Spielern: ab Zoom 1,3 sichtbar, beim Herauszoomen wieder verborgen
+  for (const players of ['4', '2']) {
+    await page.getByRole('combobox').selectOption(players);
+    await page.mouse.move(800, 450);
+    await page.mouse.wheel(0, -200); // Zoom etwa 1,27
+    await expect(strike('seat1')).toBeHidden();
+    await page.mouse.wheel(0, -50); // etwa 1,35
+    await expect(strike('seat1')).toBeVisible();
+    await expect(strike('seat2')).toBeVisible();
+    await page.mouse.wheel(0, 100);
+    await expect(strike('seat1')).toBeHidden();
+    await page.keyboard.press('Escape');
+  }
+  // Rollenansicht: eigener Bogen ohne Zoom, voll deckend; kleine Bögen erst ab Zoom 1,3
+  await page.keyboard.press('1');
+  await expect(strike('seat1')).toBeVisible();
+  await expect(roll('seat1').locator('..')).toHaveCSS('opacity', '0.95');
+  await expect(strike('seat2')).toBeHidden();
+  await expect(roll('seat2')).toBeVisible();
+  await zoomIn(page, { x: 1200, y: 300 });
+  await expect(strike('seat2')).toBeVisible();
 });

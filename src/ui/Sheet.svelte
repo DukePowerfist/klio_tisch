@@ -21,8 +21,11 @@
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
 
-  /** Zuordnung (10): Namensschild in der Draufsicht, Farbstreifen an den kleinen Bögen der Rollenansicht */
-  let { box, sheet, mark }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null } = $props();
+  /**
+   * Zuordnung (10): Namensschild in der Draufsicht, Farbstreifen an den kleinen Bögen der Rollenansicht.
+   * `tools`: kleine Bedienelemente sichtbar; `quiet`: „Auswürfeln“ dezent (beides 10, Schritt 5b).
+   */
+  let { box, sheet, mark, tools, quiet }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null; tools: boolean; quiet: boolean } = $props();
 
   const skin = content.skinPaper;
   const [imgW, imgH] = skin.size;
@@ -31,6 +34,7 @@
   const image = $derived(`${import.meta.env.BASE_URL}assets/${skin.images[sheet.variant]}`);
   const names = $derived(mark === 'plate' && session.state ? seatNames(session.state, seat) : null);
   const plate = skin.nameplate;
+  const rollAt = skin.rollButton;
 
   // Felder nach Art (sheet.yaml); Lage aus der Haut
   const all = sheetFields(content.sheet);
@@ -102,6 +106,7 @@
   class="sheet"
   class:dead={sheet.dead}
   class:hit={effects.hit.has(seat)}
+  class:tools
   data-sheet={seat}
   style:left="{box.x}px"
   style:top="{box.y}px"
@@ -211,6 +216,15 @@
       ><b>{names.character}</b>{#if names.person}<small>{names.person}</small>{/if}</div>
     {/if}
 
+    <div class="sbar control" class:quiet style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
+      {#if canRoll}
+        <button onclick={roll} title={t('sheet.rollTitle')}>{confirmTimer !== undefined ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
+      {/if}
+      {#if sheet.dead && canRevive}
+        <button class="revive" onclick={() => submit({ type: 'character.revive', seat })}>{t('sheet.revive')}</button>
+      {/if}
+    </div>
+
     {#if sheet.dead}
       <svg class="dead-cross" viewBox="0 0 100 100" preserveAspectRatio="none" width={imgW} height={imgH}>
         <path d="M4 3L96 97M96 3L4 97" stroke-width="12" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
@@ -220,14 +234,6 @@
 
   {#if mark === 'strip'}<div class="strip" data-strip={seat}></div>{/if}
 
-  <div class="sbar control">
-    {#if canRoll}
-      <button onclick={roll} title={t('sheet.rollTitle')}>{confirmTimer !== undefined ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
-    {/if}
-    {#if sheet.dead && canRevive}
-      <button class="revive" onclick={() => submit({ type: 'character.revive', seat })}>{t('sheet.revive')}</button>
-    {/if}
-  </div>
 </div>
 
 <style>
@@ -239,27 +245,27 @@
   .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: #111; }
   .cb.danger.on::after { color: var(--danger); }
   .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: #333; }
-  :global(body.zoomed) .strike { display: block; opacity: 0.4; }
-  :global(body.zoomed) .strike:hover { opacity: 0.95; }
-  :global(body.zoomed) .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
+  .tools .strike { display: block; opacity: 0.4; }
+  .tools .strike:hover { opacity: 0.95; }
+  .tools .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
   .counter { position: absolute; font-family: system-ui, sans-serif; font-weight: 600; line-height: 1; color: var(--danger); background: rgba(255, 255, 255, 0.85); border-radius: 7px; padding: 1px 4px; display: none; }
-  :global(body.zoomed) .counter { display: block; }
+  .tools .counter { display: block; }
   .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; cursor: pointer; }
   .slot { position: absolute; cursor: pointer; }
   .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: 6px; }
   .slot.empty.go { color: var(--accent); font-weight: 400; }
   .slot.empty:hover { background: rgba(214, 168, 40, 0.2); color: rgba(0, 0, 0, 0.6); }
   .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
-  :global(body.zoomed) .rmv { display: block; }
+  .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
   .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: #111; line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .plate small { font-size: 0.6em; flex: none; }
   .strip { position: absolute; left: 0; top: 0; right: 0; height: 5px; background: var(--c); pointer-events: none; }
-  /* rechts oben, damit links das Namensschild frei bleibt */
-  .sbar { position: absolute; right: 6px; top: 5px; display: flex; gap: 4px; z-index: 3; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
-  :global(body.zoomed) .sbar { opacity: 0.4; pointer-events: auto; }
-  :global(body.zoomed) .sbar:hover, .dead .sbar { opacity: 0.95; pointer-events: auto; }
-  .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; padding: 2px 7px; cursor: pointer; }
+  /* immer sichtbar, unter dem Namensschild (Lage aus der Haut); außer am eigenen Bogen der Rollenansicht dezent */
+  .sbar { position: absolute; display: flex; flex-wrap: wrap; gap: 0.3em; z-index: 3; opacity: 0.95; transition: opacity 0.2s; font-family: system-ui, sans-serif; }
+  .sbar.quiet { opacity: 0.4; }
+  .sbar.quiet:hover, .dead .sbar { opacity: 0.95; }
+  .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 0.4em; font: inherit; padding: 0.15em 0.6em; cursor: pointer; white-space: nowrap; }
   .revive { background: var(--warn-bg) !important; }
 </style>
