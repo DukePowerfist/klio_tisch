@@ -139,7 +139,6 @@ room:                                     # Mehrspielerbetrieb (neu)
   renewText: Der alte Link funktioniert danach nicht mehr. Alle öffnen den neuen Link und bekommen ihren Platz zurück.
   renewConfirm: Erneuern
   renewed: Neuer Einladungslink kopiert
-  close: Schließen
   join:
     title: Platz wählen
     name: Dein Name
@@ -160,7 +159,6 @@ settings:                                 # Einstellungen der SL (neu)
   permissionsNote: Gilt für diese Kampagne; die Voreinstellung steht in permissions.yaml.
   values: { allow: erlaubt, own: nur eigener Bogen, deny: verboten }
   defaults: Voreinstellung wiederherstellen
-  close: Schließen
   fieldChanged: "Bogen {seat}: Ein Feld, das du bearbeitet hast, wurde gerade von jemand anderem geändert."
 
 # Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL

@@ -1,20 +1,15 @@
 <script lang="ts">
   // Raumleiste oben rechts (ARCHITEKTUR.md 10, RoomBar): Verbindungsstatus, Einladungslink, eigener Platz.
   import { seatNo } from '../engine/zones';
-  import { copyText } from './clipboard';
   import { session } from './session.svelte';
   import { t } from './texts';
   import { view } from './view.svelte';
 
   let { onChooseSeat }: { onChooseSeat: () => void } = $props();
 
-  async function copy() {
-    const url = session.inviteUrl();
-    if (url && (await copyText(url))) view.say(t('room.copied'));
-  }
   async function invite() {
     await session.invite();
-    await copy();
+    await session.copyInvite();
   }
 </script>
 
@@ -23,7 +18,7 @@
     <button title={t('room.inviteTitle')} onclick={invite}>{t('room.invite')}</button>
   {:else if session.mode === 'host'}
     <span>{t('room.open', { n: session.online.length })}</span>
-    <button onclick={copy}>{t('room.copy')}</button>
+    <button onclick={() => session.copyInvite()}>{t('room.copy')}</button>
     <button title={t('room.manageTitle')} onclick={() => (view.gmPanel = 'room')}>{t('room.manage')}</button>
   {:else if session.status === 'ready' && session.role}
     {#if session.role.role === 'player'}

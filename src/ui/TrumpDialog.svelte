@@ -33,7 +33,7 @@
   const back = () => (history = history.slice(0, -1));
   const close = () => (view.trumpDialog = null);
 
-  async function submit(cmd: object) {
+  async function submit(cmd: { type: string }) {
     if (await submitOrSay(cmd)) close();
   }
 
@@ -133,6 +133,5 @@
   .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px rgba(214, 168, 40, 0.8); }
   .tc.off { opacity: 0.5; }
   .why { font-size: 12px; color: var(--reason); margin-top: 4px; }
-  .note { opacity: 0.75; font-size: 13px; }
   .note a { color: var(--accent-hint); }
 </style>

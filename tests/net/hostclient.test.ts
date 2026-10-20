@@ -317,6 +317,11 @@ describe('Platz wählen nach dem Beitritt', () => {
     expect(await r).toEqual({ ok: false, reason: { key: 'reject.seatTaken' } });
     expect(a.client.status).toBe('ready');
     expect(a.client.role).toEqual({ role: 'spectator' });
+    // auch nach dem Wiederverbinden kein fremder Platz
+    net.disconnect(a.transport.self);
+    const again = join('spectator', { key: a.key });
+    await settle(net, host);
+    expect(again.client.role).toEqual({ role: 'spectator' });
   });
 
   it('Raum wird beim Host gespeichert; Wechsel der Verbindung behält Stand und Plätze', async () => {
@@ -368,8 +373,8 @@ describe('Fotos (8.4)', () => {
   it('Spieler lädt hoch, ein anderer fragt an und bekommt es', async () => {
     const { net, host, join, photos } = await setup();
     const a = join('seat1');
-    const got: [string, Uint8Array][] = [];
-    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx', onPhoto: (h, x) => void got.push([h, x]) });
+    const mine = new MemoryPhotoBank();
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx', photos: mine });
     await settle(net, host);
     const hash = await sha256Hex(bytes);
     const up = a.client.uploadPhoto(hash, bytes);
@@ -378,7 +383,7 @@ describe('Fotos (8.4)', () => {
     expect(photos.photos.get(hash)).toEqual(bytes);
     b.client.requestPhoto(hash);
     await settle(net, host);
-    expect(got).toEqual([[hash, bytes]]);
+    expect(mine.photos.get(hash)).toEqual(bytes);
   });
 
   it('Inhalt passt nicht zum Namen oder Zuschauer lädt hoch: abgelehnt', async () => {
@@ -398,15 +403,15 @@ describe('Fotos (8.4)', () => {
     const { net, host, join, photos, startHost } = await setup();
     const hash = await sha256Hex(bytes);
     await photos.put(hash, bytes);
-    const got: string[] = [];
-    const a = join('seat1', { onPhoto: (h) => void got.push(h) });
+    const mine = new MemoryPhotoBank();
+    const a = join('seat1', { photos: mine });
     await settle(net, host);
     net.disconnect(host.peerId);
     await settle(net, host);
     a.client.requestPhoto(hash);
     const host2 = await startHost();
     await settle(net, host2);
-    expect(got).toEqual([hash]);
+    expect(mine.photos.get(hash)).toEqual(bytes);
   });
 });
 

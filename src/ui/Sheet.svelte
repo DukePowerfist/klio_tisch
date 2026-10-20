@@ -44,7 +44,7 @@
   const hasEmptySlot = $derived(sheet.trumps.some((x) => x === null));
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
 
-  const submit = (cmd: object) => submitOrSay(cmd);
+  const submit = (cmd: { type: string }) => submitOrSay(cmd);
 
   // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
   const may = (type: string) => session.can({ type, seat });
@@ -72,7 +72,7 @@
   const photoHash = $derived(sheet.photo?.hash ?? null);
   const photoUrl = $derived(photoHash ? photos.urls[photoHash] : undefined);
   $effect(() => {
-    if (photoHash) void photos.want(photoHash);
+    if (photoHash) void session.wantPhoto(photoHash);
   });
   async function onPhoto() {
     const file = fileInput?.files?.[0];
@@ -80,10 +80,9 @@
     fileInput!.value = '';
     const prepared = await preparePhoto(file).catch(() => null);
     if (!prepared) return view.say(t('sheet.photoUnreadable'), true);
-    const { hash, blob } = prepared;
-    const stored = await session.addPhoto(hash, blob);
+    const stored = await session.addPhoto(prepared.hash, prepared.bytes);
     if (!stored.ok) return view.say(text(stored.reason), true);
-    await submit({ type: 'sheet.setPhoto', seat, photo: { hash, type: 'image/jpeg' } });
+    await submit({ type: 'sheet.setPhoto', seat, photo: { hash: prepared.hash, type: 'image/jpeg' } });
   }
 
   // Großansicht eines Trumpfs: beim Überfahren nach 650 ms, beim Klick angeheftet

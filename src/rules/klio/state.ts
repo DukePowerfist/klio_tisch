@@ -2,7 +2,7 @@
 // Listenlängen kommen aus sheet.yaml und werden beim Build gegen dieses Schema geprüft.
 
 import { z } from 'zod';
-import { RankSchema } from '../../engine/schemas';
+import { PhotoHashSchema, RankSchema } from '../../engine/schemas';
 
 export const TrumpId = z.string().regex(/^[a-z0-9-]+$/);
 
@@ -17,7 +17,7 @@ export const Slot = z.number().int().min(0).max(3);
 export const Expedition = z.array(z.number().int().min(0).max(12)).length(4);
 
 /** Verweis auf ein Foto, benannt nach seinem Hash (8.4). */
-export const PhotoRef = z.object({ hash: z.string().regex(/^[0-9a-f]{64}$/), type: z.literal('image/jpeg') }).strict();
+export const PhotoRef = z.object({ hash: PhotoHashSchema, type: z.literal('image/jpeg') }).strict();
 
 const Attribute = z.number().int().min(0).max(9).nullable();
 /** Ergebnis des Auswürfelns: alle drei Attribute gesetzt */

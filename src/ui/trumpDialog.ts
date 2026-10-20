@@ -60,7 +60,7 @@ export function selectableByCategory(rows: TrumpRow[]): Record<Category, number>
 }
 
 /** Der Befehl am Ende des Dialogs. */
-export function finalCommand(seat: SeatId, path: Path, choices: Choices, trump: string | undefined): object {
+export function finalCommand(seat: SeatId, path: Path, choices: Choices, trump: string | undefined): { type: string; [key: string]: unknown } {
   if (path.kind === 'free') return { type: 'trump.chooseFree', seat, trump };
   return { type: 'trump.choose', seat, source: path.source.id, ...(trump ? { trump } : {}), ...choices };
 }

@@ -9,7 +9,6 @@ export interface PhotoBank {
   put(hash: string, bytes: Uint8Array): Promise<void>;
 }
 
-export const PhotoHashSchema = z.string().regex(/^[0-9a-f]{64}$/);
 /** Base64 eines Fotos; verkleinerte Fotos sind meist unter 64 KB, die Grenze lässt Luft */
 export const PhotoDataSchema = z.string().max(400_000).regex(/^[A-Za-z0-9+/]*={0,2}$/);
 
@@ -26,6 +25,8 @@ export function toBase64(bytes: Uint8Array): string {
 
 /** Empfangenes Foto entpacken; null, wenn der Inhalt nicht zum Namen passt. */
 export async function unpackPhoto(hash: string, data: string): Promise<Uint8Array | null> {
-  const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+  const text = atob(data);
+  const bytes = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
   return (await sha256Hex(bytes)) === hash ? bytes : null;
 }

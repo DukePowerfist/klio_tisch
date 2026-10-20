@@ -36,6 +36,10 @@ class Effects {
   private edits = new Map<string, { value: unknown; at: number }>();
 
   constructor() {
+    // Eigene Eingaben merken, egal von wo gesendet
+    session.onSubmit((cmd) => {
+      if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(`${cmd['seat']}/${cmd['field']}`, { value: cmd['value'], at: Date.now() });
+    });
     session.onEvents((events, own) => {
       for (const e of events as (EngineEvent | KlioEvent)[]) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
@@ -44,17 +48,12 @@ class Effects {
     });
   }
 
-  /** Eigene Eingabe in einem Textfeld merken. */
-  noteEdit(seat: SeatId, field: string, value: unknown): void {
-    this.edits.set(`${seat}/${field}`, { value, at: Date.now() });
-  }
-
   /** Jemand anderes hat ein Feld geändert, das man selbst gerade bearbeitet hat: kurzer Hinweis (8.2). */
   private foreignChange(seat: SeatId, changes: { field: string; value: unknown }[]): void {
-    const hit = changes.map((c) => `${seat}/${c.field}`).filter((key, i) => {
-      const mine = this.edits.get(key);
-      return mine && Date.now() - mine.at < EDIT_MS && mine.value !== changes[i]!.value;
-    });
+    const hit = changes.filter((c) => {
+      const mine = this.edits.get(`${seat}/${c.field}`);
+      return mine && Date.now() - mine.at < EDIT_MS && mine.value !== c.value;
+    }).map((c) => `${seat}/${c.field}`);
     if (hit.length === 0) return;
     for (const key of hit) this.edits.delete(key);
     this.overwritten.add(hit);

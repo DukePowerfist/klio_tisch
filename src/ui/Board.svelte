@@ -14,7 +14,7 @@
   import { cardSize, computeLayout, freePosAt, placeCards, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
-  import { t } from './texts';
+  import { t, whoColor } from './texts';
   import { view } from './view.svelte';
 
   let { table }: { table: KlioTableState } = $props();
@@ -140,7 +140,7 @@
   }
 
   function onPointerMove(e: PointerEvent) {
-    if (e.pointerType === 'mouse' || drag) showPointer(e.clientX, e.clientY);
+    if (session.sharesPointer && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
     if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && touches.size >= 2) {
       const [a, b] = [...touches.values()] as [[number, number], [number, number]];
@@ -192,7 +192,7 @@
     const target = hot;
     drag = null;
     if (!d) return;
-    if (d.moved) showPointer(e.clientX, e.clientY);
+    if (d.moved && session.sharesPointer) showPointer(e.clientX, e.clientY);
     if (!d.moved) return click(d.cards[0]!);
 
     const zone = target ?? zoneAt(layout, ...toBoard(e.clientX, e.clientY))?.id;
@@ -219,7 +219,7 @@
     view.open = view.open === zone ? null : zone;
   }
 
-  const submit = (cmd: object, drop?: PendingDrop) => submitOrSay(cmd, drop);
+  const submit = (cmd: { type: string }, drop?: PendingDrop) => submitOrSay(cmd, drop);
 
   function onDblClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
@@ -237,8 +237,6 @@
     return m;
   });
   const shakingCards = $derived(new Set(effects.shaking.values().flatMap((z) => table.zones[z] ?? [])));
-  /** von anderen gerade gezogene Karten: Farbe der Rolle (nur ein Hinweis, 8.3) */
-  const marked = $derived(new Map(session.cursors.flatMap(([, p]) => p.drag.map((c) => [c, `var(--who-${p.who})`] as const))));
 </script>
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
@@ -283,7 +281,7 @@
         dragging={!!off}
         pending={!!off && off !== drag}
         shake={shakingCards.has(card)}
-        mark={marked.get(card)}
+        mark={session.dragged.has(card) ? whoColor(session.dragged.get(card)!) : undefined}
       />
     {/each}
     <Cursors {layout} scale={sc} />

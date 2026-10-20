@@ -3,7 +3,6 @@
   import { SEATS } from '../engine/types';
   import { seatNo, seatVisible } from '../engine/zones';
   import Modal from './Modal.svelte';
-  import { copyText } from './clipboard';
   import { submitOrSay } from './commands';
   import { session } from './session.svelte';
   import { t } from './texts';
@@ -15,14 +14,10 @@
   const spectators = $derived(session.online.filter((r) => r.role === 'spectator').length);
   let confirmRenew = $state(false);
 
-  async function copy(done: string) {
-    const url = session.inviteUrl();
-    if (url && (await copyText(url))) view.say(t(done));
-  }
   async function renew() {
     confirmRenew = false;
     await session.renewLink();
-    await copy('room.renewed');
+    await session.copyInvite('room.renewed');
   }
 </script>
 
@@ -31,11 +26,12 @@
   <div class="seats">
     {#each SEATS as seat (seat)}
       {@const info = table.seats[seat]}
+      {@const on = isOnline(seat)}
       <span>{t('room.player', { n: seatNo(seat) })}</span>
       <span class="who">
         {#if !seatVisible(seat, table)}<i>{t('room.hidden')}</i>{/if}
         {#if info.occupied}
-          {info.name ?? ''} <small class:on={isOnline(seat)}>{t(isOnline(seat) ? 'room.online' : 'room.offline')}</small>
+          {info.name ?? ''} <small class:on>{t(on ? 'room.online' : 'room.offline')}</small>
         {:else}
           <i>{t('room.free')}</i>
         {/if}
@@ -52,17 +48,17 @@
   <b>{t('room.link')}</b>
   {#if confirmRenew}
     <p>{t('room.renewText')}</p>
-    <div class="row">
+    <div class="buttons">
       <button onclick={() => (confirmRenew = false)}>{t('reset.cancel')}</button>
       <button class="danger" onclick={renew}>{t('room.renewConfirm')}</button>
     </div>
   {:else}
-    <div class="row">
-      <button onclick={() => copy('room.copied')}>{t('room.copy')}</button>
+    <div class="buttons">
+      <button onclick={() => session.copyInvite()}>{t('room.copy')}</button>
       <button onclick={() => (confirmRenew = true)}>{t('room.renew')}</button>
     </div>
   {/if}
-  <div class="row end"><button onclick={close}>{t('room.close')}</button></div>
+  <div class="buttons end"><button onclick={close}>{t('gm.close')}</button></div>
 </Modal>
 
 <style>
@@ -71,7 +67,6 @@
   small { font-size: 12px; opacity: 0.6; }
   small.on { color: var(--accent-hint); opacity: 1; }
   .seats button { padding: 4px 10px; }
-  .note { font-size: 13px; opacity: 0.75; margin: 4px 0 14px; }
-  .row { display: flex; gap: 10px; margin: 8px 0; }
+  .note { margin: 4px 0 14px; }
   .end { justify-content: flex-end; margin-top: 16px; }
 </style>

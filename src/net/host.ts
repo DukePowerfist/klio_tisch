@@ -36,8 +36,8 @@ export type HostOptions<G> = {
   rng?: Rng;
   /** Speichern fehlgeschlagen: Befehl verworfen, SL bekommt eine deutliche Warnung (8.2) */
   onSaveError?: (error: unknown) => void;
-  /** nach jedem angenommenen Befehl (auch eigenen); `cause` = Befehls-ID, falls bekannt */
-  onChange?: (state: TableState<G>, events: SequencedEvent[], cause?: string) => void;
+  /** nach jedem angenommenen Befehl; `cause` = Befehls-ID, falls bekannt; `own` = per `submit` aus diesem Browser */
+  onChange?: (state: TableState<G>, events: SequencedEvent[], cause: string | undefined, own: boolean) => void;
   /** wer verbunden ist, hat sich geändert (Beitritt, Abbruch, neue Rolle) */
   onOnline?: (online: Role[]) => void;
   /** Fotos (8.4); fehlt: Fotos werden weder angenommen noch verteilt */
@@ -72,7 +72,7 @@ export class Host<G> {
     transport.onPeers((list) => {
       if (transport !== this.transport) return;
       for (const p of this.peers.keys()) if (!list.includes(p)) this.peers.delete(p);
-      this.options.onOnline?.(this.online);
+      this.onlineChanged();
     });
   }
 
@@ -114,12 +114,12 @@ export class Host<G> {
     this.transport = transport;
     this.peers.clear();
     this.listen();
-    this.options.onOnline?.(this.online);
+    this.onlineChanged();
   }
 
   /** Befehl der Spielleitung (im Browser des Hosts); `id` kommt in onChange als Auslöser zurück. */
   submit(cmd: unknown, id?: string): Promise<CommandResult> {
-    return this.enqueue(() => this.execute(cmd, { role: 'gm' }, undefined, id));
+    return this.enqueue(() => this.execute(cmd, { role: 'gm' }, undefined, id, true));
   }
 
   /** Wartet, bis alle bisher eingegangenen Befehle bearbeitet sind. */
@@ -131,6 +131,10 @@ export class Host<G> {
     const next = this.queue.then(job, job);
     this.queue = next.catch(() => undefined);
     return next;
+  }
+
+  private onlineChanged(): void {
+    this.options.onOnline?.(this.online);
   }
 
   private send(msg: ToClient, to: PeerId): void {
@@ -175,7 +179,7 @@ export class Host<G> {
     }
     this.peers.set(from, msg.key);
     this.send({ t: 'welcome', role, state: this.state }, from);
-    this.options.onOnline?.(this.online);
+    this.onlineChanged();
   }
 
   /** Zuschauer nimmt einen freien Platz (über den Engine-Befehl, als SL); die neue Rolle kommt per Willkommen. */
@@ -183,7 +187,7 @@ export class Host<G> {
     const role: Role = { role: 'player', seat: msg.seat };
     const result: CommandResult = this.saved.host.keys[key]?.role !== 'spectator'
       ? { ok: false, reason: { key: 'reject.invalid' } }
-      : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h) => withRole(h, key, role), msg.id);
+      : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h, r) => (r.ok ? withRole(h, key, role) : h), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
   }
 
@@ -205,36 +209,33 @@ export class Host<G> {
    * Der einzige Weg für Änderungen: ausführen → Host-Daten nachführen → speichern → verteilen.
    * Gemerkte Antworten werden auch für abgelehnte Befehle gespeichert, damit eine Wiederholung dieselbe Antwort bekommt.
    */
-  private async execute(cmd: unknown, actor: Actor, updateHost?: (host: HostData, result: CommandResult) => HostData, cause?: string): Promise<CommandResult> {
+  private async execute(cmd: unknown, actor: Actor, updateHost?: (host: HostData, result: CommandResult) => HostData, cause?: string, own = false): Promise<CommandResult> {
     const r = this.engine.dispatch(this.state, cmd, actor, this.rng);
     const result: CommandResult = isRejection(r) ? { ok: false, reason: r.reason } : { ok: true };
     // Bei Ablehnung ohne etwas zu merken ändert sich nichts, also auch nichts zu speichern
     if (isRejection(r) && !updateHost) return result;
 
-    const before = this.saved.host;
     const state = isRejection(r) ? this.state : r.state;
-    const host = followSeats(updateHost ? updateHost(before, result) : before, state);
+    const host = followSeats(updateHost ? updateHost(this.saved.host, result) : this.saved.host, state);
     const saved = await this.persist({ state, host });
     if (!saved.ok) return saved;
     if (isRejection(r)) return result;
 
     for (const peer of this.peers.keys()) this.send({ t: 'events', events: r.events, ...(cause ? { cause } : {}) }, peer);
-    // Neue Rolle (Platz genommen oder von der SL freigegeben): neues Willkommen
-    let roles = false;
-    for (const [peer, key] of this.peers) {
-      if (host.keys[key] === before.keys[key]) continue;
-      this.send({ t: 'welcome', role: host.keys[key]!, state: this.state }, peer);
-      roles = true;
-    }
-    this.options.onChange?.(this.state, r.events, cause);
-    if (roles) this.options.onOnline?.(this.online);
+    this.options.onChange?.(this.state, r.events, cause, own);
     return result;
   }
 
+  /** Einzige Stelle, an der Stand und Host-Daten wechseln. Neue Rolle eines Verbundenen
+   *  (Platz genommen oder von der SL freigegeben): neues Willkommen. */
   private async persist(next: Saved<G>): Promise<CommandResult> {
     try {
       await this.store.save(next);
+      const before = this.saved.host.keys;
       this.saved = next;
+      const changed = [...this.peers].filter(([, key]) => next.host.keys[key] !== before[key]);
+      for (const [peer, key] of changed) this.send({ t: 'welcome', role: next.host.keys[key]!, state: next.state }, peer);
+      if (changed.length > 0) this.onlineChanged();
       return { ok: true };
     } catch (error) {
       this.options.onSaveError?.(error);
@@ -248,8 +249,7 @@ const withRole = (host: HostData, key: string, role: Role): HostData => ({ ...ho
 /** Rollen folgen dem Stand: Wessen Platz frei geworden ist (die SL gibt ihn frei, 8.2), der ist wieder Zuschauer. */
 function followSeats<G>(host: HostData, state: TableState<G>): HostData {
   const freed = Object.entries(host.keys).filter(([, r]) => r.role === 'player' && !state.seats[r.seat].occupied);
-  if (freed.length === 0) return host;
-  return { ...host, keys: { ...host.keys, ...Object.fromEntries(freed.map(([key]) => [key, { role: 'spectator' } as Role])) } };
+  return freed.reduce((h, [key]) => withRole(h, key, { role: 'spectator' }), host);
 }
 
 /** Antwort merken; ändert nur die Liste dieses Schlüssels (die übrigen Teile werden geteilt). */

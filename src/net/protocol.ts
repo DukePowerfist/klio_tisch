@@ -2,9 +2,9 @@
 // `hello` und `reload` ändern ihr Format NIE: Nur so versteht auch ein veralteter Client die Aufforderung.
 
 import { z } from 'zod';
-import { SeatSchema, TextRefSchema } from '../engine/schemas';
+import { PhotoHashSchema, SeatSchema, TextRefSchema } from '../engine/schemas';
 import type { Actor, Rejection } from '../engine/types';
-import { PhotoDataSchema, PhotoHashSchema } from './photos';
+import { PhotoDataSchema } from './photos';
 
 // ---------- eingefroren ----------
 
@@ -22,12 +22,14 @@ export const ReloadMsg = z.object({ t: z.literal('reload'), build: z.string().ma
 
 // ---------- Client → Host ----------
 
-const CommandMsg = z.object({ t: z.literal('cmd'), id: z.string().min(8).max(64), cmd: z.unknown() }).strict();
+/** ID einer Nachricht, die beantwortet und bei Bedarf mit derselben ID erneut geschickt wird */
+const MsgId = z.string().min(8).max(64);
+const CommandMsg = z.object({ t: z.literal('cmd'), id: MsgId, cmd: z.unknown() }).strict();
 const ResyncMsg = z.object({ t: z.literal('resync') }).strict();
 /** Zuschauer möchte einen freien Platz nehmen (nach dem Beitritt); Antwort wie bei Befehlen per `result` mit derselben ID. */
-const ClaimMsg = z.object({ t: z.literal('claim'), id: z.string().min(8).max(64), seat: SeatSchema, name: z.string().max(40) }).strict();
+const ClaimMsg = z.object({ t: z.literal('claim'), id: MsgId, seat: SeatSchema, name: z.string().max(40) }).strict();
 /** Foto hochladen (vor dem Befehl, der es einträgt); Antwort per `result`. Fotos fragen Clients einzeln an (8.4). */
-const PhotoPutMsg = z.object({ t: z.literal('photo'), id: z.string().min(8).max(64), hash: PhotoHashSchema, data: PhotoDataSchema }).strict();
+const PhotoPutMsg = z.object({ t: z.literal('photo'), id: MsgId, hash: PhotoHashSchema, data: PhotoDataSchema }).strict();
 const PhotoGetMsg = z.object({ t: z.literal('photoGet'), hash: PhotoHashSchema }).strict();
 export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg, PhotoPutMsg, PhotoGetMsg]);
 export type ToHost = z.infer<typeof ToHost>;

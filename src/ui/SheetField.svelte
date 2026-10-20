@@ -22,9 +22,10 @@
     clearTimeout(timer);
     timer = undefined;
     if (draft === value) return;
-    const v = kind === 'text' ? draft : draft === '' ? null : Number(draft);
-    effects.noteEdit(seat, field, v);
-    await submitOrSay({ type: kind === 'text' ? 'sheet.setText' : 'sheet.setNumber', seat, field, value: v });
+    const cmd = kind === 'text'
+      ? { type: 'sheet.setText', seat, field, value: draft }
+      : { type: 'sheet.setNumber', seat, field, value: draft === '' ? null : Number(draft) };
+    await submitOrSay(cmd);
   }
 
   function onInput(e: Event) {

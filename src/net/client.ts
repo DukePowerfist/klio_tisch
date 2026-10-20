@@ -3,7 +3,7 @@
 
 import type { Engine } from '../engine/dispatch';
 import type { Event, SeatId, SequencedEvent, TableState, TextRef } from '../engine/types';
-import { toBase64, unpackPhoto } from './photos';
+import { toBase64, unpackPhoto, type PhotoBank } from './photos';
 import { ToClient, type CommandResult, type ReceivedEvents, type Role, type ToHost } from './protocol';
 import type { PeerId, Transport } from './transport';
 
@@ -23,11 +23,12 @@ export type ClientOptions = {
   name: string;
   newId?: () => string;
   onChange?: () => void;
-  /** bestätigte Ereignisse, nachdem sie angewendet wurden (Meldungen, Animationen); `cause` = auslösende Befehls-ID */
-  onEvents?: (events: Event[], cause?: string) => void;
+  /** bestätigte Ereignisse, nachdem sie angewendet wurden (Meldungen, Animationen); `cause` = auslösende Befehls-ID,
+   *  `own` = von einem eigenen, noch unbeantworteten Befehl */
+  onEvents?: (events: Event[], cause: string | undefined, own: boolean) => void;
   onWarning?: (w: ClientWarning) => void;
-  /** angefragtes Foto ist da (Inhalt passt zum Namen) */
-  onPhoto?: (hash: string, bytes: Uint8Array) => void;
+  /** Ablage für angefragte Fotos (8.4); der Inhalt ist am Namen geprüft */
+  photos?: PhotoBank;
 };
 
 /** Unbeantwortete Nachricht mit ID (Befehl oder Foto); wird nach dem Wiederverbinden erneut geschickt. */
@@ -76,6 +77,7 @@ export class Client<G> {
 
   /** Foto beim Host anfragen; kommt über `onPhoto`, auch wenn die Verbindung zwischendurch abreißt. */
   requestPhoto(hash: string): void {
+    if (this.wanted.has(hash)) return;
     this.wanted.add(hash);
     if (this.status === 'ready' && this.host) this.transport.send({ t: 'photoGet', hash }, this.host);
   }
@@ -167,7 +169,7 @@ export class Client<G> {
     const bytes = await unpackPhoto(hash, data);
     if (!bytes) return this.options.onWarning?.({ kind: 'invalidMessage' });
     this.wanted.delete(hash);
-    this.options.onPhoto?.(hash, bytes);
+    await this.options.photos?.put(hash, bytes);
   }
 
   /** Vollständigen Stand übernehmen (geprüft). */
@@ -198,7 +200,7 @@ export class Client<G> {
       return this.transport.send({ t: 'resync' }, this.host);
     }
     this.options.onChange?.();
-    this.options.onEvents?.(events.map((e) => e.event), cause);
+    this.options.onEvents?.(events.map((e) => e.event), cause, !!cause && this.pending.has(cause));
   }
 
   private setStatus(s: ClientStatus): void {

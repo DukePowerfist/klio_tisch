@@ -20,6 +20,7 @@ import { TrysteroRoom } from '../net/trystero';
 import type { Transport } from '../net/transport';
 import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
+import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
 import { IdbStore } from './storage';
 import { t } from './texts';
@@ -28,6 +29,7 @@ import { view } from './view.svelte';
 export type KlioTableState = TableState<KlioState>;
 /** `own`: ausgelöst von einem Befehl aus diesem Browser */
 type Listener = (events: Event[], own: boolean) => void;
+type CommandListener = (cmd: { type: string; [key: string]: unknown }) => void;
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
 export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
@@ -77,15 +79,16 @@ class Session {
   online = $state.raw<Role[]>([]);
   saveError = $state<string | null>(null);
   pending = $state.raw<Pending[]>([]);
-  /** Mauszeiger und gezogene Karten der anderen (8.3) */
+  /** Mauszeiger der anderen (8.3) */
   cursors = $state.raw<[string, PresenceInfo][]>([]);
+  /** von anderen gerade gezogene Karten → Rolle; ändert sich nur, wenn jemand greift oder loslässt */
+  dragged = $state.raw<ReadonlyMap<CardId, PresenceInfo['who']>>(new Map());
 
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
   private presence: Presence | null = null;
   private listeners = new Set<Listener>();
-  /** eigene Befehle, deren Antwort noch aussteht */
-  private own = new Set<string>();
+  private commandListeners = new Set<CommandListener>();
   private nextId = 0;
 
   /** Text zum Verbindungszustand (Raumleiste, Wartebildschirm) */
@@ -104,7 +107,7 @@ class Session {
     this.host = await Host.start(engine, localTransport(), { load: async () => saved, save: (s) => store.save(s) }, () => initialTable(ruleset, cryptoRng()), {
       build: __BUILD_ID__,
       onSaveError: (e) => (this.saveError = String(e)),
-      onChange: (state, events, cause) => this.changed(state, events.map((e) => e.event), cause),
+      onChange: (state, events, cause, own) => this.changed(state, events.map((e) => e.event), cause, own),
       onOnline: (online) => (this.online = online),
       photos,
     });
@@ -114,26 +117,26 @@ class Session {
 
   /** Spielleitung: Mitspieler einladen. Nutzt den gespeicherten Raum der Kampagne oder legt einen an (ehem. O10). */
   async invite(): Promise<void> {
-    if (!this.host) return;
-    const link = this.host.room ?? createRoomLink();
-    if (!this.host.room) await this.host.setRoom(link);
-    history.replaceState(null, '', formatHash(link));
-    await this.openRoom(link);
+    if (this.host) await this.useRoom(this.host.room ?? createRoomLink());
   }
 
   /** Neuer Link (neue Raum-ID und neues Passwort): Der alte gilt nicht mehr, die Plätze bleiben (8.2). */
   async renewLink(): Promise<void> {
-    if (!this.host || this.mode !== 'host') return;
-    const link = createRoomLink();
-    await this.host.setRoom(link);
-    history.replaceState(null, '', formatHash(link));
-    this.host.attach(this.connect(link));
+    if (this.mode === 'host') await this.useRoom(createRoomLink());
   }
 
-  /** Einladungslink zum Kopieren */
-  inviteUrl(): string | null {
+  /** Einladungslink in die Zwischenablage; Meldung `done` nur bei Erfolg. */
+  async copyInvite(done = 'room.copied'): Promise<void> {
     const room = this.host?.room;
-    return room ? `${location.origin}${location.pathname}${formatHash(room)}` : null;
+    if (room && (await copyText(`${location.origin}${location.pathname}${formatHash(room)}`))) view.say(t(done));
+  }
+
+  /** Raum merken, in den Link schreiben und betreten (als Host schon im Raum: nur die Verbindung wechseln). */
+  private async useRoom(link: RoomLink): Promise<void> {
+    if (!sameRoom(this.host!.room, link)) await this.host!.setRoom(link);
+    history.replaceState(null, '', formatHash(link));
+    if (this.mode === 'host') this.host!.attach(this.connect(link));
+    else await this.openRoom(link);
   }
 
   /** Host im Raum: eine Sperre je Browser, dann die Verbindung umstellen. */
@@ -151,17 +154,27 @@ class Session {
   private connect(link: RoomLink): Transport {
     const room = new TrysteroRoom(link);
     this.presence?.close();
-    this.presence = new Presence(room.channel(PRESENCE), (others) => (this.cursors = [...others]));
+    this.presence = new Presence(room.channel(PRESENCE), (others) => this.othersMoved(others));
     return room.channel(CHANNEL);
   }
 
-  /** Eigener Mauszeiger und gezogene Karten für die anderen; `at` null = nicht über dem Tisch. */
+  private othersMoved(others: ReadonlyMap<string, PresenceInfo>): void {
+    this.cursors = [...others];
+    const dragged = new Map([...others.values()].flatMap((p) => p.drag.map((c) => [c, p.who] as const)));
+    if (JSON.stringify([...dragged]) !== JSON.stringify([...this.dragged])) this.dragged = dragged;
+  }
+
+  /** Wird der eigene Zeiger übertragen? (nur im Raum) */
+  get sharesPointer(): boolean {
+    return this.presence !== null;
+  }
+
+  /** Eigener Mauszeiger und gezogene Karten für die anderen; `at` null = nicht über dem Tisch.
+   *  Den Namen eines Spielers kennen alle aus dem Stand; mit geschickt wird er nur für Zuschauer. */
   pointer(at: FreePos | null, drag: CardId[]): void {
-    if (!this.presence) return;
     const r = this.actor;
     const who = r.role === 'gm' ? 'gm' : r.role === 'player' ? r.seat : 'spectator';
-    const name = r.role === 'player' ? (this.state?.seats[r.seat].name ?? '') : r.role === 'spectator' ? this.savedName : '';
-    this.presence.set({ who, name, at, drag });
+    this.presence?.set({ who, name: who === 'spectator' ? this.savedName : '', at, drag });
   }
 
   private startClient(link: RoomLink): void {
@@ -175,15 +188,19 @@ class Session {
         if (!sameRole(this.role, client.role)) this.role = client.role;
         if (client.state && client.state !== this.state) this.state = client.state;
       },
-      onEvents: (events, cause) => this.changed(client.state!, events, cause),
-      onPhoto: (hash, bytes) => void photos.put(hash, bytes),
+      onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own),
+      photos,
       onWarning: (w) => {
         if (w.kind === 'secondHost') view.say(t('room.secondHost'), true);
       },
     });
     this.client = client;
     this.status = client.status;
-    photos.request = (hash) => client.requestPhoto(hash);
+  }
+
+  /** Foto soll angezeigt werden: aus der eigenen Ablage, sonst (als Client) beim Host anfragen (8.4). */
+  async wantPhoto(hash: string): Promise<void> {
+    if (!(await photos.load(hash))) this.client?.requestPhoto(hash);
   }
 
   get savedName(): string {
@@ -197,22 +214,20 @@ class Session {
     return r && !r.ok ? r.reason : null;
   }
 
-  async submit(cmd: object, drop?: PendingDrop): Promise<CommandResult> {
+  async submit(cmd: { type: string }, drop?: PendingDrop): Promise<CommandResult> {
     if (!this.host && !this.client) return { ok: false, reason: { key: 'reject.invalid' } };
     const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
-    this.own.add(id);
+    for (const cb of this.commandListeners) cb(cmd as { type: string });
     if (drop) this.pending = [...this.pending, { ...drop, id }];
     const result = await (this.host ? this.host.submit(cmd, id) : this.client!.submit(cmd, id));
     if (drop) this.pending = this.pending.filter((d) => d.id !== id);
-    this.own.delete(id);
     return result;
   }
 
-  /** Foto ablegen und (als Client) zum Host bringen, bevor ein Befehl es einträgt (8.4). */
-  async addPhoto(hash: string, blob: Blob): Promise<CommandResult> {
-    await photos.put(hash, blob);
-    if (!this.client) return { ok: true };
-    return this.client.uploadPhoto(hash, new Uint8Array(await blob.arrayBuffer()));
+  /** Foto ablegen und (als Client) zugleich zum Host bringen, bevor ein Befehl es einträgt (8.4). */
+  async addPhoto(hash: string, bytes: Uint8Array): Promise<CommandResult> {
+    const [, result] = await Promise.all([photos.put(hash, bytes), this.client?.uploadPhoto(hash, bytes) ?? { ok: true as const }]);
+    return result;
   }
 
   /** Darf der aktuelle Nutzer diesen Befehl? Zum Ausblenden von Knöpfen (9.3); verbindlich prüft der Host. */
@@ -228,6 +243,12 @@ class Session {
     }
   }
 
+  /** Jeder Befehl aus diesem Browser, beim Absenden (z. B. eigene Eingaben merken). */
+  onSubmit(cb: CommandListener): () => void {
+    this.commandListeners.add(cb);
+    return () => this.commandListeners.delete(cb);
+  }
+
   /** Ereignisse für Meldungen und Animationen. */
   onEvents(cb: Listener): () => void {
     this.listeners.add(cb);
@@ -235,10 +256,9 @@ class Session {
   }
 
   /** Neuer Stand mit Ereignissen; die Ablage des auslösenden Befehls ist damit bestätigt. */
-  private changed(state: KlioTableState, events: Event[], cause?: string): void {
+  private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean): void {
     this.state = state;
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
-    const own = !!cause && this.own.has(cause);
     if (events.length > 0) for (const cb of this.listeners) cb(events, own);
   }
 }
