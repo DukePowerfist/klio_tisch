@@ -4,6 +4,7 @@
   import BigTrump from './BigTrump.svelte';
   import Dock from './Dock.svelte';
   import JoinDialog from './JoinDialog.svelte';
+  import LogPanel from './LogPanel.svelte';
   import ResetDialog from './ResetDialog.svelte';
   import ResultDialog from './ResultDialog.svelte';
   import RoomBar from './RoomBar.svelte';
@@ -35,6 +36,7 @@
 {:else if session.state}
   <Board table={session.state} />
   <Dock players={session.state.settings.players} />
+  <LogPanel />
   <Toast />
   <BigTrump />
   {#if view.gmDialog}

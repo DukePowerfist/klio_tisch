@@ -11,7 +11,8 @@ import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
 import type { Actor, CardId, Event, FreePos, SeatId, TableState, TextRef } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
-import { Host } from '../net/host';
+import { readArchive, writeArchive } from '../net/archive';
+import { Host, type BackupInfo } from '../net/host';
 import { localTransport } from '../net/local';
 import { Presence, type PresenceInfo } from '../net/presence';
 import type { CommandResult, Role } from '../net/protocol';
@@ -22,7 +23,8 @@ import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
 import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
-import { IdbStore } from './storage';
+import { saveFile } from './files';
+import { IdbBackups, IdbStore } from './storage';
 import { t } from './texts';
 import { view } from './view.svelte';
 
@@ -110,6 +112,8 @@ class Session {
       onChange: (state, events, cause, own) => this.changed(state, events.map((e) => e.event), cause, own),
       onOnline: (online) => (this.online = online),
       photos,
+      backups: new IdbBackups(),
+      backupBefore: ['table.reset'],
     });
     this.state = this.host.state;
     if (link) await this.openRoom(link);
@@ -123,6 +127,45 @@ class Session {
   /** Neuer Link (neue Raum-ID und neues Passwort): Der alte gilt nicht mehr, die Plätze bleiben (8.2). */
   async renewLink(): Promise<void> {
     if (this.mode === 'host') await this.useRoom(createRoomLink());
+  }
+
+  // ---------- Spielstand der SL: Datei und Sicherungen (8.2, A34) ----------
+
+  /** Ganzen Spielstand samt Fotos als Datei speichern. */
+  async exportFile(): Promise<void> {
+    if (!this.host) return;
+    const saved = this.host.snapshot;
+    const hashes = saved.state.game.sheets.flatMap((s) => (s.photo ? [s.photo.hash] : []));
+    const found = await Promise.all(hashes.map(async (h) => [h, await photos.get(h)] as const));
+    const files = new Map(found.flatMap(([h, b]) => (b ? [[h, b] as const] : [])));
+    saveFile(`klio-tisch-${new Date().toISOString().slice(0, 10)}.json`, writeArchive(saved, files));
+  }
+
+  /** Datei einlesen und den Stand ersetzen (vorher wird gesichert); Grund bei Fehlern. */
+  async importFile(file: File): Promise<TextRef | null> {
+    if (!this.host) return { key: 'reject.invalid' };
+    let read: Awaited<ReturnType<typeof readArchive<KlioState>>>;
+    try {
+      read = await readArchive(engine, await file.text());
+    } catch {
+      return { key: 'settings.importInvalid' };
+    }
+    await Promise.all([...read.photos].map(([h, b]) => photos.put(h, b)));
+    const before = this.host.room;
+    const room = read.saved.host.room ?? before;
+    const r = await this.host.replace({ ...read.saved, host: { ...read.saved.host, ...(room ? { room } : {}) } }, 'import');
+    if (!r.ok) return r.reason;
+    // Im Raum und die Datei bringt einen anderen mit: dorthin wechseln
+    if (room && this.mode === 'host' && !sameRoom(before, room)) await this.useRoom(room);
+    return null;
+  }
+
+  backups(): Promise<BackupInfo[]> {
+    return this.host?.backups() ?? Promise.resolve([]);
+  }
+
+  async restore(id: string): Promise<CommandResult> {
+    return this.host?.restore(id) ?? { ok: false, reason: { key: 'reject.invalid' } };
   }
 
   /** Einladungslink in die Zwischenablage; Meldung `done` nur bei Erfolg. */

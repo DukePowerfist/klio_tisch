@@ -147,6 +147,17 @@ room:                                     # Mehrspielerbetrieb (neu)
     takenNoName: vergeben
     watch: Nur zuschauen
 
+log:                                      # Spielprotokoll (neu)
+  title: Protokoll
+  empty: Noch nichts passiert.
+  shuffled: "Gemischt: {zones}"
+  reset: Tisch zurückgesetzt
+  charactersReset: Charaktere zurückgesetzt
+  revived: "Bogen {seat}: Charakter wiederbelebt"
+  trumpRemoved: "Bogen {seat}: Trumpf entfernt"
+  expedition: "Expedition: {result}"
+  oracle: "Orakel: {words}"
+
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
 
@@ -159,6 +170,20 @@ settings:                                 # Einstellungen der SL (neu)
   permissionsNote: Gilt für diese Kampagne; die Voreinstellung steht in permissions.yaml.
   values: { allow: erlaubt, own: nur eigener Bogen, deny: verboten }
   defaults: Voreinstellung wiederherstellen
+  game: Spielstand
+  export: Als Datei speichern
+  import: Datei laden …
+  importNote: Die Datei enthält Bögen, Karten, Plätze, Raum und Fotos (z. B. für einen anderen Browser). Laden ersetzt den Stand; vorher wird gesichert.
+  importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.
+  imported: Spielstand geladen
+  backups: Sicherungen
+  noBackups: Noch keine Sicherung. Gesichert wird vor dem Zurücksetzen, Laden und Wiederherstellen.
+  backupReasons:
+    table.reset: vor dem Zurücksetzen
+    import: vor dem Laden einer Datei
+    restore: vor dem Wiederherstellen
+  restore: Wiederherstellen
+  restored: Sicherung wiederhergestellt
   fieldChanged: "Bogen {seat}: Ein Feld, das du bearbeitet hast, wurde gerade von jemand anderem geändert."
 
 # Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL

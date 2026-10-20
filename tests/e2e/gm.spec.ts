@@ -99,3 +99,62 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await expect(free).toHaveValue('deny');
   await expect(dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' })).toBeDisabled();
 });
+
+test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', async ({ page }) => {
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
+  await nameCharacter(page, 'seat1', 'Ida');
+  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
+  await reset.getByRole('checkbox').check();
+  await reset.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await expectCount(page, 'ABLAGE', 0);
+
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  await expect(dialog.getByText(/vor dem Zurücksetzen/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Wiederherstellen', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Wiederherstellen', exact: true }).click(); // bestätigen
+  await expectCount(page, 'ABLAGE', 1);
+  await expect(page.locator('[data-sheet=seat1] [data-field=name]')).toHaveValue('Ida');
+  await expect(dialog.getByText(/vor dem Wiederherstellen/)).toBeVisible();
+});
+
+test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abgelehnt', async ({ page }) => {
+  await nameCharacter(page, 'seat2', 'Ida');
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^klio-tisch-\d{4}-\d{2}-\d{2}\.json$/);
+  const file = await download.path();
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
+  await reset.getByRole('checkbox').check();
+  await reset.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
+
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  const input = dialog.locator('input[type=file]');
+  await input.setInputFiles({ name: 'falsch.json', mimeType: 'application/json', buffer: Buffer.from('{"app":"etwas"}') });
+  await expect(dialog.getByText('Diese Datei ist kein gültiger Spielstand des Kartentischs.')).toBeVisible();
+  await input.setInputFiles(file);
+  await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('Ida');
+  await expectCount(page, 'ABLAGE', 1);
+  await expect(dialog.getByText(/vor dem Laden einer Datei/)).toBeVisible();
+});
+
+test('Protokoll: einklappbar, neueste oben, bleibt nach Neuladen', async ({ page }) => {
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
+  await expectCount(page, 'ABLAGE', 1);
+  await page.getByRole('button', { name: 'Mischen', exact: true }).click(); // Menü bleibt offen
+  await expectCount(page, 'ABLAGE', 0);
+  await page.getByRole('button', { name: 'Protokoll' }).click();
+  const log = page.getByRole('list', { name: 'Protokoll' });
+  await expect(log.locator('li').first()).toContainText('Gemischt: DECK');
+  await expect(log.locator('li').nth(1)).toContainText('Aufgedeckt:');
+  await ready(page, true);
+  await page.getByRole('button', { name: 'Protokoll' }).click();
+  await expect(log.locator('li')).toHaveCount(2);
+});

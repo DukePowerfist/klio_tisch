@@ -6,7 +6,8 @@ import type { SeatId } from '../../src/engine/types';
 import { Client, type ClientOptions } from '../../src/net/client';
 import type { CommandResult } from '../../src/net/protocol';
 import { Host } from '../../src/net/host';
-import { MemoryNetwork, MemoryPhotoBank, MemoryStore } from '../../src/net/memory';
+import { readArchive, writeArchive } from '../../src/net/archive';
+import { MemoryBackups, MemoryNetwork, MemoryPhotoBank, MemoryStore } from '../../src/net/memory';
 import { sha256Hex } from '../../src/net/photos';
 import { Presence, type PresenceInfo } from '../../src/net/presence';
 import type { KlioState } from '../../src/rules/klio/state';
@@ -19,8 +20,11 @@ async function setup() {
   const store = new MemoryStore<KlioState>();
   const saveErrors: unknown[] = [];
   const photos = new MemoryPhotoBank();
+  const backups = new MemoryBackups<KlioState>();
   const startHost = () =>
-    Host.start(engine, net.connect(), store, () => fresh(), { build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e), photos });
+    Host.start(engine, net.connect(), store, () => fresh(), {
+      build: BUILD, rng: seededRng(2), onSaveError: (e) => saveErrors.push(e), photos, backups, backupBefore: ['table.reset'],
+    });
   const host = await startHost();
   const ids: string[] = [];
   /** Neuer Client; `key` = Browser (Standard: je Wunschplatz ein eigener).
@@ -40,7 +44,7 @@ async function setup() {
     });
     return { client, transport, warnings, key, claimed: () => claimed };
   };
-  return { net, store, host, startHost, join, saveErrors, ids, photos };
+  return { net, store, host, startHost, join, saveErrors, ids, photos, backups };
 }
 
 const isMsg = (msg: unknown, t: string) => (msg as { t?: string }).t === t;
@@ -436,5 +440,65 @@ describe('Mauszeiger (8.3)', () => {
     net.disconnect(ta.self);
     await net.deliver();
     expect(seen.has(ta.self)).toBe(false);
+  });
+});
+
+describe('Sicherung (A34) und Datei (8.2)', () => {
+  it('vor dem Zurücksetzen wird gesichert; Wiederherstellen bringt den Stand zu allen zurück', async () => {
+    const { net, host, join, backups } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    await host.submit({ type: 'sheet.setText', seat: 'seat1', field: 'name', value: 'Ida' });
+    await host.submit({ type: 'zone.draw', zone: 'deck' });
+    const before = host.state;
+    await host.submit({ type: 'table.reset', includeCharacters: true });
+    await settle(net, host);
+    expect(sheet(a.client.state!, 'seat1').name).toBe('');
+    const [b] = await backups.list();
+    expect(b!.reason).toBe('table.reset');
+    expect(await host.restore(b!.id)).toEqual({ ok: true });
+    await settle(net, host);
+    expect(host.state).toEqual(before);
+    expect(a.client.state).toEqual(before);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat1' });
+    // auch das Wiederherstellen selbst lässt sich zurücknehmen
+    expect((await backups.list()).map((x) => x.reason)).toEqual(['restore', 'table.reset']);
+  });
+
+  it('nur die letzten Sicherungen bleiben; abgelehnte Befehle sichern nicht', async () => {
+    const { host, backups } = await setup();
+    for (let i = 0; i < 7; i++) await host.submit({ type: 'table.reset', includeCharacters: false });
+    await host.submit({ type: 'table.reset', includeCharacters: 'ja' });
+    expect(await backups.list()).toHaveLength(5);
+  });
+
+  it('Datei: Stand, Plätze, Raum und Fotos hin und zurück; Import ersetzt den Stand bei allen', async () => {
+    const { net, host, join, photos, store } = await setup();
+    const bytes = new Uint8Array([1, 2, 3]);
+    const hash = await sha256Hex(bytes);
+    await host.setRoom({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
+    await host.submit({ type: 'sheet.setText', seat: 'seat2', field: 'name', value: 'Ida' });
+    const file = writeArchive(store.saved!, new Map([[hash, bytes]]));
+    await host.submit({ type: 'table.reset', includeCharacters: true });
+    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
+    await settle(net, host);
+
+    const read = await readArchive(engine, file);
+    expect(read.photos.get(hash)).toEqual(bytes);
+    expect(read.saved.host.room).toEqual({ room: 'r'.repeat(22), secret: 's'.repeat(22) });
+    expect(await host.replace(read.saved, 'import')).toEqual({ ok: true });
+    await settle(net, host);
+    expect(sheet(host.state, 'seat2').name).toBe('Ida');
+    expect(a.client.state).toEqual(host.state);
+    expect(photos.photos.size).toBe(0); // Fotos legt die Oberfläche ab, nicht der Host
+  });
+
+  it('Datei: fremde, beschädigte oder unpassende Inhalte werden abgelehnt', async () => {
+    const { store } = await setup();
+    const ok = JSON.parse(writeArchive(store.saved!, new Map()));
+    await expect(readArchive(engine, '{"app":"anders"}')).rejects.toThrow();
+    await expect(readArchive(engine, 'kein json')).rejects.toThrow();
+    await expect(readArchive(engine, JSON.stringify({ ...ok, state: { ...ok.state, seq: -1 } }))).rejects.toThrow();
+    await expect(readArchive(engine, JSON.stringify({ ...ok, photos: { ['0'.repeat(64)]: 'AQID' } }))).rejects.toThrow(/passt nicht/);
   });
 });

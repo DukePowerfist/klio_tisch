@@ -39,7 +39,7 @@ export type ToHost = z.infer<typeof ToHost>;
 
 /** Rolle eines Clients: jede Rolle außer SL (die ist der Host selbst). */
 export type Role = Exclude<Actor, { role: 'gm' }>;
-const RoleSchema = z.union([
+export const RoleSchema = z.union([
   z.object({ role: z.literal('player'), seat: SeatSchema }).strict(),
   z.object({ role: z.literal('spectator') }).strict(),
 ]) satisfies z.ZodType<Role>;

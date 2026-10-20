@@ -1,12 +1,15 @@
 // Speicher im Browser (ARCHITEKTUR.md 4): IndexedDB für Spielstand und Fotos.
 // Stand und Host-Daten werden in einer Transaktion geschrieben (8.2).
 
-import type { HostStore, Saved } from '../net/host';
+import type { Backup, BackupInfo, BackupStore, HostStore, Saved } from '../net/host';
 
 const DB = 'klio-tisch';
-const VERSION = 1;
+const VERSION = 2; // 2: Sicherungen
 const SAVED = 'saved';
 const PHOTOS = 'photos';
+const BACKUPS = 'backups';
+/** so viele automatische Sicherungen bleiben (A34) */
+const KEEP_BACKUPS = 5;
 
 /** Eine Verbindung für alle, erst bei Bedarf geöffnet. */
 let connection: Promise<IDBDatabase> | undefined;
@@ -19,6 +22,7 @@ function open(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(SAVED)) db.createObjectStore(SAVED);
       if (!db.objectStoreNames.contains(PHOTOS)) db.createObjectStore(PHOTOS);
+      if (!db.objectStoreNames.contains(BACKUPS)) db.createObjectStore(BACKUPS, { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -40,7 +44,7 @@ function done(tx: IDBTransaction): Promise<void> {
   });
 }
 
-/** Vorerst ein Spielstand; je Raum getrennte Stände kommen mit Schritt 4. */
+/** Ein Spielstand je Browser (eine Kampagne); umziehen geht über Export und Import (8.2). */
 const SLOT = 'main';
 
 export class IdbStore<G> implements HostStore<G> {
@@ -69,5 +73,29 @@ export class PhotoStore {
     const tx = db.transaction(PHOTOS, 'readwrite');
     tx.objectStore(PHOTOS).put(blob, hash);
     await done(tx);
+  }
+}
+
+/** Automatische Sicherungen des Stands (A34), die letzten KEEP_BACKUPS. */
+export class IdbBackups<G> implements BackupStore<G> {
+  async add(backup: Backup<G>): Promise<void> {
+    const db = await database();
+    const tx = db.transaction(BACKUPS, 'readwrite');
+    const store = tx.objectStore(BACKUPS);
+    store.put(backup);
+    const all = (await request(store.getAll())) as Backup<G>[];
+    for (const old of all.sort((a, b) => b.at - a.at).slice(KEEP_BACKUPS)) store.delete(old.id);
+    await done(tx);
+  }
+
+  async list(): Promise<BackupInfo[]> {
+    const db = await database();
+    const all = (await request(db.transaction(BACKUPS).objectStore(BACKUPS).getAll())) as Backup<G>[];
+    return all.sort((a, b) => b.at - a.at).map(({ id, at, reason }) => ({ id, at, reason }));
+  }
+
+  async get(id: string): Promise<Backup<G> | null> {
+    const db = await database();
+    return ((await request(db.transaction(BACKUPS).objectStore(BACKUPS).get(id))) as Backup<G> | undefined) ?? null;
   }
 }
