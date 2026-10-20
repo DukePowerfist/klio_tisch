@@ -30,8 +30,8 @@ export type Layout = {
   board: { w: number; h: number };
   card: { w: number; h: number };
   sheets: Record<SeatId, SheetBox>;
-  /** Tischmitte = Spielbereich (Filz, Anker `center`); in beiden Ansichten gleich groß */
-  panel: Rect;
+  /** Tischmitte = Spielbereich (Filz, Anker `center`); in beiden Ansichten gleich, nur verschoben */
+  middle: Rect;
   zones: Record<ZoneId, ZoneBox>;
   /** dieselben Zonen als Liste (Trefferprüfung beim Ziehen) */
   zoneList: ZoneBox[];
@@ -62,7 +62,9 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
 
   const M = L.middle;
   const [mx, my] = role ? L.role.middle : L.overview.middle;
-  const panel: Rect = { x: mx, y: my, w: M.size[0], h: M.size[1] };
+  const middle: Rect = { x: mx, y: my, w: M.size[0], h: M.size[1] };
+  /** Punkt relativ zur Tischmitte → Tisch */
+  const at = ([x, y]: readonly [number, number]) => ({ x: mx + x, y: my + y });
 
   const sheets = {} as Record<SeatId, SheetBox>;
   if (role) {
@@ -105,9 +107,8 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     if (z.perSeat) continue;
     const shape = L.shapes[id] ?? {};
     const grow = shape.growOnOpen && open === id;
-    const [x, y] = M.zones[id] ?? [0, 0];
     zones[id] = {
-      id, x: mx + x, y: my + y,
+      id, ...at(M.zones[id] ?? [0, 0]),
       w: grow ? CW : (shape.w ?? CW), h: grow ? CH : (shape.h ?? CH),
       scale: grow ? 1 : (shape.scale ?? 1), fanX: shape.fanX ?? 0, fanY: shape.fanY ?? 0,
       owner: null, template: id, ...decor(shape),
@@ -136,19 +137,19 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     board: { w: BW, h: BH },
     card: { w: CW, h: CH },
     sheets,
-    panel,
+    middle,
     zones,
     zoneList: Object.values(zones),
-    resistTitle: { x: mx + M.resistTitle[0], y: my + M.resistTitle[1] },
-    gmControls: { x: panel.x + panel.w - M.gmControlsInset[0], y: panel.y + panel.h - M.gmControlsInset[1] },
-    menu: { x: mx + M.menu[0], y: my + M.menu[1] },
+    resistTitle: at(M.resistTitle),
+    gmControls: at([middle.w - M.gmControlsInset[0], middle.h - M.gmControlsInset[1]]),
+    menu: at(M.menu),
     freeCardScale: L.freeCardScale,
   };
 }
 
 /** Rechteck eines Ankers für frei liegende Karten. */
 export function anchorRect(layout: Layout, anchor: AnchorId): Rect | null {
-  if (anchor === 'center') return layout.panel;
+  if (anchor === 'center') return layout.middle;
   const s = layout.sheets[anchor];
   return s.visible ? s : null;
 }
@@ -162,10 +163,12 @@ export type CardPlace = {
   z: number;
 };
 
+export type Places = Partial<Record<CardId, CardPlace>>;
+
 /** Lage jeder sichtbaren Karte: in Zonen gestapelt oder aufgefächert, frei liegende relativ zu ihrem Anker.
  *  Karten auf ausgeblendeten Bögen fehlen. */
-export function placeCards(state: TableState<unknown>, layout: Layout): Partial<Record<CardId, CardPlace>> {
-  const out: Partial<Record<CardId, CardPlace>> = {};
+export function placeCards(state: TableState<unknown>, layout: Layout): Places {
+  const out: Places = {};
   for (const [id, cards] of Object.entries(state.zones)) {
     const z = layout.zones[id];
     if (!z) continue;
@@ -191,6 +194,13 @@ export function cardSize(layout: Layout, p: Pick<CardPlace, 'scale' | 'rotated'>
 }
 
 const inside = (r: Rect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+const frac = (v: number) => Math.round(v * 10000) / 10000;
+/** Punkt als Anteil 0–1 eines Rechtecks (auf 4 Stellen) und zurück */
+const relIn = (r: Rect, x: number, y: number) => ({ x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) });
+const pointIn = (r: Rect, f: { x: number; y: number }) => ({ x: r.x + f.x * r.w, y: r.y + f.y * r.h });
+/** sichtbarer Bogen unter einem Punkt */
+const sheetAt = (layout: Layout, x: number, y: number) => SEATS.find((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
+const cardRect = (layout: Layout, p: CardPlace): Rect => ({ x: p.x, y: p.y, ...cardSize(layout, p) });
 
 /** Zone unter einem Punkt (Tischkoordinaten). */
 export function zoneAt(layout: Layout, x: number, y: number): ZoneBox | null {
@@ -200,48 +210,34 @@ export function zoneAt(layout: Layout, x: number, y: number): ZoneBox | null {
 /** Umkehrung von `freePosAt`: Punkt auf dem Tisch in dieser Ansicht; null, wenn der Anker (Bogen) ausgeblendet ist. */
 export function pointAt(layout: Layout, pos: FreePos): { x: number; y: number } | null {
   const r = anchorRect(layout, pos.anchor);
-  return r && { x: r.x + pos.x * r.w, y: r.y + pos.y * r.h };
+  return r && pointIn(r, pos);
 }
 
 /** Anker für eine frei abgelegte Karte: Bogen unter dem Punkt, sonst Spielbereich (A32). Lage als Anteil 0–1. */
 export function freePosAt(layout: Layout, x: number, y: number): FreePos {
-  const seat = SEATS.find((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
-  const anchor: AnchorId = seat ?? 'center';
-  const r = anchorRect(layout, anchor)!;
-  const frac = (v: number) => Math.round(v * 10000) / 10000;
-  return { anchor, x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) };
+  const anchor: AnchorId = sheetAt(layout, x, y) ?? 'center';
+  return { anchor, ...relIn(anchorRect(layout, anchor)!, x, y) };
 }
 
-type Places = Partial<Record<CardId, CardPlace>>;
-
 /** Lage des Zeigers für die anderen (8.3), damit sie auch in einer anderen Ansicht über derselben Stelle steht:
- *  oberste frei liegende Karte (ohne `skip`, die gerade gezogenen), sonst Bogen, sonst Tischzone, sonst Spielbereich. */
-export function pointerPosAt(layout: Layout, places: Places, free: readonly CardId[], x: number, y: number, skip: readonly CardId[]): PointerPos {
-  const frac = (v: number) => Math.round(v * 10000) / 10000;
-  const rel = (r: Rect) => ({ x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) });
+ *  oberste frei liegende Karte (ohne `skip`, die gerade gezogenen), sonst Bogen, sonst Tischzone, sonst Spielbereich.
+ *  Zonen auf einem Bogen brauchen keinen eigenen Anker, sie gehen mit dem Bogen. */
+export function pointerPosAt(layout: Layout, places: Places, free: readonly CardId[], x: number, y: number, skip: readonly CardId[] = []): PointerPos {
   for (let i = free.length - 1; i >= 0; i--) {
     const card = free[i]!;
     const p = places[card];
-    if (!p || skip.includes(card)) continue;
-    const r = { x: p.x, y: p.y, ...cardSize(layout, p) };
-    if (inside(r, x, y)) return { card, ...rel(r) };
+    const r = p && !skip.includes(card) ? cardRect(layout, p) : null;
+    if (r && inside(r, x, y)) return { card, ...relIn(r, x, y) };
   }
-  const onSheet = SEATS.some((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
-  const zone = onSheet ? null : zoneAt(layout, x, y);
-  return zone ? { zone: zone.id, ...rel(zone) } : freePosAt(layout, x, y);
+  const seat = sheetAt(layout, x, y);
+  if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
+  const zone = layout.zoneList.find((z) => !z.owner && inside(z, x, y));
+  return zone ? { zone: zone.id, ...relIn(zone, x, y) } : { anchor: 'center', ...relIn(layout.middle, x, y) };
 }
 
 /** Umkehrung von `pointerPosAt` in dieser Ansicht; null, wenn der Anker hier nicht zu sehen ist. */
 export function pointerAt(layout: Layout, places: Places, pos: PointerPos): { x: number; y: number } | null {
-  if ('card' in pos) {
-    const p = places[pos.card];
-    if (!p) return null;
-    const s = cardSize(layout, p);
-    return { x: p.x + pos.x * s.w, y: p.y + pos.y * s.h };
-  }
-  if ('zone' in pos) {
-    const z = layout.zones[pos.zone];
-    return z ? { x: z.x + pos.x * z.w, y: z.y + pos.y * z.h } : null;
-  }
-  return pointAt(layout, pos);
+  const card = 'card' in pos ? places[pos.card] : undefined;
+  const r = 'card' in pos ? card && cardRect(layout, card) : 'zone' in pos ? layout.zones[pos.zone] : anchorRect(layout, pos.anchor);
+  return r ? pointIn(r, pos) : null;
 }

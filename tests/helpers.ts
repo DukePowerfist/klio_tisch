@@ -4,7 +4,7 @@ import { expect } from 'vitest';
 import { createEngine } from '../src/engine/dispatch';
 import { seededRng } from '../src/engine/rng';
 import { initialTable } from '../src/engine/setup';
-import type { Actor, CardId, DispatchResult, Rng, SeatId, TableState, TextRef } from '../src/engine/types';
+import type { Actor, CardId, DispatchResult, FreePos, Rng, SeatId, TableState, TextRef } from '../src/engine/types';
 import { resolveText as resolveContentText } from '../src/rules/klio/content/texts';
 import { validateContent, type KlioContent } from '../src/rules/klio/content/validate';
 import { sheetOf } from '../src/rules/klio/events';
@@ -55,6 +55,16 @@ export function withSheet(state: K, seat: SeatId, patch: (s: KlioSheet) => void)
 }
 
 export const sheet = (state: K, seat: SeatId): KlioSheet => sheetOf(state, seat);
+
+/** Karte frei auf den Tisch legen (nur für Tests): entfernt sie aus allen Zonen und legt sie obenauf. */
+export function lay(state: K, card: string, pos: FreePos): K {
+  const next = structuredClone(state);
+  const id = card as CardId;
+  for (const z of Object.keys(next.zones)) next.zones[z] = next.zones[z]!.filter((c) => c !== id);
+  next.free = [...next.free.filter((c) => c !== id), id];
+  next.freePos[id] = pos;
+  return next;
+}
 
 /** Karten direkt in Zonen legen (nur für Tests): entfernt sie überall und setzt sie ans Ende. */
 export function place(state: K, zone: string, cards: string[], faceUp = false): K {

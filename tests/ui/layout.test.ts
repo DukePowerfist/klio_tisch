@@ -1,8 +1,8 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
-import { content, fresh, place, type K } from '../helpers';
+import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
+import { content, fresh, lay, place } from '../helpers';
 
 describe('Ansichten', () => {
   it('Draufsicht mit 4 Spielern: Bögen 0,9-fach links und rechts, Tischmitte mittig dazwischen', () => {
@@ -11,8 +11,8 @@ describe('Ansichten', () => {
     expect(L.sheets.seat1).toMatchObject({ x: 14, y: (990 - (2 * hh + 14)) / 2, scale: 0.9, visible: true });
     expect(L.sheets.seat2.x).toBeCloseTo(1760 - 14 - 380 * 0.9);
     expect(L.sheets.seat3.y).toBeCloseTo(L.sheets.seat1.y + hh + 14);
-    expect(L.panel).toEqual({ x: 530, y: 10, w: 700, h: 970 });
-    expect(L.panel.x + L.panel.w / 2).toBe(1760 / 2);
+    expect(L.middle).toEqual({ x: 530, y: 10, w: 700, h: 970 });
+    expect(L.middle.x + L.middle.w / 2).toBe(1760 / 2);
     // gegenüber der alten Datei um 48 nach links (5d)
     expect(L.zones['deck']).toMatchObject({ x: 760 - 48, y: 440, w: 80, h: 112, scale: 1 });
     expect(L.menu).toEqual({ x: 1102, y: 120 });
@@ -24,15 +24,15 @@ describe('Ansichten', () => {
     expect(L.sheets.seat1.scale).toBe(1.2);
     expect(L.sheets.seat3.visible).toBe(false);
     expect(L.zones['seat3.damage']).toBeUndefined();
-    expect(L.panel).toEqual({ x: 530, y: 10, w: 700, h: 970 });
-    expect(L.panel.x - (L.sheets.seat1.x + L.sheets.seat1.w)).toBeCloseTo(60);
+    expect(L.middle).toEqual({ x: 530, y: 10, w: 700, h: 970 });
+    expect(L.middle.x - (L.sheets.seat1.x + L.sheets.seat1.w)).toBeCloseTo(60);
   });
 
   it('Rollenansicht: eigener Bogen groß links, Tischmitte daneben, andere rechts untereinander', () => {
     const L = computeLayout(content, 4, 'seat2', null);
     expect(L.role).toBe('seat2');
     expect(L.sheets.seat2).toMatchObject({ x: 14, y: 10, scale: 970 / 537 });
-    expect(L.panel).toEqual({ x: 710, y: 10, w: 700, h: 970 });
+    expect(L.middle).toEqual({ x: 710, y: 10, w: 700, h: 970 });
     // 4 Spieler: drei Bögen passen in die Höhe der Spalte (oben 60 Reserve für den Menüknopf)
     const m = (990 - 70 - 10 - 2 * 8) / (3 * 537);
     expect(m).toBeCloseTo(0.555, 3);
@@ -55,8 +55,8 @@ describe('Ansichten', () => {
     for (const n of [2, 3, 4]) {
       const over = computeLayout(content, n, null, null);
       const role = computeLayout(content, n, 'seat1', null);
-      const dx = role.panel.x - over.panel.x;
-      expect({ ...role.panel, x: role.panel.x - dx }).toEqual(over.panel);
+      const dx = role.middle.x - over.middle.x;
+      expect({ ...role.middle, x: role.middle.x - dx }).toEqual(over.middle);
       for (const z of over.zoneList.filter((z) => !z.owner)) expect(role.zones[z.id]).toEqual({ ...z, x: z.x + dx });
       expect(role.menu).toEqual({ ...over.menu, x: over.menu.x + dx });
       expect(role.resistTitle).toEqual({ ...over.resistTitle, x: over.resistTitle.x + dx });
@@ -84,8 +84,7 @@ describe('Ansichten', () => {
 describe('Karten und Ablegen', () => {
   it('Stapel leicht versetzt, Fächer mit festem Abstand, frei liegende gedreht am Anker', () => {
     let s = place(fresh(), 'danger', ['H2', 'H3'], true);
-    s = { ...s, free: ['S5'], freePos: { S5: { anchor: 'seat1', x: 0.5, y: 0.5 } } };
-    s.zones['deck'] = s.zones['deck']!.filter((c) => c !== 'S5');
+    s = lay(s, 'S5', { anchor: 'seat1', x: 0.5, y: 0.5 });
     const L = computeLayout(content, 4, null, null);
     const p = placeCards(s, L);
     expect(p.H3!.x - p.H2!.x).toBeCloseTo(26);
@@ -114,12 +113,8 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
     expect(pt!.y).toBeLessThanOrEqual(r.y + r.h);
   };
   /** S5 frei im Spielbereich */
-  const withFree = (x: number, y: number) => {
-    const s: K = { ...fresh(), free: ['S5'], freePos: { S5: { anchor: 'center', x, y } } };
-    s.zones['deck'] = s.zones['deck']!.filter((c) => c !== 'S5');
-    return s;
-  };
-  const cardRect = (p: { x: number; y: number }) => ({ x: p.x, y: p.y, w: 112 * 0.6, h: 80 * 0.6 });
+  const withFree = (x: number, y: number) => lay(fresh(), 'S5', { anchor: 'center', x, y });
+  const cardRect = (p: CardPlace) => ({ x: p.x, y: p.y, ...cardSize(over, p) });
 
   it('über dem Deck: Anker ist das Deck, der Zeiger steht auch in der Draufsicht darüber', () => {
     const s = fresh();
@@ -148,7 +143,7 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
 
   it('frei liegende Karte über einem Bogen: die Karte geht vor', () => {
     // in der Rollenansicht ragt S5 vom Spielbereich in den eigenen Bogen
-    const s = withFree(-30 / role.panel.w, 0.3);
+    const s = withFree(-30 / role.middle.w, 0.3);
     const p = placeCards(s, role).S5!;
     const x = p.x + 4;
     expect(x).toBeLessThan(role.sheets.seat2.x + role.sheets.seat2.w);
@@ -159,7 +154,7 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
 
   it('zwischen den Stapeln: derselbe Punkt der Tischmitte, nur verschoben', () => {
     const s = fresh();
-    const dx = role.panel.x - over.panel.x;
+    const dx = role.middle.x - over.middle.x;
     // zwischen Deck und Gefahr, zwischen Ablage und Kreuz, rechts neben der Ablage
     for (const [x, y] of [[640, 600], [930, 600], [1000, 480]] as const) {
       const pos = pointerPosAt(over, placeCards(s, over), s.free, x, y, []);
@@ -182,8 +177,7 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
     expect(pointerAt(two, placeCards(s, two), { anchor: 'seat3', x: 0.5, y: 0.5 })).toBeNull();
     expect(pointerAt(two, placeCards(s, two), { zone: 'seat3.damage', x: 0.5, y: 0.5 })).toBeNull();
     // Karte frei auf dem ausgeblendeten Bogen
-    const h: K = { ...s, free: ['S5'], freePos: { S5: { anchor: 'seat3', x: 0.5, y: 0.5 } } };
-    h.zones['deck'] = h.zones['deck']!.filter((c) => c !== 'S5');
+    const h = lay(s, 'S5', { anchor: 'seat3', x: 0.5, y: 0.5 });
     expect(pointerAt(two, placeCards(h, two), { card: 'S5', x: 0.5, y: 0.5 })).toBeNull();
   });
 });

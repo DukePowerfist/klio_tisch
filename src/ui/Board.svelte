@@ -154,7 +154,8 @@
 
   function onPointerMove(e: PointerEvent) {
     if (e.pointerType === 'mouse') mouse = [e.clientX, e.clientY];
-    if (session.sharesPointer && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
+    // beim Verschieben sendet der Effekt oben, sobald sich die Ansicht geändert hat
+    if (session.sharesPointer && !pan?.moved && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
     if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && touches.size >= 2) {
       const [a, b] = [...touches.values()] as [[number, number], [number, number]];
@@ -172,7 +173,7 @@
       const dx = (e.clientX - drag.sx) / sc;
       const dy = (e.clientY - drag.sy) / sc;
       if (!drag.moved && Math.hypot(dx, dy) * sc < 4) return;
-      if (!drag.moved) drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy), []);
+      if (!drag.moved) drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy));
       drag.moved = true;
       drag.dx = dx;
       drag.dy = dy;
@@ -279,7 +280,7 @@
   role="application"
 >
   <div class="board" style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
-    <div class="panel" style:left="{layout.panel.x}px" style:top="{layout.panel.y}px" style:width="{layout.panel.w}px" style:height="{layout.panel.h}px"></div>
+    <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
     <GmControls at={layout.gmControls} {players} />
     <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 

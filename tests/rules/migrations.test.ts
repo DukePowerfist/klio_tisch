@@ -2,17 +2,13 @@
 
 import { describe, expect, it } from 'vitest';
 import { computeLayout, placeCards } from '../../src/ui/layout';
-import { content, engine, fresh, type K } from '../helpers';
+import type { FreePos } from '../../src/engine/types';
+import { content, engine, fresh, lay, type K } from '../helpers';
 
 /** Stand im alten Format mit S5 frei im Spielbereich bzw. am Bogen */
-function old(players: number, pos: { anchor: string; x: number; y: number }): unknown {
-  const s = fresh();
-  return {
-    ...s, format: 1,
-    settings: { ...s.settings, players },
-    zones: { ...s.zones, deck: s.zones['deck']!.filter((c) => c !== 'S5') },
-    free: ['S5'], freePos: { S5: pos },
-  };
+function old(players: number, pos: FreePos): unknown {
+  const s = lay(fresh(), 'S5', pos);
+  return { ...s, format: 1, settings: { ...s.settings, players } };
 }
 const placed = (s: K, players: number) => placeCards(s, computeLayout(content, players, null, null)).S5!;
 
@@ -31,7 +27,7 @@ describe('Format 1 → 2: Tischmitte', () => {
     // alt: ganz links und ganz unten im breiten Spielbereich (4 Spieler)
     const s = engine.parseState(old(4, { anchor: 'center', x: 0, y: 1 }));
     const p = placed(s, 4);
-    const m = computeLayout(content, 4, null, null).panel;
+    const m = computeLayout(content, 4, null, null).middle;
     // Anteil auf 4 Stellen gerundet
     expect(p.x).toBeCloseTo(m.x, 1);
     expect(p.y + 80 * 0.6).toBeCloseTo(m.y + m.h, 1);

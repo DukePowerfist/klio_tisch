@@ -2,13 +2,12 @@
   // Mauszeiger der anderen mit Namen (ARCHITEKTUR.md 8.3). Lage relativ zum Anker, damit sie in jeder Ansicht passt;
   // die Größe bleibt beim Zoomen gleich.
   import { seatNo } from '../engine/zones';
-  import type { CardId } from '../engine/types';
   import type { PresenceInfo } from '../net/presence';
-  import { pointerAt, type CardPlace, type Layout } from './layout';
+  import { pointerAt, type Layout, type Places } from './layout';
   import { session } from './session.svelte';
   import { t, whoColor } from './texts';
 
-  let { layout, places, scale }: { layout: Layout; places: Partial<Record<CardId, CardPlace>>; scale: number } = $props();
+  let { layout, places, scale }: { layout: Layout; places: Places; scale: number } = $props();
 
   /** Spieler heißen wie im Stand, Zuschauer wie gesendet */
   function label(p: PresenceInfo): string {

@@ -150,9 +150,8 @@ export class Host<G> {
   /** Sicherungsdatei laden: ersetzt den Stand (vorher wird gesichert); ohne Raum in der Datei bleibt der bisherige. */
   importArchive(text: string): Promise<CommandResult> {
     return this.enqueue(async () => {
-      const read = await readArchive(this.engine, text).catch((e: unknown) => (e instanceof NewerFormatError ? 'newer' : null));
-      if (read === 'newer') return { ok: false, reason: { key: 'reject.importNewer' } };
-      if (!read) return { ok: false, reason: { key: 'reject.importInvalid' } };
+      const read = await readArchive(this.engine, text).catch((e: unknown) => (e instanceof NewerFormatError ? 'reject.importNewer' : 'reject.importInvalid'));
+      if (typeof read === 'string') return { ok: false, reason: { key: read } };
       await Promise.all([...read.photos].map(([hash, bytes]) => this.options.photos?.put(hash, bytes)));
       const { state, host } = read.saved;
       return this.swap({ state, host: host.room || !this.room ? host : { ...host, room: this.room } }, 'import');
