@@ -1,0 +1,11 @@
+# Alte Fassung: enthält Bogenbilder und Spieltexte, bleibt dauerhaft draußen (O12)
+Kartentisch*.html
+
+node_modules/
+dist/
+.vite/
+coverage/
+test-results/
+playwright-report/
+*.log
+.DS_Store
