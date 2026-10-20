@@ -1,6 +1,6 @@
 // Zusammenbau (ARCHITEKTUR.md 7): Inhalte + Bausteine + Befehle + Reaktionen + Rechte → ein Regelwerk.
 
-import { rankValue } from '../../engine/schemas';
+import { rankOf, rankValue, suitOf } from '../../engine/schemas';
 import type { CardDef, DeckConfig, Ruleset, ZoneConfig } from '../../engine/types';
 import { expandZones } from '../../engine/zones';
 import type { KlioContent } from './content/validate';
@@ -18,8 +18,8 @@ export const KLIO_VERSION = '1';
 export function deckFrom(content: KlioContent): DeckConfig {
   const cards: CardDef[] = Object.entries(content.deck.start).flatMap(([zone, ids]) =>
     ids.map((id) => {
-      const rank = id.slice(1) as CardDef['rank'];
-      return { id, suit: id[0] as CardDef['suit'], rank, value: rankValue(rank), home: zone };
+      const rank = rankOf(id);
+      return { id, suit: suitOf(id), rank, value: rankValue(rank), home: zone };
     }),
   );
   return { cards, start: content.deck.start };

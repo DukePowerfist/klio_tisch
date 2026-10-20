@@ -1,11 +1,12 @@
 // Geometrie des Tisches (ARCHITEKTUR.md 10): wo liegen Bögen, Zonen und Karten in der aktuellen Ansicht.
 // Reine Funktionen auf Inhalten + Stand; die Werte stammen aus layouts.yaml und der Haut (wie bisher).
 
+import { seatVisibleFor } from '../engine/zones';
 import { SEATS, type AnchorId, type CardId, type FreePos, type SeatId, type TableState, type ZoneId } from '../engine/types';
 import type { KlioContent } from '../rules/klio/content/validate';
 
 export type Rect = { x: number; y: number; w: number; h: number };
-export type View = { role: SeatId | null }; // null = Draufsicht
+export type MenuSide = 'fixed' | 'left' | 'right' | 'below';
 
 export type ZoneBox = Rect & {
   id: ZoneId;
@@ -15,6 +16,9 @@ export type ZoneBox = Rect & {
   fanY: number;
   owner: SeatId | null;
   template: string;
+  /** Stapelmenü (nur Zonen mit Aktionen) und Beschriftung, aus layouts.yaml */
+  menu: MenuSide;
+  label: { center: boolean; rotated: boolean; x: number | null };
 };
 
 export type SheetBox = Rect & { seat: SeatId; scale: number; visible: boolean; opacity: number };
@@ -25,6 +29,8 @@ export type Layout = {
   sheets: Record<SeatId, SheetBox>;
   panel: Rect;
   zones: Record<ZoneId, ZoneBox>;
+  /** dieselben Zonen als Liste (Trefferprüfung beim Ziehen) */
+  zoneList: ZoneBox[];
   resistTitle: { x: number; y: number };
   menu: { x: number; y: number };
   freeCardScale: number;
@@ -34,12 +40,15 @@ export type Layout = {
 export const SHEET_W = 380;
 export const SHEET_H = 537;
 
-export function computeLayout(c: KlioContent, players: number, view: View, open: ZoneId | null): Layout {
+const hiddenSheet = (seat: SeatId): SheetBox => ({ seat, x: 0, y: 0, w: 0, h: 0, scale: 0, visible: false, opacity: 0 });
+
+/** `role` = Rollenansicht dieses Platzes, null = Draufsicht. */
+export function computeLayout(c: KlioContent, players: number, viewRole: SeatId | null, open: ZoneId | null): Layout {
   const L = c.layouts;
   const [BW, BH] = L.board;
   const [CW, CH] = L.card;
-  const visible = (s: SeatId) => SEATS.indexOf(s) < players;
-  const role = view.role && visible(view.role) ? view.role : null;
+  const visible = (s: SeatId) => seatVisibleFor(s, players);
+  const role = viewRole && visible(viewRole) ? viewRole : null;
 
   const sheets = {} as Record<SeatId, SheetBox>;
   let panel: Rect;
@@ -52,7 +61,7 @@ export function computeLayout(c: KlioContent, players: number, view: View, open:
     for (const s of SEATS) {
       if (s === role) sheets[s] = { seat: s, x: L.role.sheets.own.x, y: L.role.sheets.own.y, w: SHEET_W * own, h: SHEET_H * own, scale: own, visible: true, opacity: 1 };
       else if (visible(s)) sheets[s] = { seat: s, x: o.x + k++ * (sw + o.gap), y: BH - o.bottomMargin - sh, w: sw, h: sh, scale: o.scale, visible: true, opacity: o.opacity };
-      else sheets[s] = { seat: s, x: 0, y: 0, w: 0, h: 0, scale: 0, visible: false, opacity: 0 };
+      else sheets[s] = hiddenSheet(s);
     }
     const p = L.role.sheets.panel;
     panel = { x: p.x, y: p.y, w: BW - p.x - 10, h: BH - sh - 32 };
@@ -61,15 +70,13 @@ export function computeLayout(c: KlioContent, players: number, view: View, open:
     const m = players <= 2 ? o.scaleUpTo2Players : o.scaleFrom3Players;
     const ww = SHEET_W * m;
     const hh = SHEET_H * m;
-    // linke Spalte Plätze 1 und 3, rechte Spalte 2 und 4 (wie bisher)
-    const columns: SeatId[][] = [['seat1', 'seat3'], ['seat2', 'seat4']];
-    columns.forEach((col, ci) => {
+    o.columns.forEach((col, ci) => {
       const shown = col.filter(visible);
       const total = shown.length * hh + (shown.length - 1) * o.gap;
       for (const s of col) {
         const j = shown.indexOf(s);
         sheets[s] = j < 0
-          ? { seat: s, x: 0, y: 0, w: 0, h: 0, scale: 0, visible: false, opacity: 0 }
+          ? hiddenSheet(s)
           : { seat: s, x: ci ? BW - o.margin - ww : o.margin, y: (BH - total) / 2 + j * (hh + o.gap), w: ww, h: hh, scale: m, visible: true, opacity: 1 };
       }
     });
@@ -79,6 +86,10 @@ export function computeLayout(c: KlioContent, players: number, view: View, open:
 
   const v = role ? L.role : L.overview;
   const zones: Record<ZoneId, ZoneBox> = {};
+  const decor = (shape: (typeof L.shapes)[string] | undefined) => ({
+    menu: (role ? shape?.menuInRole : undefined) ?? shape?.menu ?? 'below',
+    label: { center: !!shape?.label?.center, rotated: !!shape?.label?.rotated, x: shape?.label?.x ?? null },
+  });
   for (const [id, z] of Object.entries(c.zones)) {
     if (z.perSeat) continue;
     const shape = L.shapes[id] ?? {};
@@ -88,7 +99,7 @@ export function computeLayout(c: KlioContent, players: number, view: View, open:
       id, x, y,
       w: grow ? CW : (shape.w ?? CW), h: grow ? CH : (shape.h ?? CH),
       scale: grow ? 1 : (shape.scale ?? 1), fanX: shape.fanX ?? 0, fanY: shape.fanY ?? 0,
-      owner: null, template: id,
+      owner: null, template: id, ...decor(shape),
     };
   }
   // Bogenzonen: Lage aus der Haut (Bildkoordinaten), skaliert mit dem Bogen
@@ -103,7 +114,7 @@ export function computeLayout(c: KlioContent, players: number, view: View, open:
       zones[`${s}.${t}`] = {
         id: `${s}.${t}`, x: sb.x + r.x * k, y: sb.y + r.y * k, w: r.w * k, h: r.h * k,
         scale: (shape.scale ?? 1) * sb.scale, fanX: (shape.fanX ?? 0) * sb.scale, fanY: (shape.fanY ?? 0) * sb.scale,
-        owner: s, template: t,
+        owner: s, template: t, ...decor(shape),
       };
     }
   }
@@ -114,6 +125,7 @@ export function computeLayout(c: KlioContent, players: number, view: View, open:
     sheets,
     panel,
     zones,
+    zoneList: Object.values(zones),
     resistTitle: { x: v.resistTitle[0], y: v.resistTitle[1] },
     menu: { x: v.menu[0], y: v.menu[1] },
     freeCardScale: L.freeCardScale,
@@ -134,30 +146,25 @@ export type CardPlace = {
   /** frei liegende Karten sind 90° gedreht */
   rotated: boolean;
   z: number;
-  hidden: boolean;
 };
 
-/** Lage jeder Karte: in Zonen gestapelt oder aufgefächert, frei liegende relativ zu ihrem Anker. */
-export function placeCards(state: TableState<unknown>, layout: Layout): Record<CardId, CardPlace> {
-  const out = {} as Record<CardId, CardPlace>;
+/** Lage jeder sichtbaren Karte: in Zonen gestapelt oder aufgefächert, frei liegende relativ zu ihrem Anker.
+ *  Karten auf ausgeblendeten Bögen fehlen. */
+export function placeCards(state: TableState<unknown>, layout: Layout): Partial<Record<CardId, CardPlace>> {
+  const out: Partial<Record<CardId, CardPlace>> = {};
   for (const [id, cards] of Object.entries(state.zones)) {
     const z = layout.zones[id];
+    if (!z) continue;
+    const fanned = z.fanX || z.fanY;
     cards.forEach((card, i) => {
-      if (!z) {
-        out[card] = { x: 0, y: 0, scale: 1, rotated: false, z: 0, hidden: true };
-        return;
-      }
-      const fanned = z.fanX || z.fanY;
       const stack = fanned ? 0 : Math.min(i, 12) * 0.4;
-      out[card] = { x: z.x + i * z.fanX + stack, y: z.y + i * z.fanY + stack, scale: z.scale, rotated: false, z: 10 + i, hidden: false };
+      out[card] = { x: z.x + i * z.fanX + stack, y: z.y + i * z.fanY + stack, scale: z.scale, rotated: false, z: 10 + i };
     });
   }
   state.free.forEach((card, i) => {
     const pos = state.freePos[card];
     const r = pos && anchorRect(layout, pos.anchor);
-    out[card] = r
-      ? { x: r.x + pos.x * r.w, y: r.y + pos.y * r.h, scale: layout.freeCardScale, rotated: true, z: 1000 + i, hidden: false }
-      : { x: 0, y: 0, scale: 1, rotated: true, z: 0, hidden: true };
+    if (r) out[card] = { x: r.x + pos.x * r.w, y: r.y + pos.y * r.h, scale: layout.freeCardScale, rotated: true, z: 1000 + i };
   });
   return out;
 }
@@ -169,11 +176,11 @@ export function cardSize(layout: Layout, p: Pick<CardPlace, 'scale' | 'rotated'>
   return p.rotated ? { w: h, h: w } : { w, h };
 }
 
-const inside = (r: Rect, x: number, y: number, padTop = 0) => x >= r.x && x <= r.x + r.w && y >= r.y - padTop && y <= r.y + r.h;
+const inside = (r: Rect, x: number, y: number) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 
-/** Zone unter einem Punkt (Tischkoordinaten); `padTop` vergrößert nach oben wie bisher beim Überfahren. */
-export function zoneAt(layout: Layout, x: number, y: number, padTop = 0): ZoneBox | null {
-  return Object.values(layout.zones).find((z) => inside(z, x, y, padTop)) ?? null;
+/** Zone unter einem Punkt (Tischkoordinaten). */
+export function zoneAt(layout: Layout, x: number, y: number): ZoneBox | null {
+  return layout.zoneList.find((z) => inside(z, x, y)) ?? null;
 }
 
 /** Anker für eine frei abgelegte Karte: Bogen unter dem Punkt, sonst Spielbereich (A32). Lage als Anteil 0–1. */

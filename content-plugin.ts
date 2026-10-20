@@ -11,6 +11,11 @@ import { validateContent, type RawContent } from './src/rules/klio/content/valid
 const ID = 'virtual:klio-content';
 const RESOLVED = `\0${ID}`;
 
+/** Alle Inhaltsdateien eines Ordners lesen (noch ungeprüft); auch für Tests. */
+export function readContentDir(dir: string): RawContent {
+  return Object.fromEntries(Object.entries(CONTENT_PATHS).map(([k, f]) => [k, parse(readFileSync(resolve(dir, f), 'utf8'))])) as RawContent;
+}
+
 export function klioContent(dir: string): Plugin {
   const files = Object.values(CONTENT_PATHS).map((f) => resolve(dir, f));
   return {
@@ -19,8 +24,7 @@ export function klioContent(dir: string): Plugin {
     load(id) {
       if (id !== RESOLVED) return;
       for (const f of files) this.addWatchFile(f);
-      const raw = Object.fromEntries(Object.entries(CONTENT_PATHS).map(([k, f]) => [k, parse(readFileSync(resolve(dir, f), 'utf8'))])) as RawContent;
-      const result = validateContent(raw);
+      const result = validateContent(readContentDir(dir));
       if (!result.ok) throw new Error(`Inhalte fehlerhaft:\n${result.errors.join('\n')}`);
       return `export default ${JSON.stringify(result.content)};`;
     },

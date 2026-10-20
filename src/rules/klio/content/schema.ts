@@ -2,7 +2,7 @@
 // Geprüft beim Build; ausgeliefert wird JSON. Beispiele stehen jeweils darüber.
 
 import { z } from 'zod';
-import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SuitSchema as Suit } from '../../../engine/schemas';
+import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SeatSchema, SuitSchema as Suit } from '../../../engine/schemas';
 import { AttrSchema as Attr, TrumpId } from '../state';
 
 /** Text mit er/sie-Form oder ein Text für beide. */
@@ -139,6 +139,7 @@ export const SkinFile = z.object({
 // ---------- layouts.yaml ----------
 // Siehe Datei; Werte aus der alten Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`.
 const Point = z.tuple([z.number(), z.number()]);
+const MenuSide = z.enum(['fixed', 'left', 'right', 'below']);
 const Shape = z.object({
   w: z.number().optional(),
   h: z.number().optional(),
@@ -146,6 +147,9 @@ const Shape = z.object({
   fanX: z.number().optional(),
   fanY: z.number().optional(),
   growOnOpen: z.boolean().optional(),
+  menu: MenuSide.optional(),
+  menuInRole: MenuSide.optional(),
+  label: z.object({ center: z.boolean().optional(), rotated: z.boolean().optional(), x: z.number().optional() }).strict().optional(),
 }).strict();
 const View = <S extends z.ZodType>(sheets: S) =>
   z.object({ zones: z.record(z.string(), Point), menu: Point, resistTitle: Point, sheets }).strict();
@@ -154,7 +158,10 @@ export const LayoutsFile = z.object({
   card: Point,
   freeCardScale: z.number(),
   shapes: z.record(z.string(), Shape),
-  overview: View(z.object({ margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number() }).strict()),
+  overview: View(z.object({
+    margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number(),
+    columns: z.tuple([z.array(SeatSchema), z.array(SeatSchema)]),
+  }).strict()),
   role: View(z.object({
     own: z.object({ x: z.number(), y: z.number(), scale: z.literal('fit') }).strict(),
     others: z.object({ x: z.number(), gap: z.number(), bottomMargin: z.number(), scale: z.number(), opacity: z.number() }).strict(),

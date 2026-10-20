@@ -1,72 +1,75 @@
 <script lang="ts">
-  // Eine Zone: Rahmen, Beschriftung mit Anzahl, bei Stapeln das Menü Mischen/Umdrehen/Ziehen.
+  // Eine Zone: Rahmen, Beschriftung mit Anzahl, bei Stapeln das Menü aus den Aktionen in zones.yaml.
+  // Lage von Menü und Beschriftung kommt aus layouts.yaml (ZoneBox.menu, ZoneBox.label).
   import content from 'virtual:klio-content';
   import type { ZoneBox } from './layout';
-  import { t } from './texts';
-  import { view } from './view.svelte';
+  import { hasText, t } from './texts';
 
-  let { zone, count, open, hot, onToggle, onAction }: {
-    zone: ZoneBox; count: number; open: boolean; hot: boolean; onToggle: () => void; onAction: (a: 'shuffle' | 'flip' | 'draw') => void;
+  let { zone, count, open, hot, fixedMenu, onToggle, onAction }: {
+    zone: ZoneBox; count: number; open: boolean; hot: boolean; fixedMenu: { x: number; y: number };
+    onToggle: () => void; onAction: (a: MenuAction) => void;
   } = $props();
 
-  const cfg = $derived(content.zones[zone.template]);
-  const hasMenu = $derived(!!cfg?.actions);
+  type MenuAction = 'shuffle' | 'flip' | 'draw';
+  /** Reihenfolge im Menü wie bisher; angezeigt wird, was die Zone kann */
+  const MENU: MenuAction[] = ['shuffle', 'flip', 'draw'];
+
+  const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined));
   const onSheet = $derived(zone.owner !== null);
   const label = $derived(t(`zones.${zone.template}`));
-  const isDiamond = $derived(zone.template.startsWith('diamonds_'));
-  const isClubs = $derived(zone.template === 'clubs');
-  // Menülage wie bisher: Karo an fester Stelle, Deck links, Kreuz unten bzw. rechts (Rollenansicht), sonst unten
-  const menuStyle = $derived.by(() => {
-    if (isDiamond) return `left:${content.layouts[view.role ? 'role' : 'overview'].menu[0] - zone.x}px;top:${content.layouts[view.role ? 'role' : 'overview'].menu[1] - zone.y}px`;
-    if (zone.template === 'deck') return 'right:calc(100% + 8px);top:0';
-    if (isClubs && view.role) return 'left:calc(100% + 8px);top:0';
-    return 'left:50%;top:calc(100% + 32px);transform:translateX(-50%)';
-  });
+  const title = $derived(hasText(`zones.${zone.template}Title`) ? t(`zones.${zone.template}Title`) : undefined);
+  const menuStyle = $derived(
+    {
+      fixed: `left:${fixedMenu.x - zone.x}px;top:${fixedMenu.y - zone.y}px`,
+      left: 'right:calc(100% + 8px);top:0',
+      right: 'left:calc(100% + 8px);top:0',
+      below: 'left:50%;top:calc(100% + 32px);transform:translateX(-50%)',
+    }[zone.menu],
+  );
+  const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
   class="zone"
   class:sheet={onSheet}
-  class:fan={!onSheet && !hasMenu && (zone.fanX || zone.fanY)}
+  class:fan={!onSheet && actions.length === 0 && (zone.fanX || zone.fanY)}
   class:hot
-  class:collect={zone.template === 'collect'}
-  class:damage={zone.template === 'damage'}
-  class:under={isDiamond || isClubs}
+  class:center={zone.label.center}
+  class:rotated={zone.label.rotated}
   style:left="{zone.x}px"
   style:top="{zone.y}px"
   style:width="{zone.w}px"
   style:height="{zone.h}px"
-  title={zone.template === 'collect' ? t('zones.collectTitle') : undefined}
-  role={hasMenu ? 'button' : undefined}
-  tabindex={hasMenu ? 0 : undefined}
-  onclick={(e) => { if (hasMenu && !(e.target as HTMLElement).closest('.menu')) onToggle(); }}
+  {title}
+  role={actions.length ? 'button' : undefined}
+  tabindex={actions.length ? 0 : undefined}
+  onclick={(e) => { if (actions.length && !(e.target as HTMLElement).closest('.menu')) onToggle(); }}
 >
   {#if label}
-    <div class="label">{label}{#if !onSheet}<span class="n">{count}</span>{/if}</div>
+    <div class="label" style={labelStyle}>{label}{#if !onSheet}<span class="n">{count}</span>{/if}</div>
   {/if}
-  {#if hasMenu && open}
+  {#if open && actions.length}
     <div class="menu control" style={menuStyle}>
-      <button onclick={() => onAction('shuffle')}>{t('zones.actions.shuffle')}</button>
-      <button onclick={() => onAction('flip')}>{t('zones.actions.flip')}</button>
-      <button onclick={() => onAction('draw')}>{t('zones.actions.draw')}</button>
+      {#each actions as a (a)}
+        <button onclick={() => onAction(a)}>{t(`zones.actions.${a}`)}</button>
+      {/each}
     </div>
   {/if}
 </div>
 
 <style>
-  .zone { position: absolute; border: 2px dashed var(--line); border-radius: 8px; box-sizing: border-box; background: rgba(255, 255, 255, 0.04); transition: left 0.35s, top 0.35s, width 0.35s, height 0.35s; }
+  .zone { position: absolute; border: 2px dashed var(--line); border-radius: 8px; box-sizing: border-box; background: rgba(255, 255, 255, 0.04); transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
   .zone.hot { border-color: #f5d76e; background: rgba(245, 215, 110, 0.1); }
   .zone.fan { border-color: rgba(255, 255, 255, 0.2); background: none; }
   .label { position: absolute; left: 0; top: 100%; margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: #fff; background: rgba(0, 0, 0, 0.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 2px #000; pointer-events: none; }
-  .under .label { left: 50%; transform: translateX(-50%); }
+  .center .label { left: 50%; transform: translateX(-50%); }
   .fan .label { font-size: 12px; font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }
   .n { margin-left: 7px; padding: 0 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.22); font-size: 12px; font-weight: 600; }
   /* Bogenzonen: dezent, Beschriftung innen */
-  .zone.sheet { border-color: rgba(0, 0, 0, 0.35); background: rgba(255, 255, 255, 0.04); }
+  .zone.sheet { border-color: rgba(0, 0, 0, 0.35); }
   .zone.sheet .label { top: 50%; left: 50%; margin: 0; transform: translate(-50%, -50%); font-size: 9px; font-weight: 500; letter-spacing: 0.05em; color: #333; background: none; padding: 0; text-shadow: none; opacity: 0.6; }
-  .zone.collect .label { transform: translate(-50%, -50%) rotate(-90deg); }
-  .zone.damage .label { left: 22%; transform: translate(-50%, -50%) rotate(-90deg); }
+  .zone.sheet.rotated .label { transform: translate(-50%, -50%) rotate(-90deg); }
   .menu { position: absolute; display: flex; flex-direction: column; gap: 5px; z-index: 500000; }
   .menu button { font: inherit; font-size: 15px; padding: 8px 14px; min-width: 104px; border-radius: 7px; background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
   .menu button:hover { background: var(--button-hover); }

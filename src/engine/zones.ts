@@ -22,8 +22,12 @@ export function expandZones(configs: readonly ZoneConfig[]): ZoneTable {
 }
 
 /** Platz 1 … n ist sichtbar, n = Spielerzahl (8.2). */
+export function seatVisibleFor(seat: SeatId, players: number): boolean {
+  return SEATS.indexOf(seat) < players;
+}
+
 export function seatVisible(seat: SeatId, state: TableState<unknown>): boolean {
-  return SEATS.indexOf(seat) < state.settings.players;
+  return seatVisibleFor(seat, state.settings.players);
 }
 
 export function zoneVisible(zone: ZoneConfig, state: TableState<unknown>): boolean {

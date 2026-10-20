@@ -1,51 +1,50 @@
 // Tisch im lokalen Betrieb (Schritt 3a): Stapel, Ziehen und Ablegen, Ansichten, Speichern.
 
 import { expect, test } from '@playwright/test';
-import { count, dragFromTo, openMenuAndClick, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, openMenuAndClick, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
 test('Deck ziehen: Karte offen auf die Ablage, Meldung mit Kartenname', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expect(page.getByRole('status')).toHaveText(/^Aufgedeckt: (Herz|Pik|Kreuz) (\d+|B|D|K|A)$/);
-  expect(await count(page, 'ABLAGE')).toBe(1);
-  expect(await count(page, 'DECK')).toBe(26);
+  await expectCount(page, 'ABLAGE', 1);
+  await expectCount(page, 'DECK', 26);
 });
 
 test('Karo ziehen: offen in die Auslage; Karo mischen holt sie zurück', async ({ page }) => {
   await openMenuAndClick(page, 'LEICHT', 'Ziehen');
   await expect(page.getByRole('status')).toHaveText(/^Ausliegend: Karo [2-6]$/);
-  expect(await count(page, 'LEICHT')).toBe(4);
+  await expectCount(page, 'LEICHT', 4);
   await page.getByRole('button', { name: 'Mischen', exact: true }).click();
-  await expect.poll(() => count(page, 'LEICHT')).toBe(5);
+  await expectCount(page, 'LEICHT', 5);
 });
 
 test('Deck mischen nimmt die Ablage auf', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await page.getByRole('button', { name: 'Ziehen', exact: true }).click();
-  await expect.poll(() => count(page, 'ABLAGE')).toBe(2);
+  await expectCount(page, 'ABLAGE', 2);
   await page.getByRole('button', { name: 'Mischen', exact: true }).click();
-  await expect.poll(() => count(page, 'ABLAGE')).toBe(0);
-  expect(await count(page, 'DECK')).toBe(27);
+  await expectCount(page, 'ABLAGE', 0);
+  await expectCount(page, 'DECK', 27);
 });
 
 test('Kreuz: „Umdrehen“ wirkt wie Ziehen', async ({ page }) => {
   await openMenuAndClick(page, 'KREUZ', 'Umdrehen');
   await expect(page.getByRole('status')).toHaveText(/^Aufgedeckt: Kreuz/);
-  expect(await count(page, 'KREUZ')).toBe(11);
+  await expectCount(page, 'KREUZ', 11);
 });
 
 test('Karte in die Gefahr ziehen, dann frei auf den Tisch, Stand bleibt nach Neuladen', async ({ page }) => {
   const deck = await zoneCenter(page, 'DECK');
   const danger = await zoneCenter(page, 'GEFAHR');
   await dragFromTo(page, deck, danger);
-  await expect.poll(() => count(page, 'GEFAHR')).toBe(1);
+  await expectCount(page, 'GEFAHR', 1);
   await dragFromTo(page, deck, { x: deck.x + 300, y: deck.y + 120 });
-  await expect.poll(() => count(page, 'DECK')).toBe(25);
-  await page.reload();
-  await expect(page.locator('.board')).toBeVisible();
-  await expect.poll(() => count(page, 'GEFAHR')).toBe(1);
-  expect(await count(page, 'DECK')).toBe(25);
+  await expectCount(page, 'DECK', 25);
+  await ready(page, true);
+  await expectCount(page, 'GEFAHR', 1);
+  await expectCount(page, 'DECK', 25);
   await expect(page.locator('[data-card]')).toHaveCount(52);
 });
 
@@ -54,11 +53,11 @@ test('Notizen fassen höchstens drei Karten', async ({ page }) => {
   const notes = await zoneCenter(page, 'NOTIZEN');
   for (let i = 1; i <= 3; i++) {
     await dragFromTo(page, deck, notes);
-    await expect.poll(() => count(page, 'DECK')).toBe(27 - i);
+    await expectCount(page, 'DECK', 27 - i);
   }
   await dragFromTo(page, deck, notes);
   await expect(page.getByRole('status')).toHaveText('Bei den Notizen haben nur drei Karten Platz.');
-  expect(await count(page, 'DECK')).toBe(24);
+  await expectCount(page, 'DECK', 24);
 });
 
 test('Doppelklick dreht die oberste Karte um', async ({ page }) => {

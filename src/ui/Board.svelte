@@ -1,24 +1,29 @@
 <script lang="ts">
   // Der Tisch: Zoom und Verschieben, Bögen, Zonen, Karten, Ziehen und Ablegen (ARCHITEKTUR.md 10, 14).
+  // Zeigt nur den Stand an und schickt Befehle; Meldungen und Animationen kommen aus effects.svelte.ts.
   import content from 'virtual:klio-content';
   import { locate } from '../engine/zones';
   import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
+  import { sheetOf } from '../rules/klio/events';
   import Card from './Card.svelte';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
-  import { cardSize, computeLayout, freePosAt, placeCards, zoneAt } from './layout';
-  import { session, type KlioTableState } from './session.svelte';
-  import { cardName, t, text } from './texts';
+  import { effects } from './effects.svelte';
+  import { cardSize, computeLayout, freePosAt, placeCards, zoneAt, type CardPlace } from './layout';
+  import { session, type KlioTableState, type PendingDrop } from './session.svelte';
+  import { t, text } from './texts';
   import { view } from './view.svelte';
 
   let { table }: { table: KlioTableState } = $props();
 
   let stageW = $state(0);
   let stageH = $state(0);
-  let stage: HTMLDivElement;
 
-  const layout = $derived(computeLayout(content, table.settings.players, { role: view.role }, view.open));
+  // Spielerzahl als eigener Wert: die Geometrie ändert sich nur, wenn sie sich ändert, nicht bei jedem Befehl
+  const players = $derived(table.settings.players);
+  const layout = $derived(computeLayout(content, players, view.role, view.open));
   const places = $derived(placeCards(table, layout));
+  const cards = $derived(Object.entries(places) as [CardId, CardPlace][]);
   const BW = $derived(layout.board.w);
   const BH = $derived(layout.board.h);
 
@@ -42,21 +47,17 @@
     view.oy = o.oy;
   }
 
-  /** Bildschirm → Tisch */
-  function toBoard(clientX: number, clientY: number): [number, number] {
-    const r = stage.getBoundingClientRect();
-    return [(clientX - r.left - geo.tx) / sc, (clientY - r.top - geo.ty) / sc];
-  }
+  /** Bildschirm → Tisch (die Bühne füllt das ganze Fenster, beginnt also bei 0, 0) */
+  const toBoard = (clientX: number, clientY: number): [number, number] => [(clientX - geo.tx) / sc, (clientY - geo.ty) / sc];
 
   function zoomAt(clientX: number, clientY: number, f: number) {
     const nz = Math.max(1, Math.min(5, view.zoom * f));
     if (nz === view.zoom) return;
-    const r = stage.getBoundingClientRect();
     const [bx, by] = toBoard(clientX, clientY);
     const s = fitScale * nz;
     view.zoom = nz;
-    view.ox = (stageW / 2 - (clientX - r.left) + bx * s) / s - BW / 2;
-    view.oy = (stageH / 2 - (clientY - r.top) + by * s) / s - BH / 2;
+    view.ox = (stageW / 2 - clientX + bx * s) / s - BW / 2;
+    view.oy = (stageH / 2 - clientY + by * s) / s - BH / 2;
     clampView();
   }
 
@@ -68,17 +69,27 @@
   }
 
   // ---------- Ziehen und Ablegen ----------
-  type Drag = { cards: CardId[]; from: CardSource; sx: number; sy: number; dx: number; dy: number; moved: boolean };
+  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean };
   let drag = $state<Drag | null>(null);
-  /** abgelegt, aber noch nicht bestätigt: bleibt an der Ablegestelle, leicht abgesetzt (8.2) */
-  let pending = $state<Drag | null>(null);
   let pan: { x: number; y: number; moved: boolean } | null = null;
   let panned = false;
   const touches = new Map<number, [number, number]>();
   let pinch: { d: number; mx: number; my: number } | null = null;
   let lastClick = { card: null as CardId | null, t: 0 };
-  let hot = $state<ZoneId | null>(null);
   let preview = $state<CardId | null>(null);
+
+  /** Mitte der ersten gezogenen Karte in Tischkoordinaten. */
+  function dropPoint(d: PendingDrop): [number, number] | null {
+    const p = places[d.cards[0]!];
+    if (!p) return null;
+    const s = cardSize(layout, p);
+    return [p.x + d.dx + s.w / 2, p.y + d.dy + s.h / 2];
+  }
+  /** Zone unter der gezogenen Karte (hervorgehoben, Ziel beim Loslassen) */
+  const hot = $derived.by(() => {
+    const c = drag?.moved ? dropPoint(drag) : null;
+    return c ? (zoneAt(layout, c[0], c[1])?.id ?? null) : null;
+  });
 
   function onPointerDown(e: PointerEvent) {
     panned = false;
@@ -102,20 +113,20 @@
   function grab(card: CardId, e: PointerEvent) {
     const where = locate(table, card);
     if (!where) return;
-    let cards: CardId[] = [card];
+    let grabbed: CardId[] = [card];
     let from: CardSource = { free: true };
     if ('zone' in where) {
       const list = table.zones[where.zone]!;
       const zone = layout.zones[where.zone];
       const fanned = !!(zone && (zone.fanX || zone.fanY));
       // Stapel: nur die oberste Karte; mit Umschalt die Karte samt den darüberliegenden
-      if (e.shiftKey) cards = list.slice(where.index);
+      if (e.shiftKey) grabbed = list.slice(where.index);
       else if (!fanned && where.index !== list.length - 1) return;
       from = { zone: where.zone };
     }
     e.preventDefault();
     preview = null;
-    drag = { cards, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false };
+    drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false };
   }
 
   function onPointerMove(e: PointerEvent) {
@@ -139,8 +150,6 @@
       drag.moved = true;
       drag.dx = dx;
       drag.dy = dy;
-      const c = dropPoint(drag);
-      hot = c ? (zoneAt(layout, c[0], c[1])?.id ?? null) : null;
       return;
     }
     if (pan) {
@@ -154,20 +163,14 @@
       clampView();
       pan.x = e.clientX;
       pan.y = e.clientY;
-      return;
     }
-    // Vorschau großer Karte beim Überfahren offener Karten
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
-    const card = el?.dataset.card as CardId | undefined;
-    preview = card && table.faceUp[card] ? card : null;
   }
 
-  /** Mitte der ersten gezogenen Karte in Tischkoordinaten. */
-  function dropPoint(d: Drag): [number, number] | null {
-    const p = places[d.cards[0]!];
-    if (!p) return null;
-    const s = cardSize(layout, p);
-    return [p.x + d.dx + s.w / 2, p.y + d.dy + s.h / 2];
+  /** Vorschau großer Karte beim Überfahren offener Karten (nur wenn sich das Element ändert) */
+  function onPointerOver(e: PointerEvent) {
+    if (drag) return;
+    const card = (e.target as HTMLElement).closest<HTMLElement>('[data-card]')?.dataset.card as CardId | undefined;
+    preview = card && table.faceUp[card] ? card : null;
   }
 
   async function onPointerUp(e: PointerEvent) {
@@ -175,23 +178,15 @@
     if (touches.size < 2) pinch = null;
     pan = null;
     const d = drag;
+    const target = hot;
     drag = null;
-    hot = null;
     if (!d) return;
     if (!d.moved) return click(d.cards[0]!);
 
-    const [px, py] = toBoard(e.clientX, e.clientY);
-    const c = dropPoint(d);
-    const target = (c && zoneAt(layout, c[0], c[1])) || zoneAt(layout, px, py);
-    let to;
-    if (target) to = { zone: target.id };
-    else {
-      const p = places[d.cards[0]!]!;
-      to = { free: freePosAt(layout, p.x + d.dx, p.y + d.dy) };
-    }
-    pending = d;
-    await submit({ type: 'cards.move', cards: d.cards, from: d.from, to });
-    if (pending === d) pending = null;
+    const zone = target ?? zoneAt(layout, ...toBoard(e.clientX, e.clientY))?.id;
+    const p = places[d.cards[0]!]!;
+    const to = zone ? { zone } : { free: freePosAt(layout, p.x + d.dx, p.y + d.dy) };
+    await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy });
   }
 
   /** Einfacher Klick: Stapelmenü; Doppelklick: umdrehen (bzw. bei Kreuz ziehen). */
@@ -212,8 +207,8 @@
     view.open = view.open === zone ? null : zone;
   }
 
-  async function submit(cmd: object) {
-    const r = await session.submit(cmd);
+  async function submit(cmd: object, drop?: PendingDrop) {
+    const r = await session.submit(cmd, drop);
     if (!r.ok) view.say(text(r.reason), true);
   }
 
@@ -225,41 +220,25 @@
     else view.animateTo(1, 0, 0);
   }
 
-  // ---------- Meldungen und Animationen aus Ereignissen ----------
-  let shaking = $state(new Set<ZoneId>());
-  $effect(() =>
-    session.onEvents((events) => {
-      for (const e of events as { type: string; [k: string]: unknown }[]) {
-        if (e.type === 'cardDrawn' && e.announce) {
-          view.say(`${t(e.to === 'display' ? 'toast.displayed' : 'toast.drawn', { card: cardName(e.card as CardId) })}`);
-        }
-        if (e.type === 'zonesShuffled') {
-          shaking = new Set(e.shuffled as ZoneId[]);
-          setTimeout(() => (shaking = new Set()), 650);
-        }
-      }
-    }),
-  );
-
-  /** Gilt nur, solange die Karte laut Stand noch am alten Platz liegt; sonst ist der Befehl schon angewendet. */
-  const stillThere = (d: Drag) => {
-    const where = locate(table, d.cards[0]!);
-    return !!where && ('zone' in d.from ? 'zone' in where && where.zone === d.from.zone : 'free' in where);
-  };
-  const moving = $derived(drag?.moved ? drag : pending && stillThere(pending) ? pending : null);
-  const dragged = $derived(new Set(moving?.cards ?? []));
-  const shakingCards = $derived(new Set([...shaking].flatMap((z) => table.zones[z] ?? [])));
+  /** Verschoben dargestellt: gerade gezogen oder abgelegt und noch nicht bestätigt */
+  const offsetOf = $derived.by(() => {
+    const m = new Map<CardId, PendingDrop>();
+    for (const d of session.pending) for (const c of d.cards) m.set(c, d);
+    if (drag?.moved) for (const c of drag.cards) m.set(c, drag);
+    return m;
+  });
+  const shakingCards = $derived(new Set([...effects.shaking].flatMap((z) => table.zones[z] ?? [])));
 </script>
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
 
 <div
   class="stage"
-  bind:this={stage}
   bind:clientWidth={stageW}
   bind:clientHeight={stageH}
   onwheel={onWheel}
   onpointerdown={onPointerDown}
+  onpointerover={onPointerOver}
   ondblclick={onDblClick}
   role="application"
 >
@@ -269,42 +248,44 @@
 
     {#each Object.values(layout.sheets) as box (box.seat)}
       {#if box.visible}
-        <Sheet {box} sheet={table.game.sheets[['seat1', 'seat2', 'seat3', 'seat4'].indexOf(box.seat)]!} />
+        <Sheet {box} sheet={sheetOf(table, box.seat)} />
       {/if}
     {/each}
 
-    {#each Object.values(layout.zones) as zone (zone.id)}
-      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+    {#each layout.zoneList as zone (zone.id)}
+      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
     {/each}
 
-    {#each Object.entries(places) as [card, p] (card)}
-      {#if !p.hidden}
-        <Card
-          card={card as CardId}
-          x={p.x + (dragged.has(card as CardId) ? moving!.dx : 0)}
-          y={p.y + (dragged.has(card as CardId) ? moving!.dy : 0)}
-          scale={p.scale}
-          rotated={p.rotated}
-          z={p.z}
-          faceUp={!!table.faceUp[card as CardId]}
-          dragging={dragged.has(card as CardId)}
-          pending={moving === pending && dragged.has(card as CardId)}
-          shake={shakingCards.has(card as CardId)}
-        />
-      {/if}
+    {#each cards as [card, p] (card)}
+      {@const off = offsetOf.get(card)}
+      <Card
+        {card}
+        x={p.x + (off?.dx ?? 0)}
+        y={p.y + (off?.dy ?? 0)}
+        scale={p.scale}
+        rotated={p.rotated}
+        z={p.z}
+        size={layout.card}
+        faceUp={!!table.faceUp[card]}
+        dragging={!!off}
+        pending={!!off && off !== drag}
+        shake={shakingCards.has(card)}
+      />
     {/each}
   </div>
 </div>
 
 {#if preview}
-  <div class="preview"><Card card={preview} x={0} y={0} scale={3} rotated={false} z={1} faceUp={true} /></div>
+  <div class="preview" style:width="{layout.card.w * 3}px" style:height="{layout.card.h * 3}px">
+    <Card card={preview} x={0} y={0} scale={3} rotated={false} z={1} size={layout.card} faceUp={true} />
+  </div>
 {/if}
 
 <style>
   .stage { position: fixed; inset: 0; overflow: hidden; touch-action: none; background: var(--bg); }
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--felt); border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
-  .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left 0.35s, top 0.35s, width 0.35s, height 0.35s; }
-  .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left 0.35s, top 0.35s; }
-  .preview { position: fixed; right: 16px; bottom: 16px; width: 240px; height: 336px; pointer-events: none; z-index: 99; }
+  .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
+  .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift), top var(--shift); }
+  .preview { position: fixed; right: 16px; bottom: 16px; pointer-events: none; z-index: 99; }
   .preview :global(.card) { transition: none; }
 </style>

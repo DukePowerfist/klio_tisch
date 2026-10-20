@@ -5,7 +5,7 @@ import content from 'virtual:klio-content';
 import { createEngine } from '../engine/dispatch';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
-import type { Event, SequencedEvent, TableState } from '../engine/types';
+import type { CardId, Event, SequencedEvent, TableState } from '../engine/types';
 import { Host } from '../net/host';
 import { localTransport } from '../net/local';
 import type { CommandResult } from '../net/protocol';
@@ -16,13 +16,18 @@ import { IdbStore, PhotoStore } from './storage';
 export type KlioTableState = TableState<KlioState>;
 type Listener = (events: Event[]) => void;
 
-export const ruleset = createKlioRuleset(content);
-export const engine = createEngine(ruleset);
+/** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
+export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
+
+const ruleset = createKlioRuleset(content);
+const engine = createEngine(ruleset);
 export const photos = new PhotoStore();
 
 class Session {
   state = $state.raw<KlioTableState | null>(null);
   saveError = $state<string | null>(null);
+  /** in Reihenfolge der Befehle; der älteste fällt weg, sobald sein Ergebnis da ist */
+  pending = $state.raw<PendingDrop[]>([]);
   private host: Host<KlioState> | null = null;
   private listeners = new Set<Listener>();
 
@@ -36,9 +41,13 @@ class Session {
   }
 
   /** Befehl als Spielleitung ausführen (lokaler Betrieb: alles erlaubt, wie bisher). */
-  submit(cmd: object): Promise<CommandResult> {
-    if (!this.host) return Promise.resolve({ ok: false, reason: { key: 'reject.invalid' } });
-    return this.host.submit(cmd);
+  async submit(cmd: object, drop?: PendingDrop): Promise<CommandResult> {
+    if (!this.host) return { ok: false, reason: { key: 'reject.invalid' } };
+    if (drop) this.pending = [...this.pending, drop];
+    const result = await this.host.submit(cmd);
+    // angenommen: schon in changed() entfernt, zusammen mit dem neuen Stand
+    if (drop && this.pending.includes(drop)) this.pending = this.pending.filter((d) => d !== drop);
+    return result;
   }
 
   /** Ereignisse für Meldungen und Animationen. */
@@ -49,6 +58,7 @@ class Session {
 
   private changed(state: KlioTableState, events: SequencedEvent[]): void {
     this.state = state;
+    this.pending = this.pending.slice(1);
     const list = events.map((e) => e.event);
     for (const cb of this.listeners) cb(list);
   }

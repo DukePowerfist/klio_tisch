@@ -25,7 +25,8 @@ zones:
 
 toast:
   drawn: "Aufgedeckt: {card}"
-  displayed: "Ausliegend: {card}"
+  drawnTo:                                # abweichende Meldung je Ziel
+    display: "Ausliegend: {card}"
   scar: "Bogen {seat}: Narbe markiert ({suit})"
   dead: "Bogen {seat}: Der Charakter ist tot."
   rolled: "Bogen {seat}: Charakter ausgewürfelt"

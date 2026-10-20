@@ -10,6 +10,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5299/klio_tisch/',
     viewport: { width: 1600, height: 900 },
+    // ohne Animationen: Tests warten nicht auf Übergänge
+    reducedMotion: 'reduce',
     launchOptions: executablePath ? { executablePath } : {},
   },
   webServer: {

@@ -16,6 +16,6 @@
 </div>
 
 <style>
-  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background: #fff; transition: left 0.35s, top 0.35s, width 0.35s, height 0.35s, opacity 0.35s; }
-  .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform 0.35s; }
+  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background: #fff; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift), opacity var(--shift); }
+  .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift); }
 </style>

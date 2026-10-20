@@ -5,6 +5,7 @@ import { createEngine } from '../src/engine/dispatch';
 import { seededRng } from '../src/engine/rng';
 import { initialTable } from '../src/engine/setup';
 import type { Actor, CardId, DispatchResult, Rng, SeatId, TableState, TextRef } from '../src/engine/types';
+import { resolveText as resolveContentText } from '../src/rules/klio/content/texts';
 import { validateContent, type KlioContent } from '../src/rules/klio/content/validate';
 import { sheetOf } from '../src/rules/klio/events';
 import { createKlioRuleset } from '../src/rules/klio/ruleset';
@@ -28,16 +29,7 @@ export function fresh(seed = 1): K {
 }
 
 /** Text zu einem Grund finden: texts.de.yaml oder Text am Trumpf-Weg (`source.<id>.why`). */
-export function resolveText(ref: TextRef): string | undefined {
-  const parts = ref.key.split('.');
-  if (parts[0] === 'source') {
-    const src = content.trumpSources.trumpSources.find((s) => s.id === parts[1]);
-    return src?.text[parts[2] as 'why' | 'levelWhy'];
-  }
-  let node: unknown = content.texts;
-  for (const p of parts) node = (node as Record<string, unknown> | undefined)?.[p];
-  return typeof node === 'string' ? node : undefined;
-}
+export const resolveText = (ref: TextRef): string | undefined => resolveContentText(content, ref.key);
 
 /** Befehl ausführen; Rückgabe: neuer Stand und Ereignisse (wirft bei Ablehnung). */
 export function run(state: K, cmd: object, actor: Actor = GM, rng: Rng = seededRng(7)) {

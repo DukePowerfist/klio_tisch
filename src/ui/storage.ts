@@ -8,6 +8,10 @@ const VERSION = 1;
 const SAVED = 'saved';
 const PHOTOS = 'photos';
 
+/** Eine Verbindung für alle, erst bei Bedarf geöffnet. */
+let connection: Promise<IDBDatabase> | undefined;
+const database = (): Promise<IDBDatabase> => (connection ??= open());
+
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB, VERSION);
@@ -36,32 +40,29 @@ function done(tx: IDBTransaction): Promise<void> {
   });
 }
 
+/** Vorerst ein Spielstand; je Raum getrennte Stände kommen mit Schritt 4. */
+const SLOT = 'main';
+
 export class IdbStore<G> implements HostStore<G> {
-  private db = open();
-
-  /** `slot` trennt Spielstände (z. B. je Raum); vorerst gibt es einen. */
-  constructor(private slot = 'main') {}
-
   async load(): Promise<Saved<G> | null> {
-    const db = await this.db;
-    return ((await request(db.transaction(SAVED).objectStore(SAVED).get(this.slot))) as Saved<G> | undefined) ?? null;
+    const db = await database();
+    return ((await request(db.transaction(SAVED).objectStore(SAVED).get(SLOT))) as Saved<G> | undefined) ?? null;
   }
 
   async save(saved: Saved<G>): Promise<void> {
-    const db = await this.db;
+    const db = await database();
     const tx = db.transaction(SAVED, 'readwrite');
-    tx.objectStore(SAVED).put(saved, this.slot);
+    tx.objectStore(SAVED).put(saved, SLOT);
     await done(tx);
   }
 }
 
 /** Fotos, benannt nach ihrem Hash (8.4). */
 export class PhotoStore {
-  private db = open();
   private urls = new Map<string, string>();
 
   async put(hash: string, blob: Blob): Promise<void> {
-    const db = await this.db;
+    const db = await database();
     const tx = db.transaction(PHOTOS, 'readwrite');
     tx.objectStore(PHOTOS).put(blob, hash);
     await done(tx);
@@ -71,7 +72,7 @@ export class PhotoStore {
   async url(hash: string): Promise<string | null> {
     const known = this.urls.get(hash);
     if (known) return known;
-    const db = await this.db;
+    const db = await database();
     const blob = (await request(db.transaction(PHOTOS).objectStore(PHOTOS).get(hash))) as Blob | undefined;
     if (!blob) return null;
     const url = URL.createObjectURL(blob);

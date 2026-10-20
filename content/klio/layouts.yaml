@@ -4,19 +4,21 @@
 board: [ 1760, 990 ]
 card: [ 80, 112 ]
 freeCardScale: 0.6
+# shapes: Größe, Kartenmaßstab, Fächerabstand; menu = Lage des Stapelmenüs (fixed = an `menu` der Ansicht,
+# left/right/below), menuInRole = abweichend in der Rollenansicht; label = Beschriftung (center, rotated, x = Anteil)
 shapes:
-  deck: { w: 80, h: 112 }
+  deck: { w: 80, h: 112, menu: left }
   discard: { w: 80, h: 112 }
   display: { w: 80, h: 112 }
-  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
-  diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
-  diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
-  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true }
+  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
+  diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
+  diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
+  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: below, menuInRole: right, label: { center: true } }
   danger: { w: 330, h: 70, scale: 0.6, fanX: 26 }
   progress: { w: 330, h: 70, scale: 0.6, fanX: 26 }
-  seat.damage: { scale: 1 }
+  seat.damage: { scale: 1, label: { rotated: true, x: 0.22 } }
   seat.notes: { scale: 1, fanX: 40 }
-  seat.collect: { scale: 0.4, fanY: 12 }
+  seat.collect: { scale: 0.4, fanY: 12, label: { rotated: true } }
 overview:
   zones:
     diamonds_easy: [ 651, 120 ]
@@ -30,7 +32,7 @@ overview:
     clubs: [ 1010, 640 ]
   menu: [ 1172, 120 ]
   resistTitle: [ 600, 616 ]
-  sheets: { margin: 14, gap: 14, scaleUpTo2Players: 1.2, scaleFrom3Players: 0.9 }
+  sheets: { margin: 14, gap: 14, scaleUpTo2Players: 1.2, scaleFrom3Players: 0.9, columns: [ [ seat1, seat3 ], [ seat2, seat4 ] ] }
 role:
   zones:
     diamonds_easy: [ 810, 40 ]

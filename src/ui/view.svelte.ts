@@ -1,12 +1,13 @@
 // Lokaler Zustand der Ansicht (nicht synchronisiert, 6.1): Ansicht, Zoom, offenes Stapelmenü, Meldungen.
 
+import { SeatSchema } from '../engine/schemas';
 import type { SeatId, ZoneId } from '../engine/types';
 
 const ROLE_KEY = 'klio.view.role';
 
 function storedRole(): SeatId | null {
-  const r = localStorage.getItem(ROLE_KEY);
-  return r === 'seat1' || r === 'seat2' || r === 'seat3' || r === 'seat4' ? r : null;
+  const r = SeatSchema.safeParse(localStorage.getItem(ROLE_KEY));
+  return r.success ? r.data : null;
 }
 
 export type Toast = { text: string; warn: boolean; id: number };

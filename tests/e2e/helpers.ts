@@ -22,12 +22,13 @@ export async function openMenuAndClick(page: Page, zoneLabel: string, action: 'M
   await page.getByRole('button', { name: action, exact: true }).click();
 }
 
-export async function count(page: Page, zoneLabel: string): Promise<number> {
-  const txt = await page.locator('.zone').filter({ hasText: new RegExp(`^${zoneLabel}`) }).first().locator('.n').textContent();
-  return Number(txt);
+/** Anzahl an einer Tischzone; wartet im Browser, bis sie stimmt. */
+export async function expectCount(page: Page, zoneLabel: string, n: number) {
+  await expect(page.locator('.zone').filter({ hasText: new RegExp(`^${zoneLabel}`) }).first().locator('.n')).toHaveText(String(n));
 }
 
-export async function ready(page: Page) {
-  await page.goto('./');
+export async function ready(page: Page, reload = false) {
+  if (reload) await page.reload();
+  else await page.goto('./');
   await expect(page.locator('.board')).toBeVisible();
 }
