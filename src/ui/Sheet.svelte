@@ -12,7 +12,7 @@
   import { submitOrSay } from './commands';
   import { effects } from './effects.svelte';
   import { SHEET_FONT } from './fitText';
-  import { SHEET_W, type SheetBox } from './layout';
+  import { CONTROLS_ZOOM, SHEET_W, type SheetBox } from './layout';
   import { preparePhoto } from './photo';
   import { photos } from './photos.svelte';
   import { seatNames } from './seatNames';
@@ -21,11 +21,8 @@
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
 
-  /**
-   * Zuordnung (10): Namensschild in der Draufsicht, Farbstreifen an den kleinen Bögen der Rollenansicht.
-   * `tools`: kleine Bedienelemente sichtbar; `quiet`: „Auswürfeln“ dezent (beides 10, Schritt 5b).
-   */
-  let { box, sheet, mark, tools, quiet }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null; tools: boolean; quiet: boolean } = $props();
+  /** Zuordnung (10): Namensschild in der Draufsicht, Farbstreifen an den kleinen Bögen der Rollenansicht, null = eigener Bogen der Rollenansicht */
+  let { box, sheet, mark }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null } = $props();
 
   const skin = content.skinPaper;
   const [imgW, imgH] = skin.size;
@@ -35,6 +32,9 @@
   const names = $derived(mark === 'plate' && session.state ? seatNames(session.state, seat) : null);
   const plate = skin.nameplate;
   const rollAt = skin.rollButton;
+  // Bedienelemente (10, Schritt 5b): am eigenen Bogen der Rollenansicht immer und deutlich, sonst klein erst ab CONTROLS_ZOOM, „Auswürfeln“ dezent
+  const own = $derived(mark === null);
+  const tools = $derived(own || view.zoom >= CONTROLS_ZOOM);
 
   // Felder nach Art (sheet.yaml); Lage aus der Haut
   const all = sheetFields(content.sheet);
@@ -216,7 +216,7 @@
       ><b>{names.character}</b>{#if names.person}<small>{names.person}</small>{/if}</div>
     {/if}
 
-    <div class="sbar control" class:quiet style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
+    <div class="sbar control" class:quiet={!own} style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
       {#if canRoll}
         <button onclick={roll} title={t('sheet.rollTitle')}>{confirmTimer !== undefined ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
       {/if}

@@ -11,7 +11,7 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
-  import { CONTROLS_ZOOM, cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
+  import { cardSize, computeLayout, freePosAt, placeCards, pointAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { t, whoColor } from './texts';
@@ -272,8 +272,7 @@
 
     {#each Object.values(layout.sheets) as box (box.seat)}
       {#if box.visible}
-        {@const own = box.seat === view.role}
-        <Sheet {box} sheet={sheetOf(table, box.seat)} mark={view.role === null ? 'plate' : own ? null : 'strip'} tools={own || view.zoom >= CONTROLS_ZOOM} quiet={!own} />
+        <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
       {/if}
     {/each}
 

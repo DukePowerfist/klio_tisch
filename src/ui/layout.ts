@@ -24,6 +24,8 @@ export type ZoneBox = Rect & {
 export type SheetBox = Rect & { seat: SeatId; scale: number; visible: boolean; opacity: number };
 
 export type Layout = {
+  /** tatsächlich gezeigte Ansicht: Platz der Rollenansicht, null = Draufsicht (auch wenn der Platz ausgeblendet ist) */
+  role: SeatId | null;
   board: { w: number; h: number };
   card: { w: number; h: number };
   sheets: Record<SeatId, SheetBox>;
@@ -126,6 +128,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
   }
 
   return {
+    role,
     board: { w: BW, h: BH },
     card: { w: CW, h: CH },
     sheets,

@@ -24,6 +24,7 @@ describe('Ansichten', () => {
 
   it('Rollenansicht: eigener Bogen groß links, andere 0,85-fach unten rechts', () => {
     const L = computeLayout(content, 4, 'seat2', null);
+    expect(L.role).toBe('seat2');
     expect(L.sheets.seat2).toMatchObject({ x: 14, y: 10, scale: 970 / 537 });
     expect(L.sheets.seat1).toMatchObject({ x: 745, scale: 0.85, opacity: 0.88 });
     expect(L.sheets.seat3.x).toBeCloseTo(745 + 380 * 0.85 + 8);

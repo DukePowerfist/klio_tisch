@@ -154,7 +154,7 @@ export const SkinFile = z.object({
   fields: z.record(z.string(), z.union([Box, Check, Label])),
   zones: z.record(z.string(), Box),
   nameplate: Box,
-  rollButton: z.object({ x: z.number(), y: z.number(), w: z.number(), font: z.number() }).strict(),
+  rollButton: Label.extend({ w: z.number() }),
 }).strict();
 
 // ---------- layouts.yaml ----------

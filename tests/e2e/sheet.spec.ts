@@ -5,11 +5,6 @@ import { dragFromTo, makePng, ready, setField as setSeatField, zoneCenter, zoomI
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
 
-/** Rollenansicht von Platz 1: am eigenen Bogen sind die kleinen Bedienelemente ohne Zoom sichtbar (5b). */
-async function ownSheet(page: Page) {
-  await page.keyboard.press('1');
-}
-
 const setField = (page: Page, field: string, value: string) => setSeatField(page, 'seat1', field, value);
 
 test.beforeEach(async ({ page }) => ready(page));
@@ -30,7 +25,7 @@ test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page 
 });
 
 test('Auswürfeln füllt den Bogen; bei Einträgen erst „Überschreiben?“', async ({ page }) => {
-  await ownSheet(page);
+  await page.keyboard.press('1'); // eigener Bogen: kleine Bedienelemente ohne Zoom (5b)
   const roll = sheet1(page).getByRole('button', { name: 'Auswürfeln' });
   await roll.click();
   await expect(page.getByRole('status')).toHaveText('Bogen 1: Charakter ausgewürfelt');
@@ -42,7 +37,7 @@ test('Auswürfeln füllt den Bogen; bei Einträgen erst „Überschreiben?“', 
 });
 
 test('Kästchen, Narbe mit Zähler, Rüstzeug streichen', async ({ page }) => {
-  await ownSheet(page);
+  await page.keyboard.press('1'); // eigener Bogen: kleine Bedienelemente ohne Zoom (5b)
   const lamp = sheet1(page).locator('[data-check="lamps.1"]');
   await lamp.click();
   await expect(lamp).toHaveAttribute('aria-pressed', 'true');
@@ -93,7 +88,6 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  await zoomIn(page, { x: 100, y: 800 });
   for (const i of [0, 1, 2]) await sheet1(page).locator(`[data-check="lamps.${i}"]`).click();
   await sheet1(page).locator('[data-slot="1"]').click();
   await page.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
@@ -144,7 +138,9 @@ test('Bedienelemente: „Auswürfeln“ immer, kleine erst ab Zoom 1,3, am eigen
   for (const players of ['4', '2']) {
     await page.getByRole('combobox').selectOption(players);
     await page.mouse.move(800, 450);
+    const w0 = (await page.locator('.board').boundingBox())!.width;
     await page.mouse.wheel(0, -200); // Zoom etwa 1,27
+    await expect.poll(async () => (await page.locator('.board').boundingBox())!.width).toBeGreaterThan(w0 * 1.2);
     await expect(strike('seat1')).toBeHidden();
     await page.mouse.wheel(0, -50); // etwa 1,35
     await expect(strike('seat1')).toBeVisible();
