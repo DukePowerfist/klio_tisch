@@ -2,6 +2,7 @@
 // Bekommt bereits gelesene Daten; das Lesen von YAML passiert nur beim Build und in Tests.
 
 import { z } from 'zod';
+import { RANKS, SUITS } from '../../../engine/types';
 import {
   DeckFile, ExpeditionFile, LayoutsFile, NamesFile, PermissionsFile, SheetFile, SkinFile,
   TablesFile, TextsFile, TrumpSourcesFile, TrumpsFile, ZonesFile, sheetFieldInstances, type TextTree,
@@ -28,8 +29,6 @@ export type RawContent = Record<ContentKey, unknown>;
 
 export type ValidationResult = { ok: true; content: KlioContent } | { ok: false; errors: string[] };
 
-const SUITS = ['H', 'S', 'C', 'D'];
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
 export function validateContent(raw: RawContent): ValidationResult {
   const errors: string[] = [];

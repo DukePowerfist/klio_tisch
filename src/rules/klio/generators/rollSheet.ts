@@ -2,18 +2,17 @@
 // Nur der Host würfelt; das Ergebnis geht als Ereignis an alle.
 
 import { pick } from '../../../engine/rng';
-import type { Rng, SeatId } from '../../../engine/types';
+import { RANKS, type Rng, type SeatId } from '../../../engine/types';
 import type { KlioContent } from '../content/validate';
 import type { KlioEventOf } from '../events';
-
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'] as const;
+import type { RolledAttributes } from '../state';
 type TableKey = keyof KlioContent['tables'];
 
 /**
  * Attributspunkte gleichverteilt über alle Aufteilungen von `total` auf drei Attribute
  * (wie bisher: zwei verschiedene Trennstellen aus total + 2 Plätzen).
  */
-export function rollAttributes(total: number, rng: Rng): { K: number; V: number; P: number } {
+export function rollAttributes(total: number, rng: Rng): RolledAttributes {
   const slots = total + 2;
   const a = rng.int(slots);
   let b = rng.int(slots - 1);
@@ -30,7 +29,7 @@ export function rollSheet(content: KlioContent, seat: SeatId, rng: Rng): KlioEve
   /** Eine Zeile aus einer Tabelle: Herz oder Pik, dann Kartenwert; Form passend zur Variante. */
   const drawFrom = (table: TableKey): string => {
     const suit = rng.int(2) === 0 ? 'H' : 'S';
-    const rank = RANKS[rng.int(13)]!;
+    const rank = RANKS[rng.int(RANKS.length)]!;
     draws.push({ table, suit, rank });
     const entry = content.tables[table]![suit][rank];
     return typeof entry === 'string' ? entry : entry[variant];
@@ -47,8 +46,12 @@ export function rollSheet(content: KlioContent, seat: SeatId, rng: Rng): KlioEve
     return out;
   };
 
-  const f = content.sheet.fields;
-  const tablesOf = (name: string) => (f[name]?.roll ?? []) as TableKey[];
+  /** Ein Feld laut sheet.yaml füllen: je Eintrag eine Tabellenzeile, ggf. ohne doppelte Texte. */
+  const rollField = (name: string): string[] => {
+    const f = content.sheet.fields[name];
+    const tables = (f?.roll ?? []) as TableKey[];
+    return f?.distinct ? drawDistinct(tables) : tables.map(drawFrom);
+  };
   const first = pick(content.names.first[variant], rng);
   const last = pick(content.names.last, rng);
 
@@ -57,10 +60,10 @@ export function rollSheet(content: KlioContent, seat: SeatId, rng: Rng): KlioEve
     seat,
     variant,
     name: `${first} ${last}`,
-    strengths: tablesOf('strengths.text').map(drawFrom),
-    weaknesses: f['weaknesses']?.distinct ? drawDistinct(tablesOf('weaknesses')) : tablesOf('weaknesses').map(drawFrom),
+    strengths: rollField('strengths.text'),
+    weaknesses: rollField('weaknesses'),
     attributes: rollAttributes(content.sheet.roll.attributeTotal, rng),
-    experiences: f['experiences']?.distinct ? drawDistinct(tablesOf('experiences')) : tablesOf('experiences').map(drawFrom),
+    experiences: rollField('experiences'),
     draws,
   };
 }

@@ -2,16 +2,13 @@
 // Ereignisse enthalten alle Zufallsergebnisse, damit Clients nie selbst würfeln.
 
 import { z } from 'zod';
+import { CardIdSchema, RankSchema, SeatSchema as Seat } from '../../engine/schemas';
 import { SEATS, type EventDef, type SeatId, type TableState } from '../../engine/types';
 import { setField } from './fields';
-import { emptySheet, KlioSheet, PhotoRef, TrumpId, type KlioState } from './state';
+import { emptySheet, Expedition, KlioSheet, Oracle, PhotoRef, RolledAttributes, ScarSchema, Slot, TrumpId, type KlioState } from './state';
 
 export type KlioTable = TableState<KlioState>;
 
-const Seat = z.enum(SEATS as unknown as [SeatId, ...SeatId[]]);
-const Attr = z.enum(['K', 'V', 'P']);
-const CardId = z.string().regex(/^[HSCD](10|[2-9JQKA])$/);
-const Rank = z.enum(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']);
 const FieldValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
 export const sheetOf = (s: KlioTable, seat: SeatId): KlioSheet => s.game.sheets[SEATS.indexOf(seat)]!;
@@ -26,31 +23,27 @@ const E = {
     name: z.string(),
     strengths: z.array(z.string()).length(5),
     weaknesses: z.array(z.string()).length(2),
-    attributes: z.object({ K: z.number().int(), V: z.number().int(), P: z.number().int() }).strict(),
+    attributes: RolledAttributes,
     experiences: z.array(z.string()).length(3),
     /** gezogene Karte je Tabellenzeile, für Meldung und Nachvollziehbarkeit */
-    draws: z.array(z.object({ table: z.string(), suit: z.enum(['H', 'S']), rank: Rank }).strict()),
+    draws: z.array(z.object({ table: z.string(), suit: z.enum(['H', 'S']), rank: RankSchema }).strict()),
   }).strict(),
   photoSet: z.object({ type: z.literal('photoSet'), seat: Seat, photo: PhotoRef.nullable() }).strict(),
   /** Trumpf gewählt; bei „Erlebnis“ mit vier Trümpfen ohne Trumpf (nur Verbesserung) */
-  trumpChosen: z.object({ type: z.literal('trumpChosen'), seat: Seat, source: z.string(), trump: TrumpId.nullable(), slot: z.number().int().min(0).max(3).nullable() }).strict(),
-  trumpRemoved: z.object({ type: z.literal('trumpRemoved'), seat: Seat, slot: z.number().int().min(0).max(3) }).strict(),
+  trumpChosen: z.object({ type: z.literal('trumpChosen'), seat: Seat, source: z.string(), trump: TrumpId.nullable(), slot: Slot.nullable() }).strict(),
+  trumpRemoved: z.object({ type: z.literal('trumpRemoved'), seat: Seat, slot: Slot }).strict(),
   /** Treffer auf dem Schadensfeld (für Rucken/Hervorhebung), danach scarMarked/characterDied */
-  damageTaken: z.object({ type: z.literal('damageTaken'), seat: Seat, hits: z.array(CardId).min(1) }).strict(),
-  scarMarked: z.object({ type: z.literal('scarMarked'), seat: Seat, scar: z.enum(['heart', 'spade']) }).strict(),
+  damageTaken: z.object({ type: z.literal('damageTaken'), seat: Seat, hits: z.array(CardIdSchema).min(1) }).strict(),
+  scarMarked: z.object({ type: z.literal('scarMarked'), seat: Seat, scar: ScarSchema }).strict(),
   characterDied: z.object({ type: z.literal('characterDied'), seat: Seat }).strict(),
   characterRevived: z.object({ type: z.literal('characterRevived'), seat: Seat }).strict(),
   charactersReset: z.object({ type: z.literal('charactersReset') }).strict(),
-  expeditionRolled: z.object({ type: z.literal('expeditionRolled'), expedition: z.array(z.number().int().min(0).max(12)).length(4) }).strict(),
-  oracleDrawn: z.object({
-    type: z.literal('oracleDrawn'),
-    oracle: z.tuple([z.object({ suit: z.enum(['H', 'S', 'C']), rank: Rank }).strict(), z.object({ suit: z.enum(['H', 'S', 'C']), rank: Rank }).strict()]),
-  }).strict(),
+  expeditionRolled: z.object({ type: z.literal('expeditionRolled'), expedition: Expedition }).strict(),
+  oracleDrawn: z.object({ type: z.literal('oracleDrawn'), oracle: Oracle }).strict(),
 };
 
 export type KlioEvent = { [K in keyof typeof E]: z.infer<(typeof E)[K]> }[keyof typeof E];
 export type KlioEventOf<T extends KlioEvent['type']> = Extract<KlioEvent, { type: T }>;
-export type AttrKey = z.infer<typeof Attr>;
 
 function def<T extends keyof typeof E>(type: T, apply: (s: KlioTable, e: KlioEventOf<T>) => void): EventDef<KlioState, KlioEventOf<T>> {
   return {
@@ -65,10 +58,7 @@ function def<T extends keyof typeof E>(type: T, apply: (s: KlioTable, e: KlioEve
 export const klioEvents = {
   fieldsChanged: def('fieldsChanged', (s, e) => {
     const sheet = sheetOf(s, e.seat);
-    for (const c of e.changes) {
-      if (c.field === 'newScars') sheet.newScars = c.value as number;
-      else setField(sheet, c.field, c.value);
-    }
+    for (const c of e.changes) setField(sheet, c.field, c.value);
   }),
   sheetRolled: def('sheetRolled', (s, e) => {
     const sheet = sheetOf(s, e.seat);

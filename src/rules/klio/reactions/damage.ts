@@ -2,14 +2,15 @@
 // Herz/Pik markiert die passende Narbe; schon markiert oder Kreuz/Karo: tot (A3).
 // Bei mehreren Karten wird jede mit der darunterliegenden verglichen, Treffer der Reihe nach.
 
-import { SEATS, type CardId, type Event, type Reaction, type SeatId } from '../../../engine/types';
+import { rankValue } from '../../../engine/schemas';
+import type { ZoneTable } from '../../../engine/zones';
+import type { CardId, EngineEventOf, Event, RankId, Reaction } from '../../../engine/types';
 import type { KlioState } from '../state';
 import { sheetOf, type KlioEvent, type KlioTable } from '../events';
 
 export const DAMAGE_ZONE = 'damage';
 
-const VALUE: Record<string, number> = { J: 11, Q: 12, K: 13, A: 14 };
-export const cardValue = (card: CardId): number => VALUE[card.slice(1)] ?? Number(card.slice(1));
+export const cardValue = (card: CardId): number => rankValue(card.slice(1) as RankId);
 
 /** Treffer unter den abgelegten Karten; `below` = Karte darunter (oder keine: leeres Feld trifft nie). */
 export function hitsOf(below: CardId | undefined, placed: readonly CardId[]): CardId[] {
@@ -23,32 +24,36 @@ export function hitsOf(below: CardId | undefined, placed: readonly CardId[]): Ca
   return hits;
 }
 
-export const damageReaction: Reaction<KlioState> = {
-  id: 'damage',
-  react(state, event: Event) {
-    if (event.type !== 'cardsMoved') return [];
-    const e = event as Extract<import('../../../engine/types').EngineEvent, { type: 'cardsMoved' }>;
-    if (!('zone' in e.to)) return [];
-    const [seat, zone] = e.to.zone.split('.') as [SeatId, string];
-    if (zone !== DAMAGE_ZONE || !SEATS.includes(seat)) return [];
+/** Reaktion auf Karten, die auf einem Schadensfeld landen; `zones` = erweiterte Zonentabelle. */
+export function damageReaction(zones: ZoneTable): Reaction<KlioState> {
+  return {
+    id: 'damage',
+    react(state, event: Event) {
+      if (event.type !== 'cardsMoved') return [];
+      const e = event as EngineEventOf<'cardsMoved'>;
+      if (!('zone' in e.to)) return [];
+      const zc = zones.get(e.to.zone);
+      const seat = zc?.owner;
+      if (zc?.template !== DAMAGE_ZONE || !seat) return [];
 
-    // Die bewegten Karten liegen jetzt oben; darunter liegt die bisherige oberste Karte.
-    const cards = state.zones[e.to.zone] ?? [];
-    const below = cards[cards.length - e.cards.length - 1];
-    const hits = hitsOf(below, e.cards);
-    if (hits.length === 0) return [];
+      // Die bewegten Karten liegen jetzt oben; darunter liegt die bisherige oberste Karte.
+      const cards = state.zones[e.to.zone] ?? [];
+      const below = cards[cards.length - e.cards.length - 1];
+      const hits = hitsOf(below, e.cards);
+      if (hits.length === 0) return [];
 
-    const out: KlioEvent[] = [{ type: 'damageTaken', seat, hits }];
-    const scars = { ...sheetOf(state as KlioTable, seat).scars };
-    for (const card of hits) {
-      const scar = card[0] === 'H' ? 'heart' : card[0] === 'S' ? 'spade' : null;
-      if (scar && !scars[scar]) {
-        scars[scar] = true;
-        out.push({ type: 'scarMarked', seat, scar });
-      } else {
-        out.push({ type: 'characterDied', seat });
+      const out: KlioEvent[] = [{ type: 'damageTaken', seat, hits }];
+      const scars = { ...sheetOf(state as KlioTable, seat).scars };
+      for (const card of hits) {
+        const scar = card[0] === 'H' ? 'heart' : card[0] === 'S' ? 'spade' : null;
+        if (scar && !scars[scar]) {
+          scars[scar] = true;
+          out.push({ type: 'scarMarked', seat, scar });
+        } else {
+          out.push({ type: 'characterDied', seat });
+        }
       }
-    }
-    return out;
-  },
-};
+      return out;
+    },
+  };
+}

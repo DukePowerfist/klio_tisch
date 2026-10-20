@@ -34,7 +34,7 @@ export function applyEngineEvent<G>(s: TableState<G>, e: EngineEvent): TableStat
       return s;
     case 'zonesShuffled':
       for (const [zone, cards] of Object.entries(e.zones)) s.zones[zone] = [...cards];
-      for (const c of e.faceDown) s.faceUp[c] = false;
+      for (const zone of e.shuffled) for (const c of e.zones[zone] ?? []) s.faceUp[c] = false;
       return s;
     case 'cardDrawn':
       s.zones[e.from] = remove(s.zones[e.from] ?? [], [e.card]);

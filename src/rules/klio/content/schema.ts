@@ -2,10 +2,8 @@
 // Geprüft beim Build; ausgeliefert wird JSON. Beispiele stehen jeweils darüber.
 
 import { z } from 'zod';
-
-const Attr = z.enum(['K', 'V', 'P']); // Körper, Verstehen, Präsenz
-const Rank = z.enum(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']);
-const Suit = z.enum(['H', 'S', 'C', 'D']);
+import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SuitSchema as Suit } from '../../../engine/schemas';
+import { AttrSchema as Attr, TrumpId } from '../state';
 
 /** Text mit er/sie-Form oder ein Text für beide. */
 const Gendered = z.union([z.string(), z.object({ m: z.string(), w: z.string() }).strict()]);
@@ -22,7 +20,7 @@ const byRank = <T extends z.ZodType>(entry: T) =>
 //   name: Schnelle Reflexe
 //   text: Du hast Vorteil auf alle Körper-Reaktionen.
 export const Trump = z.object({
-  id: z.string().regex(/^[a-z0-9-]+$/),
+  id: TrumpId,
   category: z.enum(['K', 'V', 'P', 'X']),
   attributes: z.array(Attr).min(1).max(3),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
@@ -70,25 +68,24 @@ export const NamesFile = z.object({
 //   deck:            [HA, SA, CA, H2, …, HK, S2, …, SK]
 // Heimatstapel einer Karte = ihre Startzone (Karo 2–6 → LEICHT usw., wie bisher).
 // Karten ohne Startzone sind ein Build-Fehler; jede Karte kommt genau einmal vor.
-const CardIdStr = z.string().regex(/^[HSCD](10|[2-9JQKA])$/);
 export const DeckFile = z.object({
-  start: z.record(z.string(), z.array(CardIdStr)),
+  start: z.record(z.string(), z.array(CardIdSchema)),
 }).strict();
 
 // ---------- zones.yaml ----------
 // Format siehe ARCHITEKTUR.md 7 (Stapel-Aktionen). Beschriftungen stehen in texts.de.yaml.
-const GatherRule = z.object({ from: z.string(), suit: Suit.optional(), to: z.literal('home').optional() }).strict();
+const GatherRule = z.object({ from: z.string(), suit: Suit.exactOptional(), to: z.literal('home').exactOptional() }).strict();
 export const ZoneEntry = z.object({
-  perSeat: z.boolean().optional(),
-  fanned: z.boolean().optional(),
-  capacity: z.number().int().positive().optional(),
-  onDrop: z.literal('faceUp').optional(),
+  perSeat: z.boolean().exactOptional(),
+  fanned: z.boolean().exactOptional(),
+  capacity: z.number().int().positive().exactOptional(),
+  onDrop: z.literal('faceUp').exactOptional(),
   actions: z.object({
-    shuffle: z.object({ gather: z.array(GatherRule).optional() }).strict().optional(),
-    draw: z.object({ to: z.string(), faceUp: z.boolean(), announce: z.boolean() }).strict().optional(),
-    flip: z.enum(['top', 'draw']).optional(),
-    cardDoubleClick: z.object({ faceDown: z.literal('draw') }).strict().optional(),
-  }).strict().optional(),
+    shuffle: z.object({ gather: z.array(GatherRule).exactOptional() }).strict().exactOptional(),
+    draw: z.object({ to: z.string(), faceUp: z.boolean(), announce: z.boolean() }).strict().exactOptional(),
+    flip: z.enum(['top', 'draw']).exactOptional(),
+    cardDoubleClick: z.object({ faceDown: z.literal('draw') }).strict().exactOptional(),
+  }).strict().exactOptional(),
 }).strict();
 export const ZonesFile = z.record(z.string(), ZoneEntry);
 
@@ -167,7 +164,7 @@ export const LayoutsFile = z.object({
 
 // ---------- trump-sources.yaml ----------
 // Format siehe ARCHITEKTUR.md 7. Bausteinnamen sind eine feste Liste (blocks/), Tippfehler fallen beim Build auf.
-// Jeder Baustein mit seinen erlaubten Parametern; die TS-Funktionen dazu folgen in Schritt 2.
+// Jeder Baustein mit seinen erlaubten Parametern; die TS-Funktionen dazu stehen in blocks/.
 const CheckList = z.enum(['weaknessMarks', 'lamps']);
 const one = <K extends string, T extends z.ZodType>(key: K, value: T) => z.object({ [key]: value } as Record<K, T>).strict();
 const Requires = z.union([
@@ -203,11 +200,10 @@ export const TrumpSourcesFile = z.object({
 }).strict();
 
 // ---------- permissions.yaml ----------
-const Perm = z.enum(['allow', 'deny', 'own']);
 export const PermissionsFile = z.object({
   gm: z.literal('all'),
-  player: z.record(z.string(), Perm),
-  spectator: z.union([z.literal('none'), z.record(z.string(), Perm)]),
+  player: z.record(z.string(), PermissionValueSchema),
+  spectator: z.union([z.literal('none'), z.record(z.string(), PermissionValueSchema)]),
 }).strict();
 
 // ---------- texts.de.yaml ----------

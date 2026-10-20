@@ -1,10 +1,12 @@
 // Engine: allgemeiner Kartentisch (ARCHITEKTUR.md 6). Kennt Klio nicht.
-// Nur Typen; die Laufzeitprüfung (Zod) liegt bei den Stellen, die Daten von außen annehmen.
+// Typen und Grundkonstanten; Zod-Schemas dazu in schemas.ts.
 
 // ---------- Karten ----------
 
-export type SuitId = 'H' | 'S' | 'C' | 'D'; // Herz, Pik, Kreuz, Karo
-export type RankId = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+export const SUITS = ['H', 'S', 'C', 'D'] as const; // Herz, Pik, Kreuz, Karo
+export const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'] as const;
+export type SuitId = (typeof SUITS)[number];
+export type RankId = (typeof RANKS)[number];
 /** z. B. `H10`, `SQ`, `DA`. Anzeige (B/D/K/A, Farbnamen) kommt aus den Texten. */
 export type CardId = `${SuitId}${RankId}`;
 
@@ -26,8 +28,8 @@ export type DeckConfig = {
 
 // ---------- Plätze, Zonen, Anker ----------
 
-export type SeatId = 'seat1' | 'seat2' | 'seat3' | 'seat4';
-export const SEATS: readonly SeatId[] = ['seat1', 'seat2', 'seat3', 'seat4'];
+export const SEATS = ['seat1', 'seat2', 'seat3', 'seat4'] as const;
+export type SeatId = (typeof SEATS)[number];
 
 /** Tischzonen (`deck`) oder je Platz erzeugte Zonen (`seat1.damage`). */
 export type ZoneId = string;
@@ -57,8 +59,9 @@ export type ZoneConfig = {
   id: ZoneId;
   /** Vorlage: erzeugt `seat1.<id>` … `seat4.<id>` mit `owner` */
   perSeat?: boolean;
-  /** gesetzt für erzeugte Platz-Zonen */
+  /** gesetzt für erzeugte Platz-Zonen: Besitzer und Vorlage (`damage` für `seat1.damage`) */
   owner?: SeatId;
+  template?: ZoneId;
   /** aufgefächert (alle Karten greifbar) oder Stapel (nur oberste) */
   fanned?: boolean;
   capacity?: number;
@@ -108,13 +111,6 @@ export type Actor =
 export type CardSource = { zone: ZoneId } | { free: true };
 export type CardTarget = { zone: ZoneId } | { free: FreePos };
 
-export type EngineCommand =
-  | { type: 'cards.move'; cards: CardId[]; from: CardSource; to: CardTarget }
-  | { type: 'card.flip'; card: CardId }
-  | { type: 'zone.flip'; zone: ZoneId }
-  | { type: 'zone.shuffle'; zone: ZoneId }
-  | { type: 'zone.draw'; zone: ZoneId };
-
 /** Regelwerk-Befehle haben dieselbe Hülle; `type` und Inhalt legt das Regelwerk fest. */
 export type Command = { type: string };
 
@@ -126,8 +122,8 @@ export type CommandEnvelope = { id: string; cmd: Command };
 export type EngineEvent =
   | { type: 'cardsMoved'; cards: CardId[]; from: CardSource; to: CardTarget }
   | { type: 'cardsTurned'; cards: CardId[]; faceUp: boolean }
-  /** neuer vollständiger Inhalt jeder betroffenen Zone, auch der geleerten (Zufall steckt im Ereignis) */
-  | { type: 'zonesShuffled'; shuffled: ZoneId[]; zones: Record<ZoneId, CardId[]>; faceDown: CardId[] }
+  /** neuer Inhalt jeder betroffenen Zone, auch der geleerten; die gemischten sind danach ganz verdeckt */
+  | { type: 'zonesShuffled'; shuffled: ZoneId[]; zones: Record<ZoneId, CardId[]> }
   | { type: 'cardDrawn'; card: CardId; from: ZoneId; to: ZoneId; faceUp: boolean; announce: boolean }
   | { type: 'settingsChanged'; settings: TableSettings }
   | { type: 'seatsChanged'; seats: TableState<unknown>['seats'] }
@@ -135,6 +131,7 @@ export type EngineEvent =
   | { type: 'cardsReset'; zones: Record<ZoneId, CardId[]> };
 
 export type Event = { type: string };
+export type EngineEventOf<T extends EngineEvent['type']> = Extract<EngineEvent, { type: T }>;
 
 /** Bestätigtes Ereignis mit fortlaufender Nummer (8.2: Lücke → Stand neu anfordern). */
 export type SequencedEvent = { seq: number; event: Event };
@@ -192,6 +189,8 @@ export interface Ruleset<G> {
   id: string;
   version: string;
   initialGame(rng: Rng): G;
+  /** Zusatz-Ereignisse für „Zurücksetzen inkl. Spielinhalten“ (Klio: Charaktere) */
+  resetGame?(): Event[];
   deck: DeckConfig;
   zones: ZoneConfig[];
   commands: Record<string, CommandDef<G, any>>;

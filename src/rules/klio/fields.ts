@@ -1,9 +1,10 @@
 // Felder des Bogens per Name ansprechen, z. B. `strengths.text.2` oder `scars.heart`.
 // Die Namen kommen aus sheet.yaml; ein Test stellt sicher, dass jedes Feld dort hier erreichbar ist.
 
-import type { KlioSheet } from './state';
+import { ATTRS, ScarSchema, type KlioSheet } from './state';
 
-export type FieldKind = 'text' | 'number' | 'check';
+/** `counter`: nur durch Regeln geändert (z. B. neue Narben), nicht von Hand */
+export type FieldKind = 'text' | 'number' | 'check' | 'counter';
 export type FieldValue = string | number | boolean | null;
 
 /** `strengths.text.2` → ['strengths', 2, 'text'] usw.; null bei unbekannten Namen. */
@@ -14,10 +15,12 @@ function pathOf(field: string): { path: (string | number)[]; kind: FieldKind } |
   switch (a) {
     case 'name':
       return p.length === 1 ? { path: ['name'], kind: 'text' } : null;
+    case 'newScars':
+      return p.length === 1 ? { path: ['newScars'], kind: 'counter' } : null;
     case 'attributes':
-      return p.length === 2 && (b === 'K' || b === 'V' || b === 'P') ? { path: ['attributes', b], kind: 'number' } : null;
+      return p.length === 2 && (ATTRS as readonly string[]).includes(b!) ? { path: ['attributes', b!], kind: 'number' } : null;
     case 'scars':
-      return p.length === 2 && (b === 'heart' || b === 'spade') ? { path: ['scars', b], kind: 'check' } : null;
+      return p.length === 2 && ScarSchema.safeParse(b).success ? { path: ['scars', b!], kind: 'check' } : null;
     case 'strengths':
     case 'gear': {
       const max = a === 'strengths' ? 5 : 7;

@@ -4,24 +4,21 @@ import { SEATS, type CardId, type SeatId, type TableState, type ZoneConfig, type
 
 export type ZoneTable = ReadonlyMap<ZoneId, ZoneConfig>;
 
-/** `damage` mit perSeat wird zu `seat1.damage` … `seat4.damage` mit Besitzer. */
+/** `damage` mit perSeat wird zu `seat1.damage` … `seat4.damage` mit Besitzer und Vorlage. */
 export function expandZones(configs: readonly ZoneConfig[]): ZoneTable {
   const out = new Map<ZoneId, ZoneConfig>();
   for (const z of configs) {
-    if (z.perSeat) {
-      for (const seat of SEATS) {
-        const { perSeat: _, ...rest } = z;
-        out.set(`${seat}.${z.id}`, { ...rest, id: `${seat}.${z.id}`, owner: seat });
-      }
-    } else {
+    if (!z.perSeat) {
       out.set(z.id, z);
+      continue;
+    }
+    const { perSeat: _, ...rest } = z;
+    for (const seat of SEATS) {
+      const id = `${seat}.${z.id}`;
+      out.set(id, { ...rest, id, owner: seat, template: z.id });
     }
   }
   return out;
-}
-
-export function seatZoneId(seat: SeatId, zone: string): ZoneId {
-  return `${seat}.${zone}`;
 }
 
 /** Platz 1 … n ist sichtbar, n = Spielerzahl (8.2). */

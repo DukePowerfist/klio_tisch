@@ -2,46 +2,36 @@
 
 import { z } from 'zod';
 import type { SeatId } from '../../../engine/types';
-import { trumpCount, type Change, type Choices, type Trump } from '../blocks';
+import { ChoicesSchema, trumpCount } from '../blocks';
+import { Slot } from '../state';
 import { sheetOf, type KlioEvent, type KlioTable } from '../events';
-import { planChoice, planRandom, trumpProblem, type Plan, type Source } from '../trumps';
+import { planChoice, planRandom, trumpProblem, type Plan } from '../trumps';
 import { blockContext, command, reject, Seat, type Deps } from './common';
 
-const Attr = z.enum(['K', 'V', 'P']);
-const Slot = z.number().int().min(0).max(3);
 
 export function trumpCommands(deps: Deps) {
   const cfg = deps.content.trumpSources;
-  const trumps = deps.content.trumps as Trump[];
+  const trumps = deps.content.trumps;
 
   const firstFreeSlot = (state: KlioTable, seat: SeatId) => sheetOf(state, seat).trumps.findIndex((t) => t === null);
 
   /** Plan in Ereignisse übersetzen: erst die Änderungen am Bogen, dann die Wahl selbst. */
   const toEvents = (state: KlioTable, seat: SeatId, source: string, plan: Plan): KlioEvent[] => {
     const events: KlioEvent[] = [];
-    if (plan.changes.length > 0) events.push({ type: 'fieldsChanged', seat, changes: plan.changes as Change[] });
+    if (plan.changes.length > 0) events.push({ type: 'fieldsChanged', seat, changes: plan.changes });
     const slot = plan.trump === null ? null : firstFreeSlot(state, seat);
     events.push({ type: 'trumpChosen', seat, source, trump: plan.trump, slot });
     return events;
   };
 
-  const choiceFields = {
-    removeWeakness: z.number().int().min(0).max(1).optional(),
-    improveStrength: z.object({ index: z.number().int().min(0).max(4), text: z.string().max(70) }).strict().optional(),
-    moveAttribute: z.object({ lowered: Attr, raised: Attr }).strict().optional(),
-  };
-
   return {
     'trump.choose': command(
-      z.object({ type: z.literal('trump.choose'), seat: Seat, source: z.string(), trump: z.string().optional(), ...choiceFields }).strict(),
+      z.object({ type: z.literal('trump.choose'), seat: Seat, source: z.string(), trump: z.string().optional(), ...ChoicesSchema.shape }).strict(),
       'trump.choose',
       (cmd, state) => {
         const src = cfg.trumpSources.find((s) => s.id === cmd.source);
         if (!src) return reject('reject.unknownSource');
-        const choices: Choices = {};
-        if (cmd.removeWeakness !== undefined) choices.removeWeakness = cmd.removeWeakness;
-        if (cmd.improveStrength !== undefined) choices.improveStrength = cmd.improveStrength;
-        if (cmd.moveAttribute !== undefined) choices.moveAttribute = cmd.moveAttribute;
+        const { type: _t, seat: _s, source: _src, trump: _tr, ...choices } = cmd;
         const plan = planChoice(cfg, src, trumps, blockContext(deps, state, cmd.seat), choices, cmd.trump);
         if ('why' in plan) return { rejected: true, reason: plan.why };
         return toEvents(state, cmd.seat, src.id, plan);
@@ -70,7 +60,8 @@ export function trumpCommands(deps: Deps) {
         const ctx = blockContext(deps, state, cmd.seat);
         const r = planRandom(cfg, trumps, ctx, rng);
         if ('why' in r) return { rejected: true, reason: r.why };
-        const plan = planChoice(cfg, r.source as Source, trumps, ctx, r.choices, r.trump);
+        // Gleiche Prüfung wie bei der Wahl von Hand; planRandom wählt nur aus.
+        const plan = planChoice(cfg, r.source, trumps, ctx, r.choices, r.trump);
         if ('why' in plan) return { rejected: true, reason: plan.why };
         return toEvents(state, cmd.seat, r.source.id, plan);
       },

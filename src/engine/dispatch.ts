@@ -2,7 +2,7 @@
 // Alles oder nichts: gearbeitet wird auf einer Kopie, übernommen wird nur das fertige Ergebnis.
 
 import { applyEngineEvent, isEngineEvent } from './apply';
-import { engineCommands, reject } from './commands';
+import { engineCommands, isRejection, reject } from './commands';
 import { can } from './permissions';
 import { expandZones } from './zones';
 import type { Actor, Command, CommandDef, DispatchResult, Event, Rng, Ruleset, SequencedEvent, TableState } from './types';
@@ -19,10 +19,11 @@ export type Engine<G> = {
 
 export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
   const zones = expandZones(ruleset.zones);
-  const commands: Record<string, CommandDef<G, any>> = { ...engineCommands(zones, ruleset.deck), ...ruleset.commands };
+  const base = engineCommands(zones, ruleset);
   for (const key of Object.keys(ruleset.commands)) {
-    if (key in engineCommands(zones, ruleset.deck)) throw new Error(`Regelwerk überschreibt Engine-Befehl ${key}`);
+    if (key in base) throw new Error(`Regelwerk überschreibt Engine-Befehl ${key}`);
   }
+  const commands: Record<string, CommandDef<G, any>> = { ...base, ...ruleset.commands };
 
   function apply(state: TableState<G>, event: Event): TableState<G> {
     if (isEngineEvent(event)) return applyEngineEvent(state, event);
@@ -44,7 +45,7 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
     if (!can(actor, def, cmd, state as TableState<unknown>, ruleset.permissions)) return reject('reject.notAllowed');
 
     const first = def.handle(cmd, state, actor, rng);
-    if ('rejected' in first) return first;
+    if (isRejection(first)) return first;
 
     let next = structuredClone(state);
     const done: Event[] = [];

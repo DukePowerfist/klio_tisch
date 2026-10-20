@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { validateContent, type KlioContent, type RawContent } from '../../src/rules/klio/content/validate';
 import { readContent } from './read';
 
-const result = validateContent(readContent());
+const RAW = readContent();
+const result = validateContent(RAW);
 const content = (): KlioContent => {
   if (!result.ok) throw new Error(result.errors.join('\n'));
   return result.content;
@@ -12,7 +13,7 @@ const content = (): KlioContent => {
 
 /** Kopie der echten Inhalte, an einer Stelle verändert. */
 function mutated(change: (raw: any) => void): RawContent {
-  const raw = structuredClone(readContent());
+  const raw = structuredClone(RAW);
   change(raw);
   return raw;
 }

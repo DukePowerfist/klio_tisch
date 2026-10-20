@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
-import type { Trump } from '../../src/rules/klio/blocks';
 import { planRandom } from '../../src/rules/klio/trumps';
 import { content, expectRejected, fresh, run, sheet, withSheet, type K } from '../helpers';
 
@@ -197,7 +196,7 @@ describe('Zufälliger Trumpf', () => {
     // Mit den echten 44 Trümpfen kann das bei 4 Plätzen nicht eintreten; daher mit verkürzter Liste:
     // Es gibt nur noch einen Verstehen-Trumpf, also muss V erhöht werden.
     const s = prepared([1, 0, 1], ['schnelle-reflexe', null, null, null], (b) => (b.newScars = 1));
-    const only = [T('anatomie')] as Trump[];
+    const only = [T('anatomie')];
     const ctx = { sheet: sheet(s, 'seat1'), attrNames: { K: 'Körper', V: 'Verstehen', P: 'Präsenz' } };
     for (let seed = 1; seed <= 50; seed++) {
       const r = planRandom(content.trumpSources, only, ctx, seededRng(seed));

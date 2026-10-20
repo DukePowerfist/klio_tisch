@@ -14,8 +14,7 @@ export function dealStart(deck: DeckConfig, zoneIds: Iterable<ZoneId>, rng: Rng)
   return zones;
 }
 
-export function initialTable<G>(ruleset: Ruleset<G>, rng: Rng): TableState<G> {
-  const zoneIds = [...expandZones(ruleset.zones).keys()];
+export function initialTable<G>(ruleset: Ruleset<G>, rng: Rng, zoneIds: Iterable<ZoneId> = expandZones(ruleset.zones).keys()): TableState<G> {
   return {
     format: FORMAT,
     ruleset: { id: ruleset.id, version: ruleset.version },

@@ -6,14 +6,14 @@ import type { Rng, TextRef } from '../../engine/types';
 import { pick } from '../../engine/rng';
 import {
   afterwards, always, filters, requires, steps, trumpCount, unimprovedStrengths,
-  type BlockContext, type Change, type Choices, type Trump,
+  type BlockContext, type Change, type Choices, type StepImpl, type Trump,
 } from './blocks';
 import type { TrumpSourcesFile } from './content/schema';
 
 export type SourcesConfig = z.infer<typeof TrumpSourcesFile>;
 export type Source = SourcesConfig['trumpSources'][number];
 
-export type SourceStatus = { ok: true; improveOnly: boolean } | { ok: false; why: TextRef };
+type SourceStatus = { ok: true; improveOnly: boolean } | { ok: false; why: TextRef };
 
 const entry = <T>(block: T): [string, unknown] =>
   typeof block === 'string' ? [block, undefined] : (Object.entries(block as object)[0] as [string, unknown]);
@@ -51,16 +51,13 @@ export function trumpProblem(cfg: SourcesConfig, src: Source | 'free', trump: Tr
   return null;
 }
 
-const stepRequired = (src: Source, block: Source['steps'] extends (infer B)[] | undefined ? B : never, improveOnly: boolean): boolean => {
-  const [name, param] = entry(block);
-  if (name === 'improveStrength') return improveOnly || param === 'required';
-  return true;
-};
-
-/** Welche Entscheidungen der Weg erwartet; andere sind ein Fehler. */
-function expectedChoices(src: Source): Set<keyof Choices> {
-  const map: Record<string, keyof Choices> = { chooseWeaknessToRemove: 'removeWeakness', improveStrength: 'improveStrength', moveAttributePoint: 'moveAttribute' };
-  return new Set((src.steps ?? []).map((b) => map[entry(b)[0]]!));
+/** Die Schritte eines Wegs samt Baustein und Pflicht-Angabe. */
+function stepsOf(src: Source, improveOnly: boolean): { step: StepImpl; required: boolean }[] {
+  return (src.steps ?? []).map((b) => {
+    const [name, param] = entry(b);
+    const step = steps[name as keyof typeof steps];
+    return { step, required: step.required(param, improveOnly) };
+  });
 }
 
 export type Plan = { changes: Change[]; trump: string | null };
@@ -72,16 +69,16 @@ export function planChoice(
   const status = sourceStatus(cfg, src, ctx);
   if (!status.ok) return { why: status.why };
 
-  const expected = expectedChoices(src);
+  const plan = stepsOf(src, status.improveOnly);
+  // Entscheidungen, die der Weg nicht kennt, sind ein Fehler
+  const expected = new Set(plan.map((p) => p.step.choice));
   for (const k of Object.keys(choices) as (keyof Choices)[]) {
     if (choices[k] !== undefined && !expected.has(k)) return { why: { key: 'reject.invalidChoice' } };
   }
 
   const changes: Change[] = [];
-  for (const b of src.steps ?? []) {
-    const [name] = entry(b);
-    const step = steps[name as keyof typeof steps];
-    const why = step.check(ctx, choices, stepRequired(src, b, status.improveOnly));
+  for (const { step, required } of plan) {
+    const why = step.check(ctx, choices, required);
     if (why) return { why };
     changes.push(...step.changes(ctx, choices));
   }
@@ -108,23 +105,31 @@ export function planChoice(
 export function planRandom(
   cfg: SourcesConfig, trumps: readonly Trump[], ctx: BlockContext, rng: Rng,
 ): { source: Source; choices: Choices; trump: string | undefined } | { why: TextRef } {
-  const found = cfg.trumpSources.map((s) => ({ s, st: sourceStatus(cfg, s, ctx) })).find((x) => x.st.ok);
-  if (!found || !found.st.ok) return { why: { key: 'toast.noSource' } };
-  const { s: src, st } = found;
+  let src: Source | undefined;
+  let improveOnly = false;
+  for (const s of cfg.trumpSources) {
+    const st = sourceStatus(cfg, s, ctx);
+    if (st.ok) {
+      src = s;
+      improveOnly = st.improveOnly;
+      break;
+    }
+  }
+  if (!src) return { why: { key: 'toast.noSource' } };
 
   // Alle Kombinationen gültiger Entscheidungen (klein: höchstens 2 × 5 × 6)
   let combos: Choices[] = [{}];
-  for (const b of src.steps ?? []) {
-    const [name] = entry(b);
-    const opts = steps[name as keyof typeof steps].options(ctx, stepRequired(src, b, st.improveOnly));
-    if (opts.length === 0) return { why: { key: name === 'moveAttributePoint' ? 'toast.noAttributeToLower' : 'reject.invalidChoice' } };
+  for (const { step } of stepsOf(src, improveOnly)) {
+    const opts = step.options(ctx);
+    if (opts.length === 0) return { why: step.noOptions };
     combos = combos.flatMap((c) => opts.map((o) => ({ ...c, ...o })));
   }
-  if (st.improveOnly) return { source: src, choices: pick(combos, rng), trump: undefined };
+  if (improveOnly) return { source: src, choices: pick(combos, rng), trump: undefined };
 
   // A28: nur Kombinationen, für die noch ein passender Trumpf übrig ist
+  const source = src;
   const withTrumps = combos
-    .map((choices) => ({ choices, ok: trumps.filter((t) => !trumpProblem(cfg, src, t, ctx, choices)) }))
+    .map((choices) => ({ choices, ok: trumps.filter((t) => !trumpProblem(cfg, source, t, ctx, choices)) }))
     .filter((x) => x.ok.length > 0);
   if (withTrumps.length === 0) return { why: { key: 'toast.noTrumpLeft' } };
   const chosen = pick(withTrumps, rng);

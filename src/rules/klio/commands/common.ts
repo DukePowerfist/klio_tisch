@@ -3,14 +3,14 @@
 import { z } from 'zod';
 import { reject } from '../../../engine/commands';
 import { seatVisible } from '../../../engine/zones';
-import { SEATS, type Actor, type Command, type CommandDef, type Event, type Rejection, type Rng, type SeatId } from '../../../engine/types';
+import type { Actor, Command, CommandDef, Event, Rejection, Rng, SeatId } from '../../../engine/types';
 import type { Attr, BlockContext } from '../blocks';
 import type { KlioContent } from '../content/validate';
 import { sheetOf, type KlioTable } from '../events';
 import type { KlioState } from '../state';
 
 export { reject };
-export const Seat = z.enum(SEATS as unknown as [SeatId, ...SeatId[]]);
+export { SeatSchema as Seat } from '../../../engine/schemas';
 
 export type Deps = { content: KlioContent };
 

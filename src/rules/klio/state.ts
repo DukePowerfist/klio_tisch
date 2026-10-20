@@ -2,13 +2,27 @@
 // Listenlängen kommen aus sheet.yaml und werden beim Build gegen dieses Schema geprüft.
 
 import { z } from 'zod';
+import { RankSchema } from '../../engine/schemas';
 
 export const TrumpId = z.string().regex(/^[a-z0-9-]+$/);
+
+export const ATTRS = ['K', 'V', 'P'] as const; // Körper, Verstehen, Präsenz
+export const AttrSchema = z.enum(ATTRS);
+export type Attr = z.infer<typeof AttrSchema>;
+export const ScarSchema = z.enum(['heart', 'spade']);
+export const ORACLE_SUITS = ['H', 'S', 'C'] as const;
+/** Trumpf-Platz 0–3 */
+export const Slot = z.number().int().min(0).max(3);
+/** je Expeditionstabelle I–IV der Index des gewürfelten Eintrags */
+export const Expedition = z.array(z.number().int().min(0).max(12)).length(4);
 
 /** Verweis auf ein Foto, benannt nach seinem Hash (8.4). */
 export const PhotoRef = z.object({ hash: z.string().regex(/^[0-9a-f]{64}$/), type: z.literal('image/jpeg') }).strict();
 
 const Attribute = z.number().int().min(0).max(9).nullable();
+/** Ergebnis des Auswürfelns: alle drei Attribute gesetzt */
+export const RolledAttributes = z.object({ K: z.number().int().min(0), V: z.number().int().min(0), P: z.number().int().min(0) }).strict();
+export type RolledAttributes = z.infer<typeof RolledAttributes>;
 
 export const KlioSheet = z.object({
   variant: z.enum(['m', 'w']),
@@ -28,14 +42,14 @@ export const KlioSheet = z.object({
 }).strict();
 export type KlioSheet = z.infer<typeof KlioSheet>;
 
-const OracleDraw = z.object({ suit: z.enum(['H', 'S', 'C']), rank: z.enum(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']) }).strict();
+export const OracleDraw = z.object({ suit: z.enum(ORACLE_SUITS), rank: RankSchema }).strict();
+export const Oracle = z.tuple([OracleDraw, OracleDraw]);
 
 export const KlioState = z.object({
   /** ein Bogen je Sitzplatz, Index 0 = seat1 */
   sheets: z.array(KlioSheet).length(4),
-  /** je Expeditionstabelle I–IV der Index des gewürfelten Eintrags */
-  expedition: z.array(z.number().int().min(0).max(12)).length(4).nullable(),
-  oracle: z.tuple([OracleDraw, OracleDraw]).nullable(),
+  expedition: Expedition.nullable(),
+  oracle: Oracle.nullable(),
 }).strict();
 export type KlioState = z.infer<typeof KlioState>;
 

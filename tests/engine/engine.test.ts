@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createEngine } from '../../src/engine/dispatch';
 import { cryptoRng, seededRng, shuffled } from '../../src/engine/rng';
 import { initialTable } from '../../src/engine/setup';
-import type { Ruleset } from '../../src/engine/types';
+import type { EngineEventOf, Ruleset } from '../../src/engine/types';
 import { GM, engine, expectRejected, fresh, place, player, run, type K } from '../helpers';
 
 const allCards = (s: K) => [...Object.values(s.zones).flat(), ...s.free];
@@ -164,7 +164,7 @@ describe('Umdrehen, Ziehen, Mischen', () => {
     expect(state.zones['diamonds_easy']).toContain('D3');
     expect(state.zones['diamonds_hard']).toContain('DK');
     for (const c of ['D3', 'HA', 'DK', 'C5']) expect(state.faceUp[c as never]).toBe(false);
-    const ev = events[0] as unknown as { shuffled: string[] };
+    const ev = events[0] as EngineEventOf<'zonesShuffled'>;
     expect(ev.shuffled.sort()).toEqual(['deck', 'diamonds_easy', 'diamonds_hard']);
     expect(allCards(state)).toHaveLength(52);
   });

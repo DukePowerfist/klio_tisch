@@ -1,22 +1,25 @@
 // Bausteine für trump-sources.yaml (ARCHITEKTUR.md 7, Ebene 2).
 // YAML setzt sie nur mit Parametern zusammen; jede Funktion hier hat Tests.
 
+import { z } from 'zod';
 import type { TextRef } from '../../../engine/types';
+import type { Trump as TrumpSchema } from '../content/schema';
 import type { FieldValue } from '../fields';
-import type { KlioSheet } from '../state';
+import { ATTRS, AttrSchema, type Attr, type KlioSheet } from '../state';
 
-export type Attr = 'K' | 'V' | 'P';
-export const ATTRS: readonly Attr[] = ['K', 'V', 'P'];
+export { ATTRS, type Attr };
 export type CheckList = 'weaknessMarks' | 'lamps';
+export type Trump = z.infer<typeof TrumpSchema>;
 
-export type Trump = { id: string; category: string; attributes: Attr[]; level: 1 | 2 | 3; name: string; text: string };
+const MAX_STRENGTH_TEXT = 70;
 
 /** Entscheidungen aus dem Dialog, alle auf einmal im Befehl (6.2). */
-export type Choices = {
-  removeWeakness?: number;
-  improveStrength?: { index: number; text: string };
-  moveAttribute?: { lowered: Attr; raised: Attr };
-};
+export const ChoicesSchema = z.object({
+  removeWeakness: z.number().int().min(0).max(1).optional(),
+  improveStrength: z.object({ index: z.number().int().min(0).max(4), text: z.string().max(MAX_STRENGTH_TEXT) }).strict().optional(),
+  moveAttribute: z.object({ lowered: AttrSchema, raised: AttrSchema }).strict().optional(),
+});
+export type Choices = z.infer<typeof ChoicesSchema>;
 
 export type Change = { field: string; value: FieldValue };
 
@@ -44,7 +47,8 @@ export function highestAttributes(sheet: KlioSheet): Attr[] {
 export const requires = {
   noTrumpYet: (ctx: BlockContext) => trumpCount(ctx.sheet) === 0,
   allMarked: (ctx: BlockContext, list: CheckList) => ctx.sheet[list].every(Boolean),
-  atLeast: (ctx: BlockContext, p: { newScars: number }) => ctx.sheet.newScars >= p.newScars,
+  atLeast: (ctx: BlockContext, p: Partial<Record<'newScars', number>>) =>
+    Object.entries(p).every(([field, min]) => ctx.sheet[field as 'newScars'] >= (min ?? 0)),
 };
 
 // ---------- Filter auf Trümpfe (filters): null = passt, sonst Grund ----------
@@ -71,17 +75,24 @@ export const always = {
 // options: alle gültigen Entscheidungen (für „Zufälliger Trumpf“); check: Entscheidung prüfen; changes: was sich am Bogen ändert.
 
 export type StepImpl = {
+  /** welche Angabe im Befehl zu diesem Schritt gehört */
+  choice: keyof Choices;
+  /** Pflicht? `param` ist der Parameter aus YAML; `improveOnly` = Weg bei vollen Trümpfen */
+  required(param: unknown, improveOnly: boolean): boolean;
   /** Mögliche Teil-Entscheidungen; [{}] = Schritt entfällt */
-  options(ctx: BlockContext, required: boolean): Choices[];
+  options(ctx: BlockContext): Choices[];
+  /** Grund, wenn es gar keine Möglichkeit gibt (Zufälliger Trumpf) */
+  noOptions: TextRef;
   check(ctx: BlockContext, choices: Choices, required: boolean): TextRef | null;
   changes(ctx: BlockContext, choices: Choices): Change[];
 };
 
-const MAX_STRENGTH_TEXT = 70;
-
 export const steps: Record<'chooseWeaknessToRemove' | 'improveStrength' | 'moveAttributePoint', StepImpl> = {
   /** Schwäche streichen; nur befüllte sind wählbar, sind beide leer, entfällt der Schritt (A29). */
   chooseWeaknessToRemove: {
+    choice: 'removeWeakness',
+    required: () => true,
+    noOptions: { key: 'reject.invalidChoice' },
     options: (ctx) => {
       const filled = filledWeaknesses(ctx.sheet);
       return filled.length > 0 ? filled.map((i) => ({ removeWeakness: i })) : [{}];
@@ -97,6 +108,9 @@ export const steps: Record<'chooseWeaknessToRemove' | 'improveStrength' | 'moveA
 
   /** Stärke verbessern, optional mit neuer Formulierung; leerer Text lässt die alte stehen. */
   improveStrength: {
+    choice: 'improveStrength',
+    required: (param, improveOnly) => improveOnly || param === 'required',
+    noOptions: { key: 'reject.invalidChoice' },
     options(ctx) {
       // „Zufälliger Trumpf“ verbessert immer, wenn es noch geht (wie bisher)
       const open = unimprovedStrengths(ctx.sheet);
@@ -121,6 +135,9 @@ export const steps: Record<'chooseWeaknessToRemove' | 'improveStrength' | 'moveA
 
   /** Einen Attributspunkt umverteilen: eins runter (mindestens 1 vorhanden), ein anderes hoch. */
   moveAttributePoint: {
+    choice: 'moveAttribute',
+    required: () => true,
+    noOptions: { key: 'toast.noAttributeToLower' },
     options(ctx) {
       return ATTRS.flatMap((lowered) =>
         attrValue(ctx.sheet, lowered) < 1
@@ -148,5 +165,5 @@ export const steps: Record<'chooseWeaknessToRemove' | 'improveStrength' | 'moveA
 
 export const afterwards = {
   clear: (ctx: BlockContext, list: CheckList): Change[] => ctx.sheet[list].map((_, i) => ({ field: `${list}.${i}`, value: false })),
-  decrement: (ctx: BlockContext, _field: 'newScars'): Change[] => [{ field: 'newScars', value: Math.max(0, ctx.sheet.newScars - 1) }],
+  decrement: (ctx: BlockContext, field: 'newScars'): Change[] => [{ field, value: Math.max(0, ctx.sheet[field] - 1) }],
 };
