@@ -37,11 +37,12 @@ class GameLog {
     });
     session.onReplaced((reason) => this.add([{ text: t(`log.replaced.${reason}`), warn: false }]));
     // beim Verlassen der Seite sofort speichern, damit nichts aus der Bündelung verloren geht
-    addEventListener('pagehide', () => this.save());
+    addEventListener('pagehide', () => { if (this.saveTimer) this.save(); });
   }
 
   private save(): void {
     clearTimeout(this.saveTimer);
+    this.saveTimer = undefined;
     localStorage.setItem(KEY, JSON.stringify(this.entries));
   }
 

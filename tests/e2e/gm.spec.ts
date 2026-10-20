@@ -47,15 +47,12 @@ test('Zurücksetzen: Karten auf Startplätze; Charaktere nur mit Häkchen', asyn
   await dialog.getByRole('button', { name: 'Abbrechen' }).click();
   await expectCount(page, 'ABLAGE', 1);
 
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
-  await dialog.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await resetTable(page);
   await expectCount(page, 'ABLAGE', 0);
   await expectCount(page, 'DECK', 27);
   await expect(name).toHaveValue('Ida');
 
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
-  await dialog.getByRole('checkbox').check();
-  await dialog.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await resetTable(page, true);
   await expect(name).toHaveValue('');
 });
 

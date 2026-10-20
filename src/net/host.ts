@@ -140,11 +140,9 @@ export class Host<G> {
   /** Sicherungsdatei: Stand, Plätze, Raum und die Fotos, auf die der Stand verweist (8.2). */
   async exportArchive(): Promise<string> {
     const saved = this.saved;
-    const photos: Photos = new Map();
-    for (const hash of this.engine.ruleset.photosOf?.(saved.state.game) ?? []) {
-      const bytes = await this.options.photos?.get(hash);
-      if (bytes) photos.set(hash, bytes);
-    }
+    const hashes = [...new Set(this.engine.ruleset.photosOf?.(saved.state.game))];
+    const found = await Promise.all(hashes.map(async (hash) => [hash, await this.options.photos?.get(hash)] as const));
+    const photos: Photos = new Map(found.filter((e): e is [string, Uint8Array] => e[1] !== undefined));
     return writeArchive(saved, photos);
   }
 
@@ -154,8 +152,8 @@ export class Host<G> {
       const read = await readArchive(this.engine, text).catch(() => null);
       if (!read) return { ok: false, reason: { key: 'reject.importInvalid' } };
       await Promise.all([...read.photos].map(([hash, bytes]) => this.options.photos?.put(hash, bytes)));
-      const room = read.saved.host.room ?? this.room;
-      return this.swap({ state: read.saved.state, host: { ...read.saved.host, ...(room ? { room } : {}) } }, 'import');
+      const { state, host } = read.saved;
+      return this.swap({ state, host: host.room || !this.room ? host : { ...host, room: this.room } }, 'import');
     });
   }
 
