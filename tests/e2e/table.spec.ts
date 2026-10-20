@@ -1,7 +1,7 @@
 // Tisch im lokalen Betrieb (Schritt 3a): Stapel, Ziehen und Ablegen, Ansichten, Speichern.
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, openMenuAndClick, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -75,6 +75,41 @@ test('Ansichten: Taste 1 → Rollenansicht, 0 → Draufsicht; Dock', async ({ pa
   await expect.poll(async () => Math.round((await sheet1.boundingBox())!.width)).toBe(Math.round(before));
   await page.getByTitle('Ich bin Spieler 2').click();
   await expect.poll(async () => (await page.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
+});
+
+test('Zuordnung der Bögen: Namensschild in der Draufsicht, Farbstreifen in der Rollenansicht, Dock in den Platzfarben (5b)', async ({ page }) => {
+  const plate1 = page.locator('[data-plate=seat1]');
+  await expect(plate1).toHaveText('Spieler 1');
+  await expect(page.locator('[data-dock=seat1]')).toHaveText('1');
+  await nameCharacter(page, 'seat1', 'Ida');
+  await expect(plate1).toHaveText('Ida');
+  await expect(page.locator('[data-dock=seat1]')).toHaveAttribute('title', 'Ich bin Spieler 1: Ida');
+  // Schild und Dock-Knöpfe tragen die Farbe des Platzes; jeder Knopf eine andere
+  const color = (sel: string, prop: string) => page.locator(sel).evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+  expect(await color('[data-plate=seat1]', 'background-color')).not.toBe(await color('[data-plate=seat2]', 'background-color'));
+  const docks = await Promise.all(['seat1', 'seat2', 'seat3', 'seat4'].map((s) => color(`[data-dock=${s}]`, 'border-top-color')));
+  expect(new Set(docks).size).toBe(4);
+
+  // Rollenansicht: eigener Bogen ohne Schild, die anderen mit Farbstreifen
+  await page.keyboard.press('1');
+  await expect(page.locator('.plate')).toHaveCount(0);
+  await expect(page.locator('[data-sheet=seat1] .strip')).toHaveCount(0);
+  await expect(page.locator('.strip')).toHaveCount(3);
+  expect(await color('[data-strip=seat2]', 'background-color')).toBe('rgb(90, 176, 232)');
+
+  // ausgeblendete Plätze: kein Schild, kein Dock-Knopf
+  await page.keyboard.press('0');
+  await page.getByRole('combobox').selectOption('3');
+  await expect(page.locator('[data-plate=seat4]')).toHaveCount(0);
+  await expect(page.locator('[data-dock=seat4]')).toHaveCount(0);
+});
+
+test('Namensschild ist bei 4 Spielern und Zoom 1 im Stream lesbar (mindestens 12 px)', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 950 });
+  const b = page.locator('[data-plate=seat1] b');
+  await expect(b).toBeVisible();
+  // Zeilenhöhe 1,5 → Schriftgröße auf dem Bildschirm
+  await expect.poll(async () => (await b.boundingBox())!.height / 1.5).toBeGreaterThanOrEqual(12);
 });
 
 test('Mausrad zoomt, Übersicht setzt zurück', async ({ page }) => {

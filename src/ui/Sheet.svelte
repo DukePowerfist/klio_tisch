@@ -15,18 +15,22 @@
   import { SHEET_W, type SheetBox } from './layout';
   import { preparePhoto } from './photo';
   import { photos } from './photos.svelte';
+  import { seatNames } from './seatNames';
   import { session } from './session.svelte';
-  import { t, text } from './texts';
+  import { t, text, whoColor } from './texts';
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
 
-  let { box, sheet }: { box: SheetBox; sheet: KlioSheet } = $props();
+  /** Zuordnung (10): Namensschild in der Draufsicht, Farbstreifen an den kleinen Bögen der Rollenansicht */
+  let { box, sheet, mark }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null } = $props();
 
   const skin = content.skinPaper;
   const [imgW, imgH] = skin.size;
   const k = $derived((SHEET_W * box.scale) / imgW);
   const seat = $derived(box.seat);
   const image = $derived(`${import.meta.env.BASE_URL}assets/${skin.images[sheet.variant]}`);
+  const names = $derived(mark === 'plate' && session.state ? seatNames(session.state, seat) : null);
+  const plate = skin.nameplate;
 
   // Felder nach Art (sheet.yaml); Lage aus der Haut
   const all = sheetFields(content.sheet);
@@ -104,6 +108,7 @@
   style:width="{box.w}px"
   style:height="{box.h}px"
   style:opacity={box.opacity}
+  style:--c={whoColor(seat)}
 >
   <div class="paper" style:width="{imgW}px" style:height="{imgH}px" style:transform="scale({k})" style:background-image="url({image})" style:font-family={SHEET_FONT}>
     {#each inputs as f (f.id)}
@@ -197,12 +202,23 @@
       </div>
     {/each}
 
+    {#if names}
+      <div
+        class="plate"
+        data-plate={seat}
+        title={names.person ? `${names.character} · ${names.person}` : names.character}
+        style:left="{plate.x}px" style:top="{plate.y}px" style:max-width="{plate.w}px" style:height="{plate.h}px" style:font-size="{plate.font}px"
+      ><b>{names.character}</b>{#if names.person}<small>{names.person}</small>{/if}</div>
+    {/if}
+
     {#if sheet.dead}
       <svg class="dead-cross" viewBox="0 0 100 100" preserveAspectRatio="none" width={imgW} height={imgH}>
         <path d="M4 3L96 97M96 3L4 97" stroke-width="12" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
       </svg>
     {/if}
   </div>
+
+  {#if mark === 'strip'}<div class="strip" data-strip={seat}></div>{/if}
 
   <div class="sbar control">
     {#if canRoll}
@@ -236,7 +252,12 @@
   .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
   :global(body.zoomed) .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
-  .sbar { position: absolute; left: 6px; top: 5px; display: flex; gap: 4px; z-index: 3; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: #111; line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
+  .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+  .plate small { font-size: 0.6em; flex: none; }
+  .strip { position: absolute; left: 0; top: 0; right: 0; height: 5px; background: var(--c); pointer-events: none; }
+  /* rechts oben, damit links das Namensschild frei bleibt */
+  .sbar { position: absolute; right: 6px; top: 5px; display: flex; gap: 4px; z-index: 3; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   :global(body.zoomed) .sbar { opacity: 0.4; pointer-events: auto; }
   :global(body.zoomed) .sbar:hover, .dead .sbar { opacity: 0.95; pointer-events: auto; }
   .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; padding: 2px 7px; cursor: pointer; }

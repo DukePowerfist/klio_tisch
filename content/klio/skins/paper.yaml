@@ -59,3 +59,6 @@ zones:
   damage: { x: 519.1, y: 125.4, w: 139.4, h: 195.1 }
   notes: { x: 62.7, y: 435.5, w: 278.7, h: 195.1 }
   collect: { x: 597.5, y: 456.4, w: 59.2, h: 188.1 }
+# Namensschild in der Draufsicht (ARCHITEKTUR.md 10): freier Streifen links oben über Seil und Fotorahmen.
+# Schrift 26 → bei 4 Spielern und Zoom 1 etwa 13 px auf dem Bildschirm.
+nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }

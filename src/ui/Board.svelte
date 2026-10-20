@@ -259,7 +259,7 @@
 
     {#each Object.values(layout.sheets) as box (box.seat)}
       {#if box.visible}
-        <Sheet {box} sheet={sheetOf(table, box.seat)} />
+        <Sheet {box} sheet={sheetOf(table, box.seat)} mark={view.role === null ? 'plate' : box.seat === view.role ? null : 'strip'} />
       {/if}
     {/each}
 
