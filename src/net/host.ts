@@ -4,7 +4,7 @@
 import { isRejection } from '../engine/commands';
 import type { Engine } from '../engine/dispatch';
 import { cryptoRng } from '../engine/rng';
-import type { Actor, Rng, SeatId, SequencedEvent, TableState } from '../engine/types';
+import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
 import type { RoomLink } from './room-link';
 import { ToHost, type CommandResult, type Role, type ToClient } from './protocol';
 import type { PeerId, Transport } from './transport';
