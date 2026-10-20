@@ -6,6 +6,7 @@
   import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
   import { sheetOf } from '../rules/klio/events';
   import Card from './Card.svelte';
+  import GmControls from './GmControls.svelte';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
@@ -242,6 +243,7 @@
 >
   <div class="board" style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
     <div class="panel" style:left="{layout.panel.x}px" style:top="{layout.panel.y}px" style:width="{layout.panel.w}px" style:height="{layout.panel.h}px"></div>
+    <GmControls panel={layout.panel} {players} />
     <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
     {#each Object.values(layout.sheets) as box (box.seat)}

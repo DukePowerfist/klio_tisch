@@ -22,6 +22,8 @@ class ViewState {
   open = $state<ZoneId | null>(null);
   /** offener Trumpf-Dialog für diesen Bogen */
   trumpDialog = $state<SeatId | null>(null);
+  /** offenes SL-Fenster: Ergebnis von Expedition bzw. Orakel, Rückfrage vor dem Zurücksetzen */
+  gmDialog = $state<'expedition' | 'oracle' | 'reset' | null>(null);
   /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
   bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
   toast = $state<Toast | null>(null);

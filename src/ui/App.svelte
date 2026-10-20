@@ -5,6 +5,7 @@
   import Toast from './Toast.svelte';
   import BigTrump from './BigTrump.svelte';
   import TrumpDialog from './TrumpDialog.svelte';
+  import GmDialog from './GmDialog.svelte';
   import { view } from './view.svelte';
   import { session } from './session.svelte';
 
@@ -21,6 +22,9 @@
   <Dock players={session.state.settings.players} />
   <Toast />
   <BigTrump />
+  {#if view.gmDialog}
+    <GmDialog />
+  {/if}
   {#if view.trumpDialog}
     {#key view.trumpDialog}<TrumpDialog seat={view.trumpDialog} />{/key}
   {/if}

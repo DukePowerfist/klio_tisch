@@ -50,6 +50,13 @@ class Effects {
         return view.say(t('toast.scar', { seat: seatNo(e.seat), suit: t(`scars.${e.scar}`) }), true);
       case 'characterDied':
         return view.say(t('toast.dead', { seat: seatNo(e.seat) }), true);
+      // Ergebnis sehen alle (13.1): das Fenster öffnet sich mit dem Ereignis
+      case 'expeditionRolled':
+        view.gmDialog = 'expedition';
+        return;
+      case 'oracleDrawn':
+        view.gmDialog = 'oracle';
+        return;
       case 'sheetRolled':
         return view.say(t('toast.rolled', { seat: seatNo(e.seat) }));
       case 'trumpChosen': {
