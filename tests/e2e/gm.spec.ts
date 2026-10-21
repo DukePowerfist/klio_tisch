@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test, type Locator } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -250,11 +250,15 @@ test('Protokoll: Spalte rechts über das Menü, neueste oben, offen oder zu blei
   await expect(log.locator('li')).toHaveCount(3);
   const column = (await page.locator('aside.log').boundingBox())!;
   await expect.poll(async () => { const b = (await page.locator('.board').boundingBox())!; return b.x + b.width; }).toBeLessThanOrEqual(column.x + 1);
+  // der Menüknopf rückt mit und liegt nicht auf der Kopfzeile des Protokolls
+  const button = (await menuButton(page).boundingBox())!;
+  expect(button.x + button.width).toBeLessThanOrEqual(column.x);
   await ready(page, true);
   await expect(log.locator('li')).toHaveCount(3);
   await page.locator('aside.log').getByRole('button', { name: 'Schließen' }).click();
   await ready(page, true);
   await expect(log).toHaveCount(0);
+  expect((await menuButton(page).boundingBox())!.x).toBeGreaterThan(column.x);
 });
 
 test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließt', async ({ page }) => {

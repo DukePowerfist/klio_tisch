@@ -25,7 +25,7 @@
 
 <svelte:window onpointerdown={(e) => { if (open && !root?.contains(e.target as Node)) open = false; }} />
 
-<div class="menu control" bind:this={root}>
+<div class="menu control" class:log={gameLog.open} bind:this={root}>
   {#if session.trouble}
     <div class="alert" role="alert">
       {session.statusText}
@@ -64,6 +64,8 @@
 
 <style>
   .menu { position: fixed; top: var(--menu-inset); right: var(--menu-inset); z-index: 97; display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  /* offenes Protokoll: Knopf rückt mit dem Tisch nach links, statt auf dessen Kopfzeile zu liegen */
+  .menu.log { right: calc(var(--log-w) + var(--menu-inset)); }
   .open { position: relative; width: var(--menu-size); height: var(--menu-size); padding: 0; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--panel-bg) 60%, transparent); color: var(--ink); border: 1px solid var(--line); cursor: pointer; transition: background 0.2s; }
   .open:hover, .open[aria-expanded='true'] { background: var(--panel-bg); }
   .dot { position: absolute; right: -1px; top: -1px; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--bg); background: var(--menu-local); }
