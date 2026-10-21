@@ -93,9 +93,20 @@
   type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
+  // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
+  // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
+  // kurz nach dem Laden); bis dahin der Grundton des Holzes.
+  let wood = $state<string | undefined>();
+  $effect(() => {
+    const src = `${import.meta.env.BASE_URL}assets/table/holz.webp`;
+    const img = new Image();
+    img.src = src;
+    img.decode().then(() => (wood = `url(${src})`), () => (wood = `url(${src})`));
+  });
   /** Hülle über dem Filz: blendet beim Ansichtswechsel ab und auf (11.8) */
   let sceneEl: HTMLDivElement;
-  $effect(() => view.attachScene(sceneEl));
+  // Ansichtswechsel (11.8, seit 5n): es blendet der ganze Tisch ab, Filz und Licht rücken mit der Tischmitte
+  $effect(() => view.attachFade(boardEl));
   let pan: { x: number; y: number; moved: boolean } | null = null;
   let panned = false;
   const touches = new Map<number, [number, number]>();
@@ -348,7 +359,7 @@
   onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; under = null; hover = null; session.pointer(null, []); } }}
   role="application"
 >
-  <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
+  <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>
     <div class="scene" bind:this={sceneEl}>
       <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
       <GmControls at={layout.gmControls} {players} />
@@ -398,10 +409,13 @@
 </div>
 
 <style>
-  .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--bg); }
+  .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--room); }
   .scene { position: absolute; inset: 0; }
-  .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--felt); border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
-  .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
+  /* Holz (11.9): `border-radius` rundet die Platte ab; kein overflow: über den Rand gezogene Karten bleiben sichtbar */
+  .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--wood) 0 0 / 100% 100% no-repeat; border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
+  /* Filz als Einlage: Struktur über der Filzfarbe, dunkler Rand wie Leder, Schatten nach innen und aufs Holz */
+  .panel { position: absolute; background: var(--felt-grain), var(--felt); border-radius: 56px; box-sizing: border-box;
+    box-shadow: 0 0 0 6px var(--felt-rim), 0 0 0 7px var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), 0 3px 8px 6px rgba(0, 0, 0, 0.5); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* in der Bühne: rückt mit dem Tisch zur Seite, wenn das Protokoll offen ist */
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */

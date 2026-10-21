@@ -64,27 +64,29 @@ class ViewState {
     if (r) localStorage.setItem(ROLE_KEY, r);
     else localStorage.removeItem(ROLE_KEY);
     // noch nicht gezeichnet oder Stufe „Aus“: sofort, ohne Blende
-    if (!this.scene || timing().viewOut === 0) {
+    if (!this.faded || timing().viewOut === 0) {
       this.role = r;
       this.animateTo(1, 0, 0);
       return;
     }
     // während des Abblendens zählt nur die zuletzt gewählte Ansicht
-    if (this.phase !== 'out') void this.cut(this.scene);
+    if (this.phase !== 'out') void this.cut(this.faded);
   }
 
   // ---------- Schnitt beim Ansichtswechsel (11.8) ----------
-  /** Hülle mit allem, was auf dem Tisch liegt (Board.svelte); der Filz darunter bleibt stehen */
-  private scene: HTMLElement | null = null;
+  /** Was beim Schnitt abblendet: seit 5n der ganze Tisch (`.board`), weil Filz, Laterne und Licht mit der Tischmitte
+   *  rücken. Nicht nur der Inhalt: Während der Blende wäre er eine isolierte Gruppe, und `multiply` im Licht hätte
+   *  keinen Hintergrund (11.9). */
+  private faded: HTMLElement | null = null;
   /** `out`: blendet ab, `in`: blendet auf; null: kein Schnitt */
   private phase: 'out' | 'in' | null = null;
   private fade: Animation | null = null;
   private cuts = 0;
 
-  attachScene(el: HTMLElement): () => void {
-    this.scene = el;
+  attachFade(el: HTMLElement): () => void {
+    this.faded = el;
     return () => {
-      if (this.scene === el) this.scene = null;
+      if (this.faded === el) this.faded = null;
     };
   }
 
@@ -93,44 +95,44 @@ class ViewState {
     return this.phase !== null;
   }
 
-  private async cut(scene: HTMLElement): Promise<void> {
+  private async cut(el: HTMLElement): Promise<void> {
     const id = ++this.cuts;
     const t = timing();
     this.phase = 'out';
     this.stopAnimation();
-    await this.fadeTo(scene, 0, t.viewOut, 'ease-in');
+    await this.fadeTo(el, 0, t.viewOut, 'ease-in');
     if (id !== this.cuts) return;
     this.cutting = true;
     this.role = this.chosen;
     [this.zoom, this.ox, this.oy] = [1, 0, 0];
-    await this.settle(scene);
+    await this.settle(el);
     this.phase = 'in';
-    await this.fadeTo(scene, 1, t.viewIn, 'ease-out');
+    await this.fadeTo(el, 1, t.viewIn, 'ease-out');
     if (id === this.cuts) this.phase = null;
   }
 
   /** Neue Spielerzahl (11.8): die Anordnung kommt mit dem Stand, also ohne Abblenden; Sprung, dann Aufblenden.
    *  Aufruf vor dem Neuzeichnen (`$effect.pre` in Board.svelte), damit die Karten schon mit dem Schnitt planen. */
   async reveal(): Promise<void> {
-    const scene = this.scene;
-    if (!scene || timing().viewIn === 0) return;
+    const el = this.faded;
+    if (!el || timing().viewIn === 0) return;
     this.cutting = true;
     // läuft gerade ein Abblenden, blendet dieser Schnitt am Ende auf
     if (this.phase === 'out') return;
     const id = ++this.cuts;
     this.phase = 'in';
     this.fade?.cancel();
-    this.fade = scene.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, fill: 'forwards' });
-    await this.settle(scene);
-    await this.fadeTo(scene, 1, timing().viewIn, 'ease-out');
+    this.fade = el.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, fill: 'forwards' });
+    await this.settle(el);
+    await this.fadeTo(el, 1, timing().viewIn, 'ease-out');
     if (id === this.cuts) this.phase = null;
   }
 
   /** Neue Lagen ohne Übergang setzen: erst neu zeichnen, dann den Stil berechnen lassen, dann den Schnitt lösen.
    *  Ohne das Lesen fielen neue Lage und gelöstes `data-cut` in dieselbe Stilberechnung, und `--shift` liefe doch. */
-  private async settle(scene: HTMLElement): Promise<void> {
+  private async settle(el: HTMLElement): Promise<void> {
     await tick();
-    void getComputedStyle(scene.querySelector('.zone') ?? scene).left;
+    void getComputedStyle(el.querySelector('.zone') ?? el).left;
     this.cutting = false;
   }
 

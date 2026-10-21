@@ -291,14 +291,15 @@ async function deckOffset(page: Page) {
   return Math.hypot(card[0] - zone.x - zone.width / 2, card[1] - zone.y - zone.height / 2);
 }
 
-test('Ansichtswechsel als Schnitt (5m): nichts gleitet, nur der Inhalt blendet ab und auf; Dock sofort', async ({ page }) => {
+test('Ansichtswechsel als Schnitt (5m, seit 5n der ganze Tisch): nichts gleitet, der Tisch blendet ab und auf; Dock sofort', async ({ page }) => {
   const before = (await zoneCenter(page, 'DECK')).box;
   const { seen, dock } = await keysAndWatch(page, ['2']);
   expect(dock, 'das Dock zeigt die gewählte Ansicht sofort').toBe('seat2');
   expect(shifts(seen)).toEqual([]);
-  const fades = seen.filter((s) => s.props.includes('opacity') && s.on === 'scene');
+  const fades = seen.filter((s) => s.props.includes('opacity') && s.on === 'board');
   expect(fades.map((f) => [f.to, f.duration])).toEqual([['0', 100], ['1', 180]]);
-  expect(seen.filter((s) => s.on === 'board'), 'der Filz blendet nicht mit').toEqual([]);
+  // nur eine Blende: der Inhalt allein wäre eine isolierte Gruppe, das Licht (multiply) ohne Hintergrund (11.9)
+  expect(seen.filter((s) => s.on === 'scene'), 'der Inhalt blendet nicht eigens').toEqual([]);
   // neue Anordnung, Karten liegen genau auf ihren Zonen
   expect((await zoneCenter(page, 'DECK')).box.x).not.toBeCloseTo(before.x, 0);
   expect(await deckOffset(page)).toBeLessThan(0.5);
@@ -313,7 +314,7 @@ test('Ansichtswechsel zur selben Ansicht: keine Blende, nur der Zoom gleitet zur
   await page.waitForTimeout(500);
   expect(await page.locator('.board').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(fit * 1.1);
   const { seen } = await keysAndWatch(page, ['2']);
-  expect(seen.filter((s) => s.on === 'scene')).toEqual([]);
+  expect(seen.filter((s) => s.on === 'board' || s.on === 'scene')).toEqual([]);
   await expect.poll(() => page.locator('.board').evaluate((e) => e.getBoundingClientRect().width)).toBeCloseTo(fit, 0);
 });
 
@@ -321,7 +322,7 @@ test('Ansichtswechsel rasch hintereinander: die zuletzt gewählte Ansicht, genau
   const before = (await zoneCenter(page, 'DECK')).box;
   const { seen, dock } = await keysAndWatch(page, ['1', '2', '3', '0']);
   expect(dock).toBe('overview');
-  expect(seen.filter((s) => s.on === 'scene' && s.to === '1')).toHaveLength(1);
+  expect(seen.filter((s) => s.on === 'board' && s.to === '1')).toHaveLength(1);
   expect(shifts(seen)).toEqual([]);
   expect((await zoneCenter(page, 'DECK')).box).toEqual(before);
 });
@@ -355,7 +356,7 @@ test('Spielerzahl: Sprung an die neue Anordnung, dann Aufblenden, ohne Abblenden
   await expect(page.locator('.dock button.seat')).toHaveCount(2);
   expect((await zoneCenter(page, 'SAMMELN')).box.width, 'die Anordnung ändert sich').toBeGreaterThan(before.width * 1.1);
   expect(shifts(seen)).toEqual([]);
-  const fades = seen.filter((s) => s.props.includes('opacity') && s.on === 'scene');
+  const fades = seen.filter((s) => s.props.includes('opacity') && s.on === 'board');
   expect(fades.map((f) => f.to)).not.toContain('0');
   expect(fades.filter((f) => f.to === '1').map((f) => f.duration)).toEqual([180]);
 });

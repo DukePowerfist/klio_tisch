@@ -1,7 +1,13 @@
 /* Gestaltungswerte (ARCHITEKTUR.md 10): Farben und Dauern zentral. Werte wie bisher. */
 :root {
   --bg: #10201a;
-  --felt: #1f4a39;
+  /* Holztisch (Schritt 5n, 11.9): Raum um den Tisch, Filz als Einlage mit Struktur und Rand */
+  --room: radial-gradient(ellipse at 50% 40%, #1a140f, #050403 75%);
+  --wood: #4a2f1e;          /* Grundton der Tischplatte, bis das Bild dekodiert ist */
+  --felt: #1d4636;
+  --felt-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 -0.25'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.25 -0.08'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  --felt-rim: #23160d;
+  --felt-rim-light: rgba(255, 220, 170, 0.12);
   --ink: #f3efe3;
   --line: rgba(255, 255, 255, 0.5);
   --card: #fffdf7;
