@@ -1,7 +1,9 @@
 <script lang="ts">
   // Eine Zone: Rahmen, Beschriftung mit Anzahl, bei Stapeln das Menü aus den Aktionen in zones.yaml.
   // Lage von Menü und Beschriftung kommt aus layouts.yaml (ZoneBox.menu, ZoneBox.label).
+  import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
+  import { countChanged, events, popCount } from './animator.svelte';
   import { stackEdges, type ZoneBox } from './layout';
   import { session } from './session.svelte';
   import { t, tMaybe } from './texts';
@@ -37,6 +39,14 @@
   const edges = $derived(Array.from({ length: content.zones[zone.template]?.fanned ? 0 : stackEdges(count) }, (_, i) => i + 1).reverse());
   /** Versatz je Kante: 2 px mal Maßstab; in verkleinerten Zonen etwas mehr, sonst sieht man die Kante dort kaum */
   const step = $derived(zone.scale < 1 ? 2.5 : 2 * zone.scale);
+  // Zahl springt, wenn Ereignisse sie ändern (nicht beim Laden und Zurücksetzen, 11.6)
+  let n = $state<HTMLSpanElement>();
+  $effect(() => {
+    void events.seen;
+    untrack(() => {
+      if (n && countChanged(zone.id)) popCount(n);
+    });
+  });
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 
@@ -60,7 +70,7 @@
   onclick={(e) => { if (actions.length && !(e.target as HTMLElement).closest('.menu')) onToggle(); }}
 >
   {#if label}
-    <div class="label" style={labelStyle}>{label}{#if !onSheet}<span class="n">{count}</span>{/if}</div>
+    <div class="label" style={labelStyle}>{label}{#if !onSheet}<span class="n" bind:this={n}>{count}</span>{/if}</div>
   {/if}
   {#if open && actions.length}
     <div class="menu control" style={menuStyle}>
@@ -85,7 +95,7 @@
   .label { position: absolute; left: 0; top: 100%; margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: #fff; background: rgba(0, 0, 0, 0.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 2px #000; pointer-events: none; }
   .center .label { left: 50%; transform: translateX(-50%); }
   .fan .label { font-size: 12px; font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }
-  .n { margin-left: 7px; padding: 0 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.22); font-size: 12px; font-weight: 600; }
+  .n { display: inline-block; margin-left: 7px; padding: 0 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.22); font-size: 12px; font-weight: 600; }
   /* Bogenzonen: dezent, Beschriftung innen */
   .zone.sheet { border-color: rgba(0, 0, 0, 0.35); }
   .zone.sheet .label { top: 50%; left: 50%; margin: 0; transform: translate(-50%, -50%); font-size: 9px; font-weight: 500; letter-spacing: 0.05em; color: #333; background: none; padding: 0; text-shadow: none; opacity: 0.6; }

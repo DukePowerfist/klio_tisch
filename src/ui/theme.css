@@ -59,6 +59,7 @@
   --spring-soft: linear(0, 0.110, 0.310, 0.503, 0.657, 0.771, 0.850, 0.904, 0.939, 0.962, 0.976, 0.985, 0.991, 0.994, 0.997, 0.998, 1);
   --hover: 120ms;  /* Karte unter der Maus hebt sich leicht (11.6) */
   --wiggle: 250ms; /* und wackelt dabei einmal kurz */
+  --count-pop: 250ms; /* Zahl am Stapel springt, wenn sie sich ändert (11.6) */
   --glow: 0.6s;    /* Rand leuchtet nach einem fremden Zug */
   --flip: 0.4s;    /* Karte klappt um, hebt sich dabei */
   --hold: 150ms;   /* gezogene Karte hält am Ziel kurz inne, bevor sie aufgedeckt wird */
@@ -72,7 +73,7 @@
 }
 /* Effektstufe „Aus“ (11.5; data-effects setzt effectLevel.svelte.ts, ohne eigene Wahl bei „Bewegung reduzieren“):
    keine Bewegung; Karten blenden ein, gemischte Stapel und Schaden leuchten kurz am Rand auf */
-:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; }
+:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s; }
 /* Browser ohne linear(): sonst wäre jede transition mit var(--spring) ungültig */
 @supports not (transition-timing-function: linear(0, 1)) {
   :root { --spring: ease-out; --spring-soft: ease-out; }

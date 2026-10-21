@@ -3,7 +3,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { dragFromTo, expectCount, openSettings, ready, zoneCenter } from '../e2e/helpers';
+import { dragFromTo, expectCount, openSettings, ready, resetTable, zoneCenter } from '../e2e/helpers';
 
 type Anim = { card: string | null; part: string; props: string[]; delay: number; duration: number; easing: string };
 
@@ -208,4 +208,33 @@ test('Ansichtswechsel: Karten so schnell und mit derselben Kurve wie Bögen und 
       .map((a) => `${(a.effect as KeyframeEffect).getTiming().duration} ${(a.effect as KeyframeEffect).getTiming().easing}`));
   expect(seen.length).toBeGreaterThan(0);
   expect(new Set(seen)).toEqual(new Set(['350 ease']));
+});
+
+/** Beschriftungen, deren Zahl gerade springt (beobachtet ab jetzt, 2 s lang) */
+function watchCounts(page: Page) {
+  return page.evaluate(() => {
+    const seen = new Set<string>();
+    (window as unknown as { pops: Set<string> }).pops = seen;
+    const watch = setInterval(() => {
+      for (const a of document.getAnimations()) {
+        const el = (a.effect as KeyframeEffect).target as HTMLElement;
+        if (el.classList.contains('n')) seen.add(el.parentElement!.firstChild!.textContent!.trim());
+      }
+    }, 10);
+    setTimeout(() => clearInterval(watch), 2000);
+  });
+}
+const pops = (page: Page) => page.evaluate(() => [...(window as unknown as { pops: Set<string> }).pops].sort());
+
+test('Zahl am Stapel: springt beim Ziehen an Deck und Ablage, nicht beim Zurücksetzen', async ({ page }) => {
+  await watchCounts(page);
+  await openMenu(page, 'DECK');
+  await page.getByRole('button', { name: 'Ziehen', exact: true }).click();
+  await expect.poll(() => pops(page)).toEqual(['ABLAGE', 'DECK']);
+  await page.waitForTimeout(1500);
+  await watchCounts(page);
+  await resetTable(page);
+  await expectCount(page, 'ABLAGE', 0);
+  await page.waitForTimeout(600);
+  expect(await pops(page)).toEqual([]);
 });

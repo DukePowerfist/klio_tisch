@@ -21,8 +21,8 @@ export type Timing = {
   /** Stufe „Aus“: statt Bewegung einblenden bzw. am Rand aufleuchten (11.5) */
   fade: number; flash: number;
   shift: number; shiftEase: string;
-  /** Wackeln beim Überfahren (11.6) */
-  wiggle: number;
+  /** Wackeln beim Überfahren, Springen der Zahl am Stapel (11.6) */
+  wiggle: number; count: number;
 };
 
 /** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon.
@@ -129,6 +129,13 @@ export function cues(events: readonly { type: string }[], prev: TableState<unkno
     else if (e.type === 'damageTaken') for (const c of next.zones[seatZoneId(e.seat, 'damage')] ?? []) set(c, { strike: STRIKE_DELAY });
   }
   return out;
+}
+
+/** Zonen, deren Zahl springt (11.6): Anzahl durch die Ereignisse geändert; nicht beim Zurücksetzen (alle zugleich).
+ *  Ganze Stände (Laden, Beitreten, Wiederherstellen) kommen ohne Ereignisse und kommen hier nicht an. */
+export function countChanges(events: readonly { type: string }[], prev: TableState<unknown> | null, next: TableState<unknown>): ZoneId[] {
+  if (!prev || events.some((e) => e.type === 'cardsReset')) return [];
+  return Object.keys(next.zones).filter((z) => (prev.zones[z]?.length ?? 0) !== (next.zones[z]?.length ?? 0));
 }
 
 const samePose = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.scale === b.scale && a.rotated === b.rotated;

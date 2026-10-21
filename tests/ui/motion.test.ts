@@ -2,11 +2,11 @@
 
 import { describe, expect, it } from 'vitest';
 import type { CardId } from '../../src/engine/types';
-import { ARC_MAX, arcPoints, arrival, cssMs, cues as cuesFor, cutCount, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, STAGGER, STAGGER_MAX, STAGGER_RESET_MAX, STRIKE_DELAY, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
+import { ARC_MAX, arcPoints, arrival, countChanges, cssMs, cues as cuesFor, cutCount, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, STAGGER, STAGGER_MAX, STAGGER_RESET_MAX, STRIKE_DELAY, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
 import { fresh, place } from '../helpers';
 
-const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, fade: 150, flash: 600, shift: 350, shiftEase: 'ease', wiggle: 250 };
-const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, cut: 0, strike: 0, fade: 0, flash: 0, shift: 0, shiftEase: 'ease', wiggle: 0 };
+const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, fade: 150, flash: 600, shift: 350, shiftEase: 'ease', wiggle: 250, count: 250 };
+const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, cut: 0, strike: 0, fade: 0, flash: 0, shift: 0, shiftEase: 'ease', wiggle: 0, count: 0 };
 const glide = (m: ReturnType<typeof planMove>) => {
   expect(m?.kind).toBe('glide');
   return m as Glide;
@@ -131,6 +131,18 @@ describe('Staffelung, Ziehen, Umklappen', () => {
     expect(cssMs(' 350ms ')).toBe(350);
     expect(cssMs('0s')).toBe(0);
     expect(cssMs('')).toBe(0);
+  });
+});
+
+describe('Zahl am Stapel (11.6)', () => {
+  it('springt in Zonen, deren Anzahl sich durch Ereignisse ändert; nicht beim Zurücksetzen und ohne früheren Stand', () => {
+    const prev = fresh();
+    const next = place(prev, 'discard', [prev.zones['deck']!.at(-1)!], true);
+    const drawn = [E({ type: 'cardDrawn' })];
+    expect(countChanges(drawn, prev, next).sort()).toEqual(['deck', 'discard']);
+    expect(countChanges([E({ type: 'cardsTurned' })], prev, prev)).toEqual([]);
+    expect(countChanges([E({ type: 'cardsReset', zones: prev.zones })], next, prev)).toEqual([]);
+    expect(countChanges(drawn, null, next)).toEqual([]);
   });
 });
 

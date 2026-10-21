@@ -65,3 +65,9 @@ test('Aus: Überfahren hebt nicht an und wackelt nicht', async ({ page }) => {
   expect(await lift.evaluate((e) => getComputedStyle(e).transform)).toBe('none');
   expect(await page.evaluate(() => document.getAnimations().filter((a) => a.id === 'wiggle').length)).toBe(0);
 });
+
+test('Aus: die Zahl am Stapel springt nicht', async ({ page }) => {
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
+  await expectCount(page, 'ABLAGE', 1);
+  expect(await page.evaluate(() => document.getAnimations().filter((a) => ((a.effect as KeyframeEffect).target as HTMLElement).classList.contains('n')).length)).toBe(0);
+});

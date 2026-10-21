@@ -2,8 +2,8 @@
 // Geplant wird in motion.ts; die Endlage steht schon im Element (aus dem Stand), animiert wird nur der Weg dorthin.
 // Die zuletzt gezeigte Lage merkt sich jede Karte selbst (Card.svelte); eine laufende Bewegung liefert das DOM.
 
-import type { CardId, TableState } from '../engine/types';
-import { arcPoints, cssMs, cues, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
+import type { CardId, TableState, ZoneId } from '../engine/types';
+import { arcPoints, countChanges, cssMs, cues, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
 
 /** Kennungen der eigenen Animationen (die CSS-Animation beim Rucken bleibt unberührt) */
 const MOVE = 'move';
@@ -23,7 +23,7 @@ export function timing(): Timing {
     glide: cssMs(v('--glide')), glideEase: v('--glide-ease') || 'ease-out', land: cssMs(v('--land')),
     flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), cut: cssMs(v('--cut')), strike: cssMs(v('--strike')),
     fade: cssMs(v('--fade')), flash: cssMs(v('--flash')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
-    wiggle: cssMs(v('--wiggle')),
+    wiggle: cssMs(v('--wiggle')), count: cssMs(v('--count-pop')),
   };
   return cached;
 }
@@ -42,14 +42,19 @@ let currentCues = new Map<CardId, Cue>();
 let clear: ReturnType<typeof setTimeout> | undefined;
 /** zählt die Stände mit Ereignissen: Karten, deren Lage sich nicht ändert, reagieren darauf (Abheben, Stoß) */
 export const events = $state({ seen: 0 });
+/** Zonen, deren Zahl beim letzten Stand mit Ereignissen springt (11.6) */
+let counted: ZoneId[] = [];
+export const countChanged = (zone: ZoneId): boolean => counted.includes(zone);
 export function noteEvents(list: readonly { type: string }[], own: boolean, prev: TableState<unknown> | null, next: TableState<unknown>): void {
   current = own ? 'own' : 'foreign';
   currentCues = cues(list, prev, next, timing(), current);
+  counted = countChanges(list, prev, next);
   events.seen++;
   clearTimeout(clear);
   clear = setTimeout(() => {
     current = null;
     currentCues = new Map();
+    counted = [];
   }, 0);
 }
 export const cause = (): Cause => current;
@@ -153,6 +158,12 @@ export function wobble(el: HTMLElement, lift: HTMLElement): void {
   tag(lift.animate([
     { transform: 'rotate(0deg)' }, { transform: 'rotate(1.2deg)', offset: 0.3 }, { transform: 'rotate(-0.6deg)', offset: 0.65 }, { transform: 'rotate(0deg)' },
   ], { duration: t.wiggle, easing: 'ease-out', composite: 'add' }), WIGGLE);
+}
+
+/** Zahl am Stapel springt kurz (11.6): größer und federnd zurück */
+export function popCount(n: HTMLElement): void {
+  const t = timing();
+  if (t.count) n.animate([{ scale: 1 }, { scale: 1.25, offset: 0.35 }, { scale: 0.97, offset: 0.75 }, { scale: 1 }], { duration: t.count, easing: 'ease-out' });
 }
 
 /** Stoß bei Schaden (11.1): einmal nach unten, gedämpft zurück, kurzer roter Schimmer am Rand */
