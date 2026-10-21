@@ -112,6 +112,8 @@ function crossCheck(c: KlioContent, errors: string[]): void {
   for (const z of Object.keys(c.zones)) {
     if (typeof zoneTexts !== 'object' || typeof (zoneTexts as TextTree)[z] !== 'string') err(`texts: zones.${z} fehlt`);
   }
+  // Name je wählbarer Farbe (5e)
+  for (const k of c.layouts.seatColors) if (resolveText(c, `colors.${k}`) === undefined) err(`texts: colors.${k} fehlt`);
   // Bezeichnung je Recht für den Rechte-Dialog der SL (9.2)
   for (const k of Object.keys(c.permissions.player)) if (resolveText(c, `permissions.${k}`) === undefined) err(`texts: permissions.${k} fehlt`);
 }

@@ -93,7 +93,8 @@ export type TableState<G> = {
   free: CardId[];
   freePos: Partial<Record<CardId, FreePos>>;
   faceUp: Partial<Record<CardId, boolean>>;
-  seats: Record<SeatId, { occupied: boolean; name?: string }>;
+  /** `color`: gewählte Farbe (Kennung aus `Ruleset.seatColors`); fehlt sie, gilt die Voreinstellung des Platzes */
+  seats: Record<SeatId, { occupied: boolean; name?: string; color?: string }>;
   settings: TableSettings;
   game: G;
 };
@@ -204,4 +205,6 @@ export interface Ruleset<G> {
   reactions: Reaction<G>[];
   permissions: PermissionTable;
   migrations: Migration[];
+  /** wählbare Farben der Plätze (Kennungen); die ersten vier sind die Voreinstellung von Platz 1–4 */
+  seatColors: string[];
 }

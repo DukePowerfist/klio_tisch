@@ -17,9 +17,6 @@ export function t(key: string, params: Record<string, string | number> = {}): st
 
 export const text = (ref: TextRef): string => t(ref.key, ref.params);
 
-/** Farbe einer Rolle für Mauszeiger und Markierung (theme.css `--who-*`) */
-export const whoColor = (who: string): string => `var(--who-${who})`;
-
 /** Kurzbezeichnung auf der Karte: 2–10, B, D, K, A (13.1). */
 export const rankLabel = (card: CardId): string => lookup(`cards.ranks.${rankOf(card)}`) ?? rankOf(card);
 

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { migrate, NewerFormatError } from '../../src/engine/migrate';
 import { FORMAT } from '../../src/engine/setup';
 import type { Migration } from '../../src/engine/types';
+import { engine, fresh } from '../helpers';
 
 describe('Migrationen', () => {
   const steps: Migration[] = Array.from({ length: FORMAT - 1 }, (_, i) => ({
@@ -29,5 +30,12 @@ describe('Migrationen', () => {
 
   it('fehlender Schritt: Fehler statt Endlosschleife', () => {
     expect(() => migrate({ format: 1 }, [])).toThrow(/Format 1/);
+  });
+
+  it('Format 2 → 3 (5e): Plätze ohne Farbe bleiben, wie sie sind', () => {
+    const s = fresh();
+    const parsed = engine.parseState({ ...structuredClone(s), format: 2 });
+    expect(parsed.format).toBe(3);
+    expect(parsed.seats).toEqual(s.seats);
   });
 });

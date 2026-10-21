@@ -300,6 +300,19 @@ class Session {
     return localStorage.getItem(NAME) ?? '';
   }
 
+  /** Eigener Name und eigene Farbe (5e): am Platz im Stand, für alle; als Zuschauer nur der Name am Zeiger.
+   *  Der Name wird für den nächsten Beitritt gemerkt. */
+  async editProfile(name: string, color?: string): Promise<CommandResult> {
+    localStorage.setItem(NAME, name);
+    const a = this.actor;
+    if (a.role !== 'player') {
+      this.sendMine();
+      return { ok: true };
+    }
+    const cmd = { type: 'seat.edit', seat: a.seat, name, ...(color ? { color } : {}) };
+    return this.submit(cmd);
+  }
+
   /** Als Zuschauer einen freien Platz nehmen; Ergebnis für die Anzeige im Beitrittsfenster. */
   async claim(seat: SeatId, name: string): Promise<TextRef | null> {
     localStorage.setItem(NAME, name);

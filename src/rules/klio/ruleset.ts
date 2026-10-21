@@ -45,5 +45,6 @@ export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
     reactions: [damageReaction(expandZones(zones))],
     permissions: content.permissions,
     migrations: [tischmitte],
+    seatColors: content.layouts.seatColors,
   };
 }

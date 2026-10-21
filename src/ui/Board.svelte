@@ -17,7 +17,8 @@
   import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
-  import { t, whoColor } from './texts';
+  import { whoColor } from './colors';
+  import { t } from './texts';
   import { view } from './view.svelte';
 
   let { table }: { table: KlioTableState } = $props();

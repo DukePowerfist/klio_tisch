@@ -6,7 +6,7 @@
   import { t } from './texts';
   import { view } from './view.svelte';
 
-  let { onChooseSeat }: { onChooseSeat: () => void } = $props();
+  let { onChooseSeat, onProfile }: { onChooseSeat: () => void; onProfile: () => void } = $props();
 
   let open = $state(false);
   let root = $state<HTMLElement>();
@@ -51,6 +51,11 @@
       {/if}
       {#if session.seatless}
         <button onclick={pick(onChooseSeat)}>{t('room.chooseSeat')}</button>
+      {/if}
+      {#if session.actor.role === 'player' && session.can({ type: 'seat.edit', seat: session.actor.seat })}
+        <button onclick={pick(onProfile)}>{t('menu.profile')}</button>
+      {:else if session.mode === 'client' && session.actor.role === 'spectator'}
+        <button onclick={pick(onProfile)}>{t('menu.name')}</button>
       {/if}
       <button aria-pressed={gameLog.open} onclick={pick(() => (gameLog.open = !gameLog.open))}>{t('log.title')}</button>
     </div>

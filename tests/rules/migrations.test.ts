@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { computeLayout, placeCards } from '../../src/ui/layout';
+import { FORMAT } from '../../src/engine/setup';
 import type { FreePos } from '../../src/engine/types';
 import { content, engine, fresh, lay, type K } from '../helpers';
 
@@ -16,7 +17,7 @@ describe('Format 1 → 2: Tischmitte', () => {
   it.each([[4, 372, 1016], [2, 486, 788]])('%i Spieler: Karte neben dem Deck bleibt neben dem Deck', (players, x0, w0) => {
     // alt: 100 rechts neben dem Deck (760, 440) in der Draufsicht
     const s = engine.parseState(old(players, { anchor: 'center', x: (760 + 100 - x0) / w0, y: (440 - 10) / 970 }));
-    expect(s.format).toBe(2);
+    expect(s.format).toBe(FORMAT); // die Kette läuft bis zum aktuellen Format
     const deck = computeLayout(content, players, null, null).zones['deck']!;
     const p = placed(s, players);
     expect(p.x - deck.x).toBeCloseTo(100, 0);

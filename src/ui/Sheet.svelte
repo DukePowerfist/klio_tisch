@@ -17,7 +17,8 @@
   import { photos } from './photos.svelte';
   import { seatNames } from './seatNames';
   import { session } from './session.svelte';
-  import { t, text, whoColor } from './texts';
+  import { whoColor } from './colors';
+  import { t, text } from './texts';
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
 

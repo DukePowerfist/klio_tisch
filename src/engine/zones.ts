@@ -7,6 +7,10 @@ export type ZoneTable = ReadonlyMap<ZoneId, ZoneConfig>;
 /** Platznummer für Anzeigen: seat1 → 1 */
 export const seatNo = (seat: SeatId): number => SEATS.indexOf(seat) + 1;
 
+/** Farbe eines Platzes: gewählt, sonst die Voreinstellung (n-te Farbe der Auswahl) */
+export const seatColor = (state: TableState<unknown>, seat: SeatId, colors: readonly string[]): string =>
+  state.seats[seat].color ?? colors[SEATS.indexOf(seat)]!;
+
 /** Zone eines Platzes aus einer Vorlage: `seat1` + `damage` → `seat1.damage` */
 export const seatZoneId = (seat: SeatId, template: string): ZoneId => `${seat}.${template}`;
 

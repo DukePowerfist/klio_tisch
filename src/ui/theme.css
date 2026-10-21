@@ -24,10 +24,15 @@
   --trump-border-3: 5px;
   /* Mauszeiger und Markierung gezogener Karten je Rolle (8.3) */
   --who-gm: #f2f2f2;      /* weiß: nicht mit Gold (Bedienhinweis) zu verwechseln, 8.3 */
-  --who-seat1: #e8735a;
-  --who-seat2: #5ab0e8;
-  --who-seat3: #8fd16a;
-  --who-seat4: #c98be8;
+  /* wählbare Farben der Plätze (layouts.yaml seatColors, Schritt 5e); die ersten vier wie bisher Platz 1–4 */
+  --who-c-coral: #e8735a;
+  --who-c-sky: #5ab0e8;
+  --who-c-green: #8fd16a;
+  --who-c-violet: #c98be8;
+  --who-c-teal: #3fc7b0;
+  --who-c-pink: #f28dbd;
+  --who-c-indigo: #8c96f0;
+  --who-c-raspberry: #d6557d;
   --who-spectator: #bbbbbb;
   /* Menü oben rechts: Zustandspunkt (10, Schritt 5b Teil 4) */
   --menu-local: #8a8a8a;

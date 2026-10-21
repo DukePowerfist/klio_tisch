@@ -205,12 +205,34 @@ permissions:
   table.reset: Tisch zurücksetzen
   table.setPlayers: Spielerzahl ändern
   table.setSeat: Plätze vergeben und freigeben
+  seat.edit: Eigenen Namen und eigene Farbe ändern
   table.setSettings: Einstellungen ändern
   gm.expedition: Expedition starten
   gm.oracle: Orakel ziehen
 
 menu:                                     # Menü oben rechts (neu, Schritt 5b)
   title: Menü
+  profile: Name und Farbe …
+  name: Name …
+
+profile:                                  # eigener Name und eigene Farbe (neu, Schritt 5e)
+  title: Name und Farbe
+  titleName: Name
+  name: Dein Name
+  color: Farbe
+  takenBy: "vergeben an {who}"
+  save: Speichern
+  cancel: Abbrechen
+
+colors:                                   # wählbare Farben der Plätze (layouts.yaml seatColors)
+  coral: Koralle
+  sky: Himmelblau
+  green: Grün
+  violet: Violett
+  teal: Türkis
+  pink: Rosa
+  indigo: Indigo
+  raspberry: Himbeere
 
 dock:
   seat: "Ich bin Spieler {n}"
@@ -239,6 +261,9 @@ reject:
   attributeMax: Ein Attribut kann höchstens 9 sein.
   slotEmpty: Dieser Platz ist leer.
   seatTaken: Dieser Platz ist schon vergeben.
+  seatFree: Dieser Platz ist nicht besetzt.
+  unknownColor: Diese Farbe gibt es nicht.
+  colorTaken: Diese Farbe hat schon jemand anderes.
   saveFailed: Speichern fehlgeschlagen, die Aktion wurde verworfen.
   importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.
   importNewer: Diese Datei stammt aus einer neueren Fassung des Kartentischs. Bitte die Seite neu laden.

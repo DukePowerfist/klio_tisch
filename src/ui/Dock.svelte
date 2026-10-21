@@ -4,7 +4,8 @@
   import { SEATS, type SeatId } from '../engine/types';
   import { seatNames } from './seatNames';
   import { session } from './session.svelte';
-  import { t, whoColor } from './texts';
+  import { whoColor } from './colors';
+  import { t } from './texts';
   import { view } from './view.svelte';
 
   let { players }: { players: number } = $props();

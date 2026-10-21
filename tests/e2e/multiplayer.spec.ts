@@ -32,8 +32,19 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await seated(player);
   await expect(player.locator('[data-health=ok]')).toBeVisible();
   // Menü je Rolle (10): Spieler nur Protokoll, SL Raum, Einstellungen, Protokoll
-  expect(await menuEntries(player)).toEqual(['Protokoll']);
+  expect(await menuEntries(player)).toEqual(['Name und Farbe …', 'Protokoll']);
   expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Protokoll']);
+  // Name und Farbe ändern (5e): bei der SL sofort an Schild und Dock; Farben anderer Plätze nicht wählbar
+  await fromMenu(player, 'Name und Farbe …');
+  const profile = player.getByRole('dialog', { name: 'Name und Farbe' });
+  await expect(profile.getByRole('radio', { name: 'Koralle' })).toBeDisabled(); // Platz 1
+  await expect(profile.getByRole('radio', { name: 'Himmelblau' })).toHaveAttribute('aria-checked', 'true'); // eigene
+  await profile.getByRole('textbox').fill('Ida M.');
+  await profile.getByRole('radio', { name: 'Türkis' }).click();
+  await profile.getByRole('button', { name: 'Speichern' }).click();
+  await expect(profile).toHaveCount(0);
+  await expect(gm.locator('[data-dock=seat2]')).toHaveAttribute('style', /who-c-teal/);
+  await expect(gm.locator('[data-plate=seat2]')).toContainText('Ida M.');
   // Spieler startet in seiner Rollenansicht
   await expect.poll(async () => (await player.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
   await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
@@ -135,7 +146,16 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toBeVisible();
   await expect(room.getByText('frei', { exact: true })).toHaveCount(4);
   await player.getByRole('button', { name: 'Nur zuschauen' }).click();
-  expect(await menuEntries(player)).toEqual(['Platz wählen', 'Protokoll']);
+  expect(await menuEntries(player)).toEqual(['Platz wählen', 'Name …', 'Protokoll']);
+  // Zuschauer ändern nur den Namen am Zeiger (5e)
+  await fromMenu(player, 'Name …');
+  const nameDialog = player.getByRole('dialog', { name: 'Name' });
+  await expect(nameDialog.getByRole('radio')).toHaveCount(0);
+  await nameDialog.getByRole('textbox').fill('Bo');
+  await nameDialog.getByRole('button', { name: 'Speichern' }).click();
+  await player.mouse.move(400, 300);
+  await player.mouse.move(420, 320, { steps: 5 });
+  await expect(gm.locator('.cursor', { hasText: 'Bo' })).toBeVisible();
 
   // Link erneuern: der alte gilt nicht mehr
   await room.getByRole('button', { name: 'Link erneuern' }).click();

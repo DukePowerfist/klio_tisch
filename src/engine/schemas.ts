@@ -36,7 +36,8 @@ const TableSettingsSchema = z.object({
   permissionOverrides: z.object({ player: Overrides.exactOptional(), spectator: Overrides.exactOptional() }).strict(),
 }).strict();
 
-const SeatInfo = z.object({ occupied: z.boolean(), name: z.string().max(40).exactOptional() }).strict();
+export const SeatColorSchema = z.string().regex(/^[a-z]{1,20}$/);
+const SeatInfo = z.object({ occupied: z.boolean(), name: z.string().max(40).exactOptional(), color: SeatColorSchema.exactOptional() }).strict();
 const SeatsSchema = z.object(Object.fromEntries(SEATS.map((s) => [s, SeatInfo])) as Record<SeatId, typeof SeatInfo>).strict();
 
 const Zones = z.record(z.string(), z.array(CardIdSchema));

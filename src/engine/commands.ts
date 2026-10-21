@@ -4,10 +4,10 @@
 
 import { z } from 'zod';
 import { shuffled } from './rng';
-import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayersSchema, SeatSchema } from './schemas';
+import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayersSchema, SeatColorSchema, SeatSchema } from './schemas';
 import { dealStart } from './setup';
-import { locate, seatVisible, zoneVisible, type ZoneTable } from './zones';
-import type { AnchorId, CardId, CommandDef, Event, EngineEvent, Rejection, Ruleset, SeatId, TableState, ZoneConfig, ZoneId } from './types';
+import { locate, seatColor, seatVisible, zoneVisible, type ZoneTable } from './zones';
+import { SEATS, type AnchorId, type CardId, type CommandDef, type Event, type EngineEvent, type Rejection, type Ruleset, type SeatId, type TableState, type ZoneConfig, type ZoneId } from './types';
 
 export const reject = (key: string, params?: Record<string, string | number>): Rejection =>
   ({ rejected: true, reason: params ? { key, params } : { key } });
@@ -34,6 +34,13 @@ const SeatCmd = z.object({
   occupied: z.boolean(),
   name: z.string().max(40).optional(),
 }).strict();
+/** eigener Name und eigene Farbe (Schritt 5e); nur Angegebenes ändert sich, leerer Name = ohne Namen */
+const SeatEditCmd = z.object({
+  type: z.literal('seat.edit'),
+  seat: SeatSchema,
+  name: z.string().max(40).optional(),
+  color: SeatColorSchema.optional(),
+}).strict();
 const SettingsCmd = z.object({
   type: z.literal('table.setSettings'),
   automation: z.record(z.string(), z.boolean()).optional(),
@@ -42,7 +49,7 @@ const SettingsCmd = z.object({
 
 type S = TableState<unknown>;
 
-export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>, 'deck' | 'resetGame'>): Record<string, CommandDef<any, any>> {
+export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>, 'deck' | 'resetGame' | 'seatColors'>): Record<string, CommandDef<any, any>> {
   const { deck } = ruleset;
   const home = new Map(deck.cards.map((c) => [c.id, c.home]));
   const suitOf = new Map(deck.cards.map((c) => [c.id, c.suit]));
@@ -230,7 +237,31 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
         if (!seatVisible(cmd.seat, state)) return reject('reject.hiddenSeat');
         if (state.seats[cmd.seat].occupied) return reject('reject.seatTaken');
       }
-      const info = cmd.occupied ? { occupied: true, ...(cmd.name ? { name: cmd.name } : {}) } : { occupied: false };
+      // die Farbe gehört zum Platz und bleibt beim Wechsel der Person
+      const { color } = state.seats[cmd.seat];
+      const info = { occupied: cmd.occupied, ...(cmd.occupied && cmd.name ? { name: cmd.name } : {}), ...(color ? { color } : {}) };
+      return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: info } }];
+    },
+  };
+
+  // Name und Farbe des eigenen Platzes (5e). Jede Farbe höchstens an einem Platz, auch an ausgeblendeten.
+  const seatEdit: CommandDef<unknown, z.infer<typeof SeatEditCmd>> = {
+    parse: (x) => SeatEditCmd.parse(x),
+    permission: 'seat.edit',
+    owners: (cmd) => [cmd.seat],
+    handle(cmd, state) {
+      const info = { ...state.seats[cmd.seat] };
+      if (cmd.name !== undefined) {
+        if (!info.occupied) return reject('reject.seatFree');
+        const name = cmd.name.trim();
+        if (name) info.name = name;
+        else delete info.name;
+      }
+      if (cmd.color !== undefined) {
+        if (!ruleset.seatColors.includes(cmd.color)) return reject('reject.unknownColor');
+        if (SEATS.some((s) => s !== cmd.seat && seatColor(state, s, ruleset.seatColors) === cmd.color)) return reject('reject.colorTaken');
+        info.color = cmd.color;
+      }
       return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: info } }];
     },
   };
@@ -250,6 +281,6 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
 
   return {
     'cards.move': move, 'card.flip': cardFlip, 'zone.flip': zoneFlip, 'zone.draw': zoneDraw, 'zone.shuffle': zoneShuffle,
-    'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSeat': setSeat, 'table.setSettings': setSettings,
+    'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSeat': setSeat, 'seat.edit': seatEdit, 'table.setSettings': setSettings,
   };
 }

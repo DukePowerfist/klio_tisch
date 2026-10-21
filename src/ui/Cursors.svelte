@@ -5,7 +5,8 @@
   import type { PresenceInfo } from '../net/presence';
   import { pointerAt, type Layout, type Places } from './layout';
   import { session } from './session.svelte';
-  import { t, whoColor } from './texts';
+  import { whoColor } from './colors';
+  import { t } from './texts';
 
   let { layout, places, scale }: { layout: Layout; places: Places; scale: number } = $props();
 

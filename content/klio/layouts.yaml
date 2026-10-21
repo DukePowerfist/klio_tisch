@@ -3,6 +3,9 @@
 # (ARCHITEKTUR.md 10): beide Ansichten zeigen sie gleich und verschieben sie nur.
 
 board: [ 1760, 990 ]
+# wählbare Farben der Plätze (Schritt 5e; Werte in theme.css als --who-c-<Kennung>, Namen in texts.colors);
+# die ersten vier sind die Voreinstellung von Platz 1–4. Keine davon wie Gold (Bedienhinweis), Weiß (SL) oder Grau (Zuschauer).
+seatColors: [ coral, sky, green, violet, teal, pink, indigo, raspberry ]
 card: [ 80, 112 ]
 freeCardScale: 0.6
 # shapes: Größe, Kartenmaßstab, Fächerabstand; menu = Lage des Stapelmenüs (fixed = an `menu` der Tischmitte,

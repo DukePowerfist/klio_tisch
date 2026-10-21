@@ -6,6 +6,7 @@
   import JoinDialog from './JoinDialog.svelte';
   import LogPanel from './LogPanel.svelte';
   import Menu from './Menu.svelte';
+  import ProfileDialog from './ProfileDialog.svelte';
   import ResetDialog from './ResetDialog.svelte';
   import ResultDialog from './ResultDialog.svelte';
   import RoomDialog from './RoomDialog.svelte';
@@ -23,6 +24,8 @@
   // Mitspieler ohne Platz: Platzwahl anbieten, bis gewählt oder „Nur zuschauen“
   let joinOpen = $state(true);
   const chooseSeat = $derived(joinOpen && session.seatless);
+  // eigener Name und eigene Farbe (5e)
+  let profileOpen = $state(false);
 
   // Wer einen Platz bekommt, startet in seiner Rollenansicht (10)
   const mySeat = $derived(session.role?.role === 'player' ? session.role.seat : null);
@@ -56,13 +59,16 @@
   {#if chooseSeat}
     <JoinDialog onclose={() => (joinOpen = false)} />
   {/if}
+  {#if profileOpen}
+    <ProfileDialog onclose={() => (profileOpen = false)} />
+  {/if}
   {#if session.saveError}
     <div class="save-error" role="alert">Speichern fehlgeschlagen: {session.saveError}</div>
   {/if}
 {:else if session.status !== 'starting'}
   <p class="center">{session.statusText}</p>
 {/if}
-<Menu onChooseSeat={() => (joinOpen = true)} />
+<Menu onChooseSeat={() => (joinOpen = true)} onProfile={() => (profileOpen = true)} />
 
 <style>
   .error, .save-error { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); background: var(--warn-bg); color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 3000000; }

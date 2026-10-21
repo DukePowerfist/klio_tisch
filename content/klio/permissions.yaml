@@ -18,6 +18,7 @@ player:
   table.reset: deny
   table.setPlayers: deny
   table.setSeat: deny       # Plätze vergibt der Host beim Beitritt, freigeben nur die SL
+  seat.edit: own            # eigener Name und eigene Farbe (5e)
   table.setSettings: deny
   gm.expedition: deny
   gm.oracle: deny

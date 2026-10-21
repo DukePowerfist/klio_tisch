@@ -6,8 +6,12 @@ import { ENGINE_EVENTS, EngineEventSchema, tableStateSchema } from './schemas';
 import { engineCommands, isRejection, reject } from './commands';
 import { can } from './permissions';
 import { migrate } from './migrate';
+import { seatColor } from './migrations/seatColor';
 import { expandZones } from './zones';
 import type { Actor, Command, CommandDef, DispatchResult, Event, Rng, Ruleset, SequencedEvent, TableState } from './types';
+
+/** Migrationen der Engine; sie hängen an derselben Formatnummer wie die des Regelwerks (7, Versionierung) */
+const ENGINE_MIGRATIONS = [seatColor];
 
 /** Höchstens so viele Runden Reaktion auf Reaktion; darüber wird der ganze Befehl abgelehnt. */
 export const MAX_REACTION_DEPTH = 8;
@@ -93,5 +97,5 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
     return schema.parse(input);
   }
 
-  return { ruleset, commands, dispatch, replay, parseState: (input) => stateSchema.parse(migrate(input, ruleset.migrations)), parseEvent };
+  return { ruleset, commands, dispatch, replay, parseState: (input) => stateSchema.parse(migrate(input, [...ENGINE_MIGRATIONS, ...ruleset.migrations])), parseEvent };
 }

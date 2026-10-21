@@ -5,7 +5,7 @@ import { expandZones } from './zones';
 import { SEATS, type CardId, type DeckConfig, type Rng, type Ruleset, type TableState, type ZoneId } from './types';
 
 /** Format des gespeicherten Stands; steigt bei jeder Strukturänderung (7, Versionierung). */
-export const FORMAT = 2;
+export const FORMAT = 3;
 
 /** Alle Karten auf ihre Startplätze, je Zone gemischt; alle Zonen existieren (auch leere). */
 export function dealStart(deck: DeckConfig, zoneIds: Iterable<ZoneId>, rng: Rng): Record<ZoneId, CardId[]> {

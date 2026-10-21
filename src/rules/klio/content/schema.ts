@@ -2,7 +2,7 @@
 // Geprüft beim Build; ausgeliefert wird JSON. Beispiele stehen jeweils darüber.
 
 import { z } from 'zod';
-import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SeatSchema, SuitSchema as Suit } from '../../../engine/schemas';
+import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SeatColorSchema, SeatSchema, SuitSchema as Suit } from '../../../engine/schemas';
 import { AttrSchema as Attr, TrumpId } from '../state';
 
 /** Text mit er/sie-Form oder ein Text für beide. */
@@ -174,6 +174,7 @@ const Shape = z.object({
 }).strict();
 export const LayoutsFile = z.object({
   board: Point,
+  seatColors: z.array(SeatColorSchema).min(4).refine((c) => new Set(c).size === c.length, 'Farbe doppelt'),
   card: Point,
   freeCardScale: z.number(),
   shapes: z.record(z.string(), Shape),

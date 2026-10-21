@@ -206,7 +206,7 @@ describe('Ablauf', () => {
     const loop: Ruleset<null> = {
       id: 'loop', version: '1', initialGame: () => null, parseGame: () => null,
       deck: { cards: [], start: {} }, zones: [{ id: 'a', actions: { draw: { to: 'a', faceUp: true, announce: false } } }],
-      commands: {}, events: { ping: { parse: (x) => x as { type: 'ping' }, apply: (s) => s } }, migrations: [],
+      commands: {}, events: { ping: { parse: (x) => x as { type: 'ping' }, apply: (s) => s } }, migrations: [], seatColors: ['a', 'b', 'c', 'd'],
       reactions: [{ id: 'echo', react: () => [{ type: 'ping' }] }],
       permissions: { gm: 'all', player: {}, spectator: 'none' },
     };
@@ -225,6 +225,32 @@ describe('Ablauf', () => {
     expectRejected(two, { type: 'table.setSeat', seat: 'seat3', occupied: true }, 'reject.hiddenSeat');
     expect(run(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state.seats.seat2).toEqual({ occupied: false });
     expectRejected(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }, 'reject.notAllowed', player('seat2'));
+  });
+
+  it('eigener Name und eigene Farbe (5e): nur am eigenen Platz, jede Farbe höchstens einmal', () => {
+    const s = run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Ida' }).state;
+    const named = run(s, { type: 'seat.edit', seat: 'seat2', name: '  Ida W. ' }, player('seat2')).state;
+    expect(named.seats.seat2).toEqual({ occupied: true, name: 'Ida W.' });
+    // leerer Name = ohne Namen
+    expect(run(named, { type: 'seat.edit', seat: 'seat2', name: '' }, player('seat2')).state.seats.seat2).toEqual({ occupied: true });
+    // Farbe aus der Auswahl; die Voreinstellungen der anderen Plätze sind belegt (seat1 = coral)
+    const teal = run(s, { type: 'seat.edit', seat: 'seat2', color: 'teal' }, player('seat2')).state;
+    expect(teal.seats.seat2).toEqual({ occupied: true, name: 'Ida', color: 'teal' });
+    expectRejected(s, { type: 'seat.edit', seat: 'seat2', color: 'coral' }, 'reject.colorTaken', player('seat2'));
+    expectRejected(s, { type: 'seat.edit', seat: 'seat2', color: 'gold' }, 'reject.unknownColor', player('seat2'));
+    // die alte Farbe von Platz 2 ist danach frei
+    expect(run(teal, { type: 'seat.edit', seat: 'seat1', color: 'sky' }).state.seats.seat1.color).toBe('sky');
+    // auch ausgeblendete Plätze behalten ihre Farbe für sich (seat4 = violet)
+    const two = run(s, { type: 'table.setPlayers', players: 2 }).state;
+    expectRejected(two, { type: 'seat.edit', seat: 'seat2', color: 'violet' }, 'reject.colorTaken', player('seat2'));
+    // fremder Platz, Zuschauer, freier Platz
+    expectRejected(s, { type: 'seat.edit', seat: 'seat1', color: 'teal' }, 'reject.notAllowed', player('seat2'));
+    expectRejected(s, { type: 'seat.edit', seat: 'seat2', name: 'X' }, 'reject.notAllowed', { role: 'spectator' });
+    expectRejected(s, { type: 'seat.edit', seat: 'seat3', name: 'X' }, 'reject.seatFree');
+    // die Farbe gehört zum Platz: bleibt beim Freigeben und neu Belegen
+    const freed = run(teal, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state;
+    expect(freed.seats.seat2).toEqual({ occupied: false, color: 'teal' });
+    expect(run(freed, { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Bo' }).state.seats.seat2).toEqual({ occupied: true, name: 'Bo', color: 'teal' });
   });
 
   it('Spieler eines ausgeblendeten Platzes sind Zuschauer', () => {
