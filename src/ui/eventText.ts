@@ -22,6 +22,10 @@ export function describe(e: EngineEvent | KlioEvent): EventText | null {
       return say(t('log.reset'));
     case 'charactersReset':
       return say(t('log.charactersReset'));
+    case 'characterReset':
+      return say(t('log.characterReset', { seat: seatNo(e.seat) }));
+    case 'characterImported':
+      return say(t('log.characterImported', { seat: seatNo(e.seat) }));
     case 'scarMarked':
       return say(t('toast.scar', { seat: seatNo(e.seat), suit: t(`scars.${e.scar}`) }), 'warn');
     case 'characterDied':

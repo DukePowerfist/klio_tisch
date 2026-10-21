@@ -38,6 +38,9 @@ const E = {
   characterDied: z.object({ type: z.literal('characterDied'), seat: Seat }).strict(),
   characterRevived: z.object({ type: z.literal('characterRevived'), seat: Seat }).strict(),
   charactersReset: z.object({ type: z.literal('charactersReset') }).strict(),
+  /** ein Bogen geleert bzw. aus einer Charakterdatei ersetzt (5j) */
+  characterReset: z.object({ type: z.literal('characterReset'), seat: Seat }).strict(),
+  characterImported: z.object({ type: z.literal('characterImported'), seat: Seat, sheet: KlioSheet }).strict(),
   expeditionRolled: z.object({ type: z.literal('expeditionRolled'), expedition: Expedition }).strict(),
   oracleDrawn: z.object({ type: z.literal('oracleDrawn'), oracle: Oracle }).strict(),
 };
@@ -92,6 +95,12 @@ export const klioEvents = {
   }),
   charactersReset: def('charactersReset', (s) => {
     s.game.sheets = s.game.sheets.map(() => emptySheet());
+  }),
+  characterReset: def('characterReset', (s, e) => {
+    s.game.sheets[SEATS.indexOf(e.seat)] = emptySheet();
+  }),
+  characterImported: def('characterImported', (s, e) => {
+    s.game.sheets[SEATS.indexOf(e.seat)] = structuredClone(e.sheet);
   }),
   expeditionRolled: def('expeditionRolled', (s, e) => {
     s.game.expedition = [...e.expedition];

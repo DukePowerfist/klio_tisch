@@ -17,7 +17,7 @@ export const openPage = (last: SettingsPage, pages: readonly SettingsPage[]): Se
 
 export const PERMISSION_GROUPS = {
   cards: ['cards.move', 'card.flip', 'zone.shuffle', 'zone.draw'],
-  sheet: ['sheet.edit', 'sheet.photo', 'sheet.roll'],
+  sheet: ['sheet.edit', 'sheet.photo', 'sheet.roll', 'sheet.replace'],
   trumps: ['trump.choose', 'trump.chooseFree', 'trump.remove', 'character.revive'],
   gm: ['table.reset', 'table.setPlayers', 'table.setSeat', 'table.setSettings', 'gm.expedition', 'gm.oracle'],
 } as const satisfies Record<string, readonly string[]>;

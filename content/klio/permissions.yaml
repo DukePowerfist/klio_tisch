@@ -11,6 +11,7 @@ player:
   sheet.edit: own           # sheet.setText, sheet.toggle, sheet.setNumber
   sheet.photo: own
   sheet.roll: own
+  sheet.replace: own        # sheet.reset, sheet.import: ganzen Bogen leeren oder ersetzen (5j)
   trump.choose: own         # trump.choose, trump.random
   trump.chooseFree: deny    # SL kann freigeben (ehem. O9)
   trump.remove: own

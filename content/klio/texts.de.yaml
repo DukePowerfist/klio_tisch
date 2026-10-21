@@ -164,6 +164,8 @@ log:                                      # Spielprotokoll (neu)
   shuffled: "Gemischt: {zones}"
   reset: Tisch zurückgesetzt
   charactersReset: Charaktere zurückgesetzt
+  characterReset: "Bogen {seat}: Charakter zurückgesetzt"
+  characterImported: "Bogen {seat}: Charakter aus einer Datei geladen"
   revived: "Bogen {seat}: Charakter wiederbelebt"
   trumpRemoved: "Bogen {seat}: Trumpf entfernt"
   expedition: "Expedition: {result}"
@@ -235,6 +237,7 @@ permissions:
   sheet.edit: Bogen bearbeiten
   sheet.photo: Foto setzen
   sheet.roll: Charakter auswürfeln
+  sheet.replace: Charakter zurücksetzen und laden
   trump.choose: Trumpf wählen
   trump.chooseFree: Trumpf frei wählen (ohne Regelprüfung)
   trump.remove: Trumpf entfernen
@@ -256,6 +259,7 @@ permissionHelp:
   sheet.edit: Einträge, Häkchen und Zahlen auf dem Bogen ändern.
   sheet.photo: Ein Foto für den Charakter setzen oder entfernen.
   sheet.roll: Stärken und Schwächen per Zufallstabelle füllen.
+  sheet.replace: Den ganzen Bogen leeren oder durch einen Charakter aus einer Datei ersetzen.
   trump.choose: Einen Trumpf über die Wege des Regelwerks wählen, mit Regelprüfung; auch zufällig.
   trump.chooseFree: Einen beliebigen Trumpf eintragen, ohne Regelprüfung.
   trump.remove: Einen Trumpf vom Bogen nehmen.
