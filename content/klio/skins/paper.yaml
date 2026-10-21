@@ -62,7 +62,3 @@ zones:
 # Namensschild in der Draufsicht (ARCHITEKTUR.md 10): freier Streifen links oben über Seil und Fotorahmen.
 # Schrift 26 → bei 4 Spielern und Zoom 1 etwa 13 px auf dem Bildschirm.
 nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }
-# „Auswürfeln“ (ARCHITEKTUR.md 10): rechts oben im freien Streifen über den Attributen, rechtsbündig; rechts frei bis zum
-# Rand, weil bei 16:9 der Menüknopf über der Ecke des Bogens von Spieler 2 liegt (bis etwa x 580, y 75).
-# Skaliert mit dem Bogen; „Wiederbeleben“ steht links daneben in derselben Zeile.
-rollButton: { x: 315, y: 8, w: 260, font: 13 }

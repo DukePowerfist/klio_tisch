@@ -5,7 +5,6 @@
   import content from 'virtual:klio-content';
   import { sheetFields, type SkinBox, type SkinCheck } from '../rules/klio/content/schema';
   import { getField } from '../rules/klio/fields';
-  import { rollOverwrites } from '../rules/klio/generators/rollSheet';
   import type { KlioSheet } from '../rules/klio/state';
   import { contextFor, isFull, trumpById } from '../rules/klio/trumps';
   import SheetField from './SheetField.svelte';
@@ -14,7 +13,6 @@
   import { arrivePlate, arriveSheet } from './animator.svelte';
   import { effects } from './effects.svelte';
   import { SHEET_FONT } from './fitText';
-  import { Confirm } from './confirm.svelte';
   import { CONTROLS_ZOOM, SHEET_W, type SheetBox } from './layout';
   import { photos } from './photos.svelte';
   import { entriesAt } from './PlateMenu.svelte';
@@ -58,8 +56,7 @@
     view.plateMenu = { seat, x: r.left, y: r.bottom + 4, above: r.top - 4 };
   }
   const plate = skin.nameplate;
-  const rollAt = skin.rollButton;
-  // Bedienelemente (10, Schritt 5b): am eigenen Bogen der Rollenansicht immer und deutlich, sonst klein erst ab CONTROLS_ZOOM, „Auswürfeln“ dezent
+  // Bedienelemente (10, Schritt 5b): am eigenen Bogen der Rollenansicht immer und deutlich, sonst klein erst ab CONTROLS_ZOOM
   const own = $derived(mark === null);
   const tools = $derived(own || view.zoom >= CONTROLS_ZOOM);
 
@@ -84,17 +81,9 @@
   // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
   const may = (type: string) => session.can({ type, seat });
   const canEdit = $derived(may('sheet.toggle'));
-  const canRoll = $derived(may('sheet.roll'));
   const canPhoto = $derived(may('sheet.setPhoto'));
   const canChooseTrump = $derived(may('trump.choose'));
   const canRemoveTrump = $derived(may('trump.remove'));
-  const canRevive = $derived(may('character.revive'));
-
-  // „Auswürfeln“ fragt nach, wenn schon Einträge da sind (wie bisher 3,5 s)
-  const rollConfirm = new Confirm();
-  function roll() {
-    if (rollConfirm.click(rollOverwrites(content, sheet))) void submit({ type: 'sheet.roll', seat });
-  }
 
   // Foto: über das Dateifeld, weiter in `setPhoto` (sheetActions.ts)
   let fileInput = $state<HTMLInputElement>();
@@ -235,15 +224,6 @@
       ><b>{names.plate}</b>{#if names.free && session.mode !== 'local'}<small>{t('room.free')}</small>{:else if away}<small>{t('room.away')}</small>{/if}</svelte:element>
     {/if}
 
-    <div class="sbar control" class:quiet={!own} style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
-      {#if canRoll}
-        <button onclick={roll} title={t('sheet.rollTitle')}>{rollConfirm.armed ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
-      {/if}
-      {#if dead && canRevive}
-        <button class="revive" onclick={() => submit({ type: 'character.revive', seat })}>{t('sheet.revive')}</button>
-      {/if}
-    </div>
-
     {#if dead}
       <svg class="dead-cross" viewBox="0 0 100 100" preserveAspectRatio="none" width={imgW} height={imgH}>
         <path d="M4 3L96 97M96 3L4 97" stroke-width="12" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
@@ -281,10 +261,4 @@
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .plate small { font-size: 0.6em; flex: none; opacity: 0.75; }
   .strip { position: absolute; left: 0; top: 0; right: 0; height: 5px; background: var(--c); pointer-events: none; }
-  /* immer sichtbar, rechts oben und rechtsbündig (Lage aus der Haut), „Wiederbeleben“ links daneben; außer am eigenen Bogen der Rollenansicht dezent */
-  .sbar { position: absolute; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3em; z-index: 3; opacity: 0.95; transition: opacity 0.2s; font-family: system-ui, sans-serif; }
-  .sbar.quiet { opacity: 0.4; }
-  .sbar.quiet:hover, .dead .sbar { opacity: 0.95; }
-  .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 0.4em; font: inherit; padding: 0.1em 0.45em; cursor: pointer; white-space: nowrap; }
-  .revive { order: -1; background: var(--warn-bg) !important; }
 </style>

@@ -3,6 +3,8 @@
   // Welche Einträge es gibt, sagt plateMenu.ts; was sie tun, kommt aus seatActions.ts, sheetActions.ts und confirm.svelte.ts.
   import type { SeatId } from '../engine/types';
   import { plateEntries, type PlateEntry } from './plateMenu';
+  import { sheetOf } from '../rules/klio/events';
+  import { effects } from './effects.svelte';
   import { assignable, moveTargets } from './seatActions';
   import { session } from './session.svelte';
   import { view } from './view.svelte';
@@ -14,6 +16,7 @@
     return plateEntries({
       can: (type) => session.can({ type, seat }),
       occupied: table.seats[seat].occupied,
+      dead: sheetOf(table, seat).dead && !effects.holds(seat, 'dead'),
       online: session.mode !== 'local',
       host: session.mode === 'host',
       inRoleView: view.role === seat,
@@ -26,7 +29,6 @@
 <script lang="ts">
   import content from 'virtual:klio-content';
   import { rollOverwrites } from '../rules/klio/generators/rollSheet';
-  import { sheetOf } from '../rules/klio/events';
   import { emptySheet } from '../rules/klio/state';
   import { seatNo } from '../engine/zones';
   import { submitOrSay } from './commands';
@@ -111,6 +113,8 @@
         <button role="menuitem" onclick={run(() => (view.profileFor = seat))}>{occupied ? t('menu.profile') : t('plate.color')}</button>
       {:else if entry === 'view'}
         <button role="menuitem" onclick={run(() => view.setRole(seat))}>{t('plate.view')}</button>
+      {:else if entry === 'revive'}
+        <button role="menuitem" onclick={run(() => submitOrSay({ type: 'character.revive', seat }))}>{t('plate.revive')}</button>
       {:else if entry === 'roll'}
         <button role="menuitem" title={t('sheet.rollTitle')} onclick={roll}>{rollConfirm.armed ? t('sheet.rollConfirm') : t('plate.roll')}</button>
       {:else if entry === 'photo'}

@@ -280,9 +280,9 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
   await page.setViewportSize({ width: 1600, height: 900 });
   const button = page.getByRole('button', { name: 'Menü' });
   await expect(page.locator('.menu [data-health=local]')).toBeVisible();
-  // verdeckt weder Namensschild noch Attribute noch „Auswürfeln“ von Spieler 2
+  // verdeckt weder Namensschild noch Attribute von Spieler 2
   const b = (await button.boundingBox())!;
-  for (const target of ['[data-plate=seat2]', '[data-sheet=seat2] [data-field^="attributes."]', '[data-sheet=seat2] .sbar button']) {
+  for (const target of ['[data-plate=seat2]', '[data-sheet=seat2] [data-field^="attributes."]']) {
     for (const r of await page.locator(target).all()) {
       const o = (await r.boundingBox())!;
       expect(b.x > o.x + o.width || b.x + b.width < o.x || b.y > o.y + o.height || b.y + b.height < o.y, target).toBe(true);

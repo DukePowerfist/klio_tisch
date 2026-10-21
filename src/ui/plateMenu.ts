@@ -1,13 +1,15 @@
 // Einträge des Menüs am Namensschild (10.1): welche es an diesem Platz gibt, in Gruppen. Rein, damit testbar;
 // was der Eintrag tut, steht in PlateMenu.svelte (mit seatActions.ts, sheetActions.ts, confirm.svelte.ts).
 
-export type PlateEntry = 'profile' | 'view' | 'roll' | 'photo' | 'export' | 'import' | 'reset' | 'move' | 'release' | 'assign';
+export type PlateEntry = 'profile' | 'view' | 'revive' | 'roll' | 'photo' | 'export' | 'import' | 'reset' | 'move' | 'release' | 'assign';
 
 export type PlateContext = {
   /** darf der Nutzer diesen Befehl an diesem Platz? */
   can: (type: string) => boolean;
   /** jemand sitzt am Platz */
   occupied: boolean;
+  /** der Charakter ist tot (erst nach dem Aufdecken, wie das Kreuz am Bogen) */
+  dead: boolean;
   /** Raum mit Mitspielern (nicht lokal); als Host zusätzlich `host` */
   online: boolean;
   host: boolean;
@@ -21,7 +23,7 @@ export type PlateContext = {
 /** Gruppen in fester Reihenfolge, getrennt durch feine Linien: Person und Ansicht, Bogen, Platz (SL) */
 const GROUPS: PlateEntry[][] = [
   ['profile', 'view'],
-  ['roll', 'photo', 'export', 'import', 'reset'],
+  ['revive', 'roll', 'photo', 'export', 'import', 'reset'],
   ['move', 'release', 'assign'],
 ];
 
@@ -31,6 +33,8 @@ function shown(e: PlateEntry, c: PlateContext): boolean {
       return c.can('seat.edit');
     case 'view':
       return !c.inRoleView;
+    case 'revive':
+      return c.dead && c.can('character.revive');
     case 'roll':
       return c.can('sheet.roll');
     case 'photo':

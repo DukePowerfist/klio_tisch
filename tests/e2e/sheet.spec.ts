@@ -24,18 +24,6 @@ test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page 
   await expect(sheet1(page).locator('[data-field="attributes.K"]')).toHaveValue('7');
 });
 
-test('Auswürfeln füllt den Bogen; bei Einträgen erst „Überschreiben?“', async ({ page }) => {
-  await page.keyboard.press('1'); // eigener Bogen: kleine Bedienelemente ohne Zoom (5b)
-  const roll = sheet1(page).getByRole('button', { name: 'Auswürfeln' });
-  await roll.click();
-  await expect(page.getByRole('status')).toHaveText('Bogen 1: Charakter ausgewürfelt');
-  await expect(sheet1(page).locator('[data-field="strengths.text.0"]')).not.toHaveValue('');
-  await roll.click();
-  await expect(sheet1(page).getByRole('button', { name: 'Überschreiben?' })).toBeVisible();
-  await sheet1(page).getByRole('button', { name: 'Überschreiben?' }).click();
-  await expect(sheet1(page).getByRole('button', { name: 'Auswürfeln' })).toBeVisible();
-});
-
 test('Kästchen, Narbe ohne Zähler (5k), Rüstzeug streichen', async ({ page }) => {
   await page.keyboard.press('1'); // eigener Bogen: kleine Bedienelemente ohne Zoom (5b)
   const lamp = sheet1(page).locator('[data-check="lamps.1"]');
@@ -50,7 +38,7 @@ test('Kästchen, Narbe ohne Zähler (5k), Rüstzeug streichen', async ({ page })
   await expect(sheet1(page).locator('[data-field="gear.text.0"]')).toHaveClass(/struck/);
 });
 
-test('Schaden: niedrigere Karo-Karte tötet; Wiederbeleben', async ({ page }) => {
+test('Schaden: niedrigere Karo-Karte tötet; Wiederbeleben über das Schild', async ({ page }) => {
   // Karo B–A, dann Karo 2–6: immer niedriger, Karo als Treffer → tot (A3)
   const hard = await zoneCenter(page, 'SCHWIERIG');
   const easy = await zoneCenter(page, 'LEICHT');
@@ -60,7 +48,8 @@ test('Schaden: niedrigere Karo-Karte tötet; Wiederbeleben', async ({ page }) =>
   await dragFromTo(page, easy, dmg);
   await expect(page.getByRole('status')).toHaveText('Bogen 1: Der Charakter ist tot.');
   await expect(sheet1(page).locator('.dead-cross')).toHaveCount(1);
-  await sheet1(page).getByRole('button', { name: 'Wiederbeleben' }).click();
+  await page.locator('[data-plate=seat1]').click();
+  await page.getByRole('menuitem', { name: 'Charakter wiederbeleben' }).click();
   await expect(sheet1(page).locator('.dead-cross')).toHaveCount(0);
 });
 
@@ -124,17 +113,14 @@ test('Foto wird verkleinert gespeichert und bleibt nach Neuladen', async ({ page
   await expect(sheet1(page).getByRole('button', { name: 'Foto' })).toHaveCSS('background-image', /^url\("blob:/);
 });
 
-test('Bedienelemente: „Auswürfeln“ immer, kleine erst ab Zoom 1,3, am eigenen Bogen der Rollenansicht immer', async ({ page }) => {
+test('Bedienelemente: kleine erst ab Zoom 1,3, am eigenen Bogen der Rollenansicht immer', async ({ page }) => {
   for (const seat of ['seat1', 'seat2']) {
     await page.keyboard.press(seat.slice(-1));
     await setSeatField(page, seat, 'gear.text.0', 'Seil');
   }
   await page.keyboard.press('0');
   const strike = (seat: string) => page.locator(`[data-sheet=${seat}]`).getByTitle('Untauglich markieren (durchstreichen)').first();
-  const roll = (seat: string) => page.locator(`[data-sheet=${seat}]`).getByRole('button', { name: 'Auswürfeln' });
-  // Draufsicht bei Zoom 1: „Auswürfeln“ dezent sichtbar, kleine verborgen
-  for (const seat of ['seat1', 'seat2', 'seat3', 'seat4']) await expect(roll(seat)).toBeVisible();
-  await expect(roll('seat1').locator('..')).toHaveCSS('opacity', '0.4');
+  // Draufsicht bei Zoom 1: kleine verborgen
   await expect(strike('seat1')).toBeHidden();
   // bei 2 wie bei 4 Spielern: ab Zoom 1,3 sichtbar, beim Herauszoomen wieder verborgen
   for (const players of ['4', '2']) {
@@ -151,12 +137,10 @@ test('Bedienelemente: „Auswürfeln“ immer, kleine erst ab Zoom 1,3, am eigen
     await expect(strike('seat1')).toBeHidden();
     await page.keyboard.press('Escape');
   }
-  // Rollenansicht: eigener Bogen ohne Zoom, voll deckend; kleine Bögen erst ab Zoom 1,3
+  // Rollenansicht: eigener Bogen ohne Zoom; kleine Bögen erst ab Zoom 1,3
   await page.keyboard.press('1');
   await expect(strike('seat1')).toBeVisible();
-  await expect(roll('seat1').locator('..')).toHaveCSS('opacity', '0.95');
   await expect(strike('seat2')).toBeHidden();
-  await expect(roll('seat2')).toBeVisible();
   await zoomIn(page, { x: 1200, y: 300 });
   await expect(strike('seat2')).toBeVisible();
 });

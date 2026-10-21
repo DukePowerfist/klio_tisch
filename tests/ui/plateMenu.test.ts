@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { plateEntries, type PlateContext } from '../../src/ui/plateMenu';
 
-const base: PlateContext = { can: () => true, occupied: true, online: true, host: true, inRoleView: false, moveTargets: 2, watchers: 1 };
+const base: PlateContext = { can: () => true, occupied: true, dead: false, online: true, host: true, inRoleView: false, moveTargets: 2, watchers: 1 };
 
 describe('Menü am Namensschild: Einträge (10.1)', () => {
   it('SL am besetzten Platz: alles außer Zuweisen, in drei Gruppen', () => {
@@ -28,11 +28,17 @@ describe('Menü am Namensschild: Einträge (10.1)', () => {
     const only = (key: string) => plateEntries({ ...base, inRoleView: true, can: (t) => t === key }).flat().filter((e) => e !== 'export');
     expect(only('seat.edit')).toEqual(['profile']);
     expect(only('sheet.roll')).toEqual(['roll']);
+    expect(only('character.revive')).toEqual([]);
     expect(only('sheet.setPhoto')).toEqual(['photo']);
     expect(only('sheet.import')).toEqual(['import']);
     expect(only('sheet.reset')).toEqual(['reset']);
     expect(only('table.moveSeat')).toEqual(['move']);
     expect(only('table.setSeat')).toEqual(['release']);
     expect(plateEntries({ ...base, moveTargets: 0 }).flat()).not.toContain('move');
+  });
+
+  it('Wiederbeleben nur am toten Charakter, vorn in der Gruppe Bogen', () => {
+    expect(plateEntries({ ...base, dead: true })[1]![0]).toBe('revive');
+    expect(plateEntries({ ...base, dead: true, can: (t) => t !== 'character.revive' }).flat()).not.toContain('revive');
   });
 });

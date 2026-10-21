@@ -38,10 +38,8 @@ toast:
   maxTrumps: "Es sind höchstens {max} Trümpfe möglich."
 
 sheet:
-  roll: Auswürfeln
   rollTitle: Stärken und Schwächen per Zufallstabelle füllen
   rollConfirm: Überschreiben?
-  revive: Wiederbeleben
   photoUnreadable: Das Bild konnte nicht gelesen werden.   # neu
   strike: Untauglich markieren (durchstreichen)
   trumpChoose: Trumpf wählen
@@ -293,6 +291,7 @@ plate:                                    # Menü am Namensschild (neu, Schritt 
   open: Menü zu diesem Platz
   color: Farbe …
   view: Zur Rollenansicht
+  revive: Charakter wiederbeleben
   roll: Charakter auswürfeln
   photo: Foto ändern …
   export: Charakter exportieren
