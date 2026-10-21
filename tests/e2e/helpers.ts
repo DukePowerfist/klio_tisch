@@ -57,6 +57,14 @@ export async function fromMenu(page: Page, entry: string) {
   await page.getByRole('button', { name: entry, exact: true }).click();
 }
 
+/** Einstellungen über das Menü öffnen und auf eine Seite wechseln (Schritt 5f) */
+export async function openSettings(page: Page, tab: string) {
+  await fromMenu(page, 'Einstellungen');
+  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  await dialog.getByRole('tab', { name: tab, exact: true }).click();
+  return dialog;
+}
+
 /** Einträge im Menü oben rechts (danach wieder zu) */
 export async function menuEntries(page: Page): Promise<string[]> {
   await menuButton(page).click();

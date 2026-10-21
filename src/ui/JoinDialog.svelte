@@ -12,7 +12,7 @@
   const table = $derived(session.state!);
 </script>
 
-<Modal label={t('room.join.title')} {onclose} narrow>
+<Modal label={t('room.join.title')} {onclose} size="narrow">
   <b>{t('room.join.title')}</b>
   <p><input type="text" maxlength="40" placeholder={t('room.join.name')} bind:value={name} /></p>
   <div class="seats">

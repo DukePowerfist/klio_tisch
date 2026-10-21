@@ -21,7 +21,7 @@
   }
 </script>
 
-<Modal label={t('room.manageTitle')} onclose={close} narrow>
+<Modal label={t('room.manageTitle')} onclose={close} size="narrow">
   <b>{t('room.seats')}</b>
   <div class="seats">
     {#each SEATS as seat (seat)}

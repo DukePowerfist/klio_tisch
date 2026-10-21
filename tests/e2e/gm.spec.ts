@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, nameCharacter, openMenuAndClick, ready, resetTable, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -82,28 +82,40 @@ test('Frei liegende Karte am Bogen folgt dem Bogen in die Rollenansicht (A32)', 
 });
 
 test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach dem Neuladen', async ({ page }) => {
-  await fromMenu(page, 'Einstellungen');
-  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  const dialog = await openSettings(page, 'Rechte der Spieler');
   const free = dialog.getByRole('combobox', { name: 'Trumpf frei wählen (ohne Regelprüfung)' });
   await expect(free).toHaveValue('deny');
   await free.selectOption('allow');
   await expect(free).toHaveValue('allow');
+  await dialog.getByRole('tab', { name: 'Automatik' }).click();
   const damage = dialog.getByRole('checkbox', { name: /Schaden automatisch/ });
   await expect(damage).toBeChecked();
   await damage.uncheck();
   // Das Kästchen springt sofort um, der Stand erst nach dem Speichern: neu öffnen zeigt den Stand
+  // (auf der zuletzt gewählten Seite)
   await page.keyboard.press('Escape');
   await fromMenu(page, 'Einstellungen');
   await expect(damage).not.toBeChecked();
 
   await page.reload();
   await ready(page);
-  await fromMenu(page, 'Einstellungen');
-  await expect(free).toHaveValue('allow');
+  await openSettings(page, 'Automatik');
   await expect(damage).not.toBeChecked();
+  await dialog.getByRole('tab', { name: 'Rechte der Spieler' }).click();
+  await expect(free).toHaveValue('allow');
   await dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' }).click();
   await expect(free).toHaveValue('deny');
   await expect(dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' })).toBeDisabled();
+});
+
+test('Einstellungen: Seitenleiste mit drei Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
+  const dialog = await openSettings(page, 'Spielstand');
+  await expect(dialog.getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler', 'Spielstand']);
+  await expect(dialog.getByRole('tab', { name: 'Spielstand' })).toHaveAttribute('aria-selected', 'true');
+  await expect(dialog.getByRole('heading', { name: 'Spielstand' })).toBeVisible();
+  await expect(dialog.getByRole('tabpanel', { name: 'Spielstand' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Schließen' }).click();
+  await expect(dialog).toHaveCount(0);
 });
 
 test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', async ({ page }) => {
@@ -112,8 +124,7 @@ test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', asy
   await resetTable(page, true);
   await expectCount(page, 'ABLAGE', 0);
 
-  await fromMenu(page, 'Einstellungen');
-  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  const dialog = await openSettings(page, 'Spielstand');
   await expect(dialog.getByText(/vor dem Zurücksetzen/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Wiederherstellen', exact: true }).click();
   await dialog.getByRole('button', { name: 'Wiederherstellen', exact: true }).click(); // bestätigen
@@ -125,8 +136,7 @@ test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', asy
 test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abgelehnt', async ({ page }) => {
   await nameCharacter(page, 'seat2', 'Ida');
   await openMenuAndClick(page, 'DECK', 'Ziehen');
-  await fromMenu(page, 'Einstellungen');
-  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  const dialog = await openSettings(page, 'Spielstand');
   const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
   expect(download.suggestedFilename()).toMatch(/^klio-tisch-\d{4}-\d{2}-\d{2}\.json$/);
   const file = await download.path();

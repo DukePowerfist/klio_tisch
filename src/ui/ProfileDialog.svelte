@@ -30,7 +30,7 @@
   }
 </script>
 
-<Modal label={seat ? t('profile.title') : t('profile.titleName')} {onclose} narrow>
+<Modal label={seat ? t('profile.title') : t('profile.titleName')} {onclose} size="narrow">
   <b>{seat ? t('profile.title') : t('profile.titleName')}</b>
   <p><input type="text" maxlength="40" placeholder={t('profile.name')} aria-label={t('profile.name')} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
   {#if seat}

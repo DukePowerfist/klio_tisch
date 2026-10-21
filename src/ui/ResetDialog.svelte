@@ -13,7 +13,7 @@
   }
 </script>
 
-<Modal label={t('reset.title')} onclose={close} narrow>
+<Modal label={t('reset.title')} onclose={close} size="narrow">
   <b>{t('reset.title')}</b>
   <p>{t('reset.text')}</p>
   <label><input type="checkbox" bind:checked={withCharacters} /><span>{t('reset.characters')}</span></label>

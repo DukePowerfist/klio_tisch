@@ -2,6 +2,7 @@
 
 import { SeatSchema } from '../engine/schemas';
 import type { SeatId, ZoneId } from '../engine/types';
+import type { SettingsPage } from './settingsPages';
 
 const ROLE_KEY = 'klio.view.role';
 
@@ -28,6 +29,8 @@ class ViewState {
   confirmReset = $state(false);
   /** offenes Fenster der SL: Raum (Plätze, Link) bzw. Einstellungen (Automatik, Rechte) */
   gmPanel = $state<'room' | 'settings' | null>(null);
+  /** zuletzt gewählte Seite der Einstellungen (nur für die Sitzung, nicht im Stand) */
+  settingsPage = $state<SettingsPage>('automation');
   /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
   bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
   toast = $state<Toast | null>(null);

@@ -2,7 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, openSettings, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -112,8 +112,7 @@ test('Alter Spielstand (Format 1) aus einer Datei: frei liegende Karte liegt wie
   const deck = await zoneCenter(page, 'DECK');
   await dragFromTo(page, deck, { x: deck.x + 150, y: deck.y - 120 });
   await expectCount(page, 'DECK', 26);
-  await fromMenu(page, 'Einstellungen');
-  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  const dialog = await openSettings(page, 'Spielstand');
   const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
   const saved = JSON.parse(await readFile((await download.path())!, 'utf8'));
   const [card] = saved.state.free as string[];
