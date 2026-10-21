@@ -9,6 +9,8 @@ import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
 import { unpackPhoto, toBase64, type PhotoBank } from './photos';
 import { readArchive, writeArchive, type Photos } from './archive';
 import type { RoomLink } from './room-link';
+import { PLAYER_NAME_MAX } from '../engine/schemas';
+import type { SeatId } from '../engine/types';
 import { INVALID, ToHost, type CommandResult, type Role, type ToClient } from './protocol';
 import type { PeerId, Transport } from './transport';
 
@@ -26,6 +28,9 @@ export type HostData = {
 };
 
 export type Saved<G> = { state: TableState<G>; host: HostData };
+
+/** Ein verbundener Client für das Raumfenster der SL: Peer, Rolle und gemeldeter Name (8.7). */
+export type Online = Role & { peer: PeerId; name: string };
 
 /** Speicher des Hosts; Stand und Host-Daten werden gemeinsam (in einer Transaktion) gespeichert. */
 export interface HostStore<G> {
@@ -55,8 +60,8 @@ export type HostOptions<G> = {
   onSaveError?: (error: unknown) => void;
   /** nach jedem angenommenen Befehl; `cause` = Befehls-ID, falls bekannt; `own` = per `submit` aus diesem Browser */
   onChange?: (state: TableState<G>, events: SequencedEvent[], cause: string | undefined, own: boolean) => void;
-  /** wer verbunden ist, hat sich geändert (Beitritt, Abbruch, neue Rolle) */
-  onOnline?: (online: Role[]) => void;
+  /** wer verbunden ist, hat sich geändert (Beitritt, Abbruch, neue Rolle, neuer Name) */
+  onOnline?: (online: Online[]) => void;
   /** Fotos (8.4); fehlt: Fotos werden weder angenommen noch verteilt */
   photos?: PhotoBank;
   /** Sicherungen (A34), vor Befehlen mit `backup` und vor dem Ersetzen des Stands; fehlt: keine */
@@ -69,6 +74,7 @@ type Hello = Extract<ToHost, { t: 'hello' }>;
 
 export class Host<G> {
   private peers = new Map<PeerId, string>(); // Peer → Schlüssel
+  private names = new Map<PeerId, string>(); // Peer → gemeldeter Name (8.7), nur im Speicher
   private queue: Promise<unknown> = Promise.resolve();
   private rng: Rng;
 
@@ -92,7 +98,7 @@ export class Host<G> {
     });
     transport.onPeers((list) => {
       if (transport !== this.transport) return;
-      for (const p of this.peers.keys()) if (!list.includes(p)) this.peers.delete(p);
+      for (const p of this.peers.keys()) if (!list.includes(p)) this.forget(p);
       this.onlineChanged();
     });
   }
@@ -119,9 +125,22 @@ export class Host<G> {
     return this.saved.host.room;
   }
 
-  /** Rollen der verbundenen Clients (Raumfenster der SL) */
-  get online(): Role[] {
-    return [...this.peers.values()].map((key) => this.saved.host.keys[key]!);
+  /** Verbundene Clients mit Rolle und Namen (Raumfenster der SL) */
+  get online(): Online[] {
+    return [...this.peers].map(([peer, key]) => ({ ...this.saved.host.keys[key]!, peer, name: this.names.get(peer) ?? '' }));
+  }
+
+  /** Verbundenen Zuschauer auf einen freien Platz setzen (8.7). Erst beim Ausführen geprüft: Wer sich inzwischen
+   *  neu verbunden hat, hat eine neue Peer-ID; wer schon einen Platz hat, wird nicht umgesetzt. */
+  assign(peer: PeerId, seat: SeatId): Promise<CommandResult> {
+    return this.enqueue(async () => {
+      const key = this.peers.get(peer);
+      if (!key || this.saved.host.keys[key]?.role !== 'spectator') return { ok: false, reason: { key: 'reject.notConnected' } };
+      const name = this.names.get(peer);
+      const cmd = { type: 'table.setSeat', seat, occupied: true, ...(name ? { name } : {}) };
+      const role: Role = { role: 'player', seat };
+      return this.execute(cmd, { role: 'gm' }, (h, r) => (r.ok ? withRole(h, key, role) : h), undefined, true, 'gm');
+    });
   }
 
   /** Raum festlegen bzw. erneuern; ein neuer Link macht den alten wertlos, die Plätze bleiben (8.2). */
@@ -134,6 +153,7 @@ export class Host<G> {
     this.transport.leave();
     this.transport = transport;
     this.peers.clear();
+    this.names.clear();
     this.listen();
     this.onlineChanged();
   }
@@ -223,6 +243,7 @@ export class Host<G> {
     if (!key) return; // erst hello
     if (msg.t === 'resync') return this.send({ t: 'state', state: this.state }, from);
     if (msg.t === 'claim') return this.claim(key, msg, from);
+    if (msg.t === 'name') return this.rename(from, msg.name);
     if (msg.t === 'photoGet') return this.sendPhoto(msg.hash, from);
     if (msg.t === 'photo') return this.send({ t: 'result', id: msg.id, ...(await this.putPhoto(key, msg.hash, msg.data)) }, from);
 
@@ -242,7 +263,7 @@ export class Host<G> {
     for (const [peer, key] of this.peers) {
       if (key === msg.key && peer !== from) {
         this.send({ t: 'replaced' }, peer);
-        this.peers.delete(peer);
+        this.forget(peer);
       }
     }
 
@@ -254,8 +275,19 @@ export class Host<G> {
       if (!result.ok) return this.send({ t: 'denied', reason: result.reason }, from);
     }
     this.peers.set(from, msg.key);
+    this.names.set(from, msg.name.trim().slice(0, PLAYER_NAME_MAX));
     this.send({ t: 'welcome', role, state: this.state }, from);
     this.onlineChanged();
+  }
+
+  private rename(peer: PeerId, name: string): void {
+    this.names.set(peer, name.trim());
+    this.onlineChanged();
+  }
+
+  private forget(peer: PeerId): void {
+    this.peers.delete(peer);
+    this.names.delete(peer);
   }
 
   /** Zuschauer nimmt einen freien Platz (über den Engine-Befehl, als SL); die neue Rolle kommt per Willkommen. */
@@ -285,7 +317,7 @@ export class Host<G> {
    * Der einzige Weg für Änderungen: ausführen → Host-Daten nachführen → speichern → verteilen.
    * Gemerkte Antworten werden auch für abgelehnte Befehle gespeichert, damit eine Wiederholung dieselbe Antwort bekommt.
    */
-  private async execute(cmd: unknown, actor: Actor, updateHost?: (host: HostData, result: CommandResult) => HostData, cause?: string, own = false): Promise<CommandResult> {
+  private async execute(cmd: unknown, actor: Actor, updateHost?: (host: HostData, result: CommandResult) => HostData, cause?: string, own = false, by?: 'gm'): Promise<CommandResult> {
     const r = this.engine.dispatch(this.state, cmd, actor, this.rng);
     const result: CommandResult = isRejection(r) ? { ok: false, reason: r.reason } : { ok: true };
     // Bei Ablehnung ohne etwas zu merken ändert sich nichts, also auch nichts zu speichern
@@ -294,8 +326,12 @@ export class Host<G> {
     if (!isRejection(r) && this.engine.commands[type]?.backup) await this.backup(type);
 
     const state = isRejection(r) ? this.state : r.state;
-    const host = followSeats(updateHost ? updateHost(this.saved.host, result) : this.saved.host, state);
-    const saved = await this.persist({ state, host });
+    // Umsetzen (8.7): die Schlüssel folgen den Personen, egal wer den Befehl schickt; vor followSeats,
+    // sonst würde der Umgesetzte Zuschauer. Aus dem Ereignis allein ließe sich das nicht ableiten.
+    const moved = !isRejection(r) && type === 'table.moveSeat' ? (cmd as { from: SeatId; to: SeatId }) : null;
+    const updated = updateHost ? updateHost(this.saved.host, result) : this.saved.host;
+    const host = followSeats(moved ? moveKeys(updated, moved.from, moved.to) : updated, state);
+    const saved = await this.persist({ state, host }, moved ? 'gm' : by);
     if (!saved.ok) return saved;
     if (isRejection(r)) return result;
 
@@ -306,13 +342,13 @@ export class Host<G> {
 
   /** Einzige Stelle, an der Stand und Host-Daten wechseln. Neue Rolle eines Verbundenen
    *  (Platz genommen oder von der SL freigegeben): neues Willkommen. */
-  private async persist(next: Saved<G>): Promise<CommandResult> {
+  private async persist(next: Saved<G>, by?: 'gm'): Promise<CommandResult> {
     try {
       await this.store.save(next);
       const before = this.saved.host.keys;
       this.saved = next;
       const changed = [...this.peers].filter(([, key]) => next.host.keys[key] !== before[key]);
-      for (const [peer, key] of changed) this.send({ t: 'welcome', role: next.host.keys[key]!, state: next.state }, peer);
+      for (const [peer, key] of changed) this.send({ t: 'welcome', role: next.host.keys[key]!, state: next.state, ...(by ? { by } : {}) }, peer);
       if (changed.length > 0) this.onlineChanged();
       return { ok: true };
     } catch (error) {
@@ -323,6 +359,12 @@ export class Host<G> {
 }
 
 const withRole = (host: HostData, key: string, role: Role): HostData => ({ ...host, keys: { ...host.keys, [key]: role } });
+
+/** Schlüssel auf `from` nach `to`, die auf `to` (beim Tausch) nach `from`; auch nicht verbundene (8.7). */
+function moveKeys(host: HostData, from: SeatId, to: SeatId): HostData {
+  const swap = (r: Role): Role => (r.role !== 'player' ? r : r.seat === from ? { role: 'player', seat: to } : r.seat === to ? { role: 'player', seat: from } : r);
+  return { ...host, keys: Object.fromEntries(Object.entries(host.keys).map(([k, r]) => [k, swap(r)])) };
+}
 
 /** Rollen folgen dem Stand: Wessen Platz frei geworden ist (die SL gibt ihn frei, 8.2), der ist wieder Zuschauer. */
 function followSeats<G>(host: HostData, state: TableState<G>): HostData {

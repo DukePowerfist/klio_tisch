@@ -308,6 +308,7 @@ reject:
   slotEmpty: Dieser Platz ist leer.
   seatTaken: Dieser Platz ist schon vergeben.
   seatFree: Dieser Platz ist nicht besetzt.
+  notConnected: Dieser Zuschauer ist nicht mehr verbunden oder hat schon einen Platz.
   unknownColor: Diese Farbe gibt es nicht.
   colorTaken: Diese Farbe hat schon jemand anderes.
   saveFailed: Speichern fehlgeschlagen, die Aktion wurde verworfen.

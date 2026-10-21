@@ -36,6 +36,8 @@ const SeatCmd = z.object({
   occupied: z.boolean(),
   name: PlayerNameSchema.optional(),
 }).strict();
+/** Person umsetzen oder zwei tauschen (8.7); Bögen, Karten und Farben bleiben am Platz */
+const MoveSeatCmd = z.object({ type: z.literal('table.moveSeat'), from: SeatSchema, to: SeatSchema }).strict();
 /** eigener Name und eigene Farbe (Schritt 5e); nur Angegebenes ändert sich, leerer Name = ohne Namen */
 const SeatEditCmd = z.object({
   type: z.literal('seat.edit'),
@@ -247,6 +249,32 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
     },
   };
 
+  // Person auf einen anderen Platz setzen (8.7): ist das Ziel frei, wandert sie dorthin und der alte Platz merkt sich
+  // sie als „zuletzt“; ist es besetzt, tauschen beide. Nur Personen wechseln, Farben bleiben am Platz. Die Schlüssel
+  // der Browser führt der Host nach. Ausgeblendetes `from` nur auf einen freien Platz, sonst landete der andere dort.
+  const moveSeat: CommandDef<unknown, z.infer<typeof MoveSeatCmd>> = {
+    parse: (x) => MoveSeatCmd.parse(x),
+    permission: 'table.setSeat',
+    handle(cmd, state) {
+      if (cmd.from === cmd.to) return reject('reject.invalid');
+      const from = state.seats[cmd.from];
+      const to = state.seats[cmd.to];
+      if (!from.occupied) return reject('reject.seatFree');
+      if (!seatVisible(cmd.to, state)) return reject('reject.hiddenSeat');
+      if (to.occupied && !seatVisible(cmd.from, state)) return reject('reject.hiddenSeat');
+      const seat = (occupied: boolean, name: string | undefined, color: string | undefined) =>
+        ({ occupied, ...(name ? { name } : {}), ...(color ? { color } : {}) });
+      return [{
+        type: 'seatsChanged',
+        seats: {
+          ...state.seats,
+          [cmd.to]: seat(true, from.name, to.color),
+          [cmd.from]: to.occupied ? seat(true, to.name, from.color) : seat(false, from.name, from.color),
+        },
+      }];
+    },
+  };
+
   // Name und Farbe des eigenen Platzes (5e). Jede Farbe höchstens an einem Platz, auch an ausgeblendeten.
   const seatEdit: CommandDef<unknown, z.infer<typeof SeatEditCmd>> = {
     parse: (x) => SeatEditCmd.parse(x),
@@ -284,6 +312,6 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
 
   return {
     'cards.move': move, 'card.flip': cardFlip, 'zone.flip': zoneFlip, 'zone.draw': zoneDraw, 'zone.shuffle': zoneShuffle,
-    'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSeat': setSeat, 'seat.edit': seatEdit, 'table.setSettings': setSettings,
+    'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSeat': setSeat, 'table.moveSeat': moveSeat, 'seat.edit': seatEdit, 'table.setSettings': setSettings,
   };
 }

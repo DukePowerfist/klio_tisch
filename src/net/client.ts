@@ -40,6 +40,8 @@ export class Client<G> {
   status: ClientStatus = 'connecting';
   state: TableState<G> | null = null;
   role: Role | null = null;
+  /** Anlass des letzten Willkommens: 'gm' = Rolle von außen gesetzt (8.7), sonst null */
+  roleBy: 'gm' | null = null;
   private host: PeerId | null = null;
   private peers: PeerId[] = [];
   private pending = new Map<string, Pending>();
@@ -63,6 +65,12 @@ export class Client<G> {
       this.claims.set(id, resolve);
       this.transport.send({ t: 'claim', id, seat, name }, host);
     });
+  }
+
+  /** Eigenen Namen dem Host melden (Zuschauer, für das Raumfenster der SL; 8.7). */
+  setName(name: string): void {
+    this.options = { ...this.options, name }; // auch für das nächste hello
+    if (this.status === 'ready' && this.host) this.transport.send({ t: 'name', name }, this.host);
   }
 
   /** Befehl schicken; Antwort kommt, sobald der Host ihn bearbeitet hat (auch nach Wiederverbinden).
@@ -116,7 +124,7 @@ export class Client<G> {
       case 'reload':
         return this.setStatus('reload');
       case 'welcome':
-        return this.welcome(msg.role, msg.state, from);
+        return this.welcome(msg.role, msg.state, from, msg.by ?? null);
       case 'denied':
         // Beitritt verweigert (Antwort auf hello, also bevor ein Host feststeht)
         if (this.host) return;
@@ -150,13 +158,14 @@ export class Client<G> {
     }
   }
 
-  private welcome(role: Role, state: unknown, from: PeerId): void {
+  private welcome(role: Role, state: unknown, from: PeerId, by: 'gm' | null): void {
     if (this.host && this.host !== from && this.peers.includes(this.host)) {
       return this.options.onWarning?.({ kind: 'secondHost' });
     }
     if (this.status === 'replaced' || this.status === 'reload') return;
     this.host = from;
     this.role = role;
+    this.roleBy = by;
     if (!this.adopt(state)) return;
     this.setStatus('ready');
     // Unbeantwortetes mit derselben ID erneut schicken; der Host erkennt Wiederholungen. Fotos erneut anfragen.

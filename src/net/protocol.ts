@@ -31,7 +31,9 @@ const ClaimMsg = z.object({ t: z.literal('claim'), id: MsgId, seat: SeatSchema, 
 /** Foto hochladen (vor dem Befehl, der es einträgt); Antwort per `result`. Fotos fragen Clients einzeln an (8.4). */
 const PhotoPutMsg = z.object({ t: z.literal('photo'), id: MsgId, hash: PhotoHashSchema, data: PhotoDataSchema }).strict();
 const PhotoGetMsg = z.object({ t: z.literal('photoGet'), hash: PhotoHashSchema }).strict();
-export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg, PhotoPutMsg, PhotoGetMsg]);
+/** eigener Name geändert (Zuschauer); der Host zeigt ihn der SL im Raumfenster (8.7), nur im Speicher */
+const NameMsg = z.object({ t: z.literal('name'), name: PlayerNameSchema }).strict();
+export const ToHost = z.union([HelloMsg, CommandMsg, ResyncMsg, ClaimMsg, PhotoPutMsg, PhotoGetMsg, NameMsg]);
 export type ToHost = z.infer<typeof ToHost>;
 
 // ---------- Host → Client ----------
@@ -54,7 +56,8 @@ export type ReceivedEvents = z.infer<typeof EventsMsg>['events'];
 
 export const ToClient = z.union([
   ReloadMsg,
-  z.object({ t: z.literal('welcome'), role: RoleSchema, state: z.unknown() }).strict(),
+  /** `by: 'gm'`: die neue Rolle kommt von außen (zugewiesen, umgesetzt, getauscht; 8.7), nicht aus der eigenen Wahl */
+  z.object({ t: z.literal('welcome'), role: RoleSchema, state: z.unknown(), by: z.literal('gm').exactOptional() }).strict(),
   z.object({ t: z.literal('denied'), reason: TextRefSchema }).strict(),
   /** vollständiger Stand: Antwort auf `resync` oder (mit Anlass) nach dem Ersetzen durch die SL */
   z.object({ t: z.literal('state'), state: z.unknown(), reason: z.string().max(40).exactOptional() }).strict(),

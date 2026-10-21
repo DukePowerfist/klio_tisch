@@ -237,6 +237,40 @@ describe('Ablauf', () => {
     expect(run(fresh(), { type: 'table.setSeat', seat: 'seat3', occupied: false }).state.seats.seat3).toEqual({ occupied: false });
   });
 
+  it('umsetzen und tauschen (8.7): Personen wechseln, Farben bleiben am Platz; nur die SL', () => {
+    let s = run(fresh(), { type: 'table.setSeat', seat: 'seat1', occupied: true, name: 'Ida' }).state;
+    s = run(s, { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Bo' }).state;
+    s = run(s, { type: 'seat.edit', seat: 'seat2', color: 'teal' }).state;
+    // auf einen freien Platz: der alte merkt sich die Person als „zuletzt“
+    const moved = run(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' });
+    expect(moved.events).toEqual([{ type: 'seatsChanged', seats: expect.anything() }]);
+    expect(moved.state.seats.seat3).toEqual({ occupied: true, name: 'Ida' });
+    expect(moved.state.seats.seat1).toEqual({ occupied: false, name: 'Ida' });
+    // tauschen
+    const swapped = run(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat2' }).state;
+    expect(swapped.seats.seat1).toEqual({ occupied: true, name: 'Bo' });
+    expect(swapped.seats.seat2).toEqual({ occupied: true, name: 'Ida', color: 'teal' });
+    // Bögen bleiben am Platz
+    expect(swapped.game).toEqual(s.game);
+    // Ablehnungen
+    expectRejected(s, { type: 'table.moveSeat', from: 'seat3', to: 'seat4' }, 'reject.seatFree');
+    expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat1' }, 'reject.invalid');
+    expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' }, 'reject.notAllowed', player('seat1'));
+    expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' }, 'reject.notAllowed', { role: 'spectator' });
+  });
+
+  it('umsetzen mit ausgeblendeten Plätzen (8.7): vom ausgeblendeten auf einen freien, nie auf einen ausgeblendeten', () => {
+    let s = run(fresh(), { type: 'table.setSeat', seat: 'seat1', occupied: true, name: 'Ida' }).state;
+    s = run(s, { type: 'table.setSeat', seat: 'seat4', occupied: true, name: 'Cem' }).state;
+    const two = run(s, { type: 'table.setPlayers', players: 2 }).state;
+    const back = run(two, { type: 'table.moveSeat', from: 'seat4', to: 'seat2' }).state;
+    expect(back.seats.seat2).toEqual({ occupied: true, name: 'Cem' });
+    expect(back.seats.seat4).toEqual({ occupied: false, name: 'Cem' });
+    expectRejected(two, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' }, 'reject.hiddenSeat');
+    // Tausch mit ausgeblendetem Platz: der andere landete ungefragt dort
+    expectRejected(two, { type: 'table.moveSeat', from: 'seat4', to: 'seat1' }, 'reject.hiddenSeat');
+  });
+
   it('eigener Name und eigene Farbe (5e): nur am eigenen Platz, jede Farbe höchstens einmal', () => {
     const s = run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Ida' }).state;
     const named = run(s, { type: 'seat.edit', seat: 'seat2', name: '  Ida W. ' }, player('seat2')).state;

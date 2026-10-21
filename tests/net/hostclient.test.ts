@@ -353,12 +353,12 @@ describe('Plätze freigeben (SL)', () => {
     const a = join('seat1');
     const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx' });
     await settle(net, host);
-    expect(host.online).toContainEqual({ role: 'player', seat: 'seat1' });
+    expect(host.online).toContainEqual(expect.objectContaining({ role: 'player', seat: 'seat1' }));
     expect(await host.submit({ type: 'table.setSeat', seat: 'seat1', occupied: false })).toEqual({ ok: true });
     await settle(net, host);
     expect(a.client.role).toEqual({ role: 'spectator' });
     expect(a.client.status).toBe('ready');
-    expect(host.online).not.toContainEqual({ role: 'player', seat: 'seat1' });
+    expect(host.online).not.toContainEqual(expect.objectContaining({ role: 'player', seat: 'seat1' }));
     const r = b.client.claim('seat1', 'Neues Gerät');
     await settle(net, host);
     expect(await r).toEqual({ ok: true });
@@ -368,6 +368,126 @@ describe('Plätze freigeben (SL)', () => {
     const again = join('spectator', { key: a.key });
     await settle(net, host);
     expect(again.client.role).toEqual({ role: 'spectator' });
+  });
+});
+
+describe('Plätze zuweisen und umsetzen (8.7)', () => {
+  /** Peer-ID eines Clients beim Host */
+  const peerOf = (c: { transport: { self: string } }) => c.transport.self;
+
+  it('SL setzt einen Zuschauer auf einen freien Platz: Willkommen von außen, gespeichert, nach Neuladen derselbe', async () => {
+    const { net, host, join } = await setup();
+    const a = join('spectator', { name: 'Ida' });
+    await settle(net, host);
+    expect(host.online).toEqual([{ role: 'spectator', peer: peerOf(a), name: 'Ida' }]);
+    expect(await host.assign(peerOf(a), 'seat3')).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat3' });
+    expect(a.client.roleBy).toBe('gm');
+    expect(host.state.seats.seat3).toEqual({ occupied: true, name: 'Ida' });
+    // Neuladen: derselbe Platz, das Willkommen ist kein Eingriff mehr
+    net.disconnect(peerOf(a));
+    const again = join('spectator', { key: a.key });
+    await settle(net, host);
+    expect(again.client.role).toEqual({ role: 'player', seat: 'seat3' });
+    expect(again.client.roleBy).toBeNull();
+  });
+
+  it('eigene Platzwahl bringt ein Willkommen ohne Anlass', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat2');
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat2' });
+    expect(a.client.roleBy).toBeNull();
+  });
+
+  it('Name eines Zuschauers: aus dem Beitritt, geändert per Nachricht, beim Zuweisen übernommen', async () => {
+    const { net, host, join } = await setup();
+    const a = join('spectator', { name: '' });
+    await settle(net, host);
+    expect(host.online[0]!.name).toBe('');
+    a.client.setName('  Bo ');
+    await settle(net, host);
+    expect(host.online[0]!.name).toBe('Bo');
+    await host.assign(peerOf(a), 'seat1');
+    await settle(net, host);
+    expect(host.state.seats.seat1).toEqual({ occupied: true, name: 'Bo' });
+  });
+
+  it('Zuweisen abgelehnt: Platz besetzt oder ausgeblendet, Zuschauer weg oder schon Spieler', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat1');
+    const b = join('spectator', { key: 'browser-b-xxxxxxxxxxxx' });
+    await settle(net, host);
+    expect(await host.assign(peerOf(b), 'seat1')).toEqual({ ok: false, reason: { key: 'reject.seatTaken' } });
+    await host.submit({ type: 'table.setPlayers', players: 2 });
+    expect(await host.assign(peerOf(b), 'seat3')).toEqual({ ok: false, reason: { key: 'reject.hiddenSeat' } });
+    expect(await host.assign(peerOf(a), 'seat2')).toEqual({ ok: false, reason: { key: 'reject.notConnected' } });
+    net.disconnect(peerOf(b));
+    await settle(net, host);
+    expect(await host.assign(peerOf(b), 'seat2')).toEqual({ ok: false, reason: { key: 'reject.notConnected' } });
+    await settle(net, host);
+    expect(host.state.seats.seat2).toEqual({ occupied: false });
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat1' });
+  });
+
+  it('umsetzen auf einen freien Platz und tauschen: die Browser folgen den Personen, beide mit Anlass', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat1');
+    const b = join('seat2');
+    await settle(net, host);
+    expect(await host.submit({ type: 'table.moveSeat', from: 'seat1', to: 'seat3' })).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat3' });
+    expect(a.client.roleBy).toBe('gm');
+    expect(host.state.seats.seat1).toEqual({ occupied: false, name: 'Name seat1' });
+    expect(await host.submit({ type: 'table.moveSeat', from: 'seat3', to: 'seat2' })).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat2' });
+    expect(b.client.role).toEqual({ role: 'player', seat: 'seat3' });
+    expect(b.client.roleBy).toBe('gm');
+    expect(a.client.state).toEqual(host.state);
+  });
+
+  it('umsetzen vom ausgeblendeten auf einen sichtbaren Platz', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat4');
+    await settle(net, host);
+    await host.submit({ type: 'table.setPlayers', players: 2 });
+    expect(await host.submit({ type: 'table.moveSeat', from: 'seat4', to: 'seat2' })).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat2' });
+  });
+
+  it('nicht verbundener Spieler wird umgesetzt und sitzt beim nächsten Beitritt auf dem neuen Platz, auch nach Host-Neustart', async () => {
+    const { net, host, join, startHost } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    net.disconnect(peerOf(a));
+    await settle(net, host);
+    expect(await host.submit({ type: 'table.moveSeat', from: 'seat1', to: 'seat4' })).toEqual({ ok: true });
+    net.disconnect(host.peerId); // Host-Neustart
+    await settle(net, host);
+    const restarted = await startHost();
+    const again = join('spectator', { key: a.key });
+    await settle(net, restarted);
+    expect(again.client.role).toEqual({ role: 'player', seat: 'seat4' });
+  });
+
+  it('auch ein Spieler mit freigegebenem Recht setzt um; die Schlüssel folgen trotzdem. Ohne Recht abgelehnt', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat1');
+    const b = join('seat2');
+    await settle(net, host);
+    const denied = a.client.submit({ type: 'table.moveSeat', from: 'seat2', to: 'seat3' });
+    await settle(net, host);
+    expect(await denied).toEqual({ ok: false, reason: { key: 'reject.notAllowed' } });
+    await host.submit({ type: 'table.setSettings', permissionOverrides: { player: { 'table.setSeat': 'allow' } } });
+    const r = a.client.submit({ type: 'table.moveSeat', from: 'seat2', to: 'seat3' });
+    await settle(net, host);
+    expect(await r).toEqual({ ok: true });
+    expect(b.client.role).toEqual({ role: 'player', seat: 'seat3' });
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat1' });
   });
 });
 
