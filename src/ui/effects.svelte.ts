@@ -4,6 +4,7 @@
 import type { EngineEvent, SeatId, ZoneId } from '../engine/types';
 import { seatNo, seatZoneId } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
+import { noteCause } from './animator.svelte';
 import { describe } from './eventText';
 import { session } from './session.svelte';
 import { t } from './texts';
@@ -40,6 +41,8 @@ class Effects {
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(`${cmd['seat']}/${cmd['field']}`, { value: cmd['value'], at: Date.now() });
     });
     session.onEvents((events, own) => {
+      // eigene Züge gleiten kürzer, fremde länger (11.3)
+      noteCause(own);
       for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
         this.handle(e);

@@ -27,7 +27,9 @@ test('Gleiten: Zone, frei auf den Tisch, zurück', async ({ page }) => {
   await pause();
   await dragFromTo(page, deck, { x: deck.x + 300, y: deck.y + 120 });
   await pause();
-  await dragFromTo(page, { x: deck.x + 310, y: deck.y + 125 }, danger);
+  // die frei liegende (gedrehte) Karte zurück in die Gefahr
+  const free = (await page.locator('.board > [data-card][style*="rotate(90deg)"]').boundingBox())!;
+  await dragFromTo(page, { x: free.x + free.width / 2, y: free.y + free.height / 2 }, danger);
   await pause(1500);
 });
 

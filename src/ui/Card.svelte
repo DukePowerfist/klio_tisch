@@ -4,7 +4,7 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, move, timing, turn } from './animator.svelte';
+  import { appear, cause, move, Tilt, timing, turn } from './animator.svelte';
   import { planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
@@ -29,17 +29,27 @@
   const transform = $derived(`translate(${rotated ? x + size.h * scale : x}px, ${y}px) rotate(${rotated ? 90 : 0}deg) scale(${scale})`);
 
   let el: HTMLDivElement;
+  let lift: HTMLDivElement;
   let inner: HTMLDivElement;
+  const tilt = new Tilt(() => lift);
+  /** Farbe der Person, die die Karte zuletzt gezogen hat: Leuchten am Ziel nach dem Loslassen */
+  let lastMark = $state<string | undefined>();
   /** zuletzt gezeigt (nicht reaktiv): Ausgangspunkt der nächsten Bewegung */
   let shown: { frame: Frame; transform: string; faceUp: boolean } | null = null;
   $effect(() => {
     const frame: Frame = { x, y, scale, rotated, slot, follow: dragging ? 'own' : mark ? 'remote' : null };
     const to = transform;
     untrack(() => {
-      if (shown && !still) move(el, shown.transform, planMove(shown.frame, frame, timing()));
+      if (shown && !still) {
+        move(el, lift, shown.transform, planMove(shown.frame, frame, timing(), cause()), z);
+        if (frame.follow) tilt.track(x);
+        else if (shown.frame.follow) tilt.release();
+      }
+      if (mark) lastMark = mark;
       shown = { frame, transform: to, faceUp: shown?.faceUp ?? faceUp };
     });
   });
+  $effect(() => () => tilt.stop());
   $effect(() => {
     const up = faceUp;
     untrack(() => {
@@ -51,8 +61,8 @@
   const back = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 </script>
 
-<div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
-  <div class="lift">
+<div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:--glow-c={lastMark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
+  <div bind:this={lift} class="lift">
   <div bind:this={inner} class="inner" class:down={!faceUp}>
     <div class="face front">
       <div class="corner">{rank}<br />{suit}</div>
@@ -68,12 +78,17 @@
   .card { --lift: 0 8px 18px rgba(0, 0, 0, 0.5); position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: none; user-select: none; cursor: grab; }
   .card.dragging { cursor: grabbing; }
   .card.pending { opacity: 0.8; }
-  .lift { width: 100%; height: 100%; perspective: 600px; }
+  /* Anheben: etwas größer, Schatten des Flugs (::before) darunter, Leuchten nach fremdem Zug (::after) darüber */
+  .lift { position: relative; width: 100%; height: 100%; perspective: 600px; transition: scale var(--grab) ease-out; }
+  .lift::before, .lift::after { content: ''; position: absolute; inset: 0; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity var(--grab); }
+  .lift::before { box-shadow: var(--lift); }
+  .lift::after { box-shadow: 0 0 0 3px var(--glow-c, transparent), 0 0 14px 2px var(--glow-c, transparent); }
+  .dragging .lift, .marked .lift { scale: 1.04; }
+  .dragging .lift::before, .marked .lift::before { opacity: 1; }
   .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
   .inner.down { rotate: y 180deg; }
   .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); box-sizing: border-box; }
-  .dragging .face { box-shadow: var(--lift); }
-  .marked .face { box-shadow: 0 0 0 3px var(--mark), var(--lift); }
+  .marked .face { box-shadow: 0 0 0 3px var(--mark); }
   .front { background: var(--card); color: var(--card-black); }
   .red .front { color: var(--card-red); }
   .back { transform: rotateY(180deg); background: center / 100% 100% no-repeat; }

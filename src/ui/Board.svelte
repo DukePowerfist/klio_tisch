@@ -12,6 +12,7 @@
   import GmControls from './GmControls.svelte';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
+  import { shownOffset } from './animator.svelte';
   import { effects } from './effects.svelte';
   import { cardSize, clamp, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay as submit } from './commands';
@@ -76,8 +77,10 @@
 
   // ---------- Ziehen und Ablegen ----------
   /** `grab`: Greifpunkt für die anderen (8.3), gesetzt, sobald die Karte bewegt wird */
-  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos };
+  /** `ox`, `oy`: wo die Karte beim Losziehen gezeigt wurde, gemessen von ihrer Endlage (im Flug gegriffen, 11.2) */
+  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
+  let boardEl: HTMLDivElement;
   let pan: { x: number; y: number; moved: boolean } | null = null;
   let panned = false;
   const touches = new Map<number, [number, number]>();
@@ -140,7 +143,7 @@
     }
     e.preventDefault();
     preview = null;
-    drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false };
+    drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false, ox: 0, oy: 0 };
   }
 
   /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
@@ -177,10 +180,14 @@
       const dx = (e.clientX - drag.sx) / sc;
       const dy = (e.clientY - drag.sy) / sc;
       if (!drag.moved && Math.hypot(dx, dy) * sc < 4) return;
-      if (!drag.moved) drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy));
+      if (!drag.moved) {
+        drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy));
+        const el = boardEl.querySelector<HTMLElement>(`:scope > [data-card="${drag.cards[0]}"]`);
+        if (el) ({ dx: drag.ox, dy: drag.oy } = shownOffset(el));
+      }
       drag.moved = true;
-      drag.dx = dx;
-      drag.dy = dy;
+      drag.dx = drag.ox + dx;
+      drag.dy = drag.oy + dy;
       return;
     }
     if (pan) {
@@ -280,7 +287,7 @@
   onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; session.pointer(null, []); } }}
   role="application"
 >
-  <div class="board" style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
+  <div class="board" bind:this={boardEl} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
     <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
     <GmControls at={layout.gmControls} {players} />
     <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
