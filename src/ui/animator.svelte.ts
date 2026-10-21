@@ -23,6 +23,7 @@ export function timing(): Timing {
     glide: cssMs(v('--glide')), glideEase: v('--glide-ease') || 'ease-out', land: cssMs(v('--land')),
     flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), cut: cssMs(v('--cut')), strike: cssMs(v('--strike')),
     fade: cssMs(v('--fade')), flash: cssMs(v('--flash')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
+    wiggle: cssMs(v('--wiggle')),
   };
   return cached;
 }
@@ -142,6 +143,16 @@ export function cut(el: HTMLElement, lift: HTMLElement, c: Cut, z: number, index
     { offset: 0.76, translate: side, zIndex: top },
     { offset: 1, translate: '0 0', zIndex: top },
   ], { duration: t.cut, delay: c.delay, easing: 'ease-in-out' }), CUE);
+}
+
+/** Wackeln beim Überfahren (11.6): einmal kurz und gedämpft, zur Lage dazu (`composite: 'add'`), nicht im Flug */
+const WIGGLE = 'wiggle';
+export function wobble(el: HTMLElement, lift: HTMLElement): void {
+  const t = timing();
+  if (!t.wiggle || running(el, MOVE).length || running(lift, MOVE).length || running(lift, WIGGLE).length) return;
+  tag(lift.animate([
+    { transform: 'rotate(0deg)' }, { transform: 'rotate(1.2deg)', offset: 0.3 }, { transform: 'rotate(-0.6deg)', offset: 0.65 }, { transform: 'rotate(0deg)' },
+  ], { duration: t.wiggle, easing: 'ease-out', composite: 'add' }), WIGGLE);
 }
 
 /** Stoß bei Schaden (11.1): einmal nach unten, gedämpft zurück, kurzer roter Schimmer am Rand */

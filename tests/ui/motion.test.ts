@@ -5,8 +5,8 @@ import type { CardId } from '../../src/engine/types';
 import { ARC_MAX, arcPoints, arrival, cssMs, cues as cuesFor, cutCount, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, STAGGER, STAGGER_MAX, STAGGER_RESET_MAX, STRIKE_DELAY, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
 import { fresh, place } from '../helpers';
 
-const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, fade: 150, flash: 600, shift: 350, shiftEase: 'ease' };
-const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, cut: 0, strike: 0, fade: 0, flash: 0, shift: 0, shiftEase: 'ease' };
+const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, fade: 150, flash: 600, shift: 350, shiftEase: 'ease', wiggle: 250 };
+const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, cut: 0, strike: 0, fade: 0, flash: 0, shift: 0, shiftEase: 'ease', wiggle: 0 };
 const glide = (m: ReturnType<typeof planMove>) => {
   expect(m?.kind).toBe('glide');
   return m as Glide;

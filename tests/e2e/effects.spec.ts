@@ -32,6 +32,8 @@ test('Ruhig bewegt die Karten auch bei „Bewegung reduzieren“, Aus nur mit Ei
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expect.poll(() => cardAnimations(page)).toContain('transform');
   await expectCount(page, 'ABLAGE', 1);
+  // die erste Karte ist angekommen und umgeklappt, sonst zählten ihre Bewegungen unten mit
+  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
 
   const again = await openSettings(page, 'Darstellung');
   await again.getByRole('combobox', { name: 'Effekte' }).selectOption('off');
@@ -52,4 +54,14 @@ test('Aus: gegriffene Karte nur etwas größer, ohne Anheben', async ({ page }) 
   await expect(lift).toHaveCount(1);
   expect(await lift.evaluate((e) => [getComputedStyle(e).scale, getComputedStyle(e).translate])).toEqual(['1.04', 'none']);
   await page.mouse.up();
+});
+
+test('Aus: Überfahren hebt nicht an und wackelt nicht', async ({ page }) => {
+  const z = await zoneCenter(page, 'DECK');
+  await page.mouse.move(z.x - 200, z.y);
+  await page.mouse.move(z.x, z.y, { steps: 5 });
+  const lift = page.locator('.card.hover .lift');
+  await expect(lift).toHaveCount(1);
+  expect(await lift.evaluate((e) => getComputedStyle(e).transform)).toBe('none');
+  expect(await page.evaluate(() => document.getAnimations().filter((a) => a.id === 'wiggle').length)).toBe(0);
 });

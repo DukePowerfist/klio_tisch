@@ -144,6 +144,7 @@
     }
     e.preventDefault();
     preview = null;
+    hover = null;
     drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false, ox: 0, oy: 0 };
   }
 
@@ -164,7 +165,10 @@
   $effect(() => session.shareOpen(view.open));
 
   function onPointerMove(e: PointerEvent) {
-    if (e.pointerType === 'mouse') mouse = [e.clientX, e.clientY];
+    if (e.pointerType === 'mouse') {
+      mouse = [e.clientX, e.clientY];
+      hoverAt(e);
+    }
     // beim Verschieben sendet der Effekt oben, sobald sich die Ansicht geändert hat
     if (session.sharesPointer && !pan?.moved && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
     if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
@@ -204,6 +208,39 @@
       pan.y = e.clientY;
     }
   }
+
+  // ---------- Überfahren (11.6): Karte, die man nehmen darf, hebt sich leicht; Wackeln nur bei echter Bewegung ----------
+  const mouseHovers = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover)').matches;
+  /** Karte unter der Maus (auch beim Ziehen): Wackeln nur, wenn eine andere darunter kommt, nicht nach dem Ablegen */
+  let under: CardId | null = null;
+  /** überfahrene Karte samt Platz (gleitet sie weg, hebt sie sich nicht mehr) und ob sie wackeln soll */
+  let hover = $state<{ card: CardId; slot: string; wiggle: boolean } | null>(null);
+  /** Darf man die Karte nehmen? Dieselbe Regel wie beim Greifen, dazu das Recht für genau diese Zone bzw. Lage */
+  function takeable(card: CardId): boolean {
+    const where = locate(table, card);
+    if (!where) return false;
+    if ('zone' in where) {
+      const zone = layout.zones[where.zone];
+      const fanned = !!(zone && content.zones[zone.template]?.fanned);
+      if (!fanned && where.index !== table.zones[where.zone]!.length - 1) return false;
+      return session.can({ type: 'cards.move', cards: [card], from: { zone: where.zone }, to: { zone: where.zone } });
+    }
+    const pos = table.freePos[card];
+    return !!pos && session.can({ type: 'cards.move', cards: [card], from: { free: true }, to: { free: pos } });
+  }
+  function hoverAt(e: PointerEvent) {
+    // das Ereignis kommt beim Fenster an; Ziel kann auch das Fenster selbst sein
+    const el = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-card]') : null;
+    const card = el && boardEl.contains(el) ? (el.dataset.card as CardId) : null;
+    const was = under;
+    under = card;
+    if (!mouseHovers || drag || pan || !card) return void (hover = null);
+    if (hover?.card === card) return;
+    // ohne Bewegung (Karten gleiten unter dem ruhenden Zeiger hindurch) nur anheben, nicht wackeln
+    hover = { card, slot: places[card]?.slot ?? '', wiggle: card !== was && (e.movementX !== 0 || e.movementY !== 0) };
+  }
+  /** gilt nur, solange die Karte an ihrem Platz liegt, man sie nehmen darf und niemand sie zieht */
+  const hovered = $derived(hover && !drag && places[hover.card]?.slot === hover.slot && !offsetOf.has(hover.card) && !remoteOf.has(hover.card) && takeable(hover.card) ? hover : null);
 
   /** Vorschau großer Karte beim Überfahren offener Karten (nur wenn sich das Element ändert) */
   function onPointerOver(e: PointerEvent) {
@@ -284,7 +321,7 @@
   onpointerdown={onPointerDown}
   onpointerover={onPointerOver}
   ondblclick={onDblClick}
-  onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; session.pointer(null, []); } }}
+  onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; under = null; hover = null; session.pointer(null, []); } }}
   role="application"
 >
   <div class="board" bind:this={boardEl} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
@@ -318,6 +355,8 @@
         dragging={offsetOf.has(card)}
         pending={offsetOf.has(card) && off !== drag}
         mark={remoteOf.get(card)?.color}
+        hover={hovered?.card === card}
+        wiggle={hovered?.card === card && hovered.wiggle}
       />
     {/each}
     <Cursors {layout} {places} scale={sc} />

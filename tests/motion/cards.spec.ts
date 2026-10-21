@@ -74,12 +74,52 @@ test('Greifen: die Karte hebt sich deutlich und federnd, beim Loslassen senkt si
   await expect.poll(() => back.evaluate((e) => [getComputedStyle(e).scale, getComputedStyle(e).translate])).toEqual(['none', 'none']);
 });
 
+/** Animationen des Wackelns auf der Karte unter dem Punkt (laufend oder gerade beendet zählt nicht) */
+const wiggles = (page: Page) => page.evaluate(() => document.getAnimations().filter((a) => a.id === 'wiggle').length);
+
+test('Überfahren: die oberste Karte hebt sich leicht und wackelt einmal, auch nach erneutem Überfahren', async ({ page }) => {
+  const z = await zoneCenter(page, 'DECK');
+  await page.mouse.move(z.x - 200, z.y);
+  await page.mouse.move(z.x, z.y, { steps: 5 });
+  const lift = page.locator('.card.hover .lift');
+  await expect(lift).toHaveCount(1);
+  expect(await wiggles(page)).toBe(1);
+  await expect.poll(() => lift.evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).a)).toBeCloseTo(1.02, 3);
+  // auf derselben Karte bleibt sie ruhig
+  await page.waitForTimeout(300);
+  await page.mouse.move(z.x + 5, z.y + 5, { steps: 3 });
+  expect(await wiggles(page)).toBe(0);
+  // verlassen und wieder darauf: wackelt erneut
+  await page.mouse.move(z.x - 200, z.y, { steps: 3 });
+  await expect(page.locator('.card.hover')).toHaveCount(0);
+  await page.mouse.move(z.x, z.y, { steps: 3 });
+  expect(await wiggles(page)).toBe(1);
+});
+
+test('Überfahren: kein Wackeln direkt nach dem Ablegen, die Karte lag die ganze Zeit unter dem Zeiger', async ({ page }) => {
+  const from = await zoneCenter(page, 'DECK');
+  const to = await zoneCenter(page, 'ABLAGE');
+  await page.mouse.move(from.x, from.y);
+  // das Wackeln beim Überfahren des Decks ist vorbei
+  await expect.poll(() => wiggles(page)).toBe(0);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.mouse.up();
+  await expectCount(page, 'ABLAGE', 1);
+  let seen = 0;
+  for (let i = 0; i < 6; i++) {
+    await page.mouse.move(to.x + i, to.y + i);
+    seen += await wiggles(page);
+  }
+  expect(seen).toBe(0);
+});
+
 test('Greifen im Flug: der Zug beginnt an der gezeigten Lage, die Karte springt nicht', async ({ page }) => {
   await openMenu(page, 'DECK');
   const card = await page.evaluate(async () => {
     [...document.querySelectorAll('button')].find((b) => b.textContent === 'Ziehen')!.click();
     for (let i = 0; i < 100; i++) {
-      const a = document.getAnimations().find((x) => (x.effect as KeyframeEffect).getKeyframes().some((k) => 'transform' in k));
+      const a = document.getAnimations().find((x) => x.id === 'move' && (x.effect as KeyframeEffect).getKeyframes().some((k) => 'transform' in k));
       if (a) return ((a.effect as KeyframeEffect).target as HTMLElement).dataset['card']!;
       await new Promise((r) => setTimeout(r, 5));
     }

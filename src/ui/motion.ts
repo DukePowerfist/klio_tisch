@@ -21,6 +21,8 @@ export type Timing = {
   /** Stufe „Aus“: statt Bewegung einblenden bzw. am Rand aufleuchten (11.5) */
   fade: number; flash: number;
   shift: number; shiftEase: string;
+  /** Wackeln beim Überfahren (11.6) */
+  wiggle: number;
 };
 
 /** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon.
