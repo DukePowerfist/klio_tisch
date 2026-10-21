@@ -23,6 +23,7 @@ export function timing(): Timing {
     glide: cssMs(v('--glide')), glideEase: v('--glide-ease') || 'ease-out', land: cssMs(v('--land')),
     flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), cut: cssMs(v('--cut')), strike: cssMs(v('--strike')),
     fade: cssMs(v('--fade')), flash: cssMs(v('--flash')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
+    viewOut: cssMs(v('--view-out')), viewIn: cssMs(v('--view-in')),
     wiggle: cssMs(v('--wiggle')), count: cssMs(v('--count-pop')),
   };
   return cached;
@@ -300,7 +301,8 @@ export class Tilt {
   }
 }
 
-/** Ein- und Ausblenden einer Karte ohne frühere Lage (Bogen ein- oder ausgeblendet), so schnell wie die Bögen */
+/** Ein- und Ausblenden einer Karte ohne frühere Lage (Bogen ein- oder ausgeblendet), so schnell wie die Bögen;
+ *  im Schnitt beim Ansichtswechsel (`still`) ohne Dauer, die Blende des Tisches übernimmt (11.8) */
 export function appear(_: Element, { still }: { still: boolean }) {
   const t = timing();
   return { duration: still ? 0 : t.shift, css: (k: number) => `opacity: ${k}` };

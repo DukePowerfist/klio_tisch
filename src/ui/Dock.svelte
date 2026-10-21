@@ -27,14 +27,14 @@
     {@const names = session.state ? seatNames(session.state, seat) : null}
     <button
       class="seat"
-      class:on={view.role === seat}
+      class:on={view.chosen === seat}
       data-dock={seat}
       style:--c={whoColor(seat)}
       title={`${names ? `${t('dock.seat', { n: i + 1 })}: ${names.label}` : t('dock.seat', { n: i + 1 })} (${t('dock.key', { n: i + 1 })})`}
       onclick={() => view.setRole(seat)}
     >{i + 1}</button>
   {/each}
-  <button class:on={view.role === null} title={t('dock.overview')} onclick={() => view.setRole(null)}>⤢</button>
+  <button class:on={view.chosen === null} title={t('dock.overview')} onclick={() => view.setRole(null)}>⤢</button>
 </div>
 
 <style>

@@ -1,7 +1,9 @@
 // Lokaler Zustand der Ansicht (nicht synchronisiert, 6.1): Ansicht, Zoom, offenes Stapelmenü, Meldungen.
 
+import { tick, untrack } from 'svelte';
 import { SeatSchema } from '../engine/schemas';
 import type { SeatId, ZoneId } from '../engine/types';
+import { timing } from './animator.svelte';
 import { effectLevel } from './effectLevel.svelte';
 import type { SettingsPage } from './settingsPages';
 
@@ -17,6 +19,10 @@ export type Toast = { text: string; warn: boolean; id: number };
 class ViewState {
   /** null = Draufsicht, sonst Rollenansicht dieses Platzes */
   role = $state<SeatId | null>(storedRole());
+  /** zuletzt gewählte Ansicht: gilt sofort (Dock), `role` wechselt erst im Schnitt (11.8) */
+  chosen = $state<SeatId | null>(this.role);
+  /** Schnitt beim Ansichtswechsel (11.8): Bögen, Zonen und Karten springen, statt zu gleiten */
+  cutting = $state(false);
   /** Zoom 1–5, Verschiebung in Tischkoordinaten relativ zur Mitte */
   zoom = $state(1);
   ox = $state(0);
@@ -43,10 +49,89 @@ class ViewState {
   private toastId = 0;
 
   setRole(r: SeatId | null): void {
-    this.role = r;
+    // ohne Abhängigkeiten: Aufrufer in einem Effekt (App.svelte, Platz beim Beitritt) liefen sonst bei jedem Wechsel
+    // erneut und setzten ihre Rolle zurück
+    untrack(() => this.choose(r));
+  }
+
+  private choose(r: SeatId | null): void {
+    // gleiche Ansicht: kein Schnitt, nur der Zoom gleitet zurück (wie beim Doppelklick auf freie Fläche)
+    if (r === this.chosen) {
+      if (!this.phase) this.animateTo(1, 0, 0);
+      return;
+    }
+    this.chosen = r;
     if (r) localStorage.setItem(ROLE_KEY, r);
     else localStorage.removeItem(ROLE_KEY);
-    this.animateTo(1, 0, 0);
+    // noch nicht gezeichnet oder Stufe „Aus“: sofort, ohne Blende
+    if (!this.scene || timing().viewOut === 0) {
+      this.role = r;
+      this.animateTo(1, 0, 0);
+      return;
+    }
+    // während des Abblendens zählt nur die zuletzt gewählte Ansicht
+    if (this.phase !== 'out') void this.cut(this.scene);
+  }
+
+  // ---------- Schnitt beim Ansichtswechsel (11.8) ----------
+  /** Hülle mit allem, was auf dem Tisch liegt (Board.svelte); der Filz darunter bleibt stehen */
+  private scene: HTMLElement | null = null;
+  /** `out`: blendet ab, `in`: blendet auf; null: kein Schnitt */
+  private phase: 'out' | 'in' | null = null;
+  private fade: Animation | null = null;
+  private cuts = 0;
+
+  attachScene(el: HTMLElement): () => void {
+    this.scene = el;
+    return () => {
+      if (this.scene === el) this.scene = null;
+    };
+  }
+
+  /** Schnitt läuft: der Tisch nimmt keine neuen Zeigereingaben an */
+  get inCut(): boolean {
+    return this.phase !== null;
+  }
+
+  private async cut(scene: HTMLElement): Promise<void> {
+    const id = ++this.cuts;
+    const t = timing();
+    this.phase = 'out';
+    this.stopAnimation();
+    await this.fadeTo(scene, 0, t.viewOut, 'ease-in');
+    if (id !== this.cuts) return;
+    this.cutting = true;
+    this.role = this.chosen;
+    [this.zoom, this.ox, this.oy] = [1, 0, 0];
+    await this.settle(scene);
+    this.phase = 'in';
+    await this.fadeTo(scene, 1, t.viewIn, 'ease-out');
+    if (id === this.cuts) this.phase = null;
+  }
+
+  /** Neue Lagen ohne Übergang setzen: erst neu zeichnen, dann den Stil berechnen lassen, dann den Schnitt lösen.
+   *  Ohne das Lesen fielen neue Lage und gelöstes `data-cut` in dieselbe Stilberechnung, und `--shift` liefe doch. */
+  private async settle(scene: HTMLElement): Promise<void> {
+    await tick();
+    void getComputedStyle(scene.querySelector('.zone') ?? scene).left;
+    this.cutting = false;
+  }
+
+  /** Deckkraft der Hülle von der gezeigten zu `to` (nur Compositor); voll sichtbar wieder ohne Animation */
+  private fadeTo(el: HTMLElement, to: number, duration: number, easing: string): Promise<void> {
+    const from = getComputedStyle(el).opacity;
+    this.fade?.cancel();
+    const a = el.animate([{ opacity: from }, { opacity: to }], { duration, easing, fill: 'forwards' });
+    this.fade = a;
+    return a.finished.then(
+      () => {
+        if (to === 1 && this.fade === a) {
+          a.cancel();
+          this.fade = null;
+        }
+      },
+      () => undefined,
+    );
   }
 
   say(text: string, warn = false): void {

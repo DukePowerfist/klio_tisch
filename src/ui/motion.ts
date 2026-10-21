@@ -21,6 +21,8 @@ export type Timing = {
   /** Stufe „Aus“: statt Bewegung einblenden bzw. am Rand aufleuchten (11.5) */
   fade: number; flash: number;
   shift: number; shiftEase: string;
+  /** Ansichtswechsel als Schnitt: Abblenden, Aufblenden (11.8) */
+  viewOut: number; viewIn: number;
   /** Wackeln beim Überfahren, Springen der Zahl am Stapel (11.6) */
   wiggle: number; count: number;
 };

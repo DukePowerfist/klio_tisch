@@ -126,7 +126,7 @@ test('Greifen im Flug: der Zug beginnt an der gezeigten Lage, die Karte springt 
     return '';
   });
   const moved = await page.evaluate(async (card) => {
-    const el = document.querySelector<HTMLElement>(`.board > [data-card="${card}"]`)!;
+    const el = document.querySelector<HTMLElement>(`.scene > [data-card="${card}"]`)!;
     await new Promise((r) => setTimeout(r, 60));
     const before = el.getBoundingClientRect();
     const at = (dx: number, dy: number) => ({ bubbles: true, clientX: before.x + 20 + dx, clientY: before.y + 20 + dy, pointerType: 'mouse', button: 0, isPrimary: true, pointerId: 1 });
@@ -242,14 +242,109 @@ test('Schaden: erst aufdecken, dann Stoß, dann Narbe und Meldung (5k)', async (
   expect(times['toast']!).toBeGreaterThan(times['flip']! + 100);
 });
 
-test('Ansichtswechsel: Karten so schnell und mit derselben Kurve wie Bögen und Zonen', async ({ page }) => {
-  await page.keyboard.press('1');
-  const seen = await page.evaluate(() =>
-    document.getAnimations()
-      .filter((a) => ((a.effect as KeyframeEffect).target as HTMLElement).dataset?.['card'])
-      .map((a) => `${(a.effect as KeyframeEffect).getTiming().duration} ${(a.effect as KeyframeEffect).getTiming().easing}`));
-  expect(seen.length).toBeGreaterThan(0);
-  expect(new Set(seen)).toEqual(new Set(['350 ease']));
+type Seen = { kind: string; on: string; props: string[]; to: string | null; duration: number };
+
+/** Tasten im Browser drücken (ohne Umweg über Playwright, der Schnitt dauert nur etwa 0,3 s) und 600 ms lang jedes Bild
+ *  alle laufenden Animationen und CSS-Übergänge sammeln, je einmal. `dock`: Ansicht im Dock direkt nach den Tasten. */
+function keysAndWatch(page: Page, keys: string[]): Promise<{ seen: Seen[]; dock: string | null }> {
+  return page.evaluate(async (keys) => {
+    for (const key of keys) document.body.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    await new Promise((r) => requestAnimationFrame(r));
+    const dock = document.querySelector<HTMLElement>('.dock button.on')?.dataset['dock'] ?? 'overview';
+    const all = new Set<Animation>();
+    const t0 = performance.now();
+    while (performance.now() - t0 < 600) {
+      for (const a of document.getAnimations()) all.add(a);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    const seen = [...all].map((a) => {
+      const effect = a.effect as KeyframeEffect;
+      const el = effect.target as HTMLElement;
+      const frames = effect.getKeyframes();
+      return {
+        kind: a.constructor.name,
+        on: el.dataset['card'] ? 'card' : (el.className.toString().split(' ')[0] ?? ''),
+        props: (a as CSSTransition).transitionProperty ? [(a as CSSTransition).transitionProperty] : [...new Set(frames.flatMap((k) => Object.keys(k)))].filter((k) => !['offset', 'easing', 'composite', 'computedOffset'].includes(k)),
+        to: frames.length ? String(frames[frames.length - 1]!['opacity'] ?? '') || null : null,
+        duration: Number(effect.getTiming().duration),
+      };
+    });
+    return { seen, dock };
+  }, keys);
+}
+/** gesehene Bewegungen der Lage: Karten (`transform`) und CSS-Übergänge auf Bögen, Zonen, Kanten und Panel */
+const shifts = (seen: Seen[]) => seen.filter((s) => (s.on === 'card' && s.props.includes('transform')) || (s.kind === 'CSSTransition' && ['zone', 'edge', 'sheet', 'paper', 'panel', 'ptitle'].includes(s.on)));
+/** Abstand der Mitte der obersten Deckkarte zur Mitte der Zone DECK (Endlage stimmt: 0) */
+async function deckOffset(page: Page) {
+  const zone = (await zoneCenter(page, 'DECK')).box;
+  const card = (await page.locator('.scene > [data-card]').evaluateAll((els, z) => {
+    const c = (r: DOMRect) => [r.x + r.width / 2, r.y + r.height / 2] as const;
+    const [zx, zy] = [z.x + z.width / 2, z.y + z.height / 2];
+    return els.map((e) => c(e.getBoundingClientRect())).sort((a, b) => Math.hypot(a[0] - zx, a[1] - zy) - Math.hypot(b[0] - zx, b[1] - zy))[0]!;
+  }, zone));
+  return Math.hypot(card[0] - zone.x - zone.width / 2, card[1] - zone.y - zone.height / 2);
+}
+
+test('Ansichtswechsel als Schnitt (5m): nichts gleitet, nur der Inhalt blendet ab und auf; Dock sofort', async ({ page }) => {
+  const before = (await zoneCenter(page, 'DECK')).box;
+  const { seen, dock } = await keysAndWatch(page, ['2']);
+  expect(dock, 'das Dock zeigt die gewählte Ansicht sofort').toBe('seat2');
+  expect(shifts(seen)).toEqual([]);
+  const fades = seen.filter((s) => s.props.includes('opacity') && s.on === 'scene');
+  expect(fades.map((f) => [f.to, f.duration])).toEqual([['0', 100], ['1', 180]]);
+  expect(seen.filter((s) => s.on === 'board'), 'der Filz blendet nicht mit').toEqual([]);
+  // neue Anordnung, Karten liegen genau auf ihren Zonen
+  expect((await zoneCenter(page, 'DECK')).box.x).not.toBeCloseTo(before.x, 0);
+  expect(await deckOffset(page)).toBeLessThan(0.5);
+});
+
+test('Ansichtswechsel zur selben Ansicht: keine Blende, nur der Zoom gleitet zurück (5m)', async ({ page }) => {
+  await page.keyboard.press('2');
+  await page.waitForTimeout(500);
+  const fit = await page.locator('.board').evaluate((e) => e.getBoundingClientRect().width);
+  await page.mouse.move(400, 300);
+  await page.mouse.wheel(0, -300);
+  await page.waitForTimeout(500);
+  expect(await page.locator('.board').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(fit * 1.1);
+  const { seen } = await keysAndWatch(page, ['2']);
+  expect(seen.filter((s) => s.on === 'scene')).toEqual([]);
+  await expect.poll(() => page.locator('.board').evaluate((e) => e.getBoundingClientRect().width)).toBeCloseTo(fit, 0);
+});
+
+test('Ansichtswechsel rasch hintereinander: die zuletzt gewählte Ansicht, genau ein Aufblenden (5m)', async ({ page }) => {
+  const before = (await zoneCenter(page, 'DECK')).box;
+  const { seen, dock } = await keysAndWatch(page, ['1', '2', '3', '0']);
+  expect(dock).toBe('overview');
+  expect(seen.filter((s) => s.on === 'scene' && s.to === '1')).toHaveLength(1);
+  expect(shifts(seen)).toEqual([]);
+  expect((await zoneCenter(page, 'DECK')).box).toEqual(before);
+});
+
+test('Ansichtswechsel: ein Klick während des Schnitts beginnt keinen Zug (5m)', async ({ page }) => {
+  const deck = await zoneCenter(page, 'DECK');
+  // im Browser im selben Moment wie die Taste: greifen und ziehen, dann nachsehen, ob eine Karte gezogen wird
+  const dragged = await page.evaluate(async ({ x, y }) => {
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+    const card = document.elementFromPoint(x, y)!;
+    const opts = { bubbles: true, button: 0, pointerType: 'mouse', isPrimary: true };
+    card.dispatchEvent(new PointerEvent('pointerdown', { ...opts, clientX: x, clientY: y }));
+    window.dispatchEvent(new PointerEvent('pointermove', { ...opts, clientX: x + 60, clientY: y + 40 }));
+    await new Promise((r) => requestAnimationFrame(r));
+    const n = document.querySelectorAll('.card.dragging').length;
+    window.dispatchEvent(new PointerEvent('pointerup', { ...opts, clientX: x + 60, clientY: y + 40 }));
+    return n;
+  }, deck);
+  expect(dragged).toBe(0);
+  await page.waitForTimeout(400);
+  await expectCount(page, 'DECK', 27);
+});
+
+test('Öffnen eines Stapels wächst weiter mit --shift (Gegenprobe zu 5m)', async ({ page }) => {
+  const easy = await zoneCenter(page, 'LEICHT');
+  await page.mouse.click(easy.x, easy.y);
+  const seen = await page.evaluate(() => document.getAnimations().map((a) =>
+    `${a.constructor.name} ${(a as CSSTransition).transitionProperty ?? ''} ${((a.effect as KeyframeEffect).target as HTMLElement).className.toString().split(' ')[0]} ${(a.effect as KeyframeEffect).getTiming().duration}`));
+  expect(seen).toContain('CSSTransition width zone 350');
 });
 
 /** Beschriftungen, deren Zahl gerade springt (beobachtet ab jetzt, 2 s lang) */

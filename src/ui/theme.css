@@ -70,8 +70,10 @@
   --glow: 0.6s;    /* Rand leuchtet nach einem fremden Zug */
   --flip: 0.4s;    /* Karte klappt um, hebt sich dabei */
   --hold: 150ms;   /* gezogene Karte hält am Ziel kurz inne, bevor sie aufgedeckt wird */
-  --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */
+  --shift: 0.35s;  /* Zone, Kanten und Karten beim Öffnen eines Stapels; beim Ansichtswechsel 0 (data-cut, 11.8) */
   --shift-ease: ease;  /* Kurve dazu, auch für die Karten (11.4) */
+  --view-out: 100ms;  /* Ansichtswechsel als Schnitt (11.8): Tisch blendet ab … */
+  --view-in: 180ms;   /* … und an der neuen Anordnung wieder auf */
   --cut: 0.8s;     /* Abheben im gemischten Stapel (zweimal) */
   --strike: 0.45s; /* Stoß bei Schaden */
   --strike-c: #d9534a;  /* roter Schimmer dabei */
@@ -80,9 +82,11 @@
 }
 /* Effektstufe „Aus“ (11.5; data-effects setzt effectLevel.svelte.ts, ohne eigene Wahl bei „Bewegung reduzieren“):
    keine Bewegung; Karten blenden ein, gemischte Stapel und Schaden leuchten kurz am Rand auf */
-:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s;
+:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s;
   /* Fenster und Meldungen blenden nur ein (ohne Wachsen und Gleiten), Knöpfe geben nicht nach */
   --pop-from: 1; --rise: 0px; --press: 0s; --press-scale: 1; }
+/* während des Schnitts beim Ansichtswechsel (11.8): Bögen, Zonen und Kanten springen */
+[data-cut] { --shift: 0s; }
 /* Erscheinen (11.6); in „Aus“ bleibt nur das Einblenden */
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes pop-in { from { opacity: 0; scale: var(--pop-from); } }

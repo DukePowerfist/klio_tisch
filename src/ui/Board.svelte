@@ -83,6 +83,9 @@
   type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
+  /** Hülle über dem Filz: blendet beim Ansichtswechsel ab und auf (11.8) */
+  let sceneEl: HTMLDivElement;
+  $effect(() => view.attachScene(sceneEl));
   let pan: { x: number; y: number; moved: boolean } | null = null;
   let panned = false;
   const touches = new Map<number, [number, number]>();
@@ -118,6 +121,8 @@
   }
 
   function onPointerDown(e: PointerEvent) {
+    // während des Schnitts beim Ansichtswechsel beginnt kein Zug (11.8)
+    if (view.inCut) return;
     panned = false;
     if (e.pointerType === 'touch') {
       touches.set(e.pointerId, [e.clientX, e.clientY]);
@@ -196,7 +201,7 @@
       if (!drag.moved && Math.hypot(dx, dy) * sc < 4) return;
       if (!drag.moved) {
         drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy));
-        const el = boardEl.querySelector<HTMLElement>(`:scope > [data-card="${drag.cards[0]}"]`);
+        const el = sceneEl.querySelector<HTMLElement>(`:scope > [data-card="${drag.cards[0]}"]`);
         if (el) ({ dx: drag.ox, dy: drag.oy } = shownOffset(el));
       }
       drag.moved = true;
@@ -333,45 +338,47 @@
   onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; under = null; hover = null; session.pointer(null, []); } }}
   role="application"
 >
-  <div class="board" bind:this={boardEl} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
-    <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
-    <GmControls at={layout.gmControls} {players} />
-    <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
+  <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})">
+    <div class="scene" bind:this={sceneEl}>
+      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
+      <GmControls at={layout.gmControls} {players} />
+      <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
-    {#each Object.values(layout.sheets) as box (box.seat)}
-      {#if box.visible}
-        <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
-      {/if}
-    {/each}
+      {#each Object.values(layout.sheets) as box (box.seat)}
+        {#if box.visible}
+          <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
+        {/if}
+      {/each}
 
-    {#each layout.zoneList as zone (zone.id)}
-      {@const openedBy = session.openZones.get(zone.id)}
-      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} card={layout.card} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
-    {/each}
+      {#each layout.zoneList as zone (zone.id)}
+        {@const openedBy = session.openZones.get(zone.id)}
+        <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} card={layout.card} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+      {/each}
 
-    {#each cards as [card, p] (card)}
-      {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
-      <Card
-        {card}
-        x={p.x + (off?.dx ?? 0)}
-        y={p.y + (off?.dy ?? 0)}
-        scale={p.scale}
-        rotated={p.rotated}
-        z={p.z}
-        slot={p.slot}
-        size={layout.card}
-        faceUp={!!table.faceUp[card]}
-        dragging={offsetOf.has(card)}
-        pending={offsetOf.has(card) && off !== drag}
-        mark={remoteOf.get(card)?.color}
-        hover={hovered?.card === card}
-        wiggle={hovered?.card === card && hovered.wiggle}
-      />
-    {/each}
-    {#each hints as h (h.card)}
-      <div class="drop-hint" style:left="{h.x}px" style:top="{h.y}px" style:width="{h.w}px" style:height="{h.h}px" style:border-radius="{7 * h.scale}px"></div>
-    {/each}
-    <Cursors {layout} {places} scale={sc} />
+      {#each cards as [card, p] (card)}
+        {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
+        <Card
+          {card}
+          x={p.x + (off?.dx ?? 0)}
+          y={p.y + (off?.dy ?? 0)}
+          scale={p.scale}
+          rotated={p.rotated}
+          z={p.z}
+          slot={p.slot}
+          size={layout.card}
+          faceUp={!!table.faceUp[card]}
+          dragging={offsetOf.has(card)}
+          pending={offsetOf.has(card) && off !== drag}
+          mark={remoteOf.get(card)?.color}
+          hover={hovered?.card === card}
+          wiggle={hovered?.card === card && hovered.wiggle}
+        />
+      {/each}
+      {#each hints as h (h.card)}
+        <div class="drop-hint" style:left="{h.x}px" style:top="{h.y}px" style:width="{h.w}px" style:height="{h.h}px" style:border-radius="{7 * h.scale}px"></div>
+      {/each}
+      <Cursors {layout} {places} scale={sc} />
+    </div>
   </div>
   {#if preview}
     <div class="preview" style:width="{layout.card.w * 3}px" style:height="{layout.card.h * 3}px">
@@ -382,6 +389,7 @@
 
 <style>
   .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--bg); }
+  .scene { position: absolute; inset: 0; }
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--felt); border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
   .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }

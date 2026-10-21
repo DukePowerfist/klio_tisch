@@ -28,7 +28,7 @@ test('Umriss über der Ablage an der Stelle, an der die Karte danach liegt; übe
   await page.mouse.up();
   await expectCount(page, 'ABLAGE', 1);
   await expect(hint).toHaveCount(0);
-  expect(await box(page, `.board > [data-card="${dragged}"]`)).toEqual(shown);
+  expect(await box(page, `.scene > [data-card="${dragged}"]`)).toEqual(shown);
 
   // zurück auf den eigenen Stapel: die Karte fiele an ihren Platz, kein Umriss
   await holdOver(page, deck, { x: deck.x + 10, y: deck.y + 10 });
