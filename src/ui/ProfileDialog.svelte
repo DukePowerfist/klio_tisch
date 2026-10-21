@@ -1,8 +1,9 @@
 <script lang="ts">
   // Eigener Name und eigene Farbe (Schritt 5e). Spieler: beides, gilt am Platz für alle. Zuschauer: nur der Name
   // am Zeiger. Farben aus einer festen Auswahl; was ein anderer Platz trägt, ist nicht wählbar.
-  import { SEATS, type TextRef } from '../engine/types';
-  import { seatColor } from '../engine/zones';
+  import { PLAYER_NAME_MAX } from '../engine/schemas';
+  import type { TextRef } from '../engine/types';
+  import { colorHolder, seatColor } from '../engine/zones';
   import { colorVar } from './colors';
   import Modal from './Modal.svelte';
   import { seatNames } from './seatNames';
@@ -19,7 +20,7 @@
 
   /** Wer trägt diese Farbe schon (anderer Platz)? */
   function holder(id: string): string | null {
-    const other = SEATS.find((s) => s !== seat && seatColor(table, s, ruleset.seatColors) === id);
+    const other = colorHolder(table, id, ruleset.seatColors, seat);
     return other ? seatNames(table, other).label : null;
   }
 
@@ -32,7 +33,7 @@
 
 <Modal label={seat ? t('profile.title') : t('profile.titleName')} {onclose} size="narrow">
   <b>{seat ? t('profile.title') : t('profile.titleName')}</b>
-  <p><input type="text" maxlength="40" placeholder={t('profile.name')} aria-label={t('profile.name')} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
+  <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={t('profile.name')} aria-label={t('profile.name')} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
   {#if seat}
     <div class="label">{t('profile.color')}</div>
     <div class="colors" role="radiogroup" aria-label={t('profile.color')}>

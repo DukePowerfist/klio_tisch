@@ -1,7 +1,7 @@
 // Gemeinsames für Klio-Befehle: Schema-Hülle, Platzprüfung, Kontext für Bausteine.
 
 import { z } from 'zod';
-import { reject } from '../../../engine/commands';
+import { reject, rejectWith } from '../../../engine/commands';
 import { seatVisible } from '../../../engine/zones';
 import type { Actor, Command, CommandDef, Event, Rejection, Rng, SeatId } from '../../../engine/types';
 import type { BlockContext } from '../blocks';
@@ -10,7 +10,7 @@ import type { KlioContent } from '../content/validate';
 import { sheetOf, type KlioTable } from '../events';
 import type { KlioState } from '../state';
 
-export { reject };
+export { reject, rejectWith };
 export { SeatSchema as Seat } from '../../../engine/schemas';
 
 export type Deps = { content: KlioContent };

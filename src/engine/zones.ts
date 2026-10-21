@@ -11,6 +11,10 @@ export const seatNo = (seat: SeatId): number => SEATS.indexOf(seat) + 1;
 export const seatColor = (state: TableState<unknown>, seat: SeatId, colors: readonly string[]): string =>
   state.seats[seat].color ?? colors[SEATS.indexOf(seat)]!;
 
+/** Welcher andere Platz trägt diese Farbe schon? */
+export const colorHolder = (state: TableState<unknown>, color: string, colors: readonly string[], except: SeatId | null): SeatId | undefined =>
+  SEATS.find((s) => s !== except && seatColor(state, s, colors) === color);
+
 /** Zone eines Platzes aus einer Vorlage: `seat1` + `damage` → `seat1.damage` */
 export const seatZoneId = (seat: SeatId, template: string): ZoneId => `${seat}.${template}`;
 

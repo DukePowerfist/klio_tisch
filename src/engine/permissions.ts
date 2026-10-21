@@ -12,14 +12,25 @@ export function permissionFor(role: 'player' | 'spectator', key: string, table: 
   return base[key] ?? 'deny';
 }
 
+/** Regel für Spieler und Zuschauer; wer auf einem ausgeblendeten Platz sitzt, ist bis zur Wiedereinblendung Zuschauer (8.2). */
+function ruleFor(actor: Actor, def: CommandDef<any, any>, state: TableState<unknown>, table: PermissionTable): PermissionValue {
+  const role = actor.role === 'player' && seatVisible(actor.seat, state) ? 'player' : 'spectator';
+  return permissionFor(role, def.permission, table, state);
+}
+
 export function can<C extends Command>(actor: Actor, def: CommandDef<any, C>, cmd: C, state: TableState<unknown>, table: PermissionTable): boolean {
   if (actor.role === 'gm') return true;
-  // Wer auf einem ausgeblendeten Platz sitzt, ist bis zur Wiedereinblendung Zuschauer (8.2).
-  const role = actor.role === 'player' && seatVisible(actor.seat, state) ? 'player' : 'spectator';
-  const value = permissionFor(role, def.permission, table, state);
+  const value = ruleFor(actor, def, state, table);
   if (value === 'allow') return true;
   if (value === 'deny' || actor.role !== 'player') return false;
   // own: alles Betroffene mit Besitzer muss dem eigenen Platz gehören (9.2)
   const owners = def.owners?.(cmd, state) ?? [];
   return owners.every((s) => s === actor.seat);
+}
+
+/** Darf der Nutzer diesen Befehl überhaupt (für irgendetwas)? Für die Oberfläche, solange Angaben wie das Ziel noch fehlen. */
+export function canSome(actor: Actor, def: CommandDef<any, any>, state: TableState<unknown>, table: PermissionTable): boolean {
+  if (actor.role === 'gm') return true;
+  const value = ruleFor(actor, def, state, table);
+  return value === 'allow' || (value === 'own' && actor.role === 'player');
 }

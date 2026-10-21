@@ -37,7 +37,10 @@ const TableSettingsSchema = z.object({
 }).strict();
 
 export const SeatColorSchema = z.string().regex(/^[a-z]{1,20}$/);
-const SeatInfo = z.object({ occupied: z.boolean(), name: z.string().max(40).exactOptional(), color: SeatColorSchema.exactOptional() }).strict();
+/** Höchstlänge eines Spielernamens: Stand, Befehle, Nachrichten und Eingabefelder */
+export const PLAYER_NAME_MAX = 40;
+export const PlayerNameSchema = z.string().max(PLAYER_NAME_MAX);
+const SeatInfo = z.object({ occupied: z.boolean(), name: PlayerNameSchema.exactOptional(), color: SeatColorSchema.exactOptional() }).strict();
 const SeatsSchema = z.object(Object.fromEntries(SEATS.map((s) => [s, SeatInfo])) as Record<SeatId, typeof SeatInfo>).strict();
 
 const Zones = z.record(z.string(), z.array(CardIdSchema));

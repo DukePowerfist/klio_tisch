@@ -2,8 +2,6 @@
 // Bleibt über ein Neuladen erhalten (localStorage); verdeckte Informationen gibt es nicht (A13).
 
 import { z } from 'zod';
-import type { EngineEvent } from '../engine/types';
-import type { KlioEvent } from '../rules/klio/events';
 import { describe } from './eventText';
 import { session } from './session.svelte';
 import { t } from './texts';
@@ -33,7 +31,7 @@ class GameLog {
 
   constructor() {
     session.onEvents((events) => {
-      const texts = (events as (EngineEvent | KlioEvent)[]).flatMap((e) => describe(e) ?? []);
+      const texts = events.flatMap((e) => describe(e) ?? []);
       this.add(texts.map((d) => ({ text: d.text, warn: d.level === 'warn' })));
     });
     session.onReplaced((reason) => this.add([{ text: t(`log.replaced.${reason}`), warn: false }]));

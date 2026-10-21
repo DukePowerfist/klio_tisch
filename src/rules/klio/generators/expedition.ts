@@ -1,5 +1,6 @@
 // Expedition und Orakel (nur SL würfelt, alle sehen das Ergebnis, 13.1).
 
+import { pick } from '../../../engine/rng';
 import { RANKS, type Rng } from '../../../engine/types';
 import type { KlioEventOf } from '../events';
 import { ORACLE_SUITS } from '../state';
@@ -18,7 +19,7 @@ export function rollExpedition(current: readonly number[] | null, table: number 
 
 /** Zwei Begriffe; nie zweimal dieselbe Karte (wie bisher). */
 export function drawOracle(rng: Rng): KlioEventOf<'oracleDrawn'> {
-  const one = () => ({ suit: ORACLE_SUITS[rng.int(ORACLE_SUITS.length)]!, rank: RANKS[rng.int(RANKS.length)]! });
+  const one = () => ({ suit: pick(ORACLE_SUITS, rng), rank: pick(RANKS, rng) });
   const a = one();
   let b = one();
   while (a.suit === b.suit && a.rank === b.rank) b = one();

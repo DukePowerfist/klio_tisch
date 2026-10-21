@@ -2,7 +2,7 @@
 // Eigener Kanal, direkt an alle, nichts wird gespeichert. Die Markierung ist nur ein Hinweis, keine Sperre.
 
 import { z } from 'zod';
-import { CardIdSchema, FreePosSchema, SeatSchema } from '../engine/schemas';
+import { CardIdSchema, FreePosSchema, PlayerNameSchema, SeatSchema } from '../engine/schemas';
 import type { PeerId, Transport } from './transport';
 
 const frac = { x: z.number().finite(), y: z.number().finite() };
@@ -18,7 +18,7 @@ export type PointerPos = z.infer<typeof PointerPosSchema>;
 export const PresenceMsg = z.object({
   /** für Farbe und Beschriftung */
   who: z.union([z.literal('gm'), z.literal('spectator'), SeatSchema]),
-  name: z.string().max(40),
+  name: PlayerNameSchema,
   /** Anker + Anteil, damit sie in jeder Ansicht passt; null = nicht über dem Tisch */
   at: PointerPosSchema.nullable(),
   drag: z.array(CardIdSchema).max(52),

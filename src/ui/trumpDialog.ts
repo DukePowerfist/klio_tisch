@@ -32,7 +32,7 @@ export function sourceRows(content: KlioContent, ctx: BlockContext): SourceRow[]
 
 /** Ist irgendein Weg offen? (goldenes Plus am leeren Trumpf-Platz) */
 export const anySourceOpen = (content: KlioContent, ctx: BlockContext): boolean =>
-  content.trumpSources.trumpSources.some((s) => sourceStatus(content.trumpSources, s, ctx).ok);
+  sourceRows(content, ctx).some((r) => r.ok);
 
 /** Nächster Schritt ab `index`; danach Kategorien, oder null, wenn kein Trumpf folgt (nur verbessern). */
 export function nextStep(path: SourcePath, choices: Choices, index: number, ctx: BlockContext): DialogStep | null {

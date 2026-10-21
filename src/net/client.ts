@@ -2,9 +2,9 @@
 // Übernimmt Stand und Ereignisse nur vom Host-Peer; würfelt nie selbst.
 
 import type { Engine } from '../engine/dispatch';
-import type { Event, SeatId, SequencedEvent, TableState, TextRef } from '../engine/types';
+import type { Event, SeatId, SequencedEvent, TableState } from '../engine/types';
 import { toBase64, unpackPhoto, type PhotoBank } from './photos';
-import { ToClient, type CommandResult, type ReceivedEvents, type Role, type ToHost } from './protocol';
+import { INVALID, ToClient, type CommandResult, type ReceivedEvents, type Role, type ToHost } from './protocol';
 import type { PeerId, Transport } from './transport';
 
 export type ClientStatus =
@@ -40,7 +40,6 @@ export class Client<G> {
   status: ClientStatus = 'connecting';
   state: TableState<G> | null = null;
   role: Role | null = null;
-  denied: TextRef | null = null;
   private host: PeerId | null = null;
   private peers: PeerId[] = [];
   private pending = new Map<string, Pending>();
@@ -57,7 +56,7 @@ export class Client<G> {
 
   /** Als Zuschauer einen freien Platz nehmen; bei Erfolg folgt ein neues Willkommen mit der neuen Rolle. */
   claim(seat: SeatId, name: string): Promise<CommandResult> {
-    if (this.status !== 'ready' || !this.host) return Promise.resolve({ ok: false, reason: { key: 'reject.invalid' } });
+    if (this.status !== 'ready' || !this.host) return Promise.resolve(INVALID);
     const id = this.newId();
     const host = this.host;
     return new Promise((resolve) => {
@@ -121,7 +120,6 @@ export class Client<G> {
       case 'denied':
         // Beitritt verweigert (Antwort auf hello, also bevor ein Host feststeht)
         if (this.host) return;
-        this.denied = msg.reason;
         return this.setStatus('denied');
     }
     if (from !== this.host) return;
@@ -134,7 +132,7 @@ export class Client<G> {
         if (this.adopt(msg.state) && msg.reason) this.options.onReplaced?.(msg.reason);
         return;
       case 'result': {
-        const result: CommandResult = msg.ok ? { ok: true } : { ok: false, reason: msg.reason ?? { key: 'reject.invalid' } };
+        const result: CommandResult = msg.ok ? { ok: true } : msg.reason ? { ok: false, reason: msg.reason } : INVALID;
         const claim = this.claims.get(msg.id);
         if (claim) {
           this.claims.delete(msg.id);

@@ -15,6 +15,9 @@ export function t(key: string, params: Record<string, string | number> = {}): st
   return text.replace(/\{(\w+)\}/g, (_, p: string) => String(params[p] ?? `{${p}}`));
 }
 
+/** Wie `t`, aber `undefined`, wenn es den Text nicht gibt (für optionale Titel und Hilfen). */
+export const tMaybe = (key: string): string | undefined => (hasText(key) ? t(key) : undefined);
+
 export const text = (ref: TextRef): string => t(ref.key, ref.params);
 
 /** Kurzbezeichnung auf der Karte: 2–10, B, D, K, A (13.1). */

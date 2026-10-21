@@ -6,10 +6,10 @@
   import { getField } from '../rules/klio/fields';
   import { rollOverwrites } from '../rules/klio/generators/rollSheet';
   import type { KlioSheet } from '../rules/klio/state';
-  import { contextFor, trumpById } from '../rules/klio/trumps';
+  import { contextFor, isFull, trumpById } from '../rules/klio/trumps';
   import SheetField from './SheetField.svelte';
   import TrumpCard from './TrumpCard.svelte';
-  import { submitOrSay } from './commands';
+  import { submitOrSay as submit } from './commands';
   import { effects } from './effects.svelte';
   import { SHEET_FONT } from './fitText';
   import { CONTROLS_ZOOM, SHEET_W, type SheetBox } from './layout';
@@ -50,10 +50,8 @@
 
   const value = (id: string) => getField(sheet, id);
   const struck = (id: string) => strikerOf.has(id) && value(strikerOf.get(id)!) === true;
-  const hasEmptySlot = $derived(sheet.trumps.some((x) => x === null));
+  const hasEmptySlot = $derived(!isFull(content.trumpSources, sheet));
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
-
-  const submit = (cmd: { type: string }) => submitOrSay(cmd);
 
   // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
   const may = (type: string) => session.can({ type, seat });

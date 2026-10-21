@@ -54,8 +54,11 @@ export class RemoteDrags {
     for (const [peer, p] of others) {
       if (!p.drag.length || !p.at || this.released.has(peer)) continue;
       const t = this.tracked.get(peer);
-      if (t && !t.held && sameDrag(t, p)) t.last = p.at;
-      else this.tracked.set(peer, { cards: p.drag, who: p.who, start: p.grab ?? p.at, last: p.at, grab: p.grab, since: now });
+      if (t && !t.held && sameDrag(t, p)) {
+        // unverändert (nur ein anderer hat sich gemeldet): keine neue Liste, sonst prüft der Tisch alle Karten neu
+        if (t.last === p.at) continue;
+        t.last = p.at;
+      } else this.tracked.set(peer, { cards: p.drag, who: p.who, start: p.grab ?? p.at, last: p.at, grab: p.grab, since: now });
       this.dragsChanged = true;
     }
 
@@ -88,12 +91,8 @@ export class RemoteDrags {
 
   /** Abgelaufene Haltefristen beenden (Bewegung abgelehnt). */
   expire(now: number): void {
-    this.release((t) => !!t.held && t.held.until <= now);
-  }
-
-  private release(done: (t: Tracked) => boolean): void {
     for (const [peer, t] of this.tracked) {
-      if (!done(t)) continue;
+      if (!t.held || t.held.until > now) continue;
       this.tracked.delete(peer);
       this.dragsChanged = true;
     }

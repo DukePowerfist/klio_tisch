@@ -14,12 +14,12 @@ export function dealStart(deck: DeckConfig, zoneIds: Iterable<ZoneId>, rng: Rng)
   return zones;
 }
 
-export function initialTable<G>(ruleset: Ruleset<G>, rng: Rng, zoneIds: Iterable<ZoneId> = expandZones(ruleset.zones).keys()): TableState<G> {
+export function initialTable<G>(ruleset: Ruleset<G>, rng: Rng): TableState<G> {
   return {
     format: FORMAT,
     ruleset: { id: ruleset.id, version: ruleset.version },
     seq: 0,
-    zones: dealStart(ruleset.deck, zoneIds, rng),
+    zones: dealStart(ruleset.deck, expandZones(ruleset.zones).keys(), rng),
     free: [],
     freePos: {},
     faceUp: {},

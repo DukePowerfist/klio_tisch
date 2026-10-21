@@ -40,7 +40,7 @@ class Effects {
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(`${cmd['seat']}/${cmd['field']}`, { value: cmd['value'], at: Date.now() });
     });
     session.onEvents((events, own) => {
-      for (const e of events as (EngineEvent | KlioEvent)[]) {
+      for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
         this.handle(e);
       }

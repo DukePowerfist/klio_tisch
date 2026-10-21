@@ -49,33 +49,28 @@ function done(tx: IDBTransaction): Promise<void> {
 /** Ein Spielstand je Browser (eine Kampagne); umziehen geht über Export und Import (8.2). */
 const SLOT = 'main';
 
-export class IdbStore<G> implements HostStore<G> {
-  async load(): Promise<Saved<G> | null> {
-    const db = await database();
-    return ((await request(db.transaction(SAVED).objectStore(SAVED).get(SLOT))) as Saved<G> | undefined) ?? null;
-  }
+/** Ein Eintrag aus einem Speicher, null wenn es ihn nicht gibt */
+async function getOne<T>(store: string, key: string): Promise<T | null> {
+  const db = await database();
+  return ((await request(db.transaction(store).objectStore(store).get(key))) as T | undefined) ?? null;
+}
 
-  async save(saved: Saved<G>): Promise<void> {
-    const db = await database();
-    const tx = db.transaction(SAVED, 'readwrite');
-    tx.objectStore(SAVED).put(saved, SLOT);
-    await done(tx);
-  }
+async function putOne(store: string, value: unknown, key: string): Promise<void> {
+  const db = await database();
+  const tx = db.transaction(store, 'readwrite');
+  tx.objectStore(store).put(value, key);
+  await done(tx);
+}
+
+export class IdbStore<G> implements HostStore<G> {
+  load = (): Promise<Saved<G> | null> => getOne(SAVED, SLOT);
+  save = (saved: Saved<G>): Promise<void> => putOne(SAVED, saved, SLOT);
 }
 
 /** Fotos, benannt nach ihrem Hash (8.4); Anzeige und Austausch in photos.svelte.ts. */
 export class PhotoStore {
-  async get(hash: string): Promise<Blob | null> {
-    const db = await database();
-    return ((await request(db.transaction(PHOTOS).objectStore(PHOTOS).get(hash))) as Blob | undefined) ?? null;
-  }
-
-  async put(hash: string, blob: Blob): Promise<void> {
-    const db = await database();
-    const tx = db.transaction(PHOTOS, 'readwrite');
-    tx.objectStore(PHOTOS).put(blob, hash);
-    await done(tx);
-  }
+  get = (hash: string): Promise<Blob | null> => getOne(PHOTOS, hash);
+  put = (hash: string, blob: Blob): Promise<void> => putOne(PHOTOS, blob, hash);
 }
 
 /** Automatische Sicherungen des Stands (A34), die letzten KEEP_BACKUPS. */

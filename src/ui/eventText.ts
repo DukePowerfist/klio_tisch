@@ -6,7 +6,7 @@ import type { EngineEvent, ZoneId } from '../engine/types';
 import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { trumpById } from '../rules/klio/trumps';
-import { cardName, hasText, t } from './texts';
+import { cardName, hasText, t, tMaybe } from './texts';
 
 export type EventText = { text: string; level: 'log' | 'toast' | 'warn' };
 
@@ -51,4 +51,4 @@ function drawnKey(to: ZoneId): string {
   return hasText(specific) ? specific : 'toast.drawn';
 }
 
-const zoneName = (id: ZoneId): string => (hasText(`zones.${id}`) ? t(`zones.${id}`) : '');
+const zoneName = (id: ZoneId): string => tMaybe(`zones.${id}`) ?? '';

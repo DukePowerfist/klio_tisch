@@ -11,13 +11,15 @@
     mark?: string | undefined;
   } = $props();
 
+  /** angehoben: selbst oder von jemand anderem gezogen */
+  const lifted = $derived(dragging || !!mark);
   const suit = $derived(SUIT_SYMBOL[suitOf(card)]);
   const rank = $derived(rankLabel(card));
   // gedreht: um die linke obere Ecke drehen und um die Kartenhöhe nach rechts schieben (wie bisher)
   const transform = $derived(rotated ? `translate(${x + size.h * scale}px, ${y}px) rotate(90deg) scale(${scale})` : `translate(${x}px, ${y}px) scale(${scale})`);
 </script>
 
-<div class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={dragging || mark ? 400000 + z : z} data-card={card}>
+<div class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
   <div class="inner" class:down={!faceUp}>
     <div class="face front">
       <div class="corner">{rank}<br />{suit}</div>
@@ -29,14 +31,14 @@
 </div>
 
 <style>
-  .card { position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: none; user-select: none; cursor: grab; transition: transform var(--glide) ease-out; perspective: 600px; }
+  .card { --lift: 0 8px 18px rgba(0, 0, 0, 0.5); position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: none; user-select: none; cursor: grab; transition: transform var(--glide) ease-out; perspective: 600px; }
   .card.dragging { transition: none; cursor: grabbing; }
   .card.pending { opacity: 0.8; }
   .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform var(--flip) ease-in-out; }
   .inner.down { transform: rotateY(180deg); }
   .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); box-sizing: border-box; }
-  .dragging .face { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5); }
-  .marked .face { box-shadow: 0 0 0 3px var(--mark), 0 8px 18px rgba(0, 0, 0, 0.5); }
+  .dragging .face { box-shadow: var(--lift); }
+  .marked .face { box-shadow: 0 0 0 3px var(--mark), var(--lift); }
   /* folgt dem Zeiger eines anderen: voll deckend und angehoben wie die eigene, kurz nachgeführt wie der Zeiger selbst */
   .card.marked { transition: transform 0.08s linear; }
   .front { background: var(--card); color: var(--card-black); }

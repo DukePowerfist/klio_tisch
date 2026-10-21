@@ -6,18 +6,19 @@
 
 import content from 'virtual:klio-content';
 import { createEngine } from '../engine/dispatch';
-import { can } from '../engine/permissions';
+import { can, canSome } from '../engine/permissions';
 import { cryptoRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
-import type { Actor, CardId, Event, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
+import type { Actor, CardId, EngineEvent, Event, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
 import { Host, type BackupInfo } from '../net/host';
 import { localTransport } from '../net/local';
 import { Presence, type PointerPos, type PresenceInfo } from '../net/presence';
-import type { CommandResult, Role } from '../net/protocol';
+import { INVALID, type CommandResult, type Role } from '../net/protocol';
 import { createRoomLink, formatHash, parseHash, randomToken, sameRoom, type RoomLink } from '../net/room-link';
 import { TrysteroRoom } from '../net/trystero';
 import type { Transport } from '../net/transport';
+import type { KlioEvent } from '../rules/klio/events';
 import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
 import { copyText } from './clipboard';
@@ -30,11 +31,9 @@ import { view } from './view.svelte';
 
 export type KlioTableState = TableState<KlioState>;
 /** `own`: ausgelöst von einem Befehl aus diesem Browser */
-type Listener = (events: Event[], own: boolean) => void;
+type Listener = (events: (EngineEvent | KlioEvent)[], own: boolean) => void;
 type CommandListener = (cmd: { type: string; [key: string]: unknown }) => void;
 type ReplacedListener = (reason: string) => void;
-
-const NOT_READY: CommandResult = { ok: false, reason: { key: 'reject.invalid' } };
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
 export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
@@ -166,7 +165,7 @@ class Session {
 
   /** Datei laden und den Stand ersetzen (vorher wird gesichert); bringt sie einen anderen Raum mit, dorthin wechseln. */
   async importFile(file: File): Promise<CommandResult> {
-    if (!this.host) return NOT_READY;
+    if (!this.host) return INVALID;
     const before = this.host.room;
     const r = await this.host.importArchive(await file.text());
     const room = this.host.room;
@@ -179,7 +178,7 @@ class Session {
   }
 
   async restore(id: string): Promise<CommandResult> {
-    return this.host?.restore(id) ?? NOT_READY;
+    return this.host?.restore(id) ?? INVALID;
   }
 
   /** Einladungslink in die Zwischenablage; Meldung `done` nur bei Erfolg. */
@@ -296,14 +295,20 @@ class Session {
     if (!(await photos.load(hash))) this.client?.requestPhoto(hash);
   }
 
+  /** gemerkter Name für den nächsten Beitritt (einmal gelesen; der Zeiger sendet ihn bei jeder Bewegung) */
+  #savedName = localStorage.getItem(NAME) ?? '';
   get savedName(): string {
-    return localStorage.getItem(NAME) ?? '';
+    return this.#savedName;
+  }
+  private rememberName(name: string): void {
+    this.#savedName = name;
+    localStorage.setItem(NAME, name);
   }
 
   /** Eigener Name und eigene Farbe (5e): am Platz im Stand, für alle; als Zuschauer nur der Name am Zeiger.
    *  Der Name wird für den nächsten Beitritt gemerkt. */
   async editProfile(name: string, color?: string): Promise<CommandResult> {
-    localStorage.setItem(NAME, name);
+    this.rememberName(name);
     const a = this.actor;
     if (a.role !== 'player') {
       this.sendMine();
@@ -315,15 +320,15 @@ class Session {
 
   /** Als Zuschauer einen freien Platz nehmen; Ergebnis für die Anzeige im Beitrittsfenster. */
   async claim(seat: SeatId, name: string): Promise<TextRef | null> {
-    localStorage.setItem(NAME, name);
+    this.rememberName(name);
     const r = await this.client?.claim(seat, name);
     return r && !r.ok ? r.reason : null;
   }
 
   async submit(cmd: { type: string }, drop?: PendingDrop): Promise<CommandResult> {
-    if (!this.host && !this.client) return NOT_READY;
+    if (!this.host && !this.client) return INVALID;
     const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
-    for (const cb of this.commandListeners) cb(cmd as { type: string });
+    for (const cb of this.commandListeners) cb(cmd);
     if (drop) {
       this.pending = [...this.pending, { ...drop, id }];
       // losgelassen: die anderen halten die Karte, bis das Ereignis zu dieser ID kommt (8.3)
@@ -345,13 +350,14 @@ class Session {
   can(cmd: { type: string; [key: string]: unknown }): boolean {
     const def = engine.commands[cmd.type];
     if (!def || !this.state) return false;
-    if (this.actor.role === 'gm') return true;
-    try {
-      return can(this.actor, def, cmd, this.state as TableState<unknown>, ruleset.permissions);
-    } catch {
-      // Angaben für „nur das Eigene“ fehlen noch (z. B. das Ziel beim Greifen): anzeigen, der Host prüft beim Absenden
-      return true;
-    }
+    return can(this.actor, def, cmd, this.state as TableState<unknown>, ruleset.permissions);
+  }
+
+  /** Darf der aktuelle Nutzer diesen Befehl für irgendetwas? Wenn Angaben noch fehlen (z. B. das Ziel beim Greifen). */
+  canSome(type: string): boolean {
+    const def = engine.commands[type];
+    if (!def || !this.state) return false;
+    return canSome(this.actor, def, this.state as TableState<unknown>, ruleset.permissions);
   }
 
   /** Jeder Befehl aus diesem Browser, beim Absenden (z. B. eigene Eingaben merken). */
@@ -386,7 +392,7 @@ class Session {
       this.showRemote();
     }
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
-    if (events.length > 0) for (const cb of this.listeners) cb(events, own);
+    if (events.length > 0) for (const cb of this.listeners) cb(events as (EngineEvent | KlioEvent)[], own);
   }
 }
 

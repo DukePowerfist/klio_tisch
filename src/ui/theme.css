@@ -47,6 +47,7 @@
   --switch-off: rgba(255, 255, 255, 0.22);
   --switch-on: #4f9a6e;
   --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */
+  --table-right: 0px;  /* rechter Rand von Tisch und Menüknopf; bei offenem Protokoll --log-w (App) */
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */
   --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */

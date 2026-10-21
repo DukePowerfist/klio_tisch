@@ -33,13 +33,13 @@ export function rollOverwrites(content: KlioContent, sheet: KlioSheet): boolean 
 }
 
 export function rollSheet(content: KlioContent, seat: SeatId, rng: Rng): KlioEventOf<'sheetRolled'> {
-  const variant = rng.int(2) === 0 ? 'm' : 'w';
+  const variant = pick(['m', 'w'] as const, rng);
   const draws: KlioEventOf<'sheetRolled'>['draws'] = [];
 
   /** Eine Zeile aus einer Tabelle: Herz oder Pik, dann Kartenwert; Form passend zur Variante. */
   const drawFrom = (table: TableKey): string => {
-    const suit = rng.int(2) === 0 ? 'H' : 'S';
-    const rank = RANKS[rng.int(RANKS.length)]!;
+    const suit = pick(['H', 'S'] as const, rng);
+    const rank = pick(RANKS, rng);
     draws.push({ table, suit, rank });
     const entry = content.tables[table]![suit][rank];
     return typeof entry === 'string' ? entry : entry[variant];

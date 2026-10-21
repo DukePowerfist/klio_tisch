@@ -13,9 +13,8 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { effects } from './effects.svelte';
-  import { gameLog } from './log.svelte';
-  import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
-  import { submitOrSay } from './commands';
+  import { cardSize, clamp, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
+  import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
   import { t } from './texts';
@@ -41,8 +40,8 @@
     const s = fitScale * z;
     let tx = stageW / 2 - (BW / 2 + ox) * s;
     let ty = stageH / 2 - (BH / 2 + oy) * s;
-    tx = BW * s <= stageW ? (stageW - BW * s) / 2 : Math.min(0, Math.max(stageW - BW * s, tx));
-    ty = BH * s <= stageH ? (stageH - BH * s) / 2 : Math.min(0, Math.max(stageH - BH * s, ty));
+    tx = BW * s <= stageW ? (stageW - BW * s) / 2 : clamp(tx, stageW - BW * s, 0);
+    ty = BH * s <= stageH ? (stageH - BH * s) / 2 : clamp(ty, stageH - BH * s, 0);
     return { tx, ty, ox: (stageW / 2 - tx) / s - BW / 2, oy: (stageH / 2 - ty) / s - BH / 2 };
   }
   const geo = $derived(offsets(view.zoom, view.ox, view.oy));
@@ -57,7 +56,7 @@
   const toBoard = (clientX: number, clientY: number): [number, number] => [(clientX - geo.tx) / sc, (clientY - geo.ty) / sc];
 
   function zoomAt(clientX: number, clientY: number, f: number) {
-    const nz = Math.max(1, Math.min(5, view.zoom * f));
+    const nz = clamp(view.zoom * f, 1, 5);
     if (nz === view.zoom) return;
     const [bx, by] = toBoard(clientX, clientY);
     const s = fitScale * nz;
@@ -98,6 +97,12 @@
     return c ? (zoneAt(layout, c[0], c[1])?.id ?? null) : null;
   });
 
+  /** Abstand und Mitte der ersten beiden Finger */
+  function pinchOf() {
+    const [a, b] = [...touches.values()] as [[number, number], [number, number]];
+    return { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 };
+  }
+
   function onPointerDown(e: PointerEvent) {
     panned = false;
     if (e.pointerType === 'touch') {
@@ -105,15 +110,14 @@
       if (touches.size === 2) {
         drag = null;
         pan = null;
-        const [a, b] = [...touches.values()] as [[number, number], [number, number]];
-        pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2 };
+        pinch = pinchOf();
         return;
       }
     }
     if (e.button > 0) return;
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
     // Karten greifen nur mit Recht (Zuschauer sehen nur zu); verbindlich prüft der Host
-    if (el && session.can({ type: 'cards.move' })) return grab(el.dataset.card as CardId, e);
+    if (el && session.canSome('cards.move')) return grab(el.dataset.card as CardId, e);
     if ((e.target as HTMLElement).closest('input, textarea, button, select, .control')) return;
     pan = { x: e.clientX, y: e.clientY, moved: false };
   }
@@ -126,7 +130,8 @@
     if ('zone' in where) {
       const list = table.zones[where.zone]!;
       const zone = layout.zones[where.zone];
-      const fanned = !!(zone && (zone.fanX || zone.fanY));
+      // dieselbe Regel wie beim Host (zones.yaml), nicht der Abstand aus layouts.yaml
+      const fanned = !!(zone && content.zones[zone.template]?.fanned);
       // Stapel: nur die oberste Karte; mit Umschalt die Karte samt den darüberliegenden
       if (e.shiftKey) grabbed = list.slice(where.index);
       else if (!fanned && where.index !== list.length - 1) return;
@@ -159,15 +164,12 @@
     if (session.sharesPointer && !pan?.moved && (e.pointerType === 'mouse' || drag)) showPointer(e.clientX, e.clientY);
     if (touches.has(e.pointerId)) touches.set(e.pointerId, [e.clientX, e.clientY]);
     if (pinch && touches.size >= 2) {
-      const [a, b] = [...touches.values()] as [[number, number], [number, number]];
-      const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
-      const mx = (a[0] + b[0]) / 2;
-      const my = (a[1] + b[1]) / 2;
-      if (pinch.d > 0) zoomAt(mx, my, d / pinch.d);
-      view.ox -= (mx - pinch.mx) / sc;
-      view.oy -= (my - pinch.my) / sc;
+      const next = pinchOf();
+      if (pinch.d > 0) zoomAt(next.mx, next.my, next.d / pinch.d);
+      view.ox -= (next.mx - pinch.mx) / sc;
+      view.oy -= (next.my - pinch.my) / sc;
       clampView();
-      pinch = { d, mx, my };
+      pinch = next;
       return;
     }
     if (drag) {
@@ -235,8 +237,6 @@
     view.open = view.open === zone ? null : zone;
   }
 
-  const submit = (cmd: { type: string }, drop?: PendingDrop) => submitOrSay(cmd, drop);
-
   function onDblClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     if (target.closest('[data-card], input, textarea, button, select, .control, .zone')) return;
@@ -270,7 +270,6 @@
 
 <div
   class="stage"
-  class:log={gameLog.open}
   bind:clientWidth={stageW}
   bind:clientHeight={stageH}
   onwheel={onWheel}
@@ -322,11 +321,8 @@
   {/if}
 </div>
 
-
 <style>
-  .stage { position: fixed; inset: 0; overflow: hidden; touch-action: none; background: var(--bg); }
-  /* offenes Protokoll: Tisch rückt zur Seite statt verdeckt zu werden */
-  .stage.log { right: var(--log-w); }
+  .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--bg); }
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--felt); border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
   .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift), top var(--shift); }

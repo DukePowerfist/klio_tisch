@@ -198,7 +198,7 @@ const frac = (v: number) => Math.round(v * 10000) / 10000;
 /** Punkt als Anteil 0–1 eines Rechtecks (auf 4 Stellen) und zurück */
 const relIn = (r: Rect, x: number, y: number) => ({ x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) });
 const pointIn = (r: Rect, f: { x: number; y: number }) => ({ x: r.x + f.x * r.w, y: r.y + f.y * r.h });
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 /** Punkt in die Tischmitte geholt, Abstand `w`, `h` zum rechten und unteren Rand (6.1, A32) */
 const intoMiddle = (layout: Layout, x: number, y: number, w = 0, h = 0) => {
   const m = layout.middle;

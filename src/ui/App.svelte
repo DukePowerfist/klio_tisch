@@ -3,6 +3,7 @@
   import Board from './Board.svelte';
   import BigTrump from './BigTrump.svelte';
   import Dock from './Dock.svelte';
+  import { gameLog } from './log.svelte';
   import JoinDialog from './JoinDialog.svelte';
   import LogPanel from './LogPanel.svelte';
   import Menu from './Menu.svelte';
@@ -31,6 +32,11 @@
   const mySeat = $derived(session.role?.role === 'player' ? session.role.seat : null);
   $effect(() => {
     if (mySeat) view.setRole(mySeat);
+  });
+
+  // offenes Protokoll: Tisch und Menüknopf rücken zur Seite statt verdeckt zu werden
+  $effect(() => {
+    document.documentElement.style.setProperty('--table-right', gameLog.open ? 'var(--log-w)' : '0px');
   });
 </script>
 

@@ -9,7 +9,7 @@ import type { Actor, Rng, SequencedEvent, TableState } from '../engine/types';
 import { unpackPhoto, toBase64, type PhotoBank } from './photos';
 import { readArchive, writeArchive, type Photos } from './archive';
 import type { RoomLink } from './room-link';
-import { ToHost, type CommandResult, type Role, type ToClient } from './protocol';
+import { INVALID, ToHost, type CommandResult, type Role, type ToClient } from './protocol';
 import type { PeerId, Transport } from './transport';
 
 /** Wie viele beantwortete Befehls-IDs je Schlüssel aufgehoben werden (doppelt gesendete erkennen). */
@@ -162,7 +162,7 @@ export class Host<G> {
   restore(id: string): Promise<CommandResult> {
     return this.enqueue(async () => {
       const backup = await this.options.backups?.get(id);
-      if (!backup) return { ok: false, reason: { key: 'reject.invalid' } };
+      if (!backup) return INVALID;
       const state = this.engine.parseState(backup.state);
       return this.swap({ state, host: followSeats(this.saved.host, state) }, 'restore');
     });
@@ -262,7 +262,7 @@ export class Host<G> {
   private async claim(key: string, msg: Extract<ToHost, { t: 'claim' }>, from: PeerId): Promise<void> {
     const role: Role = { role: 'player', seat: msg.seat };
     const result: CommandResult = this.saved.host.keys[key]?.role !== 'spectator'
-      ? { ok: false, reason: { key: 'reject.invalid' } }
+      ? INVALID
       : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h, r) => (r.ok ? withRole(h, key, role) : h), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
   }
@@ -271,7 +271,7 @@ export class Host<G> {
   private async putPhoto(key: string, hash: string, data: string): Promise<CommandResult> {
     const photos = this.options.photos;
     const bytes = await unpackPhoto(hash, data);
-    if (!photos || !bytes || this.saved.host.keys[key]?.role !== 'player') return { ok: false, reason: { key: 'reject.invalid' } };
+    if (!photos || !bytes || this.saved.host.keys[key]?.role !== 'player') return INVALID;
     await photos.put(hash, bytes);
     return { ok: true };
   }

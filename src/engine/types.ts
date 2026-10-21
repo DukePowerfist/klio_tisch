@@ -10,19 +10,9 @@ export type RankId = (typeof RANKS)[number];
 /** z. B. `H10`, `SQ`, `DA`. Anzeige (B/D/K/A, Farbnamen) kommt aus den Texten. */
 export type CardId = `${SuitId}${RankId}`;
 
-export type CardDef = {
-  id: CardId;
-  suit: SuitId;
-  rank: RankId;
-  /** Vergleichswert: 2–10, B=11, D=12, K=13, A=14 */
-  value: number;
-  /** Heimatstapel für `gather … to: home` */
-  home: ZoneId;
-};
-
 export type DeckConfig = {
-  cards: CardDef[];
-  /** Startaufteilung; jede Karte genau einmal. Reihenfolge wird beim Aufbau gemischt. */
+  /** Startaufteilung; jede Karte genau einmal. Reihenfolge wird beim Aufbau gemischt.
+   *  Die Startzone ist zugleich der Heimatstapel der Karte für `gather … to: home`. */
   start: Partial<Record<ZoneId, CardId[]>>;
 };
 
@@ -114,9 +104,6 @@ export type CardTarget = { zone: ZoneId } | { free: FreePos };
 
 /** Regelwerk-Befehle haben dieselbe Hülle; `type` und Inhalt legt das Regelwerk fest. */
 export type Command = { type: string };
-
-/** Über das Netz: jeder Befehl trägt eine eindeutige ID (8.2, doppelt gesendete Befehle). */
-export type CommandEnvelope = { id: string; cmd: Command };
 
 // ---------- Ereignisse ----------
 

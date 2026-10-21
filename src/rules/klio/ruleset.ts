@@ -1,7 +1,6 @@
 // Zusammenbau (ARCHITEKTUR.md 7): Inhalte + Bausteine + Befehle + Reaktionen + Rechte → ein Regelwerk.
 
-import { rankOf, rankValue, suitOf } from '../../engine/schemas';
-import type { CardDef, DeckConfig, Ruleset, ZoneConfig } from '../../engine/types';
+import type { Ruleset, ZoneConfig } from '../../engine/types';
 import { expandZones } from '../../engine/zones';
 import type { KlioContent } from './content/validate';
 import { sheetCommands } from './commands/sheet';
@@ -15,17 +14,6 @@ import { initialKlioState, KlioState } from './state';
 export const KLIO_ID = 'klio';
 export const KLIO_VERSION = '1';
 
-/** Karten aus deck.yaml; Heimatstapel = Startzone. */
-export function deckFrom(content: KlioContent): DeckConfig {
-  const cards: CardDef[] = Object.entries(content.deck.start).flatMap(([zone, ids]) =>
-    ids.map((id) => {
-      const rank = rankOf(id);
-      return { id, suit: suitOf(id), rank, value: rankValue(rank), home: zone };
-    }),
-  );
-  return { cards, start: content.deck.start };
-}
-
 export const zonesFrom = (content: KlioContent): ZoneConfig[] => Object.entries(content.zones).map(([id, z]) => ({ id, ...z }));
 
 export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
@@ -38,7 +26,7 @@ export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
     parseGame: (x) => KlioState.parse(x),
     resetGame: () => [{ type: 'charactersReset' }],
     photosOf: (game) => game.sheets.flatMap((s) => (s.photo ? [s.photo.hash] : [])),
-    deck: deckFrom(content),
+    deck: { start: content.deck.start },
     zones,
     commands: { ...sheetCommands(deps), ...trumpCommands(deps), ...tableCommands() },
     events: klioEvents,

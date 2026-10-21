@@ -10,8 +10,8 @@
   import SettingRow from './SettingRow.svelte';
   import { submitOrSay } from './commands';
   import { ruleset, session } from './session.svelte';
-  import { openPage, permissionGroups, visiblePages, type SettingsPage } from './settingsPages';
-  import { hasText, t, text } from './texts';
+  import { openPage, permissionGroups, visiblePages } from './settingsPages';
+  import { t, text, tMaybe } from './texts';
   import { view } from './view.svelte';
 
   const VALUES: PermissionValue[] = ['allow', 'own', 'deny'];
@@ -34,12 +34,9 @@
   // ---------- Spielstand (nur beim Host, nicht bei Mitspielern) ----------
   const isHost = $derived(session.mode !== 'client');
   // ---------- Seiten (Schritt 5f): Seitenleiste links, Seite rechts ----------
-  const TITLE: Record<SettingsPage, string> = { automation: 'settings.automation', permissions: 'settings.permissions', game: 'settings.game' };
   const pages = $derived(visiblePages(isHost));
   const page = $derived(openPage(view.settingsPage, pages));
   const groups = permissionGroups(Object.keys(defaults));
-  /** Beschreibung, falls vorhanden (Zeilen ohne Text bleiben einzeilig) */
-  const help = (key: string) => (hasText(key) ? t(key) : undefined);
   let backups = $state<BackupInfo[]>([]);
   let confirm = $state<string | null>(null);
   let problem = $state<TextRef | null>(null);
@@ -83,14 +80,14 @@
     <div role="tablist" aria-orientation="vertical" aria-label={t('settings.title')}>
       {#each pages as p (p)}
         <!-- beim Öffnen steht der Fokus auf der aktuellen Seite -->
-        <button {@attach (el) => { if (p === page) focus(el); }} role="tab" id="settings-tab-{p}" aria-selected={p === page} aria-controls="settings-panel" class:current={p === page} onclick={() => (view.settingsPage = p)}>{t(TITLE[p])}</button>
+        <button {@attach (el) => { if (p === page) focus(el); }} role="tab" id="settings-tab-{p}" aria-selected={p === page} aria-controls="settings-panel" class:current={p === page} onclick={() => (view.settingsPage = p)}>{t(`settings.${p}`)}</button>
       {/each}
     </div>
   </div>
   <div class="main">
     <header>
       <div class="titleline">
-        <h2>{t(TITLE[page])}</h2>
+        <h2>{t(`settings.${page}`)}</h2>
         <!-- Reichweite: Automatik und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle) -->
         {#if page !== 'game'}<span class="scope" title={t('settings.scope.allHint')}>{t('settings.scope.all')}</span>{/if}
       </div>
@@ -102,7 +99,7 @@
       {#if page === 'automation'}
         {#each ruleset.reactions as r (r.id)}
           {@const id = `auto-${r.id}`}
-          {@const desc = help(`settings.automationHelp.${r.id}`)}
+          {@const desc = tMaybe(`settings.automationHelp.${r.id}`)}
           <SettingRow {id} title={t(`settings.automationIds.${r.id}`)} description={desc}>
             <input class="switch" type="checkbox" role="switch" aria-labelledby="{id}-title" aria-describedby={desc ? `${id}-desc` : undefined}
               checked={settings.automation[r.id] !== false} onchange={(e) => setAutomation(r.id, e.currentTarget.checked)} />
@@ -110,12 +107,13 @@
         {/each}
       {:else if page === 'permissions'}
         {#each groups as g (g.id)}
+          {@const groupHelp = tMaybe(`settings.groupHelp.${g.id}`)}
           <section aria-labelledby="group-{g.id}">
             <h3 id="group-{g.id}">{t(`settings.groups.${g.id}`)}</h3>
-            {#if hasText(`settings.groupHelp.${g.id}`)}<p class="note">{t(`settings.groupHelp.${g.id}`)}</p>{/if}
+            {#if groupHelp}<p class="note">{groupHelp}</p>{/if}
             {#each g.keys as key (key)}
               {@const id = `perm-${key}`}
-              {@const desc = help(`permissionHelp.${key}`)}
+              {@const desc = tMaybe(`permissionHelp.${key}`)}
               <SettingRow {id} title={t(`permissions.${key}`)} description={desc} changed={current(key) !== defaults[key]}>
                 <select value={current(key)} aria-labelledby="{id}-title" aria-describedby={desc ? `${id}-desc` : undefined}
                   onchange={(e) => setPermission(key, e.currentTarget.value as PermissionValue)}>

@@ -4,7 +4,7 @@
   import content from 'virtual:klio-content';
   import type { ZoneBox } from './layout';
   import { session } from './session.svelte';
-  import { hasText, t } from './texts';
+  import { t, tMaybe } from './texts';
 
   let { zone, count, open, hot, mark, fixedMenu, onToggle, onAction }: {
     zone: ZoneBox; count: number; open: boolean; hot: boolean;
@@ -22,7 +22,7 @@
   const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined && session.can({ type: `zone.${a}`, zone: zone.id })));
   const onSheet = $derived(zone.owner !== null);
   const label = $derived(t(`zones.${zone.template}`));
-  const title = $derived(hasText(`zones.${zone.template}Title`) ? t(`zones.${zone.template}Title`) : undefined);
+  const title = $derived(tMaybe(`zones.${zone.template}Title`));
   const menuStyle = $derived(
     {
       fixed: `left:${fixedMenu.x - zone.x}px;top:${fixedMenu.y - zone.y}px`,

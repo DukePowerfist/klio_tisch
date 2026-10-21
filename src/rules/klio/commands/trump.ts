@@ -6,7 +6,7 @@ import { ChoicesSchema } from '../blocks';
 import { Slot } from '../state';
 import { sheetOf, type KlioEvent, type KlioTable } from '../events';
 import { fullReason, isFull, planChoice, planRandom, trumpById, trumpProblem, type Plan } from '../trumps';
-import { blockContext, command, reject, Seat, type Deps } from './common';
+import { blockContext, command, reject, rejectWith, Seat, type Deps } from './common';
 
 
 export function trumpCommands(deps: Deps) {
@@ -33,7 +33,7 @@ export function trumpCommands(deps: Deps) {
         if (!src) return reject('reject.unknownSource');
         const { type: _t, seat: _s, source: _src, trump: _tr, ...choices } = cmd;
         const plan = planChoice(cfg, src, trumps, blockContext(deps, state, cmd.seat), choices, cmd.trump);
-        if ('why' in plan) return { rejected: true, reason: plan.why };
+        if ('why' in plan) return rejectWith(plan.why);
         return toEvents(state, cmd.seat, src.id, plan);
       },
     ),
@@ -44,11 +44,11 @@ export function trumpCommands(deps: Deps) {
       (cmd, state) => {
         if (!cfg.freeChoice) return reject('reject.unknownSource');
         const ctx = blockContext(deps, state, cmd.seat);
-        if (isFull(cfg, ctx.sheet)) return { rejected: true, reason: fullReason(cfg) };
+        if (isFull(cfg, ctx.sheet)) return rejectWith(fullReason(cfg));
         const t = trumpById(trumps, cmd.trump);
         if (!t) return reject('reject.unknownTrump');
         const why = trumpProblem(cfg, 'free', t, ctx, {});
-        if (why) return { rejected: true, reason: why };
+        if (why) return rejectWith(why);
         return toEvents(state, cmd.seat, 'free', { changes: [], trump: t.id });
       },
     ),
@@ -59,10 +59,10 @@ export function trumpCommands(deps: Deps) {
       (cmd, state, _actor, rng) => {
         const ctx = blockContext(deps, state, cmd.seat);
         const r = planRandom(cfg, trumps, ctx, rng);
-        if ('why' in r) return { rejected: true, reason: r.why };
+        if ('why' in r) return rejectWith(r.why);
         // Gleiche Prüfung wie bei der Wahl von Hand; planRandom wählt nur aus.
         const plan = planChoice(cfg, r.source, trumps, ctx, r.choices, r.trump);
-        if ('why' in plan) return { rejected: true, reason: plan.why };
+        if ('why' in plan) return rejectWith(plan.why);
         return toEvents(state, cmd.seat, r.source.id, plan);
       },
     ),

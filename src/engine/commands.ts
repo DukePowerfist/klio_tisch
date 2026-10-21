@@ -4,13 +4,15 @@
 
 import { z } from 'zod';
 import { shuffled } from './rng';
-import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayersSchema, SeatColorSchema, SeatSchema } from './schemas';
+import { CardIdSchema, CardSourceSchema as Source, CardTargetSchema as Target, PermissionValueSchema, PlayerNameSchema, PlayersSchema, SeatColorSchema, SeatSchema, suitOf } from './schemas';
 import { dealStart } from './setup';
-import { locate, seatColor, seatVisible, zoneVisible, type ZoneTable } from './zones';
-import { SEATS, type AnchorId, type CardId, type CommandDef, type Event, type EngineEvent, type Rejection, type Ruleset, type SeatId, type TableState, type ZoneConfig, type ZoneId } from './types';
+import { colorHolder, locate, seatVisible, zoneVisible, type ZoneTable } from './zones';
+import type { AnchorId, CardId, CommandDef, Event, EngineEvent, Rejection, Ruleset, SeatId, TableState, TextRef, ZoneConfig, ZoneId } from './types';
 
 export const reject = (key: string, params?: Record<string, string | number>): Rejection =>
   ({ rejected: true, reason: params ? { key, params } : { key } });
+
+export const rejectWith = (reason: TextRef): Rejection => ({ rejected: true, reason });
 
 export const isRejection = (x: unknown): x is Rejection => typeof x === 'object' && x !== null && 'rejected' in x;
 
@@ -32,13 +34,13 @@ const SeatCmd = z.object({
   type: z.literal('table.setSeat'),
   seat: SeatSchema,
   occupied: z.boolean(),
-  name: z.string().max(40).optional(),
+  name: PlayerNameSchema.optional(),
 }).strict();
 /** eigener Name und eigene Farbe (Schritt 5e); nur Angegebenes ändert sich, leerer Name = ohne Namen */
 const SeatEditCmd = z.object({
   type: z.literal('seat.edit'),
   seat: SeatSchema,
-  name: z.string().max(40).optional(),
+  name: PlayerNameSchema.optional(),
   color: SeatColorSchema.optional(),
 }).strict();
 const SettingsCmd = z.object({
@@ -51,8 +53,7 @@ type S = TableState<unknown>;
 
 export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>, 'deck' | 'resetGame' | 'seatColors'>): Record<string, CommandDef<any, any>> {
   const { deck } = ruleset;
-  const home = new Map(deck.cards.map((c) => [c.id, c.home]));
-  const suitOf = new Map(deck.cards.map((c) => [c.id, c.suit]));
+  const home = new Map(Object.entries(deck.start).flatMap(([zone, ids]) => (ids ?? []).map((id) => [id, zone] as const)));
 
   /** Zone muss existieren und sichtbar sein. */
   const zoneOf = (id: ZoneId, state: S): ZoneConfig | Rejection => {
@@ -194,7 +195,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       for (const g of rule.gather ?? []) {
         const rest: CardId[] = [];
         for (const card of get(g.from)) {
-          if (g.suit && suitOf.get(card) !== g.suit) {
+          if (g.suit && suitOf(card) !== g.suit) {
             rest.push(card);
             continue;
           }
@@ -259,7 +260,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       }
       if (cmd.color !== undefined) {
         if (!ruleset.seatColors.includes(cmd.color)) return reject('reject.unknownColor');
-        if (SEATS.some((s) => s !== cmd.seat && seatColor(state, s, ruleset.seatColors) === cmd.color)) return reject('reject.colorTaken');
+        if (colorHolder(state, cmd.color, ruleset.seatColors, cmd.seat)) return reject('reject.colorTaken');
         info.color = cmd.color;
       }
       return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: info } }];

@@ -2,7 +2,7 @@
 // `hello` und `reload` ändern ihr Format NIE: Nur so versteht auch ein veralteter Client die Aufforderung.
 
 import { z } from 'zod';
-import { PhotoHashSchema, SeatSchema, TextRefSchema } from '../engine/schemas';
+import { PhotoHashSchema, PlayerNameSchema, SeatSchema, TextRefSchema } from '../engine/schemas';
 import type { Actor, Rejection } from '../engine/types';
 import { PhotoDataSchema } from './photos';
 
@@ -27,7 +27,7 @@ const MsgId = z.string().min(8).max(64);
 const CommandMsg = z.object({ t: z.literal('cmd'), id: MsgId, cmd: z.unknown() }).strict();
 const ResyncMsg = z.object({ t: z.literal('resync') }).strict();
 /** Zuschauer möchte einen freien Platz nehmen (nach dem Beitritt); Antwort wie bei Befehlen per `result` mit derselben ID. */
-const ClaimMsg = z.object({ t: z.literal('claim'), id: MsgId, seat: SeatSchema, name: z.string().max(40) }).strict();
+const ClaimMsg = z.object({ t: z.literal('claim'), id: MsgId, seat: SeatSchema, name: PlayerNameSchema }).strict();
 /** Foto hochladen (vor dem Befehl, der es einträgt); Antwort per `result`. Fotos fragen Clients einzeln an (8.4). */
 const PhotoPutMsg = z.object({ t: z.literal('photo'), id: MsgId, hash: PhotoHashSchema, data: PhotoDataSchema }).strict();
 const PhotoGetMsg = z.object({ t: z.literal('photoGet'), hash: PhotoHashSchema }).strict();
@@ -67,3 +67,5 @@ export type ToClient = z.infer<typeof ToClient>;
 
 /** Antwort auf einen Befehl, wie sie gespeichert und bei Wiederholung erneut geschickt wird. */
 export type CommandResult = { ok: true } | { ok: false; reason: Rejection['reason'] };
+/** Ablehnung ohne genaueren Grund (nicht verbunden, unbekannt, unzulässig) */
+export const INVALID: CommandResult = { ok: false, reason: { key: 'reject.invalid' } };
