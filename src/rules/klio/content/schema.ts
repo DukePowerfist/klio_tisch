@@ -170,6 +170,9 @@ const Shape = z.object({
   menu: MenuSide.optional(),
   label: z.object({ center: z.boolean().optional(), rotated: z.boolean().optional(), x: z.number().optional() }).strict().optional(),
 }).strict();
+/** Licht der Laterne je Ansicht (11.9): Reichweite in TP, Grundlicht am Rand */
+const Light = z.object({ reach: z.number().positive(), ambient: z.number().min(0).max(1) }).strict();
+
 export const LayoutsFile = z.object({
   board: Point,
   seatColors: z.array(SeatColorSchema).min(4).refine((c) => new Set(c).size === c.length, 'Farbe doppelt'),
@@ -178,9 +181,11 @@ export const LayoutsFile = z.object({
   shapes: z.record(z.string(), Shape),
   middle: z.object({
     size: Point, zones: z.record(z.string(), Point), menu: Point, resistTitle: Point, gmControlsInset: Point,
+    lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
   }).strict(),
   overview: z.object({
     middle: Point,
+    light: Light,
     sheets: z.object({
       margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number(),
       columns: z.tuple([z.array(SeatSchema), z.array(SeatSchema)]),
@@ -188,6 +193,7 @@ export const LayoutsFile = z.object({
   }).strict(),
   role: z.object({
     middle: Point,
+    light: Light,
     sheets: z.object({
       own: z.object({ x: z.number(), y: z.number(), scale: z.literal('fit') }).strict(),
       others: z.object({

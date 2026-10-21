@@ -12,3 +12,5 @@ Noch im Bau. Online: https://dukepowerfist.github.io/klio_tisch/
 Der Verbindungstest liegt unter `verbindungstest.html`.
 
 Lizenz: MIT für den Programmcode (siehe `LICENSE`). Spielinhalte sind davon ausgenommen.
+
+Bilder des Tisches (`public/assets/table/`: Holz und Laterne) sind mit ChatGPT erzeugt und bearbeitet (Freistellen, Vergrößern mit Real-ESRGAN, Leuchtmaske; `scripts/table-assets.py`). Auch sie fallen nicht unter die MIT-Lizenz.

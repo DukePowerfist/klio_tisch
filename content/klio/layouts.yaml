@@ -40,11 +40,18 @@ middle:
   menu: [ 572, 110 ]
   resistTitle: [ 22, 606 ]
   gmControlsInset: [ 40, 26 ]
+  # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
+  # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
+  lamp: { at: [ 350, 60 ], size: 104, flame: [ 0.5024, 0.4561 ], height: 260 }
 overview:
   middle: [ 530, 10 ]
+  # Licht der Laterne je Ansicht: Reichweite in TP, Grundlicht am Rand (0 = schwarz, 1 = ungedämpft)
+  light: { reach: 1050, ambient: 0.3 }
   sheets: { margin: 14, gap: 14, scaleUpTo2Players: 1.2, scaleFrom3Players: 0.9, columns: [ [ seat1, seat3 ], [ seat2, seat4 ] ] }
 role:
   middle: [ 710, 10 ]
+  # weiter und heller als in der Draufsicht: der eigene Bogen liegt links unten weit von der Laterne
+  light: { reach: 1500, ambient: 0.45 }
   sheets:
     own: { x: 14, y: 10, scale: fit }
     # Spalte rechts: andere Bögen untereinander, mittig; oben 60 Reserve für den Menüknopf (y 10 + 60).

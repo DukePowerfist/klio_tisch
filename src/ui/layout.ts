@@ -24,6 +24,10 @@ export type ZoneBox = Rect & {
 
 export type SheetBox = Rect & { seat: SeatId; scale: number; visible: boolean; opacity: number };
 
+/** Laterne (11.9): Bild als Quadrat, ein Kreis mit Radius `r` um (`cx`, `cy`) für Überlapp und Ablegen,
+ *  Flamme in Tischkoordinaten mit ihrer Höhe über dem Tisch (Schatten) */
+export type LampBox = Rect & { cx: number; cy: number; r: number; flame: { x: number; y: number; h: number } };
+
 export type Layout = {
   /** tatsächlich gezeigte Ansicht: Platz der Rollenansicht, null = Draufsicht (auch wenn der Platz ausgeblendet ist) */
   role: SeatId | null;
@@ -40,6 +44,9 @@ export type Layout = {
   gmControls: { x: number; y: number };
   menu: { x: number; y: number };
   freeCardScale: number;
+  lamp: LampBox;
+  /** Licht der Laterne in dieser Ansicht: Reichweite in TP, Grundlicht am Rand */
+  light: { reach: number; ambient: number };
 };
 
 /** Grundbreite eines Bogens auf dem Tisch bei Maßstab 1 (wie bisher 380 × 537). */
@@ -144,7 +151,22 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     gmControls: at([middle.w - M.gmControlsInset[0], middle.h - M.gmControlsInset[1]]),
     menu: at(M.menu),
     freeCardScale: L.freeCardScale,
+    lamp: lampBox(at(M.lamp.at), M.lamp),
+    light: { ...(role ? L.role.light : L.overview.light) },
   };
+}
+
+function lampBox(c: { x: number; y: number }, l: KlioContent['layouts']['middle']['lamp']): LampBox {
+  const x = c.x - l.size / 2;
+  const y = c.y - l.size / 2;
+  return { x, y, w: l.size, h: l.size, cx: c.x, cy: c.y, r: l.size / 2, flame: { x: x + l.size * l.flame[0], y: y + l.size * l.flame[1], h: l.height } };
+}
+
+/** Abstand eines Rechtecks zum Kreis der Laterne (0 = berührt oder überlappt). */
+export function lampGap(lamp: LampBox, r: Rect): number {
+  const dx = Math.max(r.x - lamp.cx, 0, lamp.cx - (r.x + r.w));
+  const dy = Math.max(r.y - lamp.cy, 0, lamp.cy - (r.y + r.h));
+  return Math.max(0, Math.hypot(dx, dy) - lamp.r);
 }
 
 /** Rechteck eines Ankers für frei liegende Karten. */

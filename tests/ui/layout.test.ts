@@ -1,7 +1,7 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
+import { cardSize, computeLayout, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
 
 describe('Ansichten', () => {
@@ -230,5 +230,60 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
     // Karte frei auf dem ausgeblendeten Bogen
     const h = lay(s, 'S5', { anchor: 'seat3', x: 0.5, y: 0.5 });
     expect(pointerAt(two, placeCards(h, two), { card: 'S5', x: 0.5, y: 0.5 })).toBeNull();
+  });
+});
+
+describe('Laterne (5n, 11.9)', () => {
+  const MIDDLE_ZONES = ['diamonds_easy', 'diamonds_medium', 'diamonds_hard', 'display', 'deck', 'discard', 'danger', 'progress', 'clubs'];
+  const views = [null, 'seat1', 'seat2', 'seat3', 'seat4'] as const;
+
+  it('oben mittig in der Tischmitte, 104 TP, in beiden Ansichten an derselben Stelle der Tischmitte', () => {
+    for (const players of [2, 3, 4] as const) {
+      for (const role of views) {
+        const L = computeLayout(content, players, role, null);
+        expect(L.lamp.cx - L.middle.x).toBe(350);
+        expect(L.lamp.cy - L.middle.y).toBe(60);
+        expect(L.lamp).toMatchObject({ w: 104, h: 104, r: 52 });
+      }
+    }
+    expect(computeLayout(content, 4, null, null).lamp).toMatchObject({ cx: 880, cy: 70 });
+    expect(computeLayout(content, 4, 'seat1', null).lamp).toMatchObject({ cx: 1060, cy: 70 });
+  });
+
+  it('Flamme im Kamin, Höhe für die Schatten', () => {
+    const { lamp } = computeLayout(content, 4, null, null);
+    expect(lamp.flame.x).toBeCloseTo(lamp.x + 104 * 0.5024);
+    expect(lamp.flame.y).toBeCloseTo(lamp.y + 104 * 0.4561);
+    expect(lamp.flame.h).toBe(260);
+  });
+
+  it('Kreis überschneidet keine Zone der Tischmitte, auch keinen geöffneten Stapel, keine Beschriftung und kein Menü', () => {
+    for (const role of [null, 'seat1'] as const) {
+      for (const open of [null, ...MIDDLE_ZONES]) {
+        const L = computeLayout(content, 4, role, open);
+        for (const id of MIDDLE_ZONES) {
+          const z = L.zones[id]!;
+          expect(lampGap(L.lamp, z), `${id} (offen: ${open})`).toBeGreaterThan(0);
+          // Beschriftung darunter: mittig bis 100 TP zu jeder Seite, sonst ab links 200 TP breit; 26 TP hoch
+          const label = z.label.center ? { x: z.x + z.w / 2 - 100, y: z.y + z.h + 4, w: 200, h: 26 } : { x: z.x, y: z.y + z.h + 4, w: 200, h: 26 };
+          expect(lampGap(L.lamp, label), `Beschriftung ${id}`).toBeGreaterThan(0);
+        }
+        expect(lampGap(L.lamp, { x: L.resistTitle.x, y: L.resistTitle.y, w: 200, h: 20 })).toBeGreaterThan(0);
+        expect(lampGap(L.lamp, { x: L.menu.x, y: L.menu.y, w: 110, h: 140 })).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('Licht je Ansicht: in der Rollenansicht weiter und heller', () => {
+    expect(computeLayout(content, 4, null, null).light).toEqual({ reach: 1050, ambient: 0.3 });
+    expect(computeLayout(content, 4, 'seat3', null).light).toEqual({ reach: 1500, ambient: 0.45 });
+  });
+
+  it('Abstand zum Kreis: 0 bei Überlapp, sonst Abstand zum Rand', () => {
+    const { lamp } = computeLayout(content, 4, null, null);
+    expect(lampGap(lamp, { x: lamp.cx - 5, y: lamp.cy - 5, w: 10, h: 10 })).toBe(0);
+    expect(lampGap(lamp, { x: lamp.cx + 62, y: lamp.cy - 5, w: 10, h: 10 })).toBeCloseTo(10);
+    // Ecke des Quadrats liegt außerhalb des Kreises
+    expect(lampGap(lamp, { x: lamp.x - 10, y: lamp.y - 10, w: 12, h: 12 })).toBeGreaterThan(0);
   });
 });
