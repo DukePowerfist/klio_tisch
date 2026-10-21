@@ -150,14 +150,25 @@ describe('Mischen, Zurücksetzen, Schaden', () => {
     expect(c.get(deck[0]!)?.cut).toBeUndefined();
   });
 
-  it('Mischen ohne Einsammeln: Abheben sofort, nach dem Zudecken offener Karten; kleine Stapel heben nicht ab', () => {
+  it('Mischen ohne Einsammeln: Abheben sofort, nach dem Zudecken offener Karten', () => {
     const prev = place(fresh(), 'deck', ['H2'], true);
     const zones = prev.zones;
     const c = cuesFor([E({ type: 'zonesShuffled', shuffled: ['deck'], zones })], prev, prev, T);
     expect(c.get(zones['deck']!.at(-1)!)!.cut!.delay).toBe(T.flip);
-    const small = { ...prev.zones, discard: ['H5', 'H6', 'H7'] as CardId[] };
-    expect(cutCount(3)).toBe(3);
-    expect(cuesFor([E({ type: 'zonesShuffled', shuffled: ['discard'], zones: small })], prev, prev, T).get('H7' as CardId)?.cut).toBeUndefined();
+  });
+
+  it('Kleine Stapel: höchstens alle bis auf eine heben ab, eine einzelne Karte leuchtet nur', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 8, 20].map(cutCount)).toEqual([0, 0, 1, 2, 3, 3, 3, 4, 6]);
+    // die Karten liegen schon verdeckt im Stapel: kein Einsammeln, Abheben sofort
+    const shuffle = (discard: string[]) => {
+      const s = place(fresh(), 'discard', discard);
+      return cuesFor([E({ type: 'zonesShuffled', shuffled: ['discard'], zones: s.zones })], s, s, T);
+    };
+    const three = shuffle(['H5', 'H6', 'H7']);
+    expect(three.get('H5' as CardId)?.cut).toBeUndefined();
+    expect(['H6', 'H7'].map((x) => three.get(x as CardId)!.cut)).toEqual([0, 1].map((rank) => ({ delay: 0, rank, count: 2 })));
+    expect(shuffle(['H5', 'H6']).get('H6' as CardId)!.cut).toEqual({ delay: 0, rank: 0, count: 1 });
+    expect(shuffle(['H5']).get('H5' as CardId)!.cut).toEqual({ delay: 0, rank: 0, count: 1, alone: true });
   });
 
   it('Zurücksetzen: alle, die woanders lagen, fliegen gestaffelt (höchstens 800 ms), dann Abheben in allen Stapeln', () => {

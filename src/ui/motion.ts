@@ -23,8 +23,9 @@ export type Timing = {
   shift: number; shiftEase: string;
 };
 
-/** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon */
-export type Cut = { delay: number; rank: number; count: number };
+/** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon.
+ *  `alone`: einzige Karte im Stapel, sie leuchtet nur am Rand auf */
+export type Cut = { delay: number; rank: number; count: number; alone?: true };
 
 /** Was die Ereignisse eines Stands für eine Karte vorsehen: Verzögerung (Staffelung), ob sie gezogen wurde, Abheben
  *  im gemischten Stapel, Stoß bei Schaden (Verzögerung in ms) */
@@ -75,13 +76,13 @@ export const FLIGHT_MIN = 20;
 export const STAGGER = 50;
 export const STAGGER_MAX = 500;
 export const STAGGER_RESET_MAX = 800;
-/** Abheben: halb so viele Karten wie im Stapel, mindestens 3, höchstens 6; nur, wenn darunter noch Karten liegen */
+/** Abheben: halb so viele Karten wie im Stapel, mindestens 3, höchstens 6; mindestens eine bleibt liegen */
 export const CUT_MIN = 3;
 export const CUT_MAX = 6;
 /** Stoß bei Schaden: kurz nach dem Ereignis, wenn die Karte, die ihn auslöst, ankommt */
 export const STRIKE_DELAY = 150;
 
-export const cutCount = (n: number): number => Math.min(CUT_MAX, Math.max(CUT_MIN, Math.floor(n / 2)));
+export const cutCount = (n: number): number => Math.max(0, Math.min(n - 1, CUT_MAX, Math.max(CUT_MIN, Math.floor(n / 2))));
 
 /** Was die Ereignisse eines Stands für die Karten vorsehen (11.1): Staffelung in Reihenfolge der Ereignisse, Ziehen,
  *  Abheben in gemischten Stapeln, Stoß bei Schaden. Nur aus Ereignissen und Stand, bei allen gleich (11). Mit einem
@@ -112,9 +113,9 @@ export function cues(events: readonly { type: string }[], prev: TableState<unkno
     if (turning) start = Math.max(start, t.flip);
     for (const zone of cutZones) {
       const cards = zones[zone] ?? [];
+      if (cards.length === 1) set(cards[0]!, { cut: { delay: start, rank: 0, count: 1, alone: true } });
       const count = cutCount(cards.length);
-      if (cards.length <= count) continue;
-      cards.slice(-count).forEach((c, rank) => set(c, { cut: { delay: start, rank, count } }));
+      if (count) cards.slice(-count).forEach((c, rank) => set(c, { cut: { delay: start, rank, count } }));
     }
   };
   for (const event of events) {

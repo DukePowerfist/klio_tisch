@@ -127,8 +127,8 @@ export function move(el: HTMLElement, lift: HTMLElement, from: string, motion: M
  *  `index`: Stelle im Stapel, `width`: Kartenbreite in Tischpunkten. */
 export function cut(el: HTMLElement, lift: HTMLElement, c: Cut, z: number, index: number, width: number): void {
   const t = timing();
-  // Stufe „Aus“: der Stapel leuchtet nur kurz am Rand auf
-  if (!t.cut) return flash(lift, 'rgba(255, 255, 255, 0.85)', c.delay);
+  // Stufe „Aus“ und einzelne Karte: der Stapel leuchtet nur kurz am Rand auf
+  if (!t.cut || c.alone) return flash(lift, 'rgba(255, 255, 255, 0.85)', c.delay);
   const top = String(z);
   // unter die unterste Karte des Stapels, Reihenfolge der abgehobenen bleibt
   const under = String(z - index - c.count + c.rank);
