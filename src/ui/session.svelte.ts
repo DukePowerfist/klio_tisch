@@ -7,7 +7,7 @@
 import content from 'virtual:klio-content';
 import { createEngine } from '../engine/dispatch';
 import { can, canSome } from '../engine/permissions';
-import { cryptoRng } from '../engine/rng';
+import { cryptoRng, seededRng } from '../engine/rng';
 import { initialTable } from '../engine/setup';
 import type { Actor, CardId, EngineEvent, Event, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
@@ -360,6 +360,21 @@ class Session {
     if (!def || !this.state) return false;
     return canSome(this.actor, def, this.state as TableState<unknown>, ruleset.permissions);
   }
+
+  /** Probelauf (Vorschau der Ablegestelle, 11.6): der Stand nach dem Befehl, ohne ihn zu senden; null, wenn er
+   *  abgelehnt würde. Gleicher Stand und Befehl wie beim letzten Aufruf: dasselbe Ergebnis, ohne neu zu rechnen. */
+  predict(cmd: { type: string; [key: string]: unknown }): KlioTableState | null {
+    const state = this.state;
+    if (!state) return null;
+    const key = JSON.stringify(cmd);
+    if (this.#predicted?.state === state && this.#predicted.key === key) return this.#predicted.result;
+    // fester Zufall: Ziehen und Mischen sind hier nicht gemeint, Reaktionen (Schaden) brauchen keinen
+    const r = engine.dispatch(state, cmd, this.actor, seededRng(0));
+    const result = 'state' in r ? (r.state as KlioTableState) : null;
+    this.#predicted = { state, key, result };
+    return result;
+  }
+  #predicted: { state: KlioTableState; key: string; result: KlioTableState | null } | null = null;
 
   /** Jeder Befehl aus diesem Browser, beim Absenden (z. B. eigene Eingaben merken). */
   onSubmit(cb: CommandListener): () => void {

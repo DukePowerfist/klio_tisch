@@ -15,7 +15,8 @@
   import { shownOffset } from './animator.svelte';
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
-  import { cardSize, clamp, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
+  import { dropHints, dropTarget } from './dropHint';
+  import { cardSize, clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -96,6 +97,14 @@
     const s = cardSize(layout, p);
     return [p.x + d.dx + s.w / 2, p.y + d.dy + s.h / 2];
   }
+  /** Zeiger beim Ziehen (Tischpunkte): Ziel, wenn die Kartenmitte über keiner Zone liegt */
+  let dragPointer = $state<[number, number] | null>(null);
+  /** Vorschau der Ablegestelle (11.6): Probelauf des Befehls, den das Loslassen senden würde */
+  const hints = $derived.by(() => {
+    const to = drag?.moved && dragPointer ? dropTarget(layout, places, drag, dragPointer) : null;
+    if (!drag || !to) return [];
+    return dropHints(layout, places, session.predict({ type: 'cards.move', cards: drag.cards, from: drag.from, to }), drag.cards);
+  });
   /** Zone unter der gezogenen Karte (hervorgehoben, Ziel beim Loslassen) */
   const hot = $derived.by(() => {
     const c = drag?.moved ? dropPoint(drag) : null;
@@ -193,6 +202,7 @@
       drag.moved = true;
       drag.dx = drag.ox + dx;
       drag.dy = drag.oy + dy;
+      dragPointer = toBoard(e.clientX, e.clientY);
       return;
     }
     if (pan) {
@@ -254,14 +264,13 @@
     if (touches.size < 2) pinch = null;
     pan = null;
     const d = drag;
-    const target = hot;
     drag = null;
+    dragPointer = null;
     if (!d) return;
     if (!d.moved) return click(d.cards[0]!);
 
-    const zone = target ?? zoneAt(layout, ...toBoard(e.clientX, e.clientY))?.id;
-    const p = places[d.cards[0]!]!;
-    const to = zone ? { zone } : { free: freePosAt(layout, p.x + d.dx, p.y + d.dy) };
+    const to = dropTarget(layout, places, d, toBoard(e.clientX, e.clientY));
+    if (!to) return;
     await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy });
   }
 
@@ -359,6 +368,9 @@
         wiggle={hovered?.card === card && hovered.wiggle}
       />
     {/each}
+    {#each hints as h (h.card)}
+      <div class="drop-hint" style:left="{h.x}px" style:top="{h.y}px" style:width="{h.w}px" style:height="{h.h}px" style:border-radius="{7 * h.scale}px"></div>
+    {/each}
     <Cursors {layout} {places} scale={sc} />
   </div>
   {#if preview}
@@ -374,5 +386,7 @@
   .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* in der Bühne: rückt mit dem Tisch zur Seite, wenn das Protokoll offen ist */
+  /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
+  .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   .preview { position: absolute; right: 16px; bottom: 16px; pointer-events: none; z-index: 99; }
 </style>
