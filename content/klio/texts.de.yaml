@@ -214,7 +214,8 @@ menu:                                     # Menü oben rechts (neu, Schritt 5b)
 
 dock:
   seat: "Ich bin Spieler {n}"
-  overview: Zur Übersicht
+  overview: Zur Übersicht (Taste 0 oder Esc)
+  key: "Taste {n}"
 
 # Gründe für abgelehnte Befehle. Neu (gab es in der alten Datei nicht), außer wo vermerkt.
 reject:

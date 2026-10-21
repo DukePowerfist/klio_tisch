@@ -75,6 +75,11 @@ test('Ansichten: Taste 1 → Rollenansicht, 0 → Draufsicht; Dock', async ({ pa
   await expect.poll(async () => Math.round((await sheet1.boundingBox())!.width)).toBe(Math.round(before));
   await page.getByTitle('Ich bin Spieler 2').click();
   await expect.poll(async () => (await page.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
+  // Esc wie 0; die Tooltips nennen die Tasten (5e)
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => Math.round((await sheet1.boundingBox())!.width)).toBe(Math.round(before));
+  await expect(page.locator('[data-dock=seat2]')).toHaveAttribute('title', /\(Taste 2\)$/);
+  await expect(page.getByTitle('Zur Übersicht (Taste 0 oder Esc)')).toBeVisible();
 });
 
 test('Zuordnung der Bögen: Namensschild in der Draufsicht, Farbstreifen in der Rollenansicht, Dock in den Platzfarben (5b)', async ({ page }) => {
@@ -83,7 +88,7 @@ test('Zuordnung der Bögen: Namensschild in der Draufsicht, Farbstreifen in der 
   await expect(page.locator('[data-dock=seat1]')).toHaveText('1');
   await nameCharacter(page, 'seat1', 'Ida');
   await expect(plate1).toHaveText('Ida');
-  await expect(page.locator('[data-dock=seat1]')).toHaveAttribute('title', 'Ich bin Spieler 1: Ida');
+  await expect(page.locator('[data-dock=seat1]')).toHaveAttribute('title', 'Ich bin Spieler 1: Ida (Taste 1)');
   // Schild und Dock-Knöpfe tragen die Farbe des Platzes; jeder Knopf eine andere
   const color = (sel: string, prop: string) => page.locator(sel).evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
   expect(await color('[data-plate=seat1]', 'background-color')).not.toBe(await color('[data-plate=seat2]', 'background-color'));
