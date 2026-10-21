@@ -35,6 +35,8 @@
   );
   // Stapel (ohne `fanned` in zones.yaml, wie beim Greifen): versetzte Kanten unter der obersten Karte zeigen die Dicke
   const edges = $derived(Array.from({ length: content.zones[zone.template]?.fanned ? 0 : stackEdges(count) }, (_, i) => i + 1).reverse());
+  /** Versatz je Kante: 2 px mal Maßstab; in verkleinerten Zonen etwas mehr, sonst sieht man die Kante dort kaum */
+  const step = $derived(zone.scale < 1 ? 2.5 : 2 * zone.scale);
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 
@@ -68,7 +70,7 @@
     </div>
   {/if}
   {#each edges as k (k)}
-    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * 2 * zone.scale}px {k * 2 * zone.scale}px" style:filter="brightness({1 - k * 0.07})"></div>
+    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})"></div>
   {/each}
 </div>
 
