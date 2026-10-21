@@ -35,6 +35,11 @@ export class TrysteroRoom {
     };
   }
 
+  /** Raum mit allen Kanälen verlassen */
+  leave(): void {
+    void this.room.leave();
+  }
+
   private setPeers(peers: PeerId[]): void {
     this.peers = peers;
     for (const cb of this.peerCbs) cb([...peers]);

@@ -2,7 +2,7 @@
 // Bleibt über ein Neuladen erhalten (localStorage); verdeckte Informationen gibt es nicht (A13).
 
 import { z } from 'zod';
-import { describe } from './eventText';
+import { describe, describeArrival } from './eventText';
 import { session } from './session.svelte';
 import { t } from './texts';
 
@@ -35,6 +35,8 @@ class GameLog {
       this.add(texts.map((d) => ({ text: d.text, warn: d.level === 'warn' })));
     });
     session.onReplaced((reason) => this.add([{ text: t(`log.replaced.${reason}`), warn: false }]));
+    // Kommen und Gehen (11.7): je Browser aus den Zeigermeldungen, deshalb nicht bei allen gleich
+    session.onArrivals((signals, state) => this.add(signals.flatMap((s) => describeArrival(s, state.seats) ?? []).map((text) => ({ text, warn: false }))));
     // beim Verlassen der Seite sofort speichern, damit nichts aus der Bündelung verloren geht
     addEventListener('pagehide', () => { if (this.saveTimer) this.save(); });
   }

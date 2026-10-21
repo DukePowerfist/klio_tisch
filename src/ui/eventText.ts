@@ -2,10 +2,11 @@
 // Stufe: `log` nur im Protokoll, `toast` auch als Meldung, `warn` als rote Meldung.
 
 import content from 'virtual:klio-content';
-import type { EngineEvent, ZoneId } from '../engine/types';
+import type { EngineEvent, TableState, ZoneId } from '../engine/types';
 import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { trumpById } from '../rules/klio/trumps';
+import type { ArrivalSignal } from './arrivals';
 import { cardName, hasText, t, tMaybe } from './texts';
 
 export type EventText = { text: string; level: 'log' | 'toast' | 'warn' };
@@ -46,6 +47,24 @@ export function describe(e: EngineEvent | KlioEvent): EventText | null {
       return say(t('log.oracle', { words: e.oracle.map((d) => content.expedition.oracle[d.suit][d.rank]).join(', ') }));
     default:
       return null;
+  }
+}
+
+/** Kommen und Gehen (11.7) → Text für Protokoll und Meldung; null, wenn es nichts zu sagen gibt (neu angekommen:
+ *  steht schon mit dem Belegen im Protokoll). Namen aus dem Stand: die Person am Platz, nicht der Charakter. */
+export function describeArrival(s: ArrivalSignal, seats: TableState<unknown>['seats']): string | null {
+  const n = seatNo(s.seat);
+  const name = seats[s.seat].name;
+  const named = (key: string) => (name ? t(`log.seat.${key}`, { name, n }) : t(`log.seat.${key}NoName`, { n }));
+  switch (s.type) {
+    case 'seated':
+      return named('seated');
+    case 'left':
+      return named('left');
+    case 'arrived':
+      return s.how === 'back' ? named('back') : null;
+    case 'freed':
+      return t('log.seat.freed', { n });
   }
 }
 

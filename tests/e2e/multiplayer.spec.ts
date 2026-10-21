@@ -288,3 +288,42 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
   await expect(player.getByText('Die Spielleitung hat dich auf Platz 3 gesetzt.')).toBeVisible();
   await expect(player.locator('[data-sheet=seat3] [data-field=name]')).toBeEditable();
 });
+
+test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, wieder da; hinausgeworfener Tab verlässt den Raum', async ({ browser }) => {
+  const gm = await (await browser.newContext()).newPage();
+  await ready(gm);
+  await fromMenu(gm, 'Mitspieler einladen');
+  await expect(gm.locator('[data-health=ok]')).toBeVisible();
+  const link = gm.url();
+  await fromMenu(gm, 'Protokoll');
+  const entries = (text: string | RegExp) => gm.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: text });
+
+  // Tab A nimmt Platz 2
+  const browserOfIda = await browser.newContext();
+  const a = await browserOfIda.newPage();
+  await a.goto(link);
+  const join = a.getByRole('dialog', { name: 'Platz wählen' });
+  await expect(join).toBeVisible({ timeout: 60_000 });
+  await join.getByRole('textbox').fill('Ida');
+  await join.getByRole('button', { name: /^Spieler 2/ }).click();
+  await seated(a);
+  await expect(entries('Ida sitzt an Platz 2.')).toHaveCount(1);
+
+  // Tab B mit demselben Schlüssel übernimmt; A verlässt den Raum (sonst meldete A weiter Platz 2)
+  const b = await browserOfIda.newPage();
+  await b.goto(link);
+  await seated(b, 60_000);
+  await expect(a.getByText('In einem anderen Tab geöffnet')).toBeVisible();
+  // B schließen: Platz 2 ist nicht mehr verbunden (Trystero bemerkt es nach einigen Sekunden, dann 5 s Wartezeit)
+  await b.close();
+  await expect(entries('Ida ist nicht mehr verbunden.')).toHaveCount(1, { timeout: 30_000 });
+
+  // derselbe Browser kommt wieder
+  const c = await browserOfIda.newPage();
+  await c.goto(link);
+  await seated(c, 60_000);
+  await expect(entries('Ida ist wieder da.')).toHaveCount(1, { timeout: 30_000 });
+  // der Wechsel von A zu B war kein Gehen, das Belegen steht nur einmal da
+  await expect(entries(/nicht mehr verbunden/)).toHaveCount(1);
+  await expect(entries(/sitzt an Platz/)).toHaveCount(1);
+});

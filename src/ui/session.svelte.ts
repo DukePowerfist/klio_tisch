@@ -10,7 +10,7 @@ import { can, canSome } from '../engine/permissions';
 import { cryptoRng, seededRng } from '../engine/rng';
 import { seatNo } from '../engine/zones';
 import { initialTable } from '../engine/setup';
-import type { Actor, CardId, EngineEvent, Event, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
+import { SEATS, type Actor, type CardId, type EngineEvent, type Event, type SeatId, type TableState, type TextRef, type ZoneId } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
 import { Host, type BackupInfo, type Online } from '../net/host';
 import { localTransport } from '../net/local';
@@ -22,6 +22,7 @@ import type { Transport } from '../net/transport';
 import type { KlioEvent } from '../rules/klio/events';
 import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
+import { Arrivals, type ArrivalSignal } from './arrivals';
 import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
 import { movedCards, RemoteDrags, type RemoteDrag, type Who } from './remoteDrags';
@@ -37,6 +38,8 @@ export type KlioTableState = TableState<KlioState>;
 type Listener = (events: (EngineEvent | KlioEvent)[], own: boolean, prev: KlioTableState | null) => void;
 type CommandListener = (cmd: { type: string; [key: string]: unknown }) => void;
 type ReplacedListener = (reason: string) => void;
+/** Kommen und Gehen (11.7) mit dem Stand, zu dem es gehört */
+type ArrivalListener = (signals: ArrivalSignal[], state: KlioTableState) => void;
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
 export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
@@ -94,10 +97,18 @@ class Session {
   remoteDrags = $state.raw<RemoteDrag[]>([]);
   /** von anderen angewählte Stapel → wer */
   openZones = $state.raw<ReadonlyMap<ZoneId, Who>>(new Map());
+  /** Plätze, die als „nicht da“ gezeigt werden (11.7); im lokalen Betrieb keine */
+  away = $state.raw<ReadonlySet<SeatId>>(new Set());
 
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
   private presence: Presence | null = null;
+  private room: TrysteroRoom | null = null;
+  /** Wer ist da (11.7): erst mit Raum und Stand; zuletzt gemeldete Zeiger der anderen */
+  private arrivals: Arrivals | null = null;
+  private others: ReadonlyMap<string, PresenceInfo> = new Map();
+  private arrivalTimer: ReturnType<typeof setTimeout> | undefined;
+  private arrivalListeners = new Set<ArrivalListener>();
   private remote = new RemoteDrags();
   private expiryTimer: ReturnType<typeof setTimeout> | undefined;
   private expiryAt: number | null = null;
@@ -214,12 +225,68 @@ class Session {
   /** Raum betreten: Spielkanal für Host bzw. Client, daneben die Mauszeiger. */
   private connect(link: RoomLink): Transport {
     const room = new TrysteroRoom(link);
+    this.room = room;
     this.presence?.close();
+    this.resetArrivals();
     this.presence = new Presence(room.channel(PRESENCE), (others) => this.othersMoved(others));
     return room.channel(CHANNEL);
   }
 
+  /** Raum verlassen (in einem anderen Tab geöffnet): sonst meldete dieser Tab weiter seinen Platz (11.7) */
+  private leaveRoom(): void {
+    if (!this.room) return;
+    this.presence?.close();
+    this.presence = null;
+    this.room.leave();
+    this.room = null;
+    this.resetArrivals();
+    this.cursors = [];
+  }
+
+  // ---------- Wer ist da (11.7) ----------
+
+  /** Kommen und Gehen an den Plätzen; nur im Raum. */
+  onArrivals(cb: ArrivalListener): () => void {
+    this.arrivalListeners.add(cb);
+    return () => this.arrivalListeners.delete(cb);
+  }
+
+  private resetArrivals(): void {
+    clearTimeout(this.arrivalTimer);
+    this.arrivals = null;
+    this.away = new Set();
+  }
+
+  private get ownSeat(): SeatId | null {
+    const r = this.actor;
+    return r.role === 'player' ? r.seat : null;
+  }
+
+  /** Neues an die Anwesenheit geben. Sie beginnt mit dem ersten Stand im Raum (Anfangszustand, still). */
+  private arrive(feed: (a: Arrivals, now: number) => ArrivalSignal[]): void {
+    const state = this.state;
+    if (!this.presence || !state) return;
+    const now = Date.now();
+    if (!this.arrivals) {
+      this.arrivals = new Arrivals(state.seats, this.ownSeat, now);
+      this.arrivals.presence(this.others, now);
+    }
+    this.announce(feed(this.arrivals, now), state);
+  }
+
+  private announce(signals: ArrivalSignal[], state: KlioTableState): void {
+    const a = this.arrivals!;
+    const away = new Set(SEATS.filter((s) => !a.present(s)));
+    if (away.size !== this.away.size || [...away].some((s) => !this.away.has(s))) this.away = away;
+    if (signals.length > 0) for (const cb of this.arrivalListeners) cb(signals, state);
+    clearTimeout(this.arrivalTimer);
+    const next = a.nextDeadline();
+    if (next !== null) this.arrivalTimer = setTimeout(() => this.arrive((x, now) => x.tick(now)), Math.max(0, next - Date.now()));
+  }
+
   private othersMoved(others: ReadonlyMap<string, PresenceInfo>): void {
+    this.others = new Map(others);
+    this.arrive((a, now) => a.presence(this.others, now));
     this.cursors = [...others];
     this.remote.update(others, Date.now());
     this.showRemote();
@@ -278,6 +345,7 @@ class Session {
       name: this.savedName,
       onChange: () => {
         this.status = client.status;
+        if (client.status === 'replaced') this.leaveRoom();
         const roleChanged = !sameRole(this.role, client.role);
         const first = this.role === null;
         if (roleChanged) this.role = client.role;
@@ -285,6 +353,7 @@ class Session {
           before = this.state;
           this.state = client.state;
         }
+        this.arrive((a, now) => a.seatsChanged(this.state!.seats, now));
         if (roleChanged) this.roleChanged(link.room, first, client.roleBy);
       },
       onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own, before),
@@ -308,6 +377,7 @@ class Session {
     else localStorage.removeItem(SEAT(room));
     view.trumpDialog = null;
     this.sendMine();
+    this.arrive((a, now) => a.setSelf(this.ownSeat, now));
     if (r?.role !== 'player' || !this.state) return;
     if (by !== 'gm' && !(first && before && before !== r.seat)) return;
     const names = seatNames(this.state, r.seat);
@@ -439,6 +509,7 @@ class Session {
    *  fremde Züge mit bewegten Karten enden (8.3). */
   private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean, prev: KlioTableState | null): void {
     this.state = state;
+    this.arrive((a, now) => a.seatsChanged(state.seats, now));
     const moved = movedCards(events, prev);
     if (cause || moved.length) {
       this.remote.confirmed(cause, moved);

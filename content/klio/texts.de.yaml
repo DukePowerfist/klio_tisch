@@ -173,6 +173,14 @@ log:                                      # Spielprotokoll (neu)
   replaced:                               # die SL hat den ganzen Stand ersetzt
     import: Spielstand aus einer Datei geladen
     restore: Sicherung wiederhergestellt
+  seat:                                   # Kommen und Gehen (11.7); mit Namen der Person, sonst nur der Platz
+    seated: "{name} sitzt an Platz {n}."
+    seatedNoName: "Platz {n} ist besetzt."
+    left: "{name} ist nicht mehr verbunden."
+    leftNoName: "Platz {n} ist nicht mehr verbunden."
+    back: "{name} ist wieder da."
+    backNoName: "Platz {n} ist wieder verbunden."
+    freed: "Platz {n} ist frei."
 
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
