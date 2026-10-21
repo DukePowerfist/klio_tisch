@@ -66,7 +66,7 @@
 </div>
 
 <style>
-  .zone { position: absolute; border: 2px dashed var(--line); border-radius: 8px; box-sizing: border-box; background: rgba(255, 255, 255, 0.04); transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
+  .zone { position: absolute; border: 2px dashed var(--line); border-radius: 8px; box-sizing: border-box; background: rgba(255, 255, 255, 0.04); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .zone.hot { border-color: #f5d76e; background: rgba(245, 215, 110, 0.1); }
   /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
   .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }

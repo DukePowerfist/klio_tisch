@@ -29,7 +29,8 @@
   const players = $derived(table.settings.players);
   const layout = $derived(computeLayout(content, players, view.role, view.open));
   const places = $derived(placeCards(table, layout));
-  const cards = $derived(Object.entries(places) as [CardId, CardPlace][]);
+  // feste Reihenfolge im DOM (nach Kennung): Eine Karte, die die Zone wechselt, behält ihr Element; die Stapelung regelt z (11.4)
+  const cards = $derived((Object.entries(places) as [CardId, CardPlace][]).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   const BW = $derived(layout.board.w);
   const BH = $derived(layout.board.h);
 
@@ -304,6 +305,7 @@
         scale={p.scale}
         rotated={p.rotated}
         z={p.z}
+        slot={p.slot}
         size={layout.card}
         faceUp={!!table.faceUp[card]}
         dragging={offsetOf.has(card)}
@@ -316,7 +318,7 @@
   </div>
   {#if preview}
     <div class="preview" style:width="{layout.card.w * 3}px" style:height="{layout.card.h * 3}px">
-      <Card card={preview} x={0} y={0} scale={3} rotated={false} z={1} size={layout.card} faceUp={true} />
+      <Card card={preview} x={0} y={0} scale={3} rotated={false} z={1} size={layout.card} faceUp={true} still />
     </div>
   {/if}
 </div>
@@ -324,9 +326,8 @@
 <style>
   .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--bg); }
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--felt); border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
-  .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift); }
-  .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift), top var(--shift); }
+  .panel { position: absolute; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.28)); border: 2px solid var(--line); border-radius: 56px; box-sizing: border-box; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
+  .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* in der Bühne: rückt mit dem Tisch zur Seite, wenn das Protokoll offen ist */
   .preview { position: absolute; right: 16px; bottom: 16px; pointer-events: none; z-index: 99; }
-  .preview :global(.card) { transition: none; }
 </style>

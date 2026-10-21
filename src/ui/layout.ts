@@ -160,28 +160,35 @@ export type CardPlace = {
   scale: number;
   /** frei liegende Karten sind 90° gedreht */
   rotated: boolean;
+  /** Stapelung: je Zone ein eigener Bereich, frei liegende darüber; eindeutig, unabhängig von der Reihenfolge im DOM */
   z: number;
+  /** Platz im Stand (Zone und Stelle bzw. freie Lage): Ändert er sich, bewegt sich die Karte; sonst nur die Ansicht (11.2) */
+  slot: string;
 };
 
 export type Places = Partial<Record<CardId, CardPlace>>;
+
+/** Stapelung: Zone k bekommt `10 + k · ZONE_Z` bis darunter, frei liegende Karten liegen ab `FREE_Z` darüber */
+const ZONE_Z = 100;
+const FREE_Z = 20000;
 
 /** Lage jeder sichtbaren Karte: in Zonen gestapelt oder aufgefächert, frei liegende relativ zu ihrem Anker.
  *  Karten auf ausgeblendeten Bögen fehlen. */
 export function placeCards(state: TableState<unknown>, layout: Layout): Places {
   const out: Places = {};
-  for (const [id, cards] of Object.entries(state.zones)) {
+  Object.entries(state.zones).forEach(([id, cards], k) => {
     const z = layout.zones[id];
-    if (!z) continue;
+    if (!z) return;
     const fanned = z.fanX || z.fanY;
     cards.forEach((card, i) => {
       const stack = fanned ? 0 : Math.min(i, 12) * 0.4;
-      out[card] = { x: z.x + i * z.fanX + stack, y: z.y + i * z.fanY + stack, scale: z.scale, rotated: false, z: 10 + i };
+      out[card] = { x: z.x + i * z.fanX + stack, y: z.y + i * z.fanY + stack, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: `${id}#${i}` };
     });
-  }
+  });
   state.free.forEach((card, i) => {
     const pos = state.freePos[card];
     const p = pos && pointAt(layout, pos);
-    if (p) out[card] = { ...p, scale: layout.freeCardScale, rotated: true, z: 1000 + i };
+    if (p) out[card] = { ...p, scale: layout.freeCardScale, rotated: true, z: FREE_Z + i, slot: `free#${pos.anchor}:${pos.x}:${pos.y}` };
   });
   return out;
 }

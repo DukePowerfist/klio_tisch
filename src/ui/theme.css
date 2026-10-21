@@ -51,6 +51,7 @@
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */
   --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */
+  --shift-ease: ease;  /* Kurve dazu, auch für die Karten (11.4) */
   --shake: 0.6s;   /* Rucken beim Mischen */
 }
 @media (prefers-reduced-motion: reduce) {

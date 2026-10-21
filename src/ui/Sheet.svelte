@@ -236,9 +236,9 @@
 </div>
 
 <style>
-  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background: #fff; color: #1b1b1b; transition: left var(--shift), top var(--shift), width var(--shift), height var(--shift), opacity var(--shift); }
+  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background: #fff; color: #1b1b1b; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), opacity var(--shift) var(--shift-ease); }
   .sheet.hit { outline: 3px solid rgba(190, 40, 30, 0.75); outline-offset: -3px; }
-  .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift); }
+  .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift) var(--shift-ease); }
   .cb { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; color: inherit; }
   .cb:disabled, .photo:disabled, .strike:disabled { cursor: default; }
   .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: #111; }

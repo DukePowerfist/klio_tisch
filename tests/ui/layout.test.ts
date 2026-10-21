@@ -93,6 +93,21 @@ describe('Karten und Ablegen', () => {
     expect(p.S5).toMatchObject({ rotated: true, scale: 0.6, x: L.sheets.seat1.x + L.sheets.seat1.w / 2 });
   });
 
+  it('Stapelung eindeutig: Zonen in Reihenfolge des Stands, frei liegende darüber; Platz je Karte (5g)', () => {
+    let s = place(fresh(), 'danger', ['H2', 'H3'], true);
+    s = lay(s, 'S5', { anchor: 'seat1', x: 0.5, y: 0.5 });
+    const p = placeCards(s, computeLayout(content, 4, null, null));
+    const all = Object.values(p);
+    expect(new Set(all.map((c) => c!.z)).size).toBe(all.length);
+    const zoneZ = Object.entries(p).filter(([c]) => c !== 'S5').map(([, c]) => c!.z);
+    expect(Math.max(...zoneZ)).toBeLessThan(p.S5!.z);
+    // in jeder Zone weniger Karten als ihr Bereich fasst
+    for (const cards of Object.values(s.zones)) expect(cards.length).toBeLessThan(100);
+    expect(10 + Object.keys(s.zones).length * 100).toBeLessThan(20000);
+    expect(p.H3!.slot).toBe('danger#1');
+    expect(p.S5!.slot).toBe('free#seat1:0.5:0.5');
+  });
+
   it('Ablegen: Zone unter dem Punkt; sonst frei am Bogen oder im Spielbereich', () => {
     const L = computeLayout(content, 4, null, null);
     expect(zoneAt(L, 750, 500)?.id).toBe('deck');
