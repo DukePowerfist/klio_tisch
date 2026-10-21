@@ -2,7 +2,7 @@
   // Charakterbogen, Haut „Papier“: Bogenbild mit Feldern an festen Stellen (ARCHITEKTUR.md 10, 14).
   // Welche Felder es gibt und welcher Art, steht in sheet.yaml; Lage, Schrift und Farbton in skins/paper.yaml.
   import content from 'virtual:klio-content';
-  import { sheetFields, type SkinBox, type SkinCheck, type SkinLabel } from '../rules/klio/content/schema';
+  import { sheetFields, type SkinBox, type SkinCheck } from '../rules/klio/content/schema';
   import { getField } from '../rules/klio/fields';
   import { rollOverwrites } from '../rules/klio/generators/rollSheet';
   import type { KlioSheet } from '../rules/klio/state';
@@ -50,7 +50,7 @@
   const all = sheetFields(content.sheet);
   const inputs = all.filter((f) => f.kind === 'text' || f.kind === 'number').map((f) => ({ ...f, kind: f.kind as 'text' | 'number', pos: skin.fields[f.id] as SkinBox }));
   const checks = all.filter((f) => f.kind === 'check').map((f) => ({ ...f, pos: skin.fields[f.id] as SkinCheck }));
-  const counters = all.filter((f) => f.kind === 'counter').map((f) => ({ ...f, pos: skin.fields[f.id] as SkinLabel }));
+  // Zähler „neue Narben“ (kind: counter) zeigt der Bogen seit 5k nicht mehr: ob „Neue Narbe“ offen ist, steht im Trumpfdialog
   const slots = all.filter((f) => f.kind === 'trumpSlot').map((f) => ({ index: Number(f.id.split('.').pop()), pos: skin.fields[f.id] as SkinBox }));
   const photoField = all.find((f) => f.kind === 'photo');
   const photoBox = photoField && (skin.fields[photoField.id] as SkinBox);
@@ -157,12 +157,6 @@
       {/if}
     {/each}
 
-    {#each counters as c (c.id)}
-      {@const n = Number(value(c.id) ?? 0)}
-      {#if n > 0}
-        <div class="counter" data-counter={c.id} style:left="{c.pos.x}px" style:top="{c.pos.y}px" style:font-size="{c.pos.font}px">{n}</div>
-      {/if}
-    {/each}
 
     {#if photoBox}
       <button
@@ -251,8 +245,6 @@
   .tools .strike { display: block; opacity: 0.4; }
   .tools .strike:hover { opacity: 0.95; }
   .tools .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
-  .counter { position: absolute; font-family: system-ui, sans-serif; font-weight: 600; line-height: 1; color: var(--danger); background: rgba(255, 255, 255, 0.85); border-radius: 7px; padding: 1px 4px; display: none; }
-  .tools .counter { display: block; }
   .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; cursor: pointer; }
   .slot { position: absolute; cursor: pointer; }
   .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: 6px; }

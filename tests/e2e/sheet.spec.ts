@@ -36,13 +36,15 @@ test('Auswürfeln füllt den Bogen; bei Einträgen erst „Überschreiben?“', 
   await expect(sheet1(page).getByRole('button', { name: 'Auswürfeln' })).toBeVisible();
 });
 
-test('Kästchen, Narbe mit Zähler, Rüstzeug streichen', async ({ page }) => {
+test('Kästchen, Narbe ohne Zähler (5k), Rüstzeug streichen', async ({ page }) => {
   await page.keyboard.press('1'); // eigener Bogen: kleine Bedienelemente ohne Zoom (5b)
   const lamp = sheet1(page).locator('[data-check="lamps.1"]');
   await lamp.click();
   await expect(lamp).toHaveAttribute('aria-pressed', 'true');
   await sheet1(page).locator('[data-check="scars.heart"]').click();
-  await expect(sheet1(page).locator('[data-counter=newScars]')).toHaveText('1');
+  await expect(sheet1(page).locator('[data-check="scars.heart"]')).toHaveAttribute('aria-pressed', 'true');
+  // eine Zahl „neue Narben“ am Bogen gibt es nicht mehr (ob „Neue Narbe“ offen ist, zeigt der Trumpfdialog)
+  await expect(sheet1(page).locator('[data-counter]')).toHaveCount(0);
   await setField(page, 'gear.text.0', 'Seil');
   await sheet1(page).getByTitle('Untauglich markieren (durchstreichen)').first().click();
   await expect(sheet1(page).locator('[data-field="gear.text.0"]')).toHaveClass(/struck/);
