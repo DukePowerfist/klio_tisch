@@ -230,6 +230,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
   };
 
   // Platz belegen oder freigeben. Belegt beim Beitritt der Host (als SL), freigeben kann die SL jederzeit (8.2).
+  // Ein freier Platz behält den Namen als „zuletzt dort“ (8.7); wer ihn neu belegt, bringt seinen Namen mit oder keinen.
   const setSeat: CommandDef<unknown, z.infer<typeof SeatCmd>> = {
     parse: (x) => SeatCmd.parse(x),
     permission: 'table.setSeat',
@@ -239,8 +240,9 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
         if (state.seats[cmd.seat].occupied) return reject('reject.seatTaken');
       }
       // die Farbe gehört zum Platz und bleibt beim Wechsel der Person
-      const { color } = state.seats[cmd.seat];
-      const info = { occupied: cmd.occupied, ...(cmd.occupied && cmd.name ? { name: cmd.name } : {}), ...(color ? { color } : {}) };
+      const { color, name: last } = state.seats[cmd.seat];
+      const name = cmd.occupied ? cmd.name : last;
+      const info = { occupied: cmd.occupied, ...(name ? { name } : {}), ...(color ? { color } : {}) };
       return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: info } }];
     },
   };

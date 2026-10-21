@@ -128,6 +128,7 @@ room:                                     # Mehrspielerbetrieb (neu)
   manageTitle: Plätze und Einladungslink
   seats: Plätze
   free: frei
+  last: "zuletzt {name}"
   hidden: ausgeblendet
   online: verbunden
   offline: nicht verbunden
@@ -142,8 +143,6 @@ room:                                     # Mehrspielerbetrieb (neu)
   join:
     title: Platz wählen
     name: Dein Name
-    seat: "Spieler {n}"
-    taken: "vergeben ({name})"
     takenNoName: vergeben
     watch: Nur zuschauen
 

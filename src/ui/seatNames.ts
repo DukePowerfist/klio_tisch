@@ -1,5 +1,6 @@
 // Wer sitzt wo (ARCHITEKTUR.md 10 „Zuordnung der Bögen“): Charaktername für den Dock-Tooltip,
-// Name der Person für das Namensschild (der Charaktername steht schon im Namensfeld des Bogens).
+// Name der Person für das Namensschild (der Charaktername steht schon im Namensfeld des Bogens),
+// bei freien Plätzen für Beitritts- und Raumfenster, wer zuletzt dort saß (8.7).
 
 import type { SeatId } from '../engine/types';
 import { seatNo } from '../engine/zones';
@@ -17,12 +18,15 @@ export type SeatNames = {
   plate: string;
   /** niemand sitzt am Platz */
   free: boolean;
+  /** freier Platz: wer zuletzt dort saß (8.7); sonst leer */
+  last: string;
 };
 
 export function seatNames(state: KlioTable, seat: SeatId): SeatNames {
   const s = state.seats[seat];
   const numbered = t('room.player', { n: seatNo(seat) });
   const character = sheetOf(state, seat).name.trim() || numbered;
-  const person = s.occupied ? (s.name ?? '').trim() : '';
-  return { character, person, label: person ? `${character} · ${person}` : character, plate: person || numbered, free: !s.occupied };
+  const name = (s.name ?? '').trim();
+  const person = s.occupied ? name : '';
+  return { character, person, label: person ? `${character} · ${person}` : character, plate: person || numbered, free: !s.occupied, last: s.occupied ? '' : name };
 }

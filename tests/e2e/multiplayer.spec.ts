@@ -27,6 +27,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   const join = player.getByRole('dialog', { name: 'Platz wählen' });
   await expect(join).toBeVisible({ timeout: 60_000 });
   await expect(gm.locator('.menu .count')).toHaveText('1');
+  await expect(join.getByRole('button', { name: /^Spieler 2/ })).toHaveText(/^Spieler 2\s*frei$/);
   await join.getByRole('textbox').fill('Ida');
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
   await seated(player);
@@ -158,6 +159,12 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await room.getByRole('button', { name: 'Freigeben' }).click();
   await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toBeVisible();
   await expect(room.getByText('frei', { exact: true })).toHaveCount(4);
+  // Beitritts- und Raumfenster zeigen den Charakter und wer zuletzt dort saß (8.7)
+  const rejoin = player.getByRole('dialog', { name: 'Platz wählen' });
+  await expect(rejoin.getByRole('button', { name: /^Ida Weber/ })).toHaveText(/frei · zuletzt Ida M\./);
+  await expect(rejoin.getByRole('button', { name: /^Spieler 3/ })).toHaveText(/^Spieler 3\s*frei$/);
+  await expect(room.getByText('zuletzt Ida M.', { exact: true })).toBeVisible();
+  await expect(room.locator('.who').nth(1)).toHaveText(/^\s*Ida Weber ·\s+frei zuletzt Ida M\.\s*$/);
   await player.getByRole('button', { name: 'Nur zuschauen' }).click();
   expect(await menuEntries(player)).toEqual(['Einstellungen', 'Platz wählen', 'Name …', 'Protokoll']);
   // Zuschauer ändern nur den Namen am Zeiger (5e)

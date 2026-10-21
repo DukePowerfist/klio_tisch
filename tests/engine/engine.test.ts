@@ -223,8 +223,18 @@ describe('Ablauf', () => {
     expectRejected(s, { type: 'table.setSeat', seat: 'seat2', occupied: true }, 'reject.seatTaken');
     const two = run(s, { type: 'table.setPlayers', players: 2 }).state;
     expectRejected(two, { type: 'table.setSeat', seat: 'seat3', occupied: true }, 'reject.hiddenSeat');
-    expect(run(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state.seats.seat2).toEqual({ occupied: false });
     expectRejected(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }, 'reject.notAllowed', player('seat2'));
+  });
+
+  it('freier Platz merkt sich, wer zuletzt dort saß (8.7)', () => {
+    const s = run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Ida' }).state;
+    const freed = run(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state;
+    expect(freed.seats.seat2).toEqual({ occupied: false, name: 'Ida' });
+    // wer den Platz neu belegt, ersetzt den Namen; ohne Namen bleibt keiner
+    expect(run(freed, { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Bo' }).state.seats.seat2).toEqual({ occupied: true, name: 'Bo' });
+    expect(run(freed, { type: 'table.setSeat', seat: 'seat2', occupied: true }).state.seats.seat2).toEqual({ occupied: true });
+    // ohne Vorgänger kein Name
+    expect(run(fresh(), { type: 'table.setSeat', seat: 'seat3', occupied: false }).state.seats.seat3).toEqual({ occupied: false });
   });
 
   it('eigener Name und eigene Farbe (5e): nur am eigenen Platz, jede Farbe höchstens einmal', () => {
@@ -249,7 +259,7 @@ describe('Ablauf', () => {
     expectRejected(s, { type: 'seat.edit', seat: 'seat3', name: 'X' }, 'reject.seatFree');
     // die Farbe gehört zum Platz: bleibt beim Freigeben und neu Belegen
     const freed = run(teal, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state;
-    expect(freed.seats.seat2).toEqual({ occupied: false, color: 'teal' });
+    expect(freed.seats.seat2).toEqual({ occupied: false, name: 'Ida', color: 'teal' });
     expect(run(freed, { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Bo' }).state.seats.seat2).toEqual({ occupied: true, name: 'Bo', color: 'teal' });
   });
 

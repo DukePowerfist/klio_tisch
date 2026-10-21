@@ -4,6 +4,7 @@
   import { seatNo, seatVisible } from '../engine/zones';
   import Modal from './Modal.svelte';
   import { submitOrSay } from './commands';
+  import { seatNames } from './seatNames';
   import { session } from './session.svelte';
   import { t } from './texts';
   import { view } from './view.svelte';
@@ -25,19 +26,21 @@
   <b>{t('room.seats')}</b>
   <div class="seats">
     {#each SEATS as seat (seat)}
-      {@const info = table.seats[seat]}
+      {@const names = seatNames(table, seat)}
+      {@const numbered = t('room.player', { n: seatNo(seat) })}
       {@const on = isOnline(seat)}
-      <span>{t('room.player', { n: seatNo(seat) })}</span>
+      <span>{numbered}</span>
       <span class="who">
         {#if !seatVisible(seat, table)}<i>{t('room.hidden')}</i>{/if}
-        {#if info.occupied}
-          {info.name ?? ''} <small class:on>{t(on ? 'room.online' : 'room.offline')}</small>
+        {#if names.character !== numbered}<span class="character">{names.character}</span>{' · '}{/if}
+        {#if !names.free}
+          {names.person} <small class:on>{t(on ? 'room.online' : 'room.offline')}</small>
         {:else}
-          <i>{t('room.free')}</i>
+          <i>{t('room.free')}</i>{#if names.last}{' '}<small>{t('room.last', { name: names.last })}</small>{/if}
         {/if}
       </span>
       <span>
-        {#if info.occupied}
+        {#if !names.free}
           <button title={t('room.releaseTitle')} onclick={() => submitOrSay({ type: 'table.setSeat', seat, occupied: false })}>{t('room.release')}</button>
         {/if}
       </span>
@@ -64,6 +67,7 @@
 <style>
   .seats { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 12px; align-items: center; margin: 8px 0; }
   .who i { opacity: 0.65; margin-right: 6px; }
+  .character { font-weight: 600; }
   small { font-size: 12px; opacity: 0.6; }
   small.on { color: var(--accent-hint); opacity: 1; }
   .seats button { padding: 4px 10px; }

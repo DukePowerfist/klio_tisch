@@ -43,4 +43,14 @@ describe('Spielleitung', () => {
     const all = run(s, { type: 'table.reset', includeCharacters: true }).state;
     expect(sheet(all, 'seat1').name).toBe('');
   });
+
+  it('Zurücksetzen inkl. Charaktere lässt die Plätze stehen: Personen, „zuletzt“, Farben (8.7)', () => {
+    let s = run(fresh(), { type: 'table.setSeat', seat: 'seat1', occupied: true, name: 'Ida' }).state;
+    s = run(s, { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Bo' }).state;
+    s = run(s, { type: 'seat.edit', seat: 'seat2', color: 'teal' }).state;
+    s = run(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state;
+    const all = run(s, { type: 'table.reset', includeCharacters: true }).state;
+    expect(all.seats).toEqual(s.seats);
+    expect(all.seats.seat2).toEqual({ occupied: false, name: 'Bo', color: 'teal' });
+  });
 });
