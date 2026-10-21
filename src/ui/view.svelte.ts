@@ -34,6 +34,10 @@ class ViewState {
   settingsPage = $state<SettingsPage>('automation');
   /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
   bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
+  /** offenes Menü am Namensschild (10.1): Platz und Lage am Bildschirm (unter dem Schild) */
+  plateMenu = $state<{ seat: SeatId; x: number; y: number; above: number } | null>(null);
+  /** Profilfenster für einen bestimmten Platz, geöffnet aus dem Menü am Namensschild */
+  profileFor = $state<SeatId | null>(null);
   toast = $state<Toast | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
   private toastId = 0;

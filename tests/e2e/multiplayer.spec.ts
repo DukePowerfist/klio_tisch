@@ -210,3 +210,57 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(player.locator('.menu [data-health=trouble]')).toBeVisible();
 });
 
+
+test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder, SL setzt um, gibt frei, weist zu', async ({ browser }) => {
+  const gm = await (await browser.newContext()).newPage();
+  await ready(gm);
+  await fromMenu(gm, 'Mitspieler einladen');
+  await expect(gm.locator('[data-health=ok]')).toBeVisible();
+  const player = await (await browser.newContext()).newPage();
+  await player.goto(gm.url());
+  const join = player.getByRole('dialog', { name: 'Platz wählen' });
+  await expect(join).toBeVisible({ timeout: 60_000 });
+  await join.getByRole('textbox').fill('Ida');
+  await join.getByRole('button', { name: /^Spieler 2/ }).click();
+  await seated(player);
+  const items = (page: Page) => page.getByRole('menu').getByRole('menuitem');
+
+  // Spieler in seiner Rollenansicht: Schild auf dem eigenen Bogen, alles zum eigenen Bogen, nichts zu Plätzen
+  await player.locator('[data-plate=seat2]').click();
+  await expect(items(player)).toHaveText(['Name und Farbe …', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter zurücksetzen']);
+  await player.keyboard.press('Escape');
+  // am fremden Schild nur die Rollenansicht
+  await player.keyboard.press('0');
+  await player.locator('[data-plate=seat1]').click();
+  await expect(items(player)).toHaveText(['Zur Rollenansicht']);
+  await player.keyboard.press('Escape');
+
+  // SL ändert Namen der Person an Platz 2
+  await gm.locator('[data-plate=seat2]').click();
+  await expect(items(gm)).toHaveText(['Name und Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter zurücksetzen', 'Umsetzen …', 'Platz freigeben']);
+  await items(gm).getByText('Name und Farbe …').click();
+  const profile = gm.getByRole('dialog', { name: 'Name und Farbe: Platz 2' });
+  await profile.getByRole('textbox').fill('Ida B.');
+  await profile.getByRole('button', { name: 'Speichern' }).click();
+  await expect(player.locator('[data-plate=seat2]')).toHaveText('Ida B.');
+
+  // Umsetzen auf Platz 3: dieselben Ziele wie im Raumfenster
+  await gm.locator('[data-plate=seat2]').click();
+  await items(gm).getByText('Umsetzen …').click();
+  await items(gm).getByText('auf Platz 3 (frei)').click();
+  await expect(player.getByText('Die Spielleitung hat dich auf Platz 3 gesetzt.')).toBeVisible();
+  await expect(player.locator('[data-sheet=seat3] [data-field=name]')).toBeEditable();
+
+  // Freigeben, dann vom freien Schild aus wieder zuweisen
+  await gm.locator('[data-plate=seat3]').click();
+  await items(gm).getByText('Platz freigeben').click();
+  await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toBeVisible();
+  await player.getByRole('dialog', { name: 'Platz wählen' }).getByRole('button', { name: 'Nur zuschauen' }).click();
+  await gm.locator('[data-plate=seat3]').click();
+  await expect(items(gm)).toContainText(['Farbe …', 'Platz zuweisen …']);
+  await items(gm).getByText('Platz zuweisen …').click();
+  // als Zuschauer meldet er seinen eigenen gemerkten Namen, nicht den, den die SL am Platz eingetragen hatte
+  await items(gm).getByText('Ida', { exact: true }).click();
+  await expect(player.getByText('Die Spielleitung hat dich auf Platz 3 gesetzt.')).toBeVisible();
+  await expect(player.locator('[data-sheet=seat3] [data-field=name]')).toBeEditable();
+});

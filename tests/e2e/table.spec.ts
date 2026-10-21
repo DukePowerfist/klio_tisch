@@ -82,14 +82,14 @@ test('Ansichten: Taste 1 → Rollenansicht, 0 → Draufsicht; Dock', async ({ pa
   await expect(page.getByTitle('Zur Übersicht (Taste 0 oder Esc)')).toBeVisible();
 });
 
-test('Zuordnung der Bögen: Namensschild in der Draufsicht, Farbstreifen in der Rollenansicht, Dock in den Platzfarben (5b)', async ({ page }) => {
+test('Zuordnung der Bögen: Namensschild in der Draufsicht und am großen Bogen, Farbstreifen in der Rollenansicht, Dock in den Platzfarben (5b)', async ({ page }) => {
   const plate1 = page.locator('[data-plate=seat1]');
   await expect(plate1).toHaveText('Spieler 1');
   await expect(page.locator('[data-dock=seat1]')).toHaveText('1');
   // Charaktername steht im Namensfeld, nicht auf dem Schild; lokal sitzt niemand am Platz, aber kein „frei“
   await nameCharacter(page, 'seat1', 'Ida');
   await expect(plate1).toHaveText('Spieler 1');
-  await expect(plate1).toHaveAttribute('title', 'Ida');
+  await expect(plate1).toHaveAttribute('title', 'Ida – Menü zu diesem Platz');
   await expect(page.locator('[data-dock=seat1]')).toHaveAttribute('title', 'Ich bin Spieler 1: Ida (Taste 1)');
   // Schild und Dock-Knöpfe tragen die Farbe des Platzes; jeder Knopf eine andere
   const color = (sel: string, prop: string) => page.locator(sel).evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);
@@ -97,9 +97,10 @@ test('Zuordnung der Bögen: Namensschild in der Draufsicht, Farbstreifen in der 
   const docks = await Promise.all(['seat1', 'seat2', 'seat3', 'seat4'].map((s) => color(`[data-dock=${s}]`, 'border-top-color')));
   expect(new Set(docks).size).toBe(4);
 
-  // Rollenansicht: eigener Bogen ohne Schild, die anderen mit Farbstreifen
+  // Rollenansicht: Schild nur auf dem großen Bogen (seit 5j, 10.1), die anderen mit Farbstreifen
   await page.keyboard.press('1');
-  await expect(page.locator('.plate')).toHaveCount(0);
+  await expect(page.locator('.plate')).toHaveCount(1);
+  await expect(page.locator('[data-sheet=seat1] .plate')).toHaveCount(1);
   await expect(page.locator('[data-sheet=seat1] .strip')).toHaveCount(0);
   await expect(page.locator('.strip')).toHaveCount(3);
   expect(await color('[data-strip=seat2]', 'background-color')).toBe('rgb(90, 176, 232)');

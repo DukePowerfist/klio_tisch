@@ -1,39 +1,52 @@
 <script lang="ts">
   // Eigener Name und eigene Farbe (Schritt 5e). Spieler: beides, gilt am Platz für alle. Zuschauer: nur der Name
   // am Zeiger. Farben aus einer festen Auswahl; was ein anderer Platz trägt, ist nicht wählbar.
+  // Seit 5j (10.1) auch für einen anderen Platz (`for`, aus dem Menü am Namensschild): die SL an jedem Platz;
+  // an einem freien Platz nur die Farbe. Der Name wird dann nicht als eigener gemerkt.
   import { PLAYER_NAME_MAX } from '../engine/schemas';
-  import type { TextRef } from '../engine/types';
-  import { colorHolder, seatColor } from '../engine/zones';
+  import type { SeatId, TextRef } from '../engine/types';
+  import { colorHolder, seatColor, seatNo } from '../engine/zones';
   import { colorVar } from './colors';
   import Modal from './Modal.svelte';
   import { seatNames } from './seatNames';
   import { ruleset, session } from './session.svelte';
   import { t, text } from './texts';
 
-  let { onclose }: { onclose: () => void } = $props();
+  let { onclose, for: target }: { onclose: () => void; for?: SeatId } = $props();
 
   const table = $derived(session.state!);
-  const seat = $derived(session.actor.role === 'player' ? session.actor.seat : null);
+  const own = $derived(session.actor.role === 'player' ? session.actor.seat : null);
+  /** fremder Platz (nicht der eigene) */
+  const other = $derived(target !== undefined && target !== own ? target : null);
+  const seat = $derived(other ?? own);
+  /** Name nur an einem besetzten Platz (seat.edit lehnt ihn sonst ab) */
+  const withName = $derived(!other || table.seats[other].occupied);
+  const title = $derived(other ? t(withName ? 'profile.titleSeat' : 'profile.titleColor', { n: seatNo(other) }) : seat ? t('profile.title') : t('profile.titleName'));
   let name = $state(seat ? (session.state!.seats[seat].name ?? '') : session.savedName);
   let color = $state(seat ? seatColor(session.state!, seat, ruleset.seatColors) : null);
   let refused = $state<TextRef | null>(null);
 
   /** Wer trägt diese Farbe schon (anderer Platz)? */
   function holder(id: string): string | null {
-    const other = colorHolder(table, id, ruleset.seatColors, seat);
-    return other ? seatNames(table, other).label : null;
+    const by = colorHolder(table, id, ruleset.seatColors, seat);
+    return by ? seatNames(table, by).label : null;
   }
 
   async function save() {
-    const r = await session.editProfile(name.trim(), color ?? undefined);
+    const r = other
+      ? await session.submit({ type: 'seat.edit', seat: other, ...(withName ? { name: name.trim() } : {}), ...(color ? { color } : {}) })
+      : await session.editProfile(name.trim(), color ?? undefined);
     if (r.ok) onclose();
     else refused = r.reason;
   }
 </script>
 
-<Modal label={seat ? t('profile.title') : t('profile.titleName')} {onclose} size="narrow">
-  <b>{seat ? t('profile.title') : t('profile.titleName')}</b>
-  <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={t('profile.name')} aria-label={t('profile.name')} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
+<Modal label={title} {onclose} size="narrow">
+  <b>{title}</b>
+  {#if withName}
+    {@const label = other ? t('profile.nameOther') : t('profile.name')}
+    <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={label} aria-label={label} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
+  {/if}
   {#if seat}
     <div class="label">{t('profile.color')}</div>
     <div class="colors" role="radiogroup" aria-label={t('profile.color')}>

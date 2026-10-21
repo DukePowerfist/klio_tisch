@@ -276,9 +276,24 @@ menu:                                     # Menü oben rechts (neu, Schritt 5b)
   profile: Name und Farbe …
   name: Name …
 
+plate:                                    # Menü am Namensschild (neu, Schritt 5j); Umsetzen und Zuweisen wie im Raumfenster (room.*)
+  title: "Platz {n}"
+  open: Menü zu diesem Platz
+  color: Farbe …
+  view: Zur Rollenansicht
+  roll: Charakter auswürfeln
+  photo: Foto ändern …
+  reset: Charakter zurücksetzen
+  resetTitle: Den ganzen Bogen leeren; die Person am Platz bleibt
+  resetConfirm: Wirklich zurücksetzen?
+  release: Platz freigeben
+
 profile:                                  # eigener Name und eigene Farbe (neu, Schritt 5e)
   title: Name und Farbe
   titleName: Name
+  titleSeat: "Name und Farbe: Platz {n}"   # aus dem Menü am Namensschild (5j)
+  titleColor: "Farbe: Platz {n}"           # freier Platz: nur die Farbe
+  nameOther: Name
   name: Dein Name
   color: Farbe
   takenBy: "vergeben an {who}"

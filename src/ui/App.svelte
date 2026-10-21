@@ -7,6 +7,7 @@
   import JoinDialog from './JoinDialog.svelte';
   import LogPanel from './LogPanel.svelte';
   import Menu from './Menu.svelte';
+  import PlateMenu from './PlateMenu.svelte';
   import ProfileDialog from './ProfileDialog.svelte';
   import ResetDialog from './ResetDialog.svelte';
   import ResultDialog from './ResultDialog.svelte';
@@ -27,6 +28,8 @@
   const chooseSeat = $derived(joinOpen && session.seatless);
   // eigener Name und eigene Farbe (5e)
   let profileOpen = $state(false);
+  // Menü am Namensschild (10.1); ein anderes Schild öffnet ein neues Menü
+  const plateSeat = $derived(view.plateMenu?.seat ?? null);
 
   // Wer einen Platz bekommt, startet in seiner Rollenansicht (10)
   const mySeat = $derived(session.role?.role === 'player' ? session.role.seat : null);
@@ -67,6 +70,12 @@
   {/if}
   {#if profileOpen}
     <ProfileDialog onclose={() => (profileOpen = false)} />
+  {/if}
+  {#if plateSeat}
+    {#key plateSeat}<PlateMenu seat={plateSeat} />{/key}
+  {/if}
+  {#if view.profileFor}
+    {#key view.profileFor}<ProfileDialog for={view.profileFor} onclose={() => (view.profileFor = null)} />{/key}
   {/if}
   {#if session.saveError}
     <div class="save-error" role="alert">Speichern fehlgeschlagen: {session.saveError}</div>

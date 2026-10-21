@@ -15,6 +15,7 @@
   import { Confirm } from './confirm.svelte';
   import { CONTROLS_ZOOM, SHEET_W, type SheetBox } from './layout';
   import { photos } from './photos.svelte';
+  import { entriesAt } from './PlateMenu.svelte';
   import { seatNames } from './seatNames';
   import { setPhoto } from './sheetActions';
   import { session } from './session.svelte';
@@ -31,7 +32,14 @@
   const k = $derived((SHEET_W * box.scale) / imgW);
   const seat = $derived(box.seat);
   const image = $derived(`${import.meta.env.BASE_URL}assets/${skin.images[sheet.variant]}`);
-  const names = $derived(mark === 'plate' && session.state ? seatNames(session.state, seat) : null);
+  // Namensschild in der Übersicht und auf dem großen Bogen der Rollenansicht (10.1), nicht an den Streifen
+  const names = $derived(mark !== 'strip' && session.state ? seatNames(session.state, seat) : null);
+  const menu = $derived(names ? entriesAt(seat).length > 0 : false);
+  function toggleMenu(e: MouseEvent) {
+    if (view.plateMenu?.seat === seat) return void (view.plateMenu = null);
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    view.plateMenu = { seat, x: r.left, y: r.bottom + 4, above: r.top - 4 };
+  }
   const plate = skin.nameplate;
   const rollAt = skin.rollButton;
   // Bedienelemente (10, Schritt 5b): am eigenen Bogen der Rollenansicht immer und deutlich, sonst klein erst ab CONTROLS_ZOOM, „Auswürfeln“ dezent
@@ -58,7 +66,7 @@
   const may = (type: string) => session.can({ type, seat });
   const canEdit = $derived(may('sheet.toggle'));
   const canRoll = $derived(may('sheet.roll'));
-  const canPhoto = $derived(may('sheet.photo'));
+  const canPhoto = $derived(may('sheet.setPhoto'));
   const canChooseTrump = $derived(may('trump.choose'));
   const canRemoveTrump = $derived(may('trump.remove'));
   const canRevive = $derived(may('character.revive'));
@@ -198,12 +206,17 @@
     {/each}
 
     {#if names}
-      <div
+      <svelte:element
+        this={menu ? 'button' : 'div'}
         class="plate"
+        class:menu
         data-plate={seat}
-        title={names.label}
+        title={menu ? `${names.label} – ${t('plate.open')}` : names.label}
+        aria-haspopup={menu ? 'menu' : undefined}
+        aria-expanded={menu ? view.plateMenu?.seat === seat : undefined}
+        onclick={menu ? toggleMenu : undefined}
         style:left="{plate.x}px" style:top="{plate.y}px" style:max-width="{plate.w}px" style:height="{plate.h}px" style:font-size="{plate.font}px"
-      ><b>{names.plate}</b>{#if names.free && session.mode !== 'local'}<small>{t('room.free')}</small>{/if}</div>
+      ><b>{names.plate}</b>{#if names.free && session.mode !== 'local'}<small>{t('room.free')}</small>{/if}</svelte:element>
     {/if}
 
     <div class="sbar control" class:quiet={!own} style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
@@ -249,6 +262,8 @@
   .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
   .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: #111; line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
+  .plate.menu { pointer-events: auto; border: 0; cursor: pointer; transition: background 0.15s, scale var(--press) ease-out; }
+  .plate.menu:hover, .plate.menu[aria-expanded='true'] { background: color-mix(in srgb, var(--c) 80%, transparent); }
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .plate small { font-size: 0.6em; flex: none; opacity: 0.75; }
   .strip { position: absolute; left: 0; top: 0; right: 0; height: 5px; background: var(--c); pointer-events: none; }
