@@ -90,8 +90,9 @@
   /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
   .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }
   .zone.fan { border-color: rgba(255, 255, 255, 0.2); background: none; }
-  /* Kanten eines Stapels: Kartengröße, ab der Ecke der Zone (innerhalb des Rahmens), nach rechts unten versetzt */
-  .edge { position: absolute; left: -2px; top: -2px; box-sizing: border-box; border-radius: 7px; background: var(--stack-edge); border: 1px solid var(--stack-edge-line); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); pointer-events: none; }
+  /* Kanten eines Stapels: Kartengröße, ab der Ecke der Zone (innerhalb des Rahmens), nach rechts unten versetzt;
+     wachsen beim Öffnen mit der Zone und den Karten (--shift), statt vorauszuspringen */
+  .edge { position: absolute; left: -2px; top: -2px; box-sizing: border-box; border-radius: 7px; background: var(--stack-edge); border: 1px solid var(--stack-edge-line); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); pointer-events: none; transition: width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), translate var(--shift) var(--shift-ease); }
   .label { position: absolute; left: 0; top: 100%; margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: #fff; background: rgba(0, 0, 0, 0.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 2px #000; pointer-events: none; }
   .center .label { left: 50%; transform: translateX(-50%); }
   .fan .label { font-size: 12px; font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }
