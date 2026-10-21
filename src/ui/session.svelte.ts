@@ -22,7 +22,7 @@ import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
 import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
-import { RemoteDrags, type RemoteDrag, type Who } from './remoteDrags';
+import { movedCards, RemoteDrags, type RemoteDrag, type Who } from './remoteDrags';
 import { saveFile } from './files';
 import { IdbBackups, IdbStore } from './storage';
 import { t } from './texts';
@@ -137,7 +137,7 @@ class Session {
     this.host = await Host.start(engine, localTransport(), { load: async () => saved, save: (s) => store.save(s) }, () => initialTable(ruleset, cryptoRng()), {
       build: __BUILD_ID__,
       onSaveError: (e) => (this.saveError = String(e)),
-      onChange: (state, events, cause, own) => this.changed(state, events.map((e) => e.event), cause, own),
+      onChange: (state, events, cause, own) => this.changed(state, events.map((e) => e.event), cause, own, this.state),
       onOnline: (online) => (this.online = online),
       photos,
       backups: new IdbBackups(),
@@ -266,6 +266,8 @@ class Session {
 
   private startClient(link: RoomLink): void {
     this.mode = 'client';
+    /** Stand vor den letzten Ereignissen: `onChange` kommt vor `onEvents` und setzt schon den neuen */
+    let before: KlioTableState | null = null;
     const client: Client<KlioState> = new Client(engine, this.connect(link), {
       build: __BUILD_ID__,
       key: reconnectKey(),
@@ -273,9 +275,12 @@ class Session {
       onChange: () => {
         this.status = client.status;
         if (!sameRole(this.role, client.role)) this.role = client.role;
-        if (client.state && client.state !== this.state) this.state = client.state;
+        if (client.state && client.state !== this.state) {
+          before = this.state;
+          this.state = client.state;
+        }
       },
-      onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own),
+      onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own, before),
       photos,
       onReplaced: (reason) => this.replaced(reason),
       onWarning: (w) => {
@@ -358,11 +363,13 @@ class Session {
     return () => this.listeners.delete(cb);
   }
 
-  /** Neuer Stand mit Ereignissen; die Ablage des auslösenden Befehls ist damit bestätigt. */
-  private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean): void {
+  /** Neuer Stand mit Ereignissen (`prev` = Stand davor); die Ablage des auslösenden Befehls ist damit bestätigt,
+   *  fremde Züge mit bewegten Karten enden (8.3). */
+  private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean, prev: KlioTableState | null): void {
     this.state = state;
-    if (cause) {
-      this.remote.confirmed(cause);
+    const moved = movedCards(events, prev);
+    if (cause || moved.length) {
+      this.remote.confirmed(cause, moved);
       this.showRemote();
     }
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);

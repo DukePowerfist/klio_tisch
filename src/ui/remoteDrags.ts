@@ -1,7 +1,8 @@
 // Was die anderen gerade tun (ARCHITEKTUR.md 8.3, Schritt 5b): gezogene Karten, die dem Zeiger folgen,
 // und angewählte Stapel. Reine Logik ohne Svelte; die Zeit kommt von außen (testbar).
 
-import type { CardId, ZoneId } from '../engine/types';
+import { locate } from '../engine/zones';
+import type { CardId, EngineEvent, Event, TableState, ZoneId } from '../engine/types';
 import type { PeerId } from '../net/transport';
 import type { PointerPos, PresenceInfo } from '../net/presence';
 
@@ -16,6 +17,8 @@ export type Who = PresenceInfo['who'];
 export type RemoteDrag = { cards: CardId[]; who: Who; start: PointerPos; last: PointerPos };
 
 type Tracked = RemoteDrag & {
+  /** Greifpunkt wie gemeldet: gleiche Karten mit anderem `grab` sind ein neuer Zug */
+  grab: PointerPos | null;
   since: number;
   /** abgelegt: wartet bis dahin auf das Ereignis zu diesem Befehl */
   held?: { until: number; cause: string };
@@ -25,6 +28,8 @@ export class RemoteDrags {
   private tracked = new Map<PeerId, Tracked>();
   private opened = new Map<PeerId, { zone: ZoneId; who: Who; since: number }>();
   private seen: string[] = [];
+  /** vom Stand beendete Züge: Meldungen mit denselben Karten und demselben Greifpunkt beleben sie nicht wieder */
+  private released = new Map<PeerId, { cards: CardId[]; grab: PointerPos | null }>();
   /** seit dem letzten `takeChanges` geändert */
   private dragsChanged = false;
   private openChanged = false;
@@ -41,11 +46,16 @@ export class RemoteDrags {
       else this.tracked.delete(peer);
       this.dragsChanged = true;
     }
+    // Sperre endet mit dem Zug: losgelassen, andere Karten, neuer Greifpunkt oder gegangen
+    for (const [peer, r] of this.released) {
+      const p = others.get(peer);
+      if (!p || !sameDrag(r, p)) this.released.delete(peer);
+    }
     for (const [peer, p] of others) {
-      if (!p.drag.length || !p.at) continue;
+      if (!p.drag.length || !p.at || this.released.has(peer)) continue;
       const t = this.tracked.get(peer);
-      if (t && !t.held && same(t.cards, p.drag)) t.last = p.at;
-      else this.tracked.set(peer, { cards: p.drag, who: p.who, start: p.grab ?? p.at, last: p.at, since: now });
+      if (t && !t.held && sameDrag(t, p)) t.last = p.at;
+      else this.tracked.set(peer, { cards: p.drag, who: p.who, start: p.grab ?? p.at, last: p.at, grab: p.grab, since: now });
       this.dragsChanged = true;
     }
 
@@ -61,10 +71,19 @@ export class RemoteDrags {
     }
   }
 
-  /** Ereignisse zu einem Befehl sind angekommen: dazu abgelegte Karten liegen jetzt am Ziel. */
-  confirmed(cause: string): void {
-    this.seen = [...this.seen.slice(1 - SEEN), cause];
-    this.release((t) => t.held?.cause === cause);
+  /** Neuer Stand mit Ereignissen (`cause` = auslösender Befehl, `moved` aus `movedCards`). Der Stand ist die Wahrheit:
+   *  Jeder Zug mit einer bewegten Karte endet, gehalten oder nicht, auch wenn „losgelassen“ noch nicht da war.
+   *  Gehaltene Züge zu `cause` enden ebenfalls (ihre Karten liegen jetzt am Ziel). */
+  confirmed(cause: string | undefined, moved: readonly CardId[]): void {
+    if (cause) this.seen = [...this.seen.slice(1 - SEEN), cause];
+    for (const [peer, t] of this.tracked) {
+      const hit = t.cards.some((c) => moved.includes(c));
+      if (!hit && !(cause && t.held?.cause === cause)) continue;
+      // nicht gehalten: die letzte Meldung zeigt noch den Zug und käme bei der nächsten Aktualisierung wieder
+      if (hit && !t.held) this.released.set(peer, { cards: t.cards, grab: t.grab });
+      this.tracked.delete(peer);
+      this.dragsChanged = true;
+    }
   }
 
   /** Abgelaufene Haltefristen beenden (Bewegung abgelehnt). */
@@ -113,4 +132,41 @@ export class RemoteDrags {
   }
 }
 
+/** Karten, deren Zone oder freie Lage sich durch die Ereignisse ändert (`prev` = Stand davor). Beim Mischen zählen nur
+ *  Karten, die aus einer anderen Zone kommen: Im selben Stapel verschiebt sich eine Karte kaum, ein Zug darf weiterlaufen. */
+export function movedCards(events: readonly Event[], prev: TableState<unknown> | null): CardId[] {
+  const out = new Set<CardId>();
+  for (const event of events) {
+    const e = event as EngineEvent;
+    switch (e.type) {
+      case 'cardsMoved':
+        for (const c of e.cards) out.add(c);
+        break;
+      case 'cardDrawn':
+        out.add(e.card);
+        break;
+      case 'zonesShuffled':
+        for (const [zone, cards] of Object.entries(e.zones)) {
+          for (const c of cards) {
+            const was = prev && locate(prev, c);
+            if (!(was && 'zone' in was && was.zone === zone)) out.add(c);
+          }
+        }
+        break;
+      case 'cardsReset':
+        for (const c of Object.values(e.zones).flat()) out.add(c);
+        break;
+    }
+  }
+  return [...out];
+}
+
 const same = (a: readonly CardId[], b: readonly CardId[]) => a.length === b.length && a.every((c, i) => c === b[i]);
+/** Zeigerlage nach Inhalt (Meldungen werden jedes Mal neu eingelesen) */
+function samePos(a: PointerPos | null, b: PointerPos | null): boolean {
+  if (!a || !b) return a === b;
+  const anchor = (p: PointerPos) => ('card' in p ? `card:${p.card}` : 'zone' in p ? `zone:${p.zone}` : `anchor:${p.anchor}`);
+  return anchor(a) === anchor(b) && a.x === b.x && a.y === b.y;
+}
+/** derselbe Zug: dieselben Karten, derselbe Greifpunkt */
+const sameDrag = (t: { cards: readonly CardId[]; grab: PointerPos | null }, p: PresenceInfo) => same(t.cards, p.drag) && samePos(t.grab, p.grab);

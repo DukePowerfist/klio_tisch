@@ -1,9 +1,10 @@
 // Was die anderen gerade tun (8.3, Schritt 5b): gezogene Karten mit Haltefrist, angewählte Stapel.
 
 import { describe, expect, it } from 'vitest';
-import type { CardId, FreePos } from '../../src/engine/types';
+import type { CardId, EngineEvent, FreePos } from '../../src/engine/types';
 import type { PresenceInfo } from '../../src/net/presence';
-import { HOLD_MS, RemoteDrags } from '../../src/ui/remoteDrags';
+import { HOLD_MS, movedCards, RemoteDrags } from '../../src/ui/remoteDrags';
+import { fresh, place } from '../helpers';
 
 const at = (x: number): FreePos => ({ anchor: 'center', x, y: 0.5 });
 const info = (p: Partial<PresenceInfo>): PresenceInfo => ({ who: 'seat1', name: '', at: at(0.1), drag: [], grab: null, dropped: null, open: null, ...p });
@@ -16,7 +17,9 @@ function setup() {
     else others.delete(peer);
     r.update(others, now);
   };
-  return { r, send };
+  /** Aktualisierung ohne neue Meldung dieses Peers (z. B. weil sich ein anderer bewegt) */
+  const again = (now: number) => r.update(others, now);
+  return { r, send, again };
 }
 
 describe('Gezogene Karten der anderen', () => {
@@ -57,9 +60,9 @@ describe('Gezogene Karten der anderen', () => {
     send('a', info({ drag: [], dropped: 'ui-1', at: at(0.9) }), 150);
     expect(r.drags()[0]!.last).toEqual(at(0.4));
     // Ereignisse zu anderen Befehlen lassen sie liegen
-    r.confirmed('ui-other');
+    r.confirmed('ui-other', []);
     expect(r.drags()).toHaveLength(1);
-    r.confirmed('ui-1');
+    r.confirmed('ui-1', ['H2']);
     expect(r.drags()).toEqual([]);
     expect(r.nextExpiry()).toBeNull();
   });
@@ -67,9 +70,12 @@ describe('Gezogene Karten der anderen', () => {
   it('kam das Ereignis schon vor der Zeigermeldung, wird nicht gewartet', () => {
     const { r, send } = setup();
     send('a', info({ drag: ['H2'] }), 0);
-    r.confirmed('ui-1');
+    r.confirmed('ui-1', ['H2']);
+    // sofort, nicht erst mit der Zeigermeldung: sonst läge der Zieh-Versatz auf der Karte am Ziel
+    expect(r.drags()).toEqual([]);
     send('a', info({ drag: [], dropped: 'ui-1' }), 100);
     expect(r.drags()).toEqual([]);
+    expect(r.nextExpiry()).toBeNull();
   });
 
   it('abgelegt, aber kein Ereignis (abgelehnt): nach der Haltefrist zurück', () => {
@@ -108,6 +114,119 @@ describe('Gezogene Karten der anderen', () => {
     // auch wenn der Zweite weiter meldet
     send('b', info({ who: 'seat2', drag: ['H2'], at: at(0.5) }), 60);
     expect(r.drags()).toEqual([expect.objectContaining({ who: 'seat1' })]);
+  });
+});
+
+describe('Der Stand beendet fremde Züge', () => {
+  const grab = (x: number): FreePos => ({ anchor: 'center', x, y: 0.2 });
+
+  it('die letzte Meldung belebt den Zug nicht wieder, auch nicht über die Meldung eines anderen', () => {
+    const { r, send, again } = setup();
+    send('a', info({ drag: ['H2'], grab: grab(0.1), at: at(0.4) }), 0);
+    r.confirmed('ui-1', ['H2']);
+    again(20);
+    send('b', info({ who: 'seat2', at: at(0.7) }), 30);
+    expect(r.drags()).toEqual([]);
+    // auch eine verspätete Bewegungsmeldung von kurz vor dem Loslassen nicht
+    send('a', info({ drag: ['H2'], grab: grab(0.1), at: at(0.45) }), 40);
+    expect(r.drags()).toEqual([]);
+  });
+
+  it('neu gegriffen: mit losgelassen dazwischen oder zusammengefasst (anderer Greifpunkt) wieder verfolgt', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'], grab: grab(0.1), at: at(0.4) }), 0);
+    r.confirmed('ui-1', ['H2']);
+    send('a', info({ drag: [], dropped: 'ui-1' }), 50);
+    send('a', info({ drag: ['H2'], grab: grab(0.1), at: at(0.5) }), 100);
+    expect(r.drags()).toEqual([expect.objectContaining({ cards: ['H2'], start: grab(0.1), last: at(0.5) })]);
+
+    r.confirmed('ui-2', ['H2']);
+    // losgelassen und gleich wieder gegriffen in einer Meldung: nur der Greifpunkt ist neu
+    send('a', info({ drag: ['H2'], grab: grab(0.3), at: at(0.6) }), 150);
+    expect(r.drags()).toEqual([expect.objectContaining({ start: grab(0.3), last: at(0.6) })]);
+  });
+
+  it('dieselben Karten mit neuem Greifpunkt sind ein neuer Zug, auch ohne Ereignis', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'], grab: grab(0.1), at: at(0.4) }), 0);
+    send('a', info({ drag: ['H2'], grab: grab(0.3), at: at(0.6) }), 50);
+    expect(r.drags()).toEqual([expect.objectContaining({ start: grab(0.3), last: at(0.6) })]);
+  });
+
+  it('Züge mit anderen Karten bleiben', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'] }), 0);
+    send('b', info({ who: 'seat2', drag: ['S5'] }), 10);
+    r.confirmed('ui-1', ['H2']);
+    expect(r.drags()).toEqual([expect.objectContaining({ who: 'seat2', cards: ['S5'] })]);
+  });
+
+  it('zwei ziehen dieselbe Karte: bewegt der Befehl des einen sie, endet auch der Zug des anderen (gewollt)', () => {
+    const { r, send } = setup();
+    send('a', info({ who: 'seat1', drag: ['H2'], grab: grab(0.1) }), 0);
+    send('b', info({ who: 'seat2', drag: ['H2'], grab: grab(0.2) }), 10);
+    r.confirmed('ui-a', ['H2']);
+    expect(r.drags()).toEqual([]);
+    // b zieht weiter; sein Befehl wird ohnehin abgelehnt, die Karte liegt bei allen am Ziel von a
+    send('b', info({ who: 'seat2', drag: ['H2'], grab: grab(0.2), at: at(0.8) }), 60);
+    expect(r.drags()).toEqual([]);
+  });
+
+  it('gehalten auf einen anderen Befehl: endet sofort, wenn ein fremder Befehl die Karte bewegt', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'] }), 0);
+    send('a', info({ drag: [], dropped: 'ui-a' }), 50);
+    expect(r.nextExpiry()).toBe(50 + HOLD_MS);
+    r.confirmed('ui-b', ['H2']);
+    expect(r.drags()).toEqual([]);
+    expect(r.nextExpiry()).toBeNull();
+  });
+
+  it('Bewegung ohne Befehl des Ziehenden (z. B. Mischen): beendet den Zug ebenfalls', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'] }), 0);
+    r.confirmed(undefined, ['H2']);
+    expect(r.drags()).toEqual([]);
+  });
+
+  it('bekannte Grenze: kommt der neue Griff vor dem Ereignis des alten Zugs, endet der neue Zug bis zum Loslassen', () => {
+    const { r, send } = setup();
+    send('a', info({ drag: ['H2'], grab: grab(0.1) }), 0);
+    send('a', info({ drag: [], dropped: 'ui-1' }), 50);
+    send('a', info({ drag: ['H2'], grab: grab(0.3), at: at(0.5) }), 60);
+    r.confirmed('ui-1', ['H2']);
+    expect(r.drags()).toEqual([]);
+    send('a', info({ drag: ['H2'], grab: grab(0.3), at: at(0.7) }), 110);
+    expect(r.drags()).toEqual([]);
+  });
+
+  it('wer geht, dessen Sperre verschwindet', () => {
+    const { r, send } = setup();
+    const moving = info({ drag: ['H2'], grab: grab(0.1), at: at(0.4) });
+    send('a', moving, 0);
+    r.confirmed('ui-1', ['H2']);
+    send('a', null, 50);
+    send('a', moving, 100);
+    expect(r.drags()).toEqual([expect.objectContaining({ cards: ['H2'] })]);
+  });
+});
+
+describe('Bewegte Karten aus den Ereignissen', () => {
+  const s = place(fresh(), 'discard', ['H3']);
+  const of = (...events: EngineEvent[]) => events;
+
+  it('Verschieben, Ziehen, Neuverteilen: alle genannten Karten', () => {
+    expect(movedCards(of({ type: 'cardsMoved', cards: ['H2', 'H4'], from: { zone: 'deck' }, to: { zone: 'discard' } }), s)).toEqual(['H2', 'H4']);
+    expect(movedCards(of({ type: 'cardDrawn', card: 'C5', from: 'clubs', to: 'display', faceUp: true, announce: true }), s)).toEqual(['C5']);
+    expect(movedCards(of({ type: 'cardsReset', zones: { deck: ['H2', 'H3'], clubs: ['C2'] } }), s)).toEqual(['H2', 'H3', 'C2']);
+  });
+
+  it('Mischen: nur Karten aus einer anderen Zone, nicht die, die im Stapel bleiben', () => {
+    expect(movedCards(of({ type: 'zonesShuffled', shuffled: ['deck'], zones: { deck: ['H3', 'H2'], discard: [] } }), s)).toEqual(['H3']);
+  });
+
+  it('Umdrehen und andere Ereignisse bewegen nichts', () => {
+    expect(movedCards([...of({ type: 'cardsTurned', cards: ['H2'], faceUp: true }), { type: 'sheetChanged' }], s)).toEqual([]);
   });
 });
 
