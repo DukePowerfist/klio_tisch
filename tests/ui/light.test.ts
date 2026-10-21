@@ -1,7 +1,7 @@
 // Schatten von der Flamme weg (ARCHITEKTUR.md 11.9).
 
 import { describe, expect, it } from 'vitest';
-import { HEIGHT, MAX_OFFSET, onCard, shadowAt, stackHeight } from '../../src/ui/light';
+import { HEIGHT, MAX_OFFSET, onCard, shadowAt, shadowCss, stackHeight } from '../../src/ui/light';
 
 const flame = { x: 880, y: 70, h: 260 };
 
@@ -47,5 +47,13 @@ describe('Schatten der Laterne', () => {
     expect(screen.x).toBeCloseTo(-6);
     expect(screen.y).toBeCloseTo(0);
     expect(local.blur).toBeCloseTo(5);
+  });
+});
+
+describe('Schatten als CSS', () => {
+  it('Versatz, Weichheit und Deckkraft, auf zwei Stellen gerundet; Deckkraft ersetzbar', () => {
+    const s = { x: -3.14159, y: 2, blur: 4.006, alpha: 0.63 };
+    expect(shadowCss(s)).toBe('-3.14px 2px 4.01px rgba(0, 0, 0, 0.63)');
+    expect(shadowCss(s, 0.3)).toBe('-3.14px 2px 4.01px rgba(0, 0, 0, 0.3)');
   });
 });

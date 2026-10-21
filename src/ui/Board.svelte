@@ -11,6 +11,8 @@
   import Cursors from './Cursors.svelte';
   import GmControls from './GmControls.svelte';
   import Lamp from './Lamp.svelte';
+  import { lampShadows } from './lampLight.svelte';
+  import { shadowAt, shadowCss, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
@@ -94,6 +96,9 @@
   type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
+  /** Flamme für die Schatten (11.9); null bei gelöschter Laterne: dann die bisherigen Schatten */
+  const flame = $derived(lampShadows.lit ? layout.lamp.flame : null);
+  const feltShadow = $derived(flame ? shadowCss(shadowAt(flame, layout.middle.x + layout.middle.w / 2, layout.middle.y + layout.middle.h / 2, HEIGHT.felt)) : undefined);
   // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
   // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
   // kurz nach dem Laden); bis dahin der Grundton des Holzes.
@@ -362,20 +367,23 @@
 >
   <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>
     <div class="scene" bind:this={sceneEl}>
-      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
+      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-shadow={feltShadow}></div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} />
       <GmControls at={layout.gmControls} {players} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
       {#each Object.values(layout.sheets) as box (box.seat)}
         {#if box.visible}
-          <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
+          <!-- Schatten des Bogens von der Flamme weg (11.9); `display: contents`, die Variable erbt der Bogen -->
+          <div class="shade" style:--sheet-shadow={flame ? shadowCss(shadowAt(flame, box.x + box.w / 2, box.y + box.h / 2, HEIGHT.sheet)) : undefined}>
+            <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
+          </div>
         {/if}
       {/each}
 
       {#each layout.zoneList as zone (zone.id)}
         {@const openedBy = session.openZones.get(zone.id)}
-        <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} card={layout.card} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+        <ZoneView {zone} {flame} count={table.zones[zone.id]?.length ?? 0} card={layout.card} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
       {/each}
 
       {#each cards as [card, p] (card)}
@@ -389,6 +397,7 @@
           z={p.z}
           slot={p.slot}
           size={layout.card}
+          {flame}
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}
           pending={offsetOf.has(card) && off !== drag}
@@ -413,11 +422,12 @@
 <style>
   .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--room); }
   .scene { position: absolute; inset: 0; }
+  .shade { display: contents; }
   /* Holz (11.9): `border-radius` rundet die Platte ab; kein overflow: über den Rand gezogene Karten bleiben sichtbar */
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--wood) 0 0 / 100% 100% no-repeat; border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
   /* Filz als Einlage: Struktur über der Filzfarbe, dunkler Rand wie Leder, Schatten nach innen und aufs Holz */
   .panel { position: absolute; background: var(--felt-grain), var(--felt); border-radius: 56px; box-sizing: border-box;
-    box-shadow: 0 0 0 6px var(--felt-rim), 0 0 0 7px var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), 0 3px 8px 6px rgba(0, 0, 0, 0.5); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
+    box-shadow: 0 0 0 6px var(--felt-rim), 0 0 0 7px var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* in der Bühne: rückt mit dem Tisch zur Seite, wenn das Protokoll offen ist */
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */

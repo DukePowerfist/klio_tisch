@@ -101,6 +101,11 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await gm.keyboard.press('Escape');
   await player.getByRole('button', { name: 'Laterne anzünden' }).click();
   await expect(gm.locator('[data-lamp]')).toHaveAttribute('data-lit', 'true');
+  // nach einem fremden Ereignis bleibt die Laterne für die SL bedienbar
+  await gm.getByRole('button', { name: 'Laterne löschen' }).click();
+  await expect(player.locator('[data-lamp]')).toHaveAttribute('data-lit', 'false');
+  await gm.getByRole('button', { name: 'Laterne anzünden' }).click();
+  await expect(player.locator('[data-lamp]')).toHaveAttribute('data-lit', 'true');
 
   // Spieler zieht eine Karte, SL sieht sie
   await player.keyboard.press('0');

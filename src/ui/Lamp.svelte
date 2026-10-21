@@ -6,6 +6,7 @@
   import { timing } from './animator.svelte';
   import { submitOrSay } from './commands';
   import type { LampBox } from './layout';
+  import { lampShadows } from './lampLight.svelte';
   import { haloGradient, IGNITE, lightGradient } from './light';
   import { session } from './session.svelte';
   import { t } from './texts';
@@ -34,14 +35,29 @@
   function turn(to: boolean): void {
     const { lampOn, lampOff } = timing();
     const duration = to ? lampOn : lampOff;
+    // Schatten springen, wenn die Laterne am wenigsten leuchtet: beim Anzünden jetzt, beim Löschen am Ende
+    if (to || !duration) lampShadows.lit = to;
     if (!duration) return;
     const up = to ? IGNITE : [{ opacity: 1 }, { opacity: 0 }];
     const down = up.map((k) => ({ ...k, opacity: 1 - Number(k.opacity) }));
     const opts = { duration, easing: to ? 'linear' : 'ease-in' };
     const anims = [on, glow, ember].flatMap((el) => (el ? [el.animate(up, opts)] : []));
     anims.push(out.animate(down, opts));
-    running = Promise.all(anims.map((a) => a.finished.catch(() => undefined)));
+    const r = Promise.all(anims.map((a) => a.finished.catch(() => undefined))).then(() => {
+      if (!to) lampShadows.lit = false;
+      // auch nach einem fremden Ereignis wieder frei für Klicks
+      if (running === r) running = null;
+    });
+    running = r;
   }
+
+  // Laden, Beitreten, Wiederherstellen: ohne Ereignis, also ohne Übergang; die Schatten folgen dem Stand
+  $effect(() => {
+    const now = lit;
+    untrack(() => {
+      if (!running) lampShadows.lit = now;
+    });
+  });
 
   $effect(() => session.onEvents((events) => {
     let last: boolean | null = null;
@@ -55,9 +71,6 @@
     sending = true;
     await submitOrSay({ type: 'table.setLamp', lit: !lit });
     sending = false;
-    const r = running;
-    if (r) await r;
-    if (running === r) running = null;
   }
 </script>
 

@@ -5,13 +5,17 @@
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
   import { appear, cause, cue, cut, events, fade, move, revealed, strike, Tilt, timing, turn, wobble } from './animator.svelte';
+  import type { LampBox } from './layout';
+  import { HEIGHT, onCard, shadowAt, shadowCss } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
   import { view } from './view.svelte';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number };
+    /** Flamme der Laterne für den Schatten (11.9); null: der bisherige Schatten */
+    flame?: LampBox['flame'] | null;
     /** Platz im Stand (`CardPlace.slot`) */
     slot?: string;
     dragging?: boolean; pending?: boolean;
@@ -25,6 +29,19 @@
 
   /** angehoben: selbst oder von jemand anderem gezogen */
   const lifted = $derived(dragging || !!mark);
+
+  /** Schatten von der Flamme weg (11.9), umgerechnet ins Koordinatensystem der Karte (gedreht, verkleinert): liegend
+   *  auf `.face`, angehoben (auch von anderen gezogen) lang und weich auf `.lift::before` */
+  const shadows = $derived.by(() => {
+    if (!flame) return null;
+    const w = (rotated ? size.h : size.w) * scale;
+    const h = (rotated ? size.w : size.h) * scale;
+    const at = (height: number) => onCard(shadowAt(flame, x + w / 2, y + h / 2, height), rotated, scale);
+    return {
+      face: `0 0 1px rgba(0, 0, 0, 0.6), ${shadowCss(at(HEIGHT.card))}`,
+      lift: `${shadowCss(at(HEIGHT.lifted), 0.42)}, ${shadowCss(at(HEIGHT.lifted / 3), 0.3)}`,
+    };
+  });
   const suit = $derived(SUIT_SYMBOL[suitOf(card)]);
   const rank = $derived(rankLabel(card));
   // gedreht: um die linke obere Ecke drehen und um die Kartenhöhe nach rechts schieben (wie bisher). Immer derselbe
@@ -91,7 +108,7 @@
   const back = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 </script>
 
-<div bind:this={el} transition:appear={{ still: still || view.cutting }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} class:hover style:--mark={mark} style:--glow-c={lastMark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
+<div bind:this={el} transition:appear={{ still: still || view.cutting }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} class:hover style:--mark={mark} style:--glow-c={lastMark} style:--face-shadow={shadows?.face} style:--lift-shadow={shadows?.lift} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
   <div bind:this={lift} class="lift">
   <div bind:this={inner} class="inner" class:down={!faceUp}>
     <div class="face front">
@@ -114,7 +131,7 @@
      Überschwingen zurück. */
   .lift { position: relative; width: 100%; height: 100%; perspective: 600px; transition: scale var(--grab) var(--spring-soft), translate var(--grab) var(--spring-soft), transform var(--hover) ease-out; }
   .lift::before, .lift::after { content: ''; position: absolute; inset: 0; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity var(--grab); }
-  .lift::before { box-shadow: var(--lift); }
+  .lift::before { box-shadow: var(--lift-shadow, var(--lift)); }
   .lift::after { box-shadow: 0 0 0 3px var(--glow-c, transparent), 0 0 14px 2px var(--glow-c, transparent); }
   .dragging .lift, .marked .lift { scale: 1.1; translate: 0 -6px; transition-timing-function: var(--spring); }
   /* Überfahren (11.6): ganz leicht anheben über `transform` (Greifen und Neigen liegen auf `scale`, `translate`, `rotate`),
@@ -128,7 +145,7 @@
   .dragging .lift::before, .marked .lift::before { opacity: 1; }
   .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
   .inner.down { rotate: y 180deg; }
-  .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); box-sizing: border-box; }
+  .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: var(--face-shadow, 0 1px 3px rgba(0, 0, 0, 0.55)); box-sizing: border-box; }
   .marked .face { box-shadow: 0 0 0 3px var(--mark); }
   .front { background: var(--card); color: var(--card-black); }
   .red .front { color: var(--card-red); }

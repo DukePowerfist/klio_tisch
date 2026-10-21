@@ -237,7 +237,7 @@
 </div>
 
 <style>
-  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); background: #fff; color: #1b1b1b; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), opacity var(--shift) var(--shift-ease); }
+  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: var(--sheet-shadow, 0 2px 10px rgba(0, 0, 0, 0.5)); background: #fff; color: #1b1b1b; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), opacity var(--shift) var(--shift-ease); }
   .sheet.hit { outline: 3px solid rgba(190, 40, 30, 0.75); outline-offset: -3px; }
   .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift) var(--shift-ease); }
   .cb { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; color: inherit; }

@@ -22,6 +22,12 @@ export function shadowAt(flame: LampBox['flame'], x: number, y: number, h: numbe
   return { x: dx * k, y: dy * k, blur: 1.5 + h * 0.5 + d * 0.004, alpha: 0.63 };
 }
 
+/** Als Wert für `box-shadow`; `alpha` ersetzt die Deckkraft (etwa für eine zweite, weichere Lage) */
+export function shadowCss(s: Shadow, alpha = s.alpha): string {
+  const n = (v: number) => +v.toFixed(2);
+  return `${n(s.x)}px ${n(s.y)}px ${n(s.blur)}px rgba(0, 0, 0, ${alpha})`;
+}
+
 /** Ins Koordinatensystem einer Karte: Der Schatten liegt dort unter `rotate(90deg) scale(s)` (Card.svelte).
  *  Gedreht zeigt ein Versatz (x, y) der Karte auf dem Bildschirm nach (−y, x); zurück also (y, −x). Nur für Karten:
  *  Bögen und Stapelkanten haben ihre Größe ohne `transform` und liegen schon in Tischkoordinaten. */

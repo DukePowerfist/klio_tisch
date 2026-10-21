@@ -4,12 +4,15 @@
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
-  import { stackEdges, type ZoneBox } from './layout';
+  import { stackEdges, type LampBox, type ZoneBox } from './layout';
+  import { HEIGHT, shadowAt, shadowCss } from './light';
   import { session } from './session.svelte';
   import { t, tMaybe } from './texts';
 
-  let { zone, count, card, open, hot, mark, fixedMenu, onToggle, onAction }: {
+  let { zone, count, card, open, hot, mark, fixedMenu, flame = null, onToggle, onAction }: {
     zone: ZoneBox; count: number; open: boolean; hot: boolean;
+    /** Flamme der Laterne für die Schatten der Kanten (11.9); null: der bisherige Schatten */
+    flame?: LampBox['flame'] | null;
     /** Kartengröße bei Maßstab 1 (für die Kanten eines Stapels) */
     card: { w: number; h: number };
     /** Farbe, wenn jemand anderes das Menü dieses Stapels offen hat (8.3) */
@@ -47,6 +50,8 @@
       if (n && countChanged(zone.id)) popCount(n);
     });
   });
+  /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab */
+  const edgeShadow = $derived(flame ? shadowCss(shadowAt(flame, zone.x + (card.w * zone.scale) / 2, zone.y + (card.h * zone.scale) / 2, HEIGHT.card)) : undefined);
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 
@@ -80,7 +85,7 @@
     </div>
   {/if}
   {#each edges as k (k)}
-    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})"></div>
+    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})" style:box-shadow={edgeShadow}></div>
   {/each}
 </div>
 
