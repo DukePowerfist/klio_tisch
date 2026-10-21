@@ -30,6 +30,16 @@
 
   // Spielerzahl als eigener Wert: die Geometrie ändert sich nur, wenn sie sich ändert, nicht bei jedem Befehl
   const players = $derived(table.settings.players);
+  // neue Spielerzahl: Sprung und Aufblenden (11.8); vor dem Neuzeichnen, damit die Karten schon mit dem Schnitt planen
+  let shownPlayers = untrack(() => players);
+  $effect.pre(() => {
+    const n = players;
+    untrack(() => {
+      if (n === shownPlayers) return;
+      shownPlayers = n;
+      void view.reveal();
+    });
+  });
   const layout = $derived(computeLayout(content, players, view.role, view.open));
   const places = $derived(placeCards(table, layout));
   // feste Reihenfolge im DOM (nach Kennung): Eine Karte, die die Zone wechselt, behält ihr Element; die Stapelung regelt z (11.4)

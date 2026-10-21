@@ -244,11 +244,17 @@ test('Schaden: erst aufdecken, dann Stoß, dann Narbe und Meldung (5k)', async (
 
 type Seen = { kind: string; on: string; props: string[]; to: string | null; duration: number };
 
-/** Tasten im Browser drücken (ohne Umweg über Playwright, der Schnitt dauert nur etwa 0,3 s) und 600 ms lang jedes Bild
- *  alle laufenden Animationen und CSS-Übergänge sammeln, je einmal. `dock`: Ansicht im Dock direkt nach den Tasten. */
-function keysAndWatch(page: Page, keys: string[]): Promise<{ seen: Seen[]; dock: string | null }> {
-  return page.evaluate(async (keys) => {
+/** Tasten im Browser drücken bzw. die Spielerzahl wählen (ohne Umweg über Playwright, der Schnitt dauert nur etwa
+ *  0,3 s) und 600 ms lang jedes Bild alle laufenden Animationen und CSS-Übergänge sammeln, je einmal. `dock`: Ansicht im
+ *  Dock direkt danach. */
+function keysAndWatch(page: Page, keys: string[], players?: number): Promise<{ seen: Seen[]; dock: string | null }> {
+  return page.evaluate(async ({ keys, players }) => {
     for (const key of keys) document.body.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    if (players) {
+      const select = document.querySelector<HTMLSelectElement>('.ctl select')!;
+      select.value = String(players);
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     await new Promise((r) => requestAnimationFrame(r));
     const dock = document.querySelector<HTMLElement>('.dock button.on')?.dataset['dock'] ?? 'overview';
     const all = new Set<Animation>();
@@ -270,7 +276,7 @@ function keysAndWatch(page: Page, keys: string[]): Promise<{ seen: Seen[]; dock:
       };
     });
     return { seen, dock };
-  }, keys);
+  }, { keys, players });
 }
 /** gesehene Bewegungen der Lage: Karten (`transform`) und CSS-Übergänge auf Bögen, Zonen, Kanten und Panel */
 const shifts = (seen: Seen[]) => seen.filter((s) => (s.on === 'card' && s.props.includes('transform')) || (s.kind === 'CSSTransition' && ['zone', 'edge', 'sheet', 'paper', 'panel', 'ptitle'].includes(s.on)));
@@ -337,6 +343,21 @@ test('Ansichtswechsel: ein Klick während des Schnitts beginnt keinen Zug (5m)',
   expect(dragged).toBe(0);
   await page.waitForTimeout(400);
   await expectCount(page, 'DECK', 27);
+});
+
+test('Spielerzahl: Sprung an die neue Anordnung, dann Aufblenden, ohne Abblenden (5m)', async ({ page }) => {
+  // eine Karte auf dem Bogen von Spieler 1: Bei 2 Spielern werden die Bögen größer, sie wandert mit
+  await dragFromTo(page, await zoneCenter(page, 'DECK'), await zoneCenter(page, 'SAMMELN'));
+  await expectCount(page, 'DECK', 26);
+  await page.waitForTimeout(1500);
+  const before = (await zoneCenter(page, 'SAMMELN')).box;
+  const { seen } = await keysAndWatch(page, [], 2);
+  await expect(page.locator('.dock button.seat')).toHaveCount(2);
+  expect((await zoneCenter(page, 'SAMMELN')).box.width, 'die Anordnung ändert sich').toBeGreaterThan(before.width * 1.1);
+  expect(shifts(seen)).toEqual([]);
+  const fades = seen.filter((s) => s.props.includes('opacity') && s.on === 'scene');
+  expect(fades.map((f) => f.to)).not.toContain('0');
+  expect(fades.filter((f) => f.to === '1').map((f) => f.duration)).toEqual([180]);
 });
 
 test('Öffnen eines Stapels wächst weiter mit --shift (Gegenprobe zu 5m)', async ({ page }) => {

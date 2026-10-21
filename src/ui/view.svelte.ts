@@ -109,6 +109,23 @@ class ViewState {
     if (id === this.cuts) this.phase = null;
   }
 
+  /** Neue Spielerzahl (11.8): die Anordnung kommt mit dem Stand, also ohne Abblenden; Sprung, dann Aufblenden.
+   *  Aufruf vor dem Neuzeichnen (`$effect.pre` in Board.svelte), damit die Karten schon mit dem Schnitt planen. */
+  async reveal(): Promise<void> {
+    const scene = this.scene;
+    if (!scene || timing().viewIn === 0) return;
+    this.cutting = true;
+    // läuft gerade ein Abblenden, blendet dieser Schnitt am Ende auf
+    if (this.phase === 'out') return;
+    const id = ++this.cuts;
+    this.phase = 'in';
+    this.fade?.cancel();
+    this.fade = scene.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, fill: 'forwards' });
+    await this.settle(scene);
+    await this.fadeTo(scene, 1, timing().viewIn, 'ease-out');
+    if (id === this.cuts) this.phase = null;
+  }
+
   /** Neue Lagen ohne Übergang setzen: erst neu zeichnen, dann den Stil berechnen lassen, dann den Schnitt lösen.
    *  Ohne das Lesen fielen neue Lage und gelöstes `data-cut` in dieselbe Stilberechnung, und `--shift` liefe doch. */
   private async settle(scene: HTMLElement): Promise<void> {
