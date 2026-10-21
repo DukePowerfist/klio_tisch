@@ -213,6 +213,9 @@ settings:                                 # Einstellungen (neu; seit 5g für all
     browser: in diesem Browser
     mine: nur für dich
     mineHint: Gilt nur in diesem Browser; die anderen am Tisch stellen es für sich ein.
+  notices: Meldungen                      # Gruppe auf der Seite „Automatik“ (11.7)
+  noticeArrivals: Meldung bei Kommen und Gehen
+  noticeArrivalsHelp: Zeigt allen eine Meldung, wenn jemand einen Platz einnimmt, die Verbindung verliert oder wiederkommt. Das Protokoll trägt es immer ein.
   automationHelp:
     damage: "Landet eine niedrigere Karte auf dem Schadensfeld, markiert der Tisch die passende Narbe; ist sie schon markiert oder ist es Kreuz, ist der Charakter tot. Aus: Die Karten bleiben liegen, ausgewertet wird von Hand."
   groups:                                 # Zwischenüberschriften auf der Seite „Rechte der Spieler“

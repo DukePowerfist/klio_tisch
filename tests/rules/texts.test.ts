@@ -54,6 +54,7 @@ describe('Texte', () => {
       ...['all', 'allHint', 'browser', 'mine', 'mineHint'].map((s) => `settings.scope.${s}`),
       ...EFFECT_LEVELS.map((l) => `settings.levels.${l}`),
       'settings.effects', 'settings.effectsHelp',
+      'settings.notices', 'settings.noticeArrivals', 'settings.noticeArrivalsHelp',
       ...['allow', 'own', 'deny'].map((v) => `settings.values.${v}`),
       ...['table.reset', 'import', 'restore'].map((r) => `settings.backupReasons.${r}`),
       'settings.defaults', 'settings.defaultsHelp', 'settings.export', 'settings.exportHelp', 'settings.exportButton',

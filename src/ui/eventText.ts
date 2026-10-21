@@ -68,6 +68,13 @@ export function describeArrival(s: ArrivalSignal, seats: TableState<unknown>['se
   }
 }
 
+/** Meldung (Toast) zu Kommen und Gehen: neu, nicht mehr verbunden, wieder da; nicht bei der Person selbst (wer
+ *  zugewiesen oder umgesetzt wird, hat schon die Meldung aus 8.7). Text wie im Protokoll. */
+export function noticeArrival(s: ArrivalSignal, seats: TableState<unknown>['seats']): string | null {
+  if (s.type === 'arrived' && s.how === 'new') return s.self ? null : describeArrival({ type: 'seated', seat: s.seat }, seats);
+  return s.type === 'left' || s.type === 'arrived' ? describeArrival(s, seats) : null;
+}
+
 /** Meldung je Ziel (texts: toast.drawnTo.<zone>), sonst „Aufgedeckt“. */
 function drawnKey(to: ZoneId): string {
   const specific = `toast.drawnTo.${to}`;

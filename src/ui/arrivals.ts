@@ -7,6 +7,10 @@ import { SEATS, type SeatId, type TableState } from '../engine/types';
 import type { PresenceInfo } from '../net/presence';
 import type { PeerId } from '../net/transport';
 
+/** Schalter „Meldung bei Kommen und Gehen“ im vorhandenen `settings.automation` (fehlend heißt an); der Punkt hält
+ *  ihn von den IDs der Reaktionen fern (11.7) */
+export const NOTICE_ARRIVALS = 'notice.arrivals';
+
 /** so lange darf eine Verbindung abreißen, ohne dass der Tisch etwas zeigt (Nutzer 2026-10-21) */
 export const AWAY_MS = 5000;
 

@@ -6,7 +6,8 @@ import type { EngineEvent, SeatId } from '../engine/types';
 import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { afterReveal, noteEvents, strikeImpacted } from './animator.svelte';
-import { describe } from './eventText';
+import { NOTICE_ARRIVALS } from './arrivals';
+import { describe, noticeArrival } from './eventText';
 import { session } from './session.svelte';
 import { t } from './texts';
 import { view } from './view.svelte';
@@ -44,6 +45,12 @@ class Effects {
   private edits = new Map<string, { value: unknown; at: number }>();
 
   constructor() {
+    // Kommen und Gehen (11.7): Meldung bei allen außer der Person selbst, sofern die SL sie nicht abgeschaltet hat
+    session.onArrivals((signals, state) => {
+      if (state.settings.automation[NOTICE_ARRIVALS] === false) return;
+      const texts = signals.flatMap((s) => noticeArrival(s, state.seats) ?? []);
+      if (texts.length > 0) view.say(texts.join(' '));
+    });
     // Eigene Eingaben merken, egal von wo gesendet
     session.onSubmit((cmd) => {
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(key(cmd['seat'] as SeatId, String(cmd['field'])), { value: cmd['value'], at: Date.now() });

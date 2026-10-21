@@ -32,6 +32,8 @@ const Overrides = z.record(z.string(), PermissionValueSchema);
 
 const TableSettingsSchema = z.object({
   players: PlayersSchema,
+  /** je Reaktion an oder aus (fehlend heißt an); dazu Schalter der Oberfläche mit Punkt im Namen, etwa
+   *  `notice.arrivals` (Meldung bei Kommen und Gehen, 11.7), die `dispatch` nicht liest */
   automation: z.record(z.string(), z.boolean()),
   permissionOverrides: z.object({ player: Overrides.exactOptional(), spectator: Overrides.exactOptional() }).strict(),
 }).strict();

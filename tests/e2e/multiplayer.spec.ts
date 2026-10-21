@@ -308,6 +308,10 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
   await seated(a);
   await expect(entries('Ida sitzt an Platz 2.')).toHaveCount(1);
+  // Meldung bei der SL, nicht bei Ida selbst
+  await expect(gm.getByRole('status')).toHaveText('Ida sitzt an Platz 2.');
+  // sofort gezählt: `toHaveCount(0)` würde warten, bis eine Meldung von selbst verschwindet
+  expect(await a.getByRole('status').filter({ hasText: 'sitzt an Platz' }).count()).toBe(0);
 
   // Tab B mit demselben Schlüssel übernimmt; A verlässt den Raum (sonst meldete A weiter Platz 2)
   const b = await browserOfIda.newPage();
@@ -317,12 +321,20 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   // B schließen: Platz 2 ist nicht mehr verbunden (Trystero bemerkt es nach einigen Sekunden, dann 5 s Wartezeit)
   await b.close();
   await expect(entries('Ida ist nicht mehr verbunden.')).toHaveCount(1, { timeout: 30_000 });
+  await expect(gm.getByRole('status')).toHaveText('Ida ist nicht mehr verbunden.');
+
+  // Meldung abgeschaltet: das Protokoll trägt weiter ein
+  const settings = await openSettings(gm, 'Automatik');
+  await settings.getByRole('switch', { name: 'Meldung bei Kommen und Gehen' }).uncheck();
+  await gm.keyboard.press('Escape');
+  await expect(gm.getByRole('status')).toHaveCount(0);
 
   // derselbe Browser kommt wieder
   const c = await browserOfIda.newPage();
   await c.goto(link);
   await seated(c, 60_000);
   await expect(entries('Ida ist wieder da.')).toHaveCount(1, { timeout: 30_000 });
+  expect(await gm.getByRole('status').count()).toBe(0);
   // der Wechsel von A zu B war kein Gehen, das Belegen steht nur einmal da
   await expect(entries(/nicht mehr verbunden/)).toHaveCount(1);
   await expect(entries(/sitzt an Platz/)).toHaveCount(1);

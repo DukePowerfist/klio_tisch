@@ -81,6 +81,21 @@ test('Frei liegende Karte am Bogen folgt dem Bogen in die Rollenansicht (A32)', 
   await expect.poll(inside).toBe(true);
 });
 
+test('Einstellungen: Meldung bei Kommen und Gehen in eigener Gruppe auf „Automatik“, an, bleibt aus nach dem Neuladen (5l)', async ({ page }) => {
+  const dialog = await openSettings(page, 'Automatik');
+  const group = dialog.getByRole('region', { name: 'Meldungen' });
+  const notice = group.getByRole('switch', { name: 'Meldung bei Kommen und Gehen' });
+  await expect(notice).toBeChecked();
+  await expect(group).toContainText('Das Protokoll trägt es immer ein.');
+  await notice.uncheck();
+  await page.reload();
+  await ready(page);
+  await openSettings(page, 'Automatik');
+  await expect(notice).not.toBeChecked();
+  // die Reaktion daneben bleibt unberührt
+  await expect(dialog.getByRole('switch', { name: /Schaden automatisch/ })).toBeChecked();
+});
+
 test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach dem Neuladen', async ({ page }) => {
   const dialog = await openSettings(page, 'Rechte der Spieler');
   const free = dialog.getByRole('combobox', { name: 'Trumpf frei wählen (ohne Regelprüfung)' });

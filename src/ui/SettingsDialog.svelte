@@ -15,6 +15,7 @@
   import { t, text, tMaybe } from './texts';
   import { view } from './view.svelte';
   import { EFFECT_LEVELS, effectLevel, type EffectLevel } from './effectLevel.svelte';
+  import { NOTICE_ARRIVALS } from './arrivals';
 
   const VALUES: PermissionValue[] = ['allow', 'own', 'deny'];
   const defaults = ruleset.permissions.player;
@@ -109,6 +110,14 @@
               checked={settings.automation[r.id] !== false} onchange={(e) => setAutomation(r.id, e.currentTarget.checked)} />
           </SettingRow>
         {/each}
+        <!-- Schalter der Oberfläche im selben Feld des Stands (11.7) -->
+        <section aria-labelledby="group-notices">
+          <h3 id="group-notices">{t('settings.notices')}</h3>
+          <SettingRow id="notice-arrivals" title={t('settings.noticeArrivals')} description={t('settings.noticeArrivalsHelp')}>
+            <input class="switch" type="checkbox" role="switch" aria-labelledby="notice-arrivals-title" aria-describedby="notice-arrivals-desc"
+              checked={settings.automation[NOTICE_ARRIVALS] !== false} onchange={(e) => setAutomation(NOTICE_ARRIVALS, e.currentTarget.checked)} />
+          </SettingRow>
+        </section>
       {:else if page === 'permissions'}
         {#each groups as g (g.id)}
           {@const groupHelp = tMaybe(`settings.groupHelp.${g.id}`)}
