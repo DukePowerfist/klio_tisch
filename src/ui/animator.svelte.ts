@@ -14,18 +14,22 @@ const CUE = 'cue';
 const FLYING_Z = 300000;
 
 let cached: Timing | null = null;
-/** Dauern und Kurven aus theme.css; neu gelesen, wenn sich „Bewegung reduzieren“ ändert */
+/** Dauern und Kurven aus theme.css; neu gelesen, wenn sich die Effektstufe ändert (`resetTiming`) */
 export function timing(): Timing {
   if (cached) return cached;
   const css = getComputedStyle(document.documentElement);
   const v = (name: string) => css.getPropertyValue(name).trim();
   cached = {
     glide: cssMs(v('--glide')), glideEase: v('--glide-ease') || 'ease-out', land: cssMs(v('--land')),
-    flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), cut: cssMs(v('--cut')), strike: cssMs(v('--strike')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
+    flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), cut: cssMs(v('--cut')), strike: cssMs(v('--strike')),
+    fade: cssMs(v('--fade')), flash: cssMs(v('--flash')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
   };
   return cached;
 }
-if (typeof matchMedia !== 'undefined') matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => (cached = null));
+/** Effektstufe gewechselt: Werte neu lesen */
+export const resetTiming = (): void => {
+  cached = null;
+};
 /** Dauer des Leuchtens nach einem fremden Zug */
 const glowMs = () => cssMs(getComputedStyle(document.documentElement).getPropertyValue('--glow'));
 
@@ -86,6 +90,10 @@ export function move(el: HTMLElement, lift: HTMLElement, from: string, motion: M
   const start = now.length ? getComputedStyle(el).transform : from;
   for (const a of now) a.cancel();
   if (motion.kind === 'jump') return;
+  if (motion.kind === 'fade') {
+    fade(el, motion.duration);
+    return;
+  }
   const opts = { duration: motion.duration, easing: motion.easing };
   if (motion.kind !== 'glide') {
     tag(el.animate([{ transform: start }, { transform: el.style.transform }], opts), MOVE);
@@ -117,9 +125,10 @@ export function move(el: HTMLElement, lift: HTMLElement, from: string, motion: M
 /** Abheben im gemischten Stapel (11.1): Die oberen Karten gleiten eine halbe Kartenbreite zur Seite und schieben sich
  *  unter den Rest, dann wieder heraus und obenauf (zweimal; am Ende liegen sie wie im Stand). `z`: Stapelung im Stand,
  *  `index`: Stelle im Stapel, `width`: Kartenbreite in Tischpunkten. */
-export function cut(el: HTMLElement, c: Cut, z: number, index: number, width: number): void {
+export function cut(el: HTMLElement, lift: HTMLElement, c: Cut, z: number, index: number, width: number): void {
   const t = timing();
-  if (!t.cut) return;
+  // Stufe „Aus“: der Stapel leuchtet nur kurz am Rand auf
+  if (!t.cut) return flash(lift, 'rgba(255, 255, 255, 0.85)', c.delay);
   const top = String(z);
   // unter die unterste Karte des Stapels, Reihenfolge der abgehobenen bleibt
   const under = String(z - index - c.count + c.rank);
@@ -138,15 +147,32 @@ export function cut(el: HTMLElement, c: Cut, z: number, index: number, width: nu
 /** Stoß bei Schaden (11.1): einmal nach unten, gedämpft zurück, kurzer roter Schimmer am Rand */
 export function strike(el: HTMLElement, lift: HTMLElement, delay: number): void {
   const t = timing();
-  if (!t.strike) return;
+  const red = getComputedStyle(document.documentElement).getPropertyValue('--strike-c').trim() || 'red';
+  // Stufe „Aus“: nur der rote Schimmer
+  if (!t.strike) return flash(lift, red, delay);
   const opts = { duration: t.strike, delay, easing: 'ease-out' };
   tag(el.animate([
     { translate: '0 0' }, { translate: '0 8px', offset: 0.15 }, { translate: '0 -2px', offset: 0.45 }, { translate: '0 1px', offset: 0.7 }, { translate: '0 0' },
   ], opts), CUE);
-  const red = getComputedStyle(document.documentElement).getPropertyValue('--strike-c').trim() || 'red';
+  glowEdge(lift, red, opts);
+}
+
+/** Rand leuchtet auf und klingt ab */
+function glowEdge(lift: HTMLElement, color: string, opts: KeyframeAnimationOptions): void {
   tag(lift.animate([
-    { opacity: 0, boxShadow: `0 0 0 3px ${red}, 0 0 14px 2px ${red}` }, { opacity: 1, offset: 0.2 }, { opacity: 0 },
+    { opacity: 0, boxShadow: `0 0 0 3px ${color}, 0 0 14px 2px ${color}` }, { opacity: 1, offset: 0.2 }, { opacity: 0 },
   ], { ...opts, pseudoElement: '::after' }), CUE);
+}
+
+/** Stufe „Aus“: Rückmeldung ohne Bewegung (11.5) */
+function flash(lift: HTMLElement, color: string, delay: number): void {
+  const t = timing();
+  if (t.flash) glowEdge(lift, color, { duration: t.flash, delay, easing: 'ease-out' });
+}
+
+/** Stufe „Aus“: an der neuen Lage bzw. mit der neuen Seite einblenden */
+export function fade(el: HTMLElement, duration: number): void {
+  if (duration > 0) tag(el.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: 'ease-out' }), MOVE);
 }
 
 /** Wie weit die Karte gerade (mitten in einer Bewegung) von ihrer Endlage entfernt gezeigt wird, in Tischpunkten.

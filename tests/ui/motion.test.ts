@@ -5,8 +5,8 @@ import type { CardId } from '../../src/engine/types';
 import { ARC_MAX, arcPoints, arrival, cssMs, cues as cuesFor, cutCount, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, STAGGER, STAGGER_MAX, STAGGER_RESET_MAX, STRIKE_DELAY, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
 import { fresh, place } from '../helpers';
 
-const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, shift: 350, shiftEase: 'ease' };
-const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, cut: 0, strike: 0, shift: 0, shiftEase: 'ease' };
+const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, fade: 150, flash: 600, shift: 350, shiftEase: 'ease' };
+const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, cut: 0, strike: 0, fade: 0, flash: 0, shift: 0, shiftEase: 'ease' };
 const glide = (m: ReturnType<typeof planMove>) => {
   expect(m?.kind).toBe('glide');
   return m as Glide;
@@ -75,6 +75,13 @@ describe('Bewegung je Fall', () => {
     expect(planMove(f(), f({ x: 200, slot: 'discard#0' }), OFF)).toEqual({ kind: 'jump' });
     expect(planMove(f(), f({ x: 120 }), OFF)).toEqual({ kind: 'jump' });
     expect(planMove(f({ follow: 'remote' }), f({ x: 5, follow: 'remote' }), OFF)?.kind).toBe('follow');
+  });
+
+  it('Stufe „Aus“: im Stand bewegte Karten blenden am Ziel ein; vom Zeiger losgelassene und Ansichtswechsel springen', () => {
+    const AUS: Timing = { ...OFF, fade: 150, flash: 600 };
+    expect(planMove(f(), f({ x: 200, slot: 'discard#0' }), AUS)).toEqual({ kind: 'fade', duration: 150 });
+    expect(planMove(f({ x: 50, follow: 'own' }), f({ x: 200, slot: 'discard#0' }), AUS)).toEqual({ kind: 'jump' });
+    expect(planMove(f(), f({ x: 120 }), AUS)).toEqual({ kind: 'jump' });
   });
 });
 

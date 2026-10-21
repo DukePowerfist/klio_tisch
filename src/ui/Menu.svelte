@@ -46,9 +46,8 @@
         <button onclick={pick(() => session.copyInvite())}>{t('room.copy')}</button>
         <button title={t('room.manageTitle')} onclick={pick(() => (view.gmPanel = 'room'))}>{t('room.manage')}</button>
       {/if}
-      {#if session.can({ type: 'table.setSettings' })}
-        <button onclick={pick(() => (view.gmPanel = 'settings'))}>{t('gm.settings')}</button>
-      {/if}
+      <!-- für alle: wenigstens die eigene Darstellung (5g) -->
+      <button onclick={pick(() => (view.gmPanel = 'settings'))}>{t('gm.settings')}</button>
       {#if session.seatless}
         <button onclick={pick(onChooseSeat)}>{t('room.chooseSeat')}</button>
       {/if}

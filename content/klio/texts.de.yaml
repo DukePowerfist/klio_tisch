@@ -165,7 +165,7 @@ log:                                      # Spielprotokoll (neu)
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
 
-settings:                                 # Einstellungen der SL (neu)
+settings:                                 # Einstellungen (neu; seit 5g für alle, Automatik und Rechte nur mit Recht)
   title: Einstellungen
   automation: Automatik
   automationIds:
@@ -191,6 +191,8 @@ settings:                                 # Einstellungen der SL (neu)
     all: gilt für alle
     allHint: Steht im Spielstand und gilt für alle am Tisch.
     browser: in diesem Browser
+    mine: nur für dich
+    mineHint: Gilt nur in diesem Browser; die anderen am Tisch stellen es für sich ein.
   automationHelp:
     damage: "Landet eine niedrigere Karte auf dem Schadensfeld, markiert der Tisch die passende Narbe; ist sie schon markiert oder ist es Kreuz oder Karo, ist der Charakter tot. Aus: Die Karten bleiben liegen, ausgewertet wird von Hand."
   groups:                                 # Zwischenüberschriften auf der Seite „Rechte der Spieler“
@@ -208,6 +210,11 @@ settings:                                 # Einstellungen der SL (neu)
   restoreConfirm: Stand für alle ersetzen?
   exportButton: Speichern                 # Knöpfe in den Zeilen; Name für Screenreader ist der Titel der Zeile
   importButton: Laden …
+  # Schritt 5g: Seite „Darstellung“ (für alle, nur im eigenen Browser)
+  appearance: Darstellung
+  effects: Effekte
+  effectsHelp: "Wie sich die Karten bewegen. Ruhig ist für den Stream gedacht; Aus zeigt Änderungen ohne Bewegung (voreingestellt, wenn das System Bewegung reduziert); bei Voll folgen später weitere Effekte."
+  levels: { off: Aus, calm: Ruhig, full: Voll }
 
 # Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL
 permissions:

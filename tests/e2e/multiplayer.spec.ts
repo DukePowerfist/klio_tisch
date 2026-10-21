@@ -32,7 +32,11 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await seated(player);
   await expect(player.locator('[data-health=ok]')).toBeVisible();
   // Menü je Rolle (10): Spieler nur Protokoll, SL Raum, Einstellungen, Protokoll
-  expect(await menuEntries(player)).toEqual(['Name und Farbe …', 'Protokoll']);
+  expect(await menuEntries(player)).toEqual(['Einstellungen', 'Name und Farbe …', 'Protokoll']);
+  // ohne Recht nur die eigene Darstellung (5g)
+  await openSettings(player, 'Darstellung');
+  await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Darstellung']);
+  await player.keyboard.press('Escape');
   expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Protokoll']);
   // Name und Farbe ändern (5e): bei der SL sofort an Schild und Dock; Farben anderer Plätze nicht wählbar
   await fromMenu(player, 'Name und Farbe …');
@@ -50,7 +54,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await settings.getByRole('combobox', { name: 'Einstellungen ändern' }).selectOption('allow');
   await gm.keyboard.press('Escape');
   await openSettings(player, 'Automatik');
-  await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler']);
+  await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler', 'Darstellung']);
   await player.keyboard.press('Escape');
   // Spieler startet in seiner Rollenansicht
   await expect.poll(async () => (await player.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
@@ -153,7 +157,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toBeVisible();
   await expect(room.getByText('frei', { exact: true })).toHaveCount(4);
   await player.getByRole('button', { name: 'Nur zuschauen' }).click();
-  expect(await menuEntries(player)).toEqual(['Platz wählen', 'Name …', 'Protokoll']);
+  expect(await menuEntries(player)).toEqual(['Einstellungen', 'Platz wählen', 'Name …', 'Protokoll']);
   // Zuschauer ändern nur den Namen am Zeiger (5e)
   await fromMenu(player, 'Name …');
   const nameDialog = player.getByRole('dialog', { name: 'Name' });

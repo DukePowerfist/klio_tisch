@@ -2,6 +2,7 @@
   // Einstellungen der SL (7 „Abschaltbare Automatik“, 9.3): Automatik je Reaktion und Rechte der Spieler zur Laufzeit.
   // Gespeichert im Stand (settings), also für alle gleich; die Voreinstellung bleibt in permissions.yaml.
   // Dazu für die SL im eigenen Browser: Spielstand als Datei und automatische Sicherungen (8.2, A34).
+  // Seit 5g für alle: Seite „Darstellung“ mit der Effektstufe (nur im eigenen Browser, 11.5).
   import { permissionFor } from '../engine/permissions';
   import type { PermissionValue, TableState, TextRef } from '../engine/types';
   import type { BackupInfo } from '../net/host';
@@ -13,6 +14,7 @@
   import { openPage, permissionGroups, visiblePages } from './settingsPages';
   import { t, text, tMaybe } from './texts';
   import { view } from './view.svelte';
+  import { EFFECT_LEVELS, effectLevel, type EffectLevel } from './effectLevel.svelte';
 
   const VALUES: PermissionValue[] = ['allow', 'own', 'deny'];
   const defaults = ruleset.permissions.player;
@@ -34,7 +36,7 @@
   // ---------- Spielstand (nur beim Host, nicht bei Mitspielern) ----------
   const isHost = $derived(session.mode !== 'client');
   // ---------- Seiten (Schritt 5f): Seitenleiste links, Seite rechts ----------
-  const pages = $derived(visiblePages(isHost));
+  const pages = $derived(visiblePages(isHost, session.can({ type: 'table.setSettings' })));
   const page = $derived(openPage(view.settingsPage, pages));
   const groups = permissionGroups(Object.keys(defaults));
   let backups = $state<BackupInfo[]>([]);
@@ -88,8 +90,10 @@
     <header>
       <div class="titleline">
         <h2>{t(`settings.${page}`)}</h2>
-        <!-- Reichweite: Automatik und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle) -->
-        {#if page !== 'game'}<span class="scope" title={t('settings.scope.allHint')}>{t('settings.scope.all')}</span>{/if}
+        <!-- Reichweite: Automatik und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle);
+             die Darstellung gilt nur im eigenen Browser -->
+        {#if page === 'appearance'}<span class="scope" title={t('settings.scope.mineHint')}>{t('settings.scope.mine')}</span>
+        {:else if page !== 'game'}<span class="scope" title={t('settings.scope.allHint')}>{t('settings.scope.all')}</span>{/if}
       </div>
       <button class="close" aria-label={t('gm.close')} title={t('gm.close')} onclick={close}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
@@ -128,6 +132,13 @@
             <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides({})}>{t('settings.restore')}</button>
           </SettingRow>
         </section>
+      {:else if page === 'appearance'}
+        <SettingRow id="effects" title={t('settings.effects')} description={t('settings.effectsHelp')}>
+          <select value={effectLevel.level} aria-labelledby="effects-title" aria-describedby="effects-desc"
+            onchange={(e) => (effectLevel.level = e.currentTarget.value as EffectLevel)}>
+            {#each EFFECT_LEVELS as v (v)}<option value={v}>{t(`settings.levels.${v}`)}</option>{/each}
+          </select>
+        </SettingRow>
       {:else}
         <SettingRow id="export" title={t('settings.export')} description={t('settings.exportHelp')}>
           <button aria-labelledby="export-title" aria-describedby="export-desc" onclick={() => session.exportFile()}>{t('settings.exportButton')}</button>

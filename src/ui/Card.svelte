@@ -4,7 +4,7 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, cause, cue, cut, events, move, revealed, strike, Tilt, timing, turn } from './animator.svelte';
+  import { appear, cause, cue, cut, events, fade, move, revealed, strike, Tilt, timing, turn } from './animator.svelte';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
@@ -59,7 +59,7 @@
     void events.seen;
     untrack(() => {
       const c = still ? undefined : cue(card);
-      if (c?.cut) cut(el, c.cut, z, Number(slot.split('#')[1] ?? 0), size.w * scale);
+      if (c?.cut) cut(el, lift, c.cut, z, Number(slot.split('#')[1] ?? 0), size.w * scale);
       if (c?.strike !== undefined) strike(el, lift, c.strike);
     });
   });
@@ -69,7 +69,11 @@
     untrack(() => {
       if (shown && shown.faceUp !== up && !still) {
         const arrive = Math.max(0, Math.round(shown.arrives - performance.now()));
-        const spin = turn(inner, lift, up, planTurn(shown.faceUp, up, timing(), arrive, cue(card)));
+        const t = timing();
+        const plan = planTurn(shown.faceUp, up, t, arrive, cue(card));
+        const spin = turn(inner, lift, up, plan);
+        // Stufe „Aus“: mit der neuen Seite einblenden
+        if (!plan) fade(el, t.fade);
         if (up) revealed(card, spin);
       }
       if (shown) shown.faceUp = up;

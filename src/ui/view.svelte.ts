@@ -2,6 +2,7 @@
 
 import { SeatSchema } from '../engine/schemas';
 import type { SeatId, ZoneId } from '../engine/types';
+import { effectLevel } from './effectLevel.svelte';
 import type { SettingsPage } from './settingsPages';
 
 const ROLE_KEY = 'klio.view.role';
@@ -56,7 +57,8 @@ class ViewState {
     cancelAnimationFrame(this.anim);
     const [z0, x0, y0] = [this.zoom, this.ox, this.oy];
     const t0 = performance.now();
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Stufe „Aus“: sofort (11.5)
+    const reduce = effectLevel.level === 'off';
     const step = (t: number) => {
       let p = reduce ? 1 : Math.min(1, (t - t0) / 420);
       p = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;

@@ -16,7 +16,12 @@ export type Frame = {
 };
 
 /** Dauern in ms und Kurven aus theme.css; `glide` ist die Grunddauer, dazu kommt die Strecke */
-export type Timing = { glide: number; glideEase: string; land: number; flip: number; hold: number; cut: number; strike: number; shift: number; shiftEase: string };
+export type Timing = {
+  glide: number; glideEase: string; land: number; flip: number; hold: number; cut: number; strike: number;
+  /** Stufe „Aus“: statt Bewegung einblenden bzw. am Rand aufleuchten (11.5) */
+  fade: number; flash: number;
+  shift: number; shiftEase: string;
+};
 
 /** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon */
 export type Cut = { delay: number; rank: number; count: number };
@@ -49,7 +54,7 @@ export type Glide = {
 
 /** Bewegung von der gezeigten zur neuen Lage: `jump` = sofort dort (laufende Bewegung endet), null = nichts zu tun
  *  (gleiche Lage; eine laufende Bewegung läuft weiter) */
-export type Motion = Glide | { kind: 'follow' | 'shift'; duration: number; easing: string } | { kind: 'jump' } | null;
+export type Motion = Glide | { kind: 'follow' | 'shift'; duration: number; easing: string } | { kind: 'fade'; duration: number } | { kind: 'jump' } | null;
 
 /** Nachführen hinter einem fremden Zeiger: glättet die Bündelung der Zeigermeldungen auf 50 ms (8.3) */
 export const FOLLOW_MS = 80;
@@ -134,7 +139,8 @@ export function planMove(prev: Frame, next: Frame, t: Timing, cause: Cause = nul
   if (next.follow === 'remote') return { kind: 'follow', duration: FOLLOW_MS, easing: 'linear' };
   // losgelassen (bestätigt, abgelehnt, ohne Befehl, Haltefrist abgelaufen) oder im Stand bewegt: gleiten
   if (prev.follow || prev.slot !== next.slot) {
-    if (t.glide <= 0) return JUMP;
+    // Stufe „Aus“: keine Bewegung, die Karte erscheint am Ziel und blendet ein (nicht nach einem Zug mit dem Zeiger)
+    if (t.glide <= 0) return t.fade > 0 && !prev.follow && prev.slot !== next.slot ? { kind: 'fade', duration: t.fade } : JUMP;
     const by = prev.follow === 'own' ? 'own' : prev.follow === 'remote' ? 'foreign' : cause;
     const dx = next.x - prev.x;
     const dist = Math.hypot(dx, next.y - prev.y);

@@ -108,9 +108,9 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await expect(dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' })).toBeDisabled();
 });
 
-test('Einstellungen: Seitenleiste mit drei Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
+test('Einstellungen: Seitenleiste mit vier Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
   const dialog = await openSettings(page, 'Spielstand');
-  await expect(dialog.getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler', 'Spielstand']);
+  await expect(dialog.getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler', 'Spielstand', 'Darstellung']);
   await expect(dialog.getByRole('tab', { name: 'Spielstand' })).toHaveAttribute('aria-selected', 'true');
   await expect(dialog.getByRole('heading', { name: 'Spielstand' })).toBeVisible();
   await expect(dialog.getByRole('tabpanel', { name: 'Spielstand' })).toBeVisible();
@@ -171,7 +171,7 @@ test('Einstellungen per Tastatur: Fokus auf der Seite, Tab bleibt im Fenster, Es
   await page.keyboard.press('Space');
   await expect(dialog.getByRole('heading', { name: 'Automatik' })).toBeVisible();
   // Reihenfolge: Seitenleiste, × im Kopf, dann die Zeilen
-  for (const _ of ['Rechte der Spieler', 'Spielstand', 'Schließen', 'Schalter']) await page.keyboard.press('Tab');
+  for (const _ of ['Rechte der Spieler', 'Spielstand', 'Darstellung', 'Schließen', 'Schalter']) await page.keyboard.press('Tab');
   await expect(dialog.getByRole('switch', { name: /Schaden automatisch/ })).toBeFocused();
 
   // Rückfrage beim Wiederherstellen: Esc bricht sie ab, das nächste Esc schließt
