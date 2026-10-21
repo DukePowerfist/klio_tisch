@@ -7,10 +7,11 @@
   import type { BackupInfo } from '../net/host';
   import type { CommandResult } from '../net/protocol';
   import Modal from './Modal.svelte';
+  import SettingRow from './SettingRow.svelte';
   import { submitOrSay } from './commands';
   import { ruleset, session } from './session.svelte';
-  import { openPage, visiblePages, type SettingsPage } from './settingsPages';
-  import { t, text } from './texts';
+  import { openPage, permissionGroups, visiblePages, type SettingsPage } from './settingsPages';
+  import { hasText, t, text } from './texts';
   import { view } from './view.svelte';
 
   const VALUES: PermissionValue[] = ['allow', 'own', 'deny'];
@@ -34,6 +35,9 @@
   const TITLE: Record<SettingsPage, string> = { automation: 'settings.automation', permissions: 'settings.permissions', game: 'settings.game' };
   const pages = $derived(visiblePages(isHost));
   const page = $derived(openPage(view.settingsPage, pages));
+  const groups = permissionGroups(Object.keys(defaults));
+  /** Beschreibung, falls vorhanden (Zeilen ohne Text bleiben einzeilig) */
+  const help = (key: string) => (hasText(key) ? t(key) : undefined);
   let backups = $state<BackupInfo[]>([]);
   let confirm = $state<string | null>(null);
   let problem = $state<TextRef | null>(null);
@@ -81,7 +85,11 @@
   </div>
   <div class="main">
     <header>
-      <h2>{t(TITLE[page])}</h2>
+      <div class="titleline">
+        <h2>{t(TITLE[page])}</h2>
+        <!-- Reichweite: Automatik und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle) -->
+        {#if page !== 'game'}<span class="scope" title={t('settings.scope.allHint')}>{t('settings.scope.all')}</span>{/if}
+      </div>
       <button class="close" aria-label={t('gm.close')} title={t('gm.close')} onclick={close}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
       </button>
@@ -89,46 +97,60 @@
     <div class="body" role="tabpanel" id="settings-panel" aria-labelledby="settings-tab-{page}">
       {#if page === 'automation'}
         {#each ruleset.reactions as r (r.id)}
-          <label class="check">
-            <input type="checkbox" checked={settings.automation[r.id] !== false} onchange={(e) => setAutomation(r.id, e.currentTarget.checked)} />
-            <span>{t(`settings.automationIds.${r.id}`)}</span>
-          </label>
+          {@const id = `auto-${r.id}`}
+          {@const desc = help(`settings.automationHelp.${r.id}`)}
+          <SettingRow {id} title={t(`settings.automationIds.${r.id}`)} description={desc}>
+            <input class="switch" type="checkbox" role="switch" aria-labelledby="{id}-title" aria-describedby={desc ? `${id}-desc` : undefined}
+              checked={settings.automation[r.id] !== false} onchange={(e) => setAutomation(r.id, e.currentTarget.checked)} />
+          </SettingRow>
         {/each}
       {:else if page === 'permissions'}
-        <p class="note">{t('settings.permissionsNote')}</p>
-        <div class="perms">
-          {#each Object.keys(defaults) as key (key)}
-            <span class:changed={current(key) !== defaults[key]}>{t(`permissions.${key}`)}</span>
-            <select value={current(key)} aria-label={t(`permissions.${key}`)} onchange={(e) => setPermission(key, e.currentTarget.value as PermissionValue)}>
-              {#each VALUES as v (v)}<option value={v}>{t(`settings.values.${v}`)}</option>{/each}
-            </select>
-          {/each}
-        </div>
-        <div class="buttons">
-          <button disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides({})}>{t('settings.defaults')}</button>
-        </div>
-      {:else}
-        <div class="buttons">
-          <button onclick={() => session.exportFile()}>{t('settings.export')}</button>
-          <button onclick={() => fileInput?.click()}>{t('settings.import')}</button>
-          <input bind:this={fileInput} type="file" accept="application/json,.json" hidden onchange={importFile} />
-        </div>
-        <p class="note">{t('settings.importNote')}</p>
-        {#if problem}<p class="problem">{text(problem)}</p>{/if}
-        <b class="gap">{t('settings.backups')}</b>
-        {#each backups as b (b.id)}
-          <div class="backup">
-            <span>{when.format(b.at)} · {t(`settings.backupReasons.${b.reason}`)}</span>
-            {#if confirm === b.id}
-              <button onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
-              <button class="danger" onclick={() => restore(b.id)}>{t('settings.restore')}</button>
-            {:else}
-              <button onclick={() => (confirm = b.id)}>{t('settings.restore')}</button>
-            {/if}
-          </div>
-        {:else}
-          <p class="note">{t('settings.noBackups')}</p>
+        {#each groups as g (g.id)}
+          <section aria-labelledby="group-{g.id}">
+            <h3 id="group-{g.id}">{t(`settings.groups.${g.id}`)}</h3>
+            {#if hasText(`settings.groupHelp.${g.id}`)}<p class="note">{t(`settings.groupHelp.${g.id}`)}</p>{/if}
+            {#each g.keys as key (key)}
+              {@const id = `perm-${key}`}
+              {@const desc = help(`permissionHelp.${key}`)}
+              <SettingRow {id} title={t(`permissions.${key}`)} description={desc} changed={current(key) !== defaults[key]}>
+                <select value={current(key)} aria-labelledby="{id}-title" aria-describedby={desc ? `${id}-desc` : undefined}
+                  onchange={(e) => setPermission(key, e.currentTarget.value as PermissionValue)}>
+                  {#each VALUES as v (v)}<option value={v}>{t(`settings.values.${v}`)}</option>{/each}
+                </select>
+              </SettingRow>
+            {/each}
+          </section>
         {/each}
+        <section class="defaults">
+          <SettingRow id="defaults" title={t('settings.defaults')} description={t('settings.defaultsHelp')}>
+            <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides({})}>{t('settings.restore')}</button>
+          </SettingRow>
+        </section>
+      {:else}
+        <SettingRow id="export" title={t('settings.export')} description={t('settings.exportHelp')}>
+          <button aria-labelledby="export-title" aria-describedby="export-desc" onclick={() => session.exportFile()}>{t('settings.exportButton')}</button>
+        </SettingRow>
+        <SettingRow id="import" title={t('settings.import')} description={t('settings.importHelp')} problem={problem ? text(problem) : undefined}>
+          <button aria-labelledby="import-title" aria-describedby="import-desc" onclick={() => fileInput?.click()}>{t('settings.importButton')}</button>
+          <input bind:this={fileInput} type="file" accept="application/json,.json" hidden onchange={importFile} />
+        </SettingRow>
+        <section aria-labelledby="backups">
+          <h3 id="backups" class="titleline">{t('settings.backups')} <span class="scope">{t('settings.scope.browser')}</span></h3>
+          <p class="note">{t('settings.backupsHelp')}</p>
+          {#each backups as b (b.id)}
+            <SettingRow id="backup-{b.id}" title={when.format(b.at)} description={t(`settings.backupReasons.${b.reason}`)}>
+              {#if confirm === b.id}
+                <span class="ask">{t('settings.restoreConfirm')}</span>
+                <button onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
+                <button class="danger" onclick={() => restore(b.id)}>{t('settings.restore')}</button>
+              {:else}
+                <button onclick={() => (confirm = b.id)}>{t('settings.restore')}</button>
+              {/if}
+            </SettingRow>
+          {:else}
+            <p class="note">{t('settings.noBackups')}</p>
+          {/each}
+        </section>
       {/if}
     </div>
   </div>
@@ -144,19 +166,23 @@
   .side button.current { background: var(--pane-current); font-weight: 600; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 12px 22px; border-bottom: 1px solid var(--pane-rule); }
+  .titleline { display: flex; align-items: center; gap: 10px; }
   h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .scope { font-size: 12px; font-weight: normal; padding: 1px 8px; border: 1px solid var(--pane-rule); border-radius: 999px; opacity: 0.8; }
   header .close { background: none; border: none; padding: 5px; line-height: 0; opacity: 0.75; }
   header .close:hover { background: var(--button-hover); opacity: 1; }
   .close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
-  .body { flex: 1; overflow: auto; padding: 14px 22px 18px; }
-  b { display: block; margin: 4px 0 8px; }
-  .check { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
-  .note { margin: 0 0 8px; }
-  .perms { display: grid; grid-template-columns: 1fr auto; gap: 6px 14px; align-items: center; }
-  .changed { color: var(--accent-hint); }
-  .gap { margin-top: 18px; }
-  .backup { display: flex; gap: 8px; align-items: center; margin: 4px 0; }
-  .backup span { flex: 1; }
-  .backup button { padding: 4px 10px; }
-  .perms + .buttons { margin-top: 16px; }
+  .body { flex: 1; overflow: auto; padding: 4px 22px 18px; }
+  .body button { padding: 5px 12px; }
+  h3 { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }
+  section:first-child h3 { margin-top: 10px; }
+  .note { margin: 0 0 4px; }
+  .defaults { margin-top: 14px; border-top: 1px solid var(--pane-rule); }
+  .ask { font-size: 13px; }
+  /* Schalter: Kästchen mit role="switch", nur anders gezeichnet */
+  .switch { appearance: none; position: relative; width: 36px; height: 20px; margin: 0; border-radius: 10px; background: var(--switch-off); cursor: pointer; transition: background var(--glide); }
+  .switch::before { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform var(--glide); }
+  .switch:checked { background: var(--switch-on); }
+  .switch:checked::before { transform: translateX(16px); }
+  .switch:focus-visible { outline: 2px solid var(--accent-hint); outline-offset: 2px; }
 </style>

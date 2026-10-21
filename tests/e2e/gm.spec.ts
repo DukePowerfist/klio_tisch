@@ -88,7 +88,7 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await free.selectOption('allow');
   await expect(free).toHaveValue('allow');
   await dialog.getByRole('tab', { name: 'Automatik' }).click();
-  const damage = dialog.getByRole('checkbox', { name: /Schaden automatisch/ });
+  const damage = dialog.getByRole('switch', { name: /Schaden automatisch/ });
   await expect(damage).toBeChecked();
   await damage.uncheck();
   // Das Kästchen springt sofort um, der Stand erst nach dem Speichern: neu öffnen zeigt den Stand
@@ -116,6 +116,19 @@ test('Einstellungen: Seitenleiste mit drei Seiten, Kopf mit Seitentitel, × schl
   await expect(dialog.getByRole('tabpanel', { name: 'Spielstand' })).toBeVisible();
   await dialog.getByRole('button', { name: 'Schließen' }).click();
   await expect(dialog).toHaveCount(0);
+});
+
+test('Einstellungen: Rechte in Gruppen mit Beschreibung, Schilder zur Reichweite', async ({ page }) => {
+  const dialog = await openSettings(page, 'Rechte der Spieler');
+  await expect(dialog.getByRole('heading', { level: 3 })).toHaveText(['Karten', 'Bogen', 'Trümpfe und Charakter', 'Spielleitung']);
+  await expect(dialog.getByRole('combobox')).toHaveCount(17);
+  await expect(dialog.getByRole('combobox', { name: 'Eigenen Namen und eigene Farbe ändern' })).toHaveCount(0);
+  await expect(dialog.getByRole('combobox', { name: 'Karten bewegen' })).toHaveAccessibleDescription(/Bei „nur eigener Bogen“ nichts auf fremde Bögen/);
+  await expect(dialog.getByText('gilt für alle', { exact: true })).toBeVisible();
+  await dialog.getByRole('tab', { name: 'Spielstand' }).click();
+  await expect(dialog.getByText('gilt für alle', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByText('in diesem Browser', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Datei laden …' })).toHaveAccessibleDescription(/Ersetzt den Stand für alle am Tisch/);
 });
 
 test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', async ({ page }) => {

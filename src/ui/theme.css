@@ -44,6 +44,8 @@
   --pane-side: #132b23;
   --pane-current: #2c5a47;
   --pane-rule: rgba(255, 255, 255, 0.14);
+  --switch-off: rgba(255, 255, 255, 0.22);
+  --switch-on: #4f9a6e;
   --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */
   --glide: 0.3s;   /* Karte gleitet an ihren Platz */
   --flip: 0.35s;   /* Karte klappt um */
