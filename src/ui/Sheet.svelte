@@ -111,7 +111,6 @@
 <div
   bind:this={sheetEl}
   class="sheet"
-  class:dead
   class:hit={effects.hit.has(seat)}
   class:tools
   data-sheet={seat}
