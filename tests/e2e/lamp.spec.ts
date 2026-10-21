@@ -1,7 +1,7 @@
 // Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Lage, Anzünden und Löschen für alle, Bedienung des Tisches bleibt.
 
 import { expect, test, type Page } from '@playwright/test';
-import { fromMenu, ready, zoneCenter } from './helpers';
+import { fromMenu, openSettings, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -82,4 +82,22 @@ test('Karte auf die Laterne gezogen: Vorschau und Ablage daneben, nicht auf ihr 
   const dx = Math.max(card.x - centre.x, 0, centre.x - (card.x + card.width));
   const dy = Math.max(card.y - centre.y, 0, centre.y - (card.y + card.height));
   expect(Math.hypot(dx, dy)).toBeGreaterThan(l.width / 2);
+});
+
+test('Schalter „Laterne flackert“ nur bei „Voll“, voreingestellt aus, bleibt nach dem Neuladen', async ({ page }) => {
+  const dialog = await openSettings(page, 'Darstellung');
+  const flicker = dialog.getByRole('switch', { name: 'Laterne flackert' });
+  await expect(flicker).toHaveCount(0);
+  await dialog.getByRole('combobox', { name: 'Effekte' }).selectOption('full');
+  await expect(flicker).not.toBeChecked();
+  await expect(dialog).toContainText('Kann auf Rechnern ohne Grafikbeschleunigung ruckeln.');
+  await flicker.check();
+  await ready(page, true);
+  await openSettings(page, 'Darstellung');
+  await expect(flicker).toBeChecked();
+  // auf „Ruhig“ verschwindet die Zeile, die Wahl bleibt
+  await dialog.getByRole('combobox', { name: 'Effekte' }).selectOption('calm');
+  await expect(flicker).toHaveCount(0);
+  await dialog.getByRole('combobox', { name: 'Effekte' }).selectOption('full');
+  await expect(flicker).toBeChecked();
 });

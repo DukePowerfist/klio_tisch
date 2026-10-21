@@ -57,9 +57,15 @@
     running = r;
   }
 
+  /** flackert gerade: „Voll“, Schalter an (eigene Wahl, 11.9) und Laterne brennt */
+  const flicker = $derived(effectLevel.flickering && lit);
+
   // Deckkraft von Licht, Schein und Glühen aus dem Stand. Gesetzt im Skript statt mit `style:`, weil das Flackern
-  // dieselbe Eigenschaft bewegt; ein Übergang (WAAPI) liegt während er läuft darüber.
+  // dieselbe Eigenschaft bewegt; ein Übergang (WAAPI) liegt während er läuft darüber. Läuft auch, wenn das Flackern
+  // endet: Dessen Aufräumen setzt die Deckkraft nicht selbst, weil Svelte dort noch den alten Wert von `lit` liefert
+  // (Fehler 2026-10-22: gelöscht in „Voll“ glühte die Laterne weiter).
   $effect(() => {
+    void flicker;
     const v = lit ? '1' : '0';
     for (const el of [on, glow, ember]) if (el) el.style.opacity = v;
   });
@@ -69,7 +75,6 @@
   // am Glühen (opacity, translate, scale), nichts auf :root und keine Schatten: sonst müsste der Browser alles neu
   // berechnen und zeichnen. Keine endlose WAAPI-Animation (Tests zählen getAnimations()). Im Hintergrund hält der
   // Browser requestAnimationFrame ohnehin an.
-  const flicker = $derived(effectLevel.level === 'full' && lit);
   $effect(() => {
     if (!flicker) return;
     const f = { v: 1, target: 1, next: 0, t: 0 };
@@ -95,9 +100,6 @@
     return () => {
       cancelAnimationFrame(raf);
       for (const el of [on, glow]) el.style.translate = el.style.scale = '';
-      const v = lit ? '1' : '0';
-      glow.style.opacity = v;
-      if (ember) ember.style.opacity = v;
       delete layers.dataset['flicker'];
     };
   });
@@ -148,6 +150,8 @@
 <style>
   .lamp { position: absolute; z-index: 5; padding: 0; border: 0; background: none; border-radius: 50%; }
   button.lamp { cursor: pointer; }
+  /* kein Fokusrahmen nach einem Mausklick (weißer Ring um die Laterne); mit der Tastatur bleibt er */
+  button.lamp:focus:not(:focus-visible) { outline: none; }
   .lamp img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none;
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) drop-shadow(0 1px 6px rgba(0, 0, 0, 0.5)); }
   /* Glühen aus Kamin, Lüftungslöchern und Glas; `screen` wirkt nur in der Laterne (z 5 ist ein eigener Stapelkontext) */

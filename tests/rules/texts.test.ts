@@ -53,7 +53,7 @@ describe('Texte', () => {
       ...SETTINGS_PAGES.map((p) => `settings.${p}`),
       ...['all', 'allHint', 'browser', 'mine', 'mineHint'].map((s) => `settings.scope.${s}`),
       ...EFFECT_LEVELS.map((l) => `settings.levels.${l}`),
-      'settings.effects', 'settings.effectsHelp',
+      'settings.effects', 'settings.effectsHelp', 'settings.flicker', 'settings.flickerHelp',
       'settings.notices', 'settings.noticeArrivals', 'settings.noticeArrivalsHelp',
       ...['allow', 'own', 'deny'].map((v) => `settings.values.${v}`),
       ...['table.reset', 'import', 'restore'].map((r) => `settings.backupReasons.${r}`),

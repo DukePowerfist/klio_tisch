@@ -148,6 +148,12 @@
             {#each EFFECT_LEVELS as v (v)}<option value={v}>{t(`settings.levels.${v}`)}</option>{/each}
           </select>
         </SettingRow>
+        {#if effectLevel.level === 'full'}
+          <SettingRow id="flicker" title={t('settings.flicker')} description={t('settings.flickerHelp')}>
+            <input class="switch" type="checkbox" role="switch" aria-labelledby="flicker-title" aria-describedby="flicker-desc"
+              checked={effectLevel.flicker} onchange={(e) => (effectLevel.flicker = e.currentTarget.checked)} />
+          </SettingRow>
+        {/if}
       {:else}
         <SettingRow id="export" title={t('settings.export')} description={t('settings.exportHelp')}>
           <button aria-labelledby="export-title" aria-describedby="export-desc" onclick={() => session.exportFile()}>{t('settings.exportButton')}</button>

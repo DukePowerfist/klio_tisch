@@ -90,8 +90,11 @@ test('Gegriffene Karte wirft einen langen, weichen Schatten von der Flamme weg',
 });
 
 test.describe('Flackern (Voll)', () => {
-  test('in „Voll“ flackert das Licht per Inline-Stil, ohne Animationen; gelöscht hört es auf', async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('klio.effects', 'full'));
+  test('in „Voll“ mit Schalter flackert das Licht per Inline-Stil, ohne Animationen; gelöscht hört es auf, Glühen und Schein sind aus', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('klio.effects', 'full');
+      localStorage.setItem('klio.flicker', '1');
+    });
     await ready(page, true);
     const light = page.locator('.light');
     await expect(light).toHaveAttribute('data-flicker', '');
@@ -106,11 +109,25 @@ test.describe('Flackern (Voll)', () => {
     await page.locator('button[data-lamp]').click();
     await expect(light).not.toHaveAttribute('data-flicker');
     expect(await page.locator('.light > .on').evaluate((e) => e.style.scale)).toBe('');
+    // nach dem Übergang: alles aus (Fehler 2026-10-22: Glühen und Schein blieben an)
+    await page.waitForTimeout(1000);
+    const opacity = (sel: string) => page.locator(sel).evaluate((e) => getComputedStyle(e).opacity);
+    expect([await opacity('.ember'), await opacity('.light > .glow'), await opacity('.light > .on')]).toEqual(['0', '0', '0']);
+  });
+
+  test('in „Voll“ ohne Schalter (Voreinstellung) ruht das Licht', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('klio.effects', 'full'));
+    await ready(page, true);
+    await page.waitForTimeout(500);
+    await expect(page.locator('.light')).not.toHaveAttribute('data-flicker');
   });
 
   for (const level of ['calm', 'off'] as const) {
-    test(`in „${level === 'calm' ? 'Ruhig' : 'Aus'}“ ruht das Licht`, async ({ page }) => {
-      await page.addInitScript((level) => localStorage.setItem('klio.effects', level), level);
+    test(`in „${level === 'calm' ? 'Ruhig' : 'Aus'}“ ruht das Licht, auch mit Schalter`, async ({ page }) => {
+      await page.addInitScript((level) => {
+        localStorage.setItem('klio.effects', level);
+        localStorage.setItem('klio.flicker', '1');
+      }, level);
       await ready(page, true);
       await page.waitForTimeout(500);
       await expect(page.locator('.light')).not.toHaveAttribute('data-flicker');
