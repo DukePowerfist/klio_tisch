@@ -86,8 +86,10 @@ test('Zuordnung der Bögen: Namensschild in der Draufsicht, Farbstreifen in der 
   const plate1 = page.locator('[data-plate=seat1]');
   await expect(plate1).toHaveText('Spieler 1');
   await expect(page.locator('[data-dock=seat1]')).toHaveText('1');
+  // Charaktername steht im Namensfeld, nicht auf dem Schild; lokal sitzt niemand am Platz, aber kein „frei“
   await nameCharacter(page, 'seat1', 'Ida');
-  await expect(plate1).toHaveText('Ida');
+  await expect(plate1).toHaveText('Spieler 1');
+  await expect(plate1).toHaveAttribute('title', 'Ida');
   await expect(page.locator('[data-dock=seat1]')).toHaveAttribute('title', 'Ich bin Spieler 1: Ida (Taste 1)');
   // Schild und Dock-Knöpfe tragen die Farbe des Platzes; jeder Knopf eine andere
   const color = (sel: string, prop: string) => page.locator(sel).evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), prop);

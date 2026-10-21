@@ -212,7 +212,7 @@
         data-plate={seat}
         title={names.label}
         style:left="{plate.x}px" style:top="{plate.y}px" style:max-width="{plate.w}px" style:height="{plate.h}px" style:font-size="{plate.font}px"
-      ><b>{names.character}</b>{#if names.person}<small>{names.person}</small>{/if}</div>
+      ><b>{names.plate}</b>{#if names.free && session.mode !== 'local'}<small>{t('room.free')}</small>{/if}</div>
     {/if}
 
     <div class="sbar control" class:quiet={!own} style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
@@ -259,7 +259,7 @@
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
   .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: #111; line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-  .plate small { font-size: 0.6em; flex: none; }
+  .plate small { font-size: 0.6em; flex: none; opacity: 0.75; }
   .strip { position: absolute; left: 0; top: 0; right: 0; height: 5px; background: var(--c); pointer-events: none; }
   /* immer sichtbar, unter dem Namensschild (Lage aus der Haut); außer am eigenen Bogen der Rollenansicht dezent */
   .sbar { position: absolute; display: flex; flex-wrap: wrap; gap: 0.3em; z-index: 3; opacity: 0.95; transition: opacity 0.2s; font-family: system-ui, sans-serif; }

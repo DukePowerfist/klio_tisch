@@ -48,7 +48,9 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await profile.getByRole('button', { name: 'Speichern' }).click();
   await expect(profile).toHaveCount(0);
   await expect(gm.locator('[data-dock=seat2]')).toHaveAttribute('style', /who-c-teal/);
-  await expect(gm.locator('[data-plate=seat2]')).toContainText('Ida M.');
+  // Schild: Name der Person, freie Plätze mit Hinweis „frei“
+  await expect(gm.locator('[data-plate=seat2]')).toHaveText('Ida M.');
+  await expect(gm.locator('[data-plate=seat3]')).toHaveText('Spieler 3frei');
   // Gibt die SL die Einstellungen frei, sieht der Spieler Automatik und Rechte, aber keinen Spielstand (5f)
   const settings = await openSettings(gm, 'Rechte der Spieler');
   await settings.getByRole('combobox', { name: 'Einstellungen ändern' }).selectOption('allow');
