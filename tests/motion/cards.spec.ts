@@ -58,6 +58,22 @@ test('Ziehen: verdeckt im Bogen über den anderen, Innehalten, dann Aufdecken; M
   expect(await page.locator(`[data-card=${fly.card}] .inner`).evaluate((e) => e.getAnimations().length)).toBe(0);
 });
 
+test('Greifen: die Karte hebt sich deutlich und federnd, beim Loslassen senkt sie sich wieder', async ({ page }) => {
+  const z = await zoneCenter(page, 'DECK');
+  await page.mouse.move(z.x, z.y);
+  await page.mouse.down();
+  await page.mouse.move(z.x + 60, z.y + 40, { steps: 4 });
+  const lift = page.locator('.card.dragging .lift');
+  await expect(lift).toHaveCount(1);
+  expect(await lift.evaluate((e) => getComputedStyle(e).transitionTimingFunction)).toMatch(/^linear\(/);
+  await expect.poll(() => lift.evaluate((e) => [getComputedStyle(e).scale, getComputedStyle(e).translate])).toEqual(['1.1', '0px -6px']);
+  const card = await lift.evaluate((e) => e.closest<HTMLElement>('[data-card]')!.dataset['card']!);
+  await page.mouse.move(z.x, z.y, { steps: 4 });
+  await page.mouse.up();
+  const back = page.locator(`[data-card="${card}"] .lift`);
+  await expect.poll(() => back.evaluate((e) => [getComputedStyle(e).scale, getComputedStyle(e).translate])).toEqual(['none', 'none']);
+});
+
 test('Greifen im Flug: der Zug beginnt an der gezeigten Lage, die Karte springt nicht', async ({ page }) => {
   await openMenu(page, 'DECK');
   const card = await page.evaluate(async () => {

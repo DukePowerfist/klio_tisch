@@ -98,15 +98,19 @@
 </div>
 
 <style>
-  .card { --lift: 0 8px 18px rgba(0, 0, 0, 0.5); position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: none; user-select: none; cursor: grab; }
+  .card { --lift: 0 18px 30px rgba(0, 0, 0, 0.42), 0 6px 12px rgba(0, 0, 0, 0.3); position: absolute; left: 0; top: 0; transform-origin: 0 0; touch-action: none; user-select: none; cursor: grab; }
   .card.dragging { cursor: grabbing; }
   .card.pending { opacity: 0.8; }
-  /* Anheben: etwas größer, Schatten des Flugs (::before) darunter, Leuchten nach fremdem Zug (::after) darüber */
-  .lift { position: relative; width: 100%; height: 100%; perspective: 600px; transition: scale var(--grab) ease-out; }
+  /* Anheben: deutlich größer und etwas höher (federnd), Schatten des Flugs (::before) darunter, Leuchten nach fremdem
+     Zug (::after) darüber. Anheben über `translate`, die Neigung liegt auf `rotate` (11.6). Beim Loslassen ohne
+     Überschwingen zurück. */
+  .lift { position: relative; width: 100%; height: 100%; perspective: 600px; transition: scale var(--grab) var(--spring-soft), translate var(--grab) var(--spring-soft); }
   .lift::before, .lift::after { content: ''; position: absolute; inset: 0; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity var(--grab); }
   .lift::before { box-shadow: var(--lift); }
   .lift::after { box-shadow: 0 0 0 3px var(--glow-c, transparent), 0 0 14px 2px var(--glow-c, transparent); }
-  .dragging .lift, .marked .lift { scale: 1.04; }
+  .dragging .lift, .marked .lift { scale: 1.1; translate: 0 -6px; transition-timing-function: var(--spring); }
+  /* Stufe „Aus“: wie bisher nur etwas größer, ohne Anheben */
+  :global(:root[data-effects='off']) .dragging .lift, :global(:root[data-effects='off']) .marked .lift { scale: 1.04; translate: none; }
   .dragging .lift::before, .marked .lift::before { opacity: 1; }
   .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
   .inner.down { rotate: y 180deg; }

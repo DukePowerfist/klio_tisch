@@ -2,7 +2,7 @@
 // Die Tests laufen mit reduzierter Bewegung (playwright.config.ts).
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, openMenuAndClick, openSettings, ready } from './helpers';
+import { expectCount, openMenuAndClick, openSettings, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -41,4 +41,15 @@ test('Ruhig bewegt die Karten auch bei „Bewegung reduzieren“, Aus nur mit Ei
   await expect.poll(() => cardAnimations(page)).toContain('opacity');
   expect(await cardAnimations(page)).not.toContain('transform');
   await expectCount(page, 'ABLAGE', 2);
+});
+
+test('Aus: gegriffene Karte nur etwas größer, ohne Anheben', async ({ page }) => {
+  const z = await zoneCenter(page, 'DECK');
+  await page.mouse.move(z.x, z.y);
+  await page.mouse.down();
+  await page.mouse.move(z.x + 60, z.y + 40, { steps: 4 });
+  const lift = page.locator('.card.dragging .lift');
+  await expect(lift).toHaveCount(1);
+  expect(await lift.evaluate((e) => [getComputedStyle(e).scale, getComputedStyle(e).translate])).toEqual(['1.04', 'none']);
+  await page.mouse.up();
 });
