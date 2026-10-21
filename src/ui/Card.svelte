@@ -17,6 +17,8 @@
   const rank = $derived(rankLabel(card));
   // gedreht: um die linke obere Ecke drehen und um die Kartenhöhe nach rechts schieben (wie bisher)
   const transform = $derived(rotated ? `translate(${x + size.h * scale}px, ${y}px) rotate(90deg) scale(${scale})` : `translate(${x}px, ${y}px) scale(${scale})`);
+  // Rückseite: Bild mit eigenem Rand und abgerundeten Ecken (public/assets/cards)
+  const back = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 </script>
 
 <div class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
@@ -26,7 +28,7 @@
       <div class="pip">{suit}</div>
       <div class="corner bottom">{rank}<br />{suit}</div>
     </div>
-    <div class="face back"></div>
+    <div class="face back" style:background-image={back}></div>
   </div>
 </div>
 
@@ -43,7 +45,7 @@
   .card.marked { transition: transform 0.08s linear; }
   .front { background: var(--card); color: var(--card-black); }
   .red .front { color: var(--card-red); }
-  .back { transform: rotateY(180deg); background: repeating-linear-gradient(45deg, #24457a 0 6px, #2d5799 6px 12px); border: 4px solid var(--card); }
+  .back { transform: rotateY(180deg); background: center / 100% 100% no-repeat; }
   .corner { position: absolute; left: 6px; top: 4px; font: 700 16px/1.05 Georgia, serif; text-align: center; }
   .corner.bottom { left: auto; top: auto; right: 6px; bottom: 4px; transform: rotate(180deg); }
   .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; }
