@@ -188,6 +188,26 @@ settings:                                 # Einstellungen der SL (neu)
   restore: Wiederherstellen
   restored: Sicherung wiederhergestellt
   fieldChanged: "Bogen {seat}: Ein Feld, das du bearbeitet hast, wurde gerade von jemand anderem geändert."
+  # Schritt 5f: Seiten im Stil des Zed-Editors (Seitentitel: automation, permissions, game)
+  scope:                                  # Schild am Seitentitel und Hinweis über den Sicherungen
+    all: gilt für alle
+    allHint: Steht im Spielstand und gilt für alle am Tisch.
+    browser: in diesem Browser
+  automationHelp:
+    damage: "Landet eine niedrigere Karte auf dem Schadensfeld, markiert der Tisch die passende Narbe; ist sie schon markiert oder ist es Kreuz oder Karo, ist der Charakter tot. Aus: Die Karten bleiben liegen, ausgewertet wird von Hand."
+  groups:                                 # Zwischenüberschriften auf der Seite „Rechte der Spieler“
+    cards: Karten
+    sheet: Bogen
+    trumps: Trümpfe und Charakter
+    gm: Spielleitung
+    other: Weitere
+  groupHelp:
+    gm: Diese Rechte betreffen den ganzen Tisch. „nur eigener Bogen“ wirkt hier wie „erlaubt“.
+  defaultsHelp: Setzt alle Rechte auf die Voreinstellung des Regelwerks zurück. Abweichende Rechte sind farbig markiert.
+  exportHelp: Bögen, Karten, Plätze, Raum und Fotos als Datei, z. B. für einen anderen Browser.
+  importHelp: Ersetzt den Stand für alle am Tisch durch den aus der Datei. Vorher wird gesichert.
+  backupsHelp: Wiederherstellen ersetzt den Stand für alle am Tisch. Vorher wird gesichert.
+  restoreConfirm: Stand für alle ersetzen?
 
 # Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL
 permissions:
@@ -209,6 +229,26 @@ permissions:
   table.setSettings: Einstellungen ändern
   gm.expedition: Expedition starten
   gm.oracle: Orakel ziehen
+
+# Beschreibung je Recht (Schritt 5f); „nur eigener Bogen“ wird nur erklärt, wo es nicht selbstverständlich ist
+permissionHelp:
+  cards.move: Karten zwischen Stapeln, Bögen und Tisch verschieben. Bei „nur eigener Bogen“ nichts auf fremde Bögen legen und nichts von dort nehmen; Deck, Ablage, Auslage, die Stapel in der Tischmitte und der freie Tisch bleiben erlaubt.
+  card.flip: Einzelne Karten und ganze Stapel umdrehen. Bei „nur eigener Bogen“ nicht auf fremden Bögen.
+  zone.shuffle: Einen Stapel mischen. Bei „nur eigener Bogen“ nicht auf fremden Bögen.
+  zone.draw: Karten von einem Stapel ziehen. Bei „nur eigener Bogen“ nicht von fremden Bögen.
+  sheet.edit: Einträge, Häkchen und Zahlen auf dem Bogen ändern.
+  sheet.photo: Ein Foto für den Charakter setzen oder entfernen.
+  sheet.roll: Stärken und Schwächen per Zufallstabelle füllen.
+  trump.choose: Einen Trumpf über die Wege des Regelwerks wählen, mit Regelprüfung; auch zufällig.
+  trump.chooseFree: Einen beliebigen Trumpf eintragen, ohne Regelprüfung.
+  trump.remove: Einen Trumpf vom Bogen nehmen.
+  character.revive: Einen toten Charakter wieder ins Spiel holen.
+  table.reset: Alle Karten zurück auf ihre Startplätze und neu mischen, auf Wunsch auch die Charaktere. Vorher wird gesichert.
+  table.setPlayers: Die Zahl der Plätze am Tisch ändern.
+  table.setSeat: Personen auf Plätze setzen und Plätze freigeben.
+  table.setSettings: Diese Einstellungen ändern. Wer das darf, kann sich auch selbst weitere Rechte geben.
+  gm.expedition: Ein Ergebnis aus der Expeditionstabelle ziehen.
+  gm.oracle: Zwei Begriffe aus dem Orakel ziehen.
 
 menu:                                     # Menü oben rechts (neu, Schritt 5b)
   title: Menü
