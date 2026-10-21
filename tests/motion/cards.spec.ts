@@ -176,39 +176,48 @@ async function loadDeckTop(page: Page, top: string[]) {
   await page.keyboard.press('Escape');
 }
 
-test('Schaden: die Karten der Schadenszone stoßen und schimmern rot', async ({ page }) => {
-  // erst Herz König, dann die niedrigere Herz 2 auf das Schadensfeld: Treffer
+/** Treffer vorbereiten: erst Herz König aufs Schadensfeld, als Nächstes oben im Deck die niedrigere Herz 2.
+ *  Liefert den Zug, der trifft. */
+async function primeHit(page: Page): Promise<() => Promise<void>> {
   await loadDeckTop(page, ['H2', 'HK']);
   const deck = await zoneCenter(page, 'DECK');
   const damage = await zoneCenter(page, 'SCHADEN');
   await dragFromTo(page, deck, damage);
   await page.waitForTimeout(800);
-  // beobachten schon vor dem Ablegen: der Stoß ist nach gut einer halben Sekunde vorbei
+  return () => dragFromTo(page, deck, damage);
+}
+
+/** im Browser je Karte den ersten Zeitpunkt ihres Stoßes merken (`window.strikes`), alle 5 ms für 5 s */
+async function watchStrikes(page: Page) {
   await page.evaluate(() => {
-    const seen = new Set<string>();
-    (window as unknown as { strikes: Set<string> }).strikes = seen;
+    const strikes: Record<string, number> = {};
+    (window as unknown as { strikes: Record<string, number> }).strikes = strikes;
     const watch = setInterval(() => {
       for (const a of document.getAnimations()) {
         const frames = (a.effect as KeyframeEffect).getKeyframes();
         // genau der Stoß (0 → 8 px nach unten) auf einer Karte; nicht etwa das Anheben beim Greifen (`translate` auf `.lift`)
         const card = ((a.effect as KeyframeEffect).target as HTMLElement).dataset['card'];
-        if (card && frames.some((k) => /^0(px)? 8px$/.test(String(k['translate'] ?? '')))) seen.add(card);
+        if (card && strikes[card] === undefined && frames.some((k) => /^0(px)? 8px$/.test(String(k['translate'] ?? '')))) strikes[card] = performance.now();
       }
-    }, 10);
+    }, 5);
     setTimeout(() => clearInterval(watch), 5000);
   });
-  await dragFromTo(page, deck, damage);
+}
+const strikes = (page: Page) => page.evaluate(() => (window as unknown as { strikes: Record<string, number> }).strikes);
+
+test('Schaden: die Karten der Schadenszone stoßen und schimmern rot', async ({ page }) => {
+  const hit = await primeHit(page);
+  // beobachten schon vor dem Ablegen: der Stoß ist nach gut einer halben Sekunde vorbei
+  await watchStrikes(page);
+  await hit();
   await expect(page.getByRole('status')).toHaveText(/Narbe markiert/);
-  await expect.poll(() => page.evaluate(() => [...(window as unknown as { strikes: Set<string> }).strikes].sort())).toEqual(['H2', 'HK']);
+  await expect.poll(async () => Object.keys(await strikes(page)).sort()).toEqual(['H2', 'HK']);
 });
 
 test('Schaden: erst aufdecken, dann Stoß, dann Narbe und Meldung (5k)', async ({ page }) => {
-  await loadDeckTop(page, ['H2', 'HK']);
-  const deck = await zoneCenter(page, 'DECK');
-  const damage = await zoneCenter(page, 'SCHADEN');
-  await dragFromTo(page, deck, damage);
-  await page.waitForTimeout(800);
-  // Zeitpunkte im Browser: letztes Umklappen der getroffenen Karte, erster Stoß, Narbe am Bogen, Meldung
+  const hit = await primeHit(page);
+  await watchStrikes(page);
+  // Zeitpunkte im Browser: letztes Umklappen der getroffenen Karte, Narbe am Bogen, Meldung
   await page.evaluate(() => {
     const times: Record<string, number> = {};
     (window as unknown as { times: Record<string, number> }).times = times;
@@ -216,23 +225,19 @@ test('Schaden: erst aufdecken, dann Stoß, dann Narbe und Meldung (5k)', async (
       const now = performance.now();
       const inner = document.querySelector('[data-card=H2] .inner');
       if (inner?.getAnimations().some((a) => a.playState === 'running')) times['flip'] = now;
-      for (const a of document.getAnimations()) {
-        const frames = (a.effect as KeyframeEffect).getKeyframes();
-        const card = ((a.effect as KeyframeEffect).target as HTMLElement).dataset['card'];
-        if (card && times['strike'] === undefined && frames.some((k) => /^0(px)? 8px$/.test(String(k['translate'] ?? '')))) times['strike'] = now;
-      }
       if (times['scar'] === undefined && document.querySelector('[data-check="scars.heart"][aria-pressed=true]')) times['scar'] = now;
       if (times['toast'] === undefined && /Narbe markiert/.test(document.querySelector('[role=status]')?.textContent ?? '')) times['toast'] = now;
     }, 5);
     setTimeout(() => clearInterval(watch), 5000);
   });
-  await dragFromTo(page, deck, damage);
+  await hit();
   await expect(page.locator('[data-check="scars.heart"][aria-pressed=true]')).toHaveCount(1);
   await expect(page.getByRole('status')).toHaveText(/Narbe markiert/);
   const times = await page.evaluate(() => (window as unknown as { times: Record<string, number> }).times);
+  const first = Math.min(...Object.values(await strikes(page)));
   expect(times['flip'], 'die getroffene Karte klappt um').toBeDefined();
   // Abtastung alle 5 ms: etwas Spiel
-  expect(times['strike']!).toBeGreaterThanOrEqual(times['flip']! - 10);
+  expect(first).toBeGreaterThanOrEqual(times['flip']! - 10);
   expect(times['scar']!).toBeGreaterThan(times['flip']! + 100);
   expect(times['toast']!).toBeGreaterThan(times['flip']! + 100);
 });

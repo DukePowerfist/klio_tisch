@@ -58,9 +58,9 @@
   const strikerOf = new Map(checks.flatMap((c) => (c.strikes ? [[c.strikes, c.id] as const] : [])));
 
   // Narbe und Tod nach einem Treffer erst mit dem Aufprall (5k)
-  const value = (id: string) => (effects.holds(seat, id) ? false : getField(sheet, id));
+  const checked = (id: string) => !effects.holds(seat, id) && getField(sheet, id) === true;
   const dead = $derived(sheet.dead && !effects.holds(seat, 'dead'));
-  const struck = (id: string) => strikerOf.has(id) && value(strikerOf.get(id)!) === true;
+  const struck = (id: string) => strikerOf.has(id) && checked(strikerOf.get(id)!);
   const hasEmptySlot = $derived(!isFull(content.trumpSources, sheet));
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
 
@@ -121,7 +121,7 @@
         {seat}
         field={f.id}
         kind={f.kind}
-        value={String(value(f.id) ?? '')}
+        value={String(getField(sheet, f.id) ?? '')}
         x={f.pos.x} y={f.pos.y} w={f.pos.w} h={f.pos.h}
         font={f.pos.font ?? 17}
         struck={struck(f.id)}
@@ -131,7 +131,7 @@
     {/each}
 
     {#each checks as c (c.id)}
-      {@const on = value(c.id) === true}
+      {@const on = checked(c.id)}
       {#if c.strikes}
         <button
           class="strike control"
@@ -158,7 +158,6 @@
         ></button>
       {/if}
     {/each}
-
 
     {#if photoBox}
       <button

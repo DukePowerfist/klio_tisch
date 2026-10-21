@@ -3,7 +3,7 @@
 // Die zuletzt gezeigte Lage merkt sich jede Karte selbst (Card.svelte); eine laufende Bewegung liefert das DOM.
 
 import type { CardId, TableState, ZoneId } from '../engine/types';
-import { arcPoints, countChanges, cssMs, cues, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn, hitsTurningUp } from './motion';
+import { arcPoints, countChanges, cssMs, cues, hitsTurningUp, STRIKE_IMPACT, strikeImpact, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
 
 /** Kennungen der eigenen Animationen (die CSS-Animation beim Rucken bleibt unberührt) */
 const MOVE = 'move';
@@ -62,45 +62,48 @@ export function noteEvents(list: readonly { type: string }[], own: boolean, prev
 }
 export const cause = (): Cause => current;
 export const cue = (card: CardId): Cue | undefined => currentCues.get(card);
-/** erfüllt, wenn der Stoß des letzten Stands beginnen darf (getroffene Karten aufgedeckt) */
-export const strikeReady = (): Promise<void> => currentStrike;
+/** erfüllt mit dem Aufprall des Stoßes im letzten Stand: nach dem Aufdecken Verzögerung plus der Weg nach unten (5k) */
+export const strikeImpacted = (): Promise<void> =>
+  currentStrike.then(() => new Promise((r) => setTimeout(r, strikeImpact(timing()))));
 
 // ---------- Aufgedeckt ----------
 // Die Meldung nach dem Ziehen nennt die Karte erst, wenn man sie sieht (11.1 „Ziehen“).
 const REVEAL_FALLBACK_MS = 2000;
-const waiting = new Map<CardId, () => void>();
-/** `then` ausführen, sobald die Karte aufgedeckt zu sehen ist (spätestens nach 2 s, etwa wenn sie nicht sichtbar ist) */
-export function afterReveal(card: CardId, then: () => void): void {
-  waiting.get(card)?.();
-  let done = false;
+const waiting = new Map<CardId, Set<() => void>>();
+/** `then` einmal ausführen, sobald die Karte aufgedeckt zu sehen ist (spätestens nach 2 s, etwa wenn sie nicht sichtbar ist) */
+function onReveal(card: CardId, then: () => void): () => void {
   const run = () => {
-    if (done) return;
-    done = true;
-    waiting.delete(card);
+    const runs = waiting.get(card);
+    if (!runs?.delete(run)) return;
+    if (runs.size === 0) waiting.delete(card);
+    clearTimeout(fallback);
     then();
   };
-  waiting.set(card, run);
-  setTimeout(run, REVEAL_FALLBACK_MS);
+  waiting.set(card, (waiting.get(card) ?? new Set()).add(run));
+  const fallback = setTimeout(run, REVEAL_FALLBACK_MS);
+  return run;
+}
+/** je Karte die Meldung, die auf sie wartet: eine neue ersetzt die alte (die dann sofort erscheint) */
+const told = new Map<CardId, () => void>();
+export function afterReveal(card: CardId, then: () => void): void {
+  told.get(card)?.();
+  told.set(card, onReveal(card, () => {
+    told.delete(card);
+    then();
+  }));
+}
+// Schaden (5k): Stoß, Narbe und Tod warten, bis die getroffenen Karten aufgedeckt zu sehen sind
+/** erfüllt, sobald alle Karten aufgedeckt zu sehen sind (spätestens nach 2 s); ohne Karten sofort */
+function whenRevealed(cards: readonly CardId[]): Promise<void> {
+  if (cards.length === 0) return Promise.resolve();
+  return Promise.all(cards.map((card) => new Promise<void>((open) => onReveal(card, open)))).then(() => undefined);
 }
 /** von der Karte: jetzt (bzw. nach dieser Animation) aufgedeckt zu sehen */
 export function revealed(card: CardId, anim?: Animation): void {
-  const run = () => {
-    waiting.get(card)?.();
-    for (const open of gates.get(card) ?? []) open();
-    gates.delete(card);
-  };
+  if (!waiting.has(card)) return;
+  const run = () => { for (const r of [...(waiting.get(card) ?? [])]) r(); };
   if (anim) anim.finished.then(run, run);
   else run();
-}
-
-// Schaden (5k): Stoß, Narbe und Tod warten, bis die getroffenen Karten aufgedeckt zu sehen sind
-const gates = new Map<CardId, (() => void)[]>();
-/** erfüllt, sobald alle Karten aufgedeckt zu sehen sind (spätestens nach 2 s); ohne Karten sofort */
-export function whenRevealed(cards: readonly CardId[]): Promise<void> {
-  return Promise.all(cards.map((card) => new Promise<void>((open) => {
-    gates.set(card, [...(gates.get(card) ?? []), open]);
-    setTimeout(open, REVEAL_FALLBACK_MS);
-  }))).then(() => undefined);
 }
 
 const running = (el: Element, id: string) => el.getAnimations().filter((a) => a.id === id);
@@ -184,15 +187,19 @@ export function popCount(n: HTMLElement): void {
   if (t.count) n.animate([{ scale: 1 }, { scale: 1.25, offset: 0.35 }, { scale: 0.97, offset: 0.75 }, { scale: 1 }], { duration: t.count, easing: 'ease-out' });
 }
 
-/** Stoß bei Schaden (11.1): einmal nach unten, gedämpft zurück, kurzer roter Schimmer am Rand */
+/** Stoß bei Schaden (11.1): einmal nach unten, gedämpft zurück, kurzer roter Schimmer am Rand; erst wenn die
+ *  getroffenen Karten dieses Stands aufgedeckt sind (5k) */
 export function strike(el: HTMLElement, lift: HTMLElement, delay: number): void {
+  void currentStrike.then(() => strikeNow(el, lift, delay));
+}
+function strikeNow(el: HTMLElement, lift: HTMLElement, delay: number): void {
   const t = timing();
   const red = getComputedStyle(document.documentElement).getPropertyValue('--strike-c').trim() || 'red';
   // Stufe „Aus“: nur der rote Schimmer
   if (!t.strike) return flash(lift, red, delay);
   const opts = { duration: t.strike, delay, easing: 'ease-out' };
   tag(el.animate([
-    { translate: '0 0' }, { translate: '0 8px', offset: 0.15 }, { translate: '0 -2px', offset: 0.45 }, { translate: '0 1px', offset: 0.7 }, { translate: '0 0' },
+    { translate: '0 0' }, { translate: '0 8px', offset: STRIKE_IMPACT }, { translate: '0 -2px', offset: 0.45 }, { translate: '0 1px', offset: 0.7 }, { translate: '0 0' },
   ], opts), CUE);
   glowEdge(lift, red, opts);
 }

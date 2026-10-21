@@ -147,7 +147,6 @@ const Check = z.object({ x: z.number(), y: z.number(), size: z.number(), font: z
 const Label = z.object({ x: z.number(), y: z.number(), font: z.number() }).strict();
 export type SkinBox = z.infer<typeof Box>;
 export type SkinCheck = z.infer<typeof Check>;
-export type SkinLabel = z.infer<typeof Label>;
 export const SkinFile = z.object({
   size: z.tuple([z.number(), z.number()]),
   images: z.object({ m: z.string(), w: z.string() }).strict(),
