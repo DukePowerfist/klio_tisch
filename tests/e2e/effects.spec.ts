@@ -17,7 +17,7 @@ test('Darstellung: Effekte für alle einstellbar, nur für einen selbst, bleibt 
   await expect(dialog.getByText('nur für dich', { exact: true })).toBeVisible();
   const select = dialog.getByRole('combobox', { name: 'Effekte' });
   await expect(select).toHaveValue('off');
-  await expect(select).toHaveAccessibleDescription(/Ruhig ist für den Stream gedacht/);
+  await expect(select).toHaveAccessibleDescription(/^Aus: keine Bewegung.*Ruhig: .*Voll: /);
   await select.selectOption('calm');
   expect(await level(page)).toBe('calm');
   await ready(page, true);

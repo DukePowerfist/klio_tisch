@@ -213,7 +213,7 @@ settings:                                 # Einstellungen (neu; seit 5g für all
   # Schritt 5g: Seite „Darstellung“ (für alle, nur im eigenen Browser)
   appearance: Darstellung
   effects: Effekte
-  effectsHelp: "Wie sich die Karten bewegen. Ruhig ist für den Stream gedacht; Aus zeigt Änderungen ohne Bewegung (voreingestellt, wenn das System Bewegung reduziert); bei Voll folgen später weitere Effekte."
+  effectsHelp: "Aus: keine Bewegung, Karten blenden an ihrem Ziel ein. Ruhig: Karten gleiten, klappen um und heben beim Mischen ab. Voll: wie Ruhig, weitere Effekte folgen."
   levels: { off: Aus, calm: Ruhig, full: Voll }
 
 # Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL
