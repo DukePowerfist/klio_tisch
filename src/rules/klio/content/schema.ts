@@ -141,7 +141,7 @@ export const sheetFieldInstances = (sheet: z.infer<typeof SheetFile>): string[] 
 // zones:
 //   damage: { x: 519.2, y: 125.4, w: 139.4, h: 195.1 }   # bisher 380er-Koordinaten, umgerechnet
 // nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }  # Namensschild in der Draufsicht (5b)
-// rollButton: { x: 146, y: 90, w: 118, font: 15 }  # „Auswürfeln“: linke obere Ecke, Breite, Schrift (5b)
+// rollButton: { x: 315, y: 8, w: 260, font: 13 }  # „Auswürfeln“: linke obere Ecke, Breite, Schrift (5b)
 const Box = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number(), font: z.number().optional(), align: z.literal('center').optional() }).strict();
 const Check = z.object({ x: z.number(), y: z.number(), size: z.number(), font: z.number().optional(), tone: z.literal('danger').optional() }).strict();
 const Label = z.object({ x: z.number(), y: z.number(), font: z.number() }).strict();

@@ -281,10 +281,10 @@
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .plate small { font-size: 0.6em; flex: none; opacity: 0.75; }
   .strip { position: absolute; left: 0; top: 0; right: 0; height: 5px; background: var(--c); pointer-events: none; }
-  /* immer sichtbar, unter dem Namensschild (Lage aus der Haut); außer am eigenen Bogen der Rollenansicht dezent */
-  .sbar { position: absolute; display: flex; flex-wrap: wrap; gap: 0.3em; z-index: 3; opacity: 0.95; transition: opacity 0.2s; font-family: system-ui, sans-serif; }
+  /* immer sichtbar, rechts oben und rechtsbündig (Lage aus der Haut), „Wiederbeleben“ links daneben; außer am eigenen Bogen der Rollenansicht dezent */
+  .sbar { position: absolute; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3em; z-index: 3; opacity: 0.95; transition: opacity 0.2s; font-family: system-ui, sans-serif; }
   .sbar.quiet { opacity: 0.4; }
   .sbar.quiet:hover, .dead .sbar { opacity: 0.95; }
-  .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 0.4em; font: inherit; padding: 0.15em 0.6em; cursor: pointer; white-space: nowrap; }
-  .revive { background: var(--warn-bg) !important; }
+  .sbar button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 0.4em; font: inherit; padding: 0.1em 0.45em; cursor: pointer; white-space: nowrap; }
+  .revive { order: -1; background: var(--warn-bg) !important; }
 </style>
