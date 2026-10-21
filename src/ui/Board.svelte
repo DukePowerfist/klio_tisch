@@ -12,7 +12,7 @@
   import GmControls from './GmControls.svelte';
   import Lamp from './Lamp.svelte';
   import { lampShadows } from './lampLight.svelte';
-  import { shadowAt, shadowCss, stackHeight, HEIGHT } from './light';
+  import { shadowCss, shadowFrom, stackHeight, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
@@ -96,7 +96,7 @@
   type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
-  /** Flamme für die Schatten (11.9); null bei gelöschter Laterne: dann die bisherigen Schatten */
+  /** Flamme für die Schatten (11.9); null bei gelöschter Laterne: dann fallen sie weich nach unten (F4) */
   const flame = $derived(lampShadows.lit ? layout.lamp.flame : null);
   /** Höhe einer liegenden Karte über dem Tisch (11.9): oberste Karte eines Stapels 2 + Zahl seiner Kanten, sonst eine
    *  Karte. Null für die Karten darunter: Sie liegen genau unter der obersten, und jeder eigene Schatten machte den Rand
@@ -108,7 +108,7 @@
     const n = table.zones[zone!]?.length ?? 0;
     return Number(i) === n - 1 ? stackHeight(stackEdges(n)) : null;
   }
-  const feltShadow = $derived(flame ? shadowCss(shadowAt(flame, layout.middle.x + layout.middle.w / 2, layout.middle.y + layout.middle.h / 2, HEIGHT.felt)) : undefined);
+  const feltShadow = $derived(shadowCss(shadowFrom(flame, layout.middle.x + layout.middle.w / 2, layout.middle.y + layout.middle.h / 2, HEIGHT.felt)));
   // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
   // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
   // kurz nach dem Laden); bis dahin der Grundton des Holzes.
@@ -385,7 +385,7 @@
       {#each Object.values(layout.sheets) as box (box.seat)}
         {#if box.visible}
           <!-- Schatten des Bogens von der Flamme weg (11.9); `display: contents`, die Variable erbt der Bogen -->
-          <div class="shade" style:--sheet-shadow={flame ? shadowCss(shadowAt(flame, box.x + box.w / 2, box.y + box.h / 2, HEIGHT.sheet)) : undefined}>
+          <div class="shade" style:--sheet-shadow={shadowCss(shadowFrom(flame, box.x + box.w / 2, box.y + box.h / 2, HEIGHT.sheet))}>
             <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
           </div>
         {/if}
@@ -408,6 +408,7 @@
           slot={p.slot}
           size={layout.card}
           {flame}
+          shaded
           height={heightOf(p)}
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}

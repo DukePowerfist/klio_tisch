@@ -44,7 +44,7 @@ async function screenShadow(page: Page, selector: string, pseudo?: string, first
   }, { pseudo, first });
 }
 
-test('Schatten von der Flamme weg: Deck links unten, Kreuz rechts unten, frei liegende (gedrehte) Karte auch; gelöscht wie bisher', async ({ page }) => {
+test('Schatten von der Flamme weg: Deck links unten, Kreuz rechts unten, frei liegende (gedrehte) Karte auch; gelöscht weich nach unten', async ({ page }) => {
   /** oberste Karte an einer Stelle des Bildschirms */
   const cardAt = (p: { x: number; y: number }) => page.evaluate(({ x, y }) => document.elementsFromPoint(x, y).find((e) => e.closest('[data-card]'))!.closest<HTMLElement>('[data-card]')!.dataset['card'], p);
   // oberste Karte im Deck: links unter der Laterne
@@ -64,9 +64,15 @@ test('Schatten von der Flamme weg: Deck links unten, Kreuz rechts unten, frei li
   const free = await screenShadow(page, '.scene > [data-card][style*="rotate(90deg)"] .face.back');
   expect(free.x).toBeLessThan(0);
   expect(free.y).toBeGreaterThan(0);
-  // gelöscht: wie vor 5n, weich nach unten
+  // gelöscht (F4): weich nach unten, auch dann nur die oberste Karte eines Stapels
   await page.locator('button[data-lamp]').click();
-  await expect.poll(() => screenShadow(page, `[data-card="${clubCard}"] .face.back`).then((s) => s.shadow)).toBe('rgba(0, 0, 0, 0.55) 0px 1px 3px 0px');
+  await expect.poll(() => screenShadow(page, `[data-card="${clubCard}"] .face.back`).then((s) => s.x)).toBe(0);
+  expect((await screenShadow(page, `[data-card="${clubCard}"] .face.back`)).y).toBeGreaterThan(0);
+  const under = await page.evaluate((top) => [...document.querySelectorAll<HTMLElement>('.scene > [data-card]')].find((c) => {
+    const t = document.querySelector<HTMLElement>(`[data-card="${top}"]`)!;
+    return c !== t && c.style.transform === t.style.transform;
+  })!.dataset['card'], clubCard);
+  expect(await page.locator(`[data-card="${under}"] .face.back`).evaluate((e) => getComputedStyle(e).boxShadow)).toBe('none');
 });
 
 test('Gegriffene Karte wirft einen langen, weichen Schatten von der Flamme weg', async ({ page }) => {

@@ -5,13 +5,13 @@
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
   import { stackEdges, type LampBox, type ZoneBox } from './layout';
-  import { shadowAt, shadowCss } from './light';
+  import { shadowCss, shadowFrom } from './light';
   import { session } from './session.svelte';
   import { t, tMaybe } from './texts';
 
   let { zone, count, card, open, hot, mark, fixedMenu, flame = null, onToggle, onAction }: {
     zone: ZoneBox; count: number; open: boolean; hot: boolean;
-    /** Flamme der Laterne für die Schatten der Kanten (11.9); null: der bisherige Schatten */
+    /** Flamme der Laterne für die Schatten der Kanten (11.9); null: Laterne aus, Schatten nach unten */
     flame?: LampBox['flame'] | null;
     /** Kartengröße bei Maßstab 1 (für die Kanten eines Stapels) */
     card: { w: number; h: number };
@@ -52,7 +52,7 @@
   });
   /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab.
    *  Kante k (k-ter Versatz) in Höhe 1 + k, wie in der Musterseite: so fällt der Stapel weich statt mit hartem Rand */
-  const edgeShadow = (k: number) => (flame ? shadowCss(shadowAt(flame, zone.x + (card.w * zone.scale) / 2, zone.y + (card.h * zone.scale) / 2, 1 + k)) : undefined);
+  const edgeShadow = (k: number) => shadowCss(shadowFrom(flame, zone.x + (card.w * zone.scale) / 2, zone.y + (card.h * zone.scale) / 2, 1 + k));
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 

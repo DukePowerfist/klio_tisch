@@ -22,6 +22,15 @@ export function shadowAt(flame: LampBox['flame'], x: number, y: number, h: numbe
   return { x: dx * k, y: dy * k, blur: 1.5 + h * 0.5 + d * 0.004, alpha: 0.63 };
 }
 
+/** Laterne aus (F4): weich nach unten, wie in der Musterseite; länger und weicher, je höher etwas liegt */
+export function shadowDown(h: number): Shadow {
+  return { x: 0, y: 1 + h * 0.4, blur: 1.5 + h * 0.5, alpha: 0.38 };
+}
+
+/** Schatten bei brennender Laterne (`flame`) von ihr weg, bei gelöschter (null) nach unten */
+export const shadowFrom = (flame: LampBox['flame'] | null, x: number, y: number, h: number): Shadow =>
+  (flame ? shadowAt(flame, x, y, h) : shadowDown(h));
+
 /** Als Wert für `box-shadow`; `alpha` ersetzt die Deckkraft (etwa für eine zweite, weichere Lage) */
 export function shadowCss(s: Shadow, alpha = s.alpha): string {
   const n = (v: number) => +v.toFixed(2);

@@ -6,16 +6,18 @@
   import type { CardId } from '../engine/types';
   import { appear, cause, cue, cut, events, fade, move, revealed, strike, Tilt, timing, turn, wobble } from './animator.svelte';
   import type { LampBox } from './layout';
-  import { HEIGHT, onCard, shadowAt, shadowCss } from './light';
+  import { HEIGHT, onCard, shadowCss, shadowFrom } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
   import { view } from './view.svelte';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, height = HEIGHT.card, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = HEIGHT.card, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number };
-    /** Flamme der Laterne für den Schatten (11.9); null: der bisherige Schatten */
+    /** Flamme der Laterne für den Schatten (11.9); null: Laterne aus, Schatten weich nach unten */
     flame?: LampBox['flame'] | null;
+    /** liegt auf dem Tisch und bekommt Schatten nach 11.9; ohne (Vorschau): der Schatten aus dem CSS */
+    shaded?: boolean;
     /** Höhe über dem Tisch, liegend (11.9): oberste Karte eines Stapels höher als eine einzelne; null: liegt unter der
      *  obersten Karte eines Stapels und wirft keinen eigenen Schatten */
     height?: number | null;
@@ -36,10 +38,10 @@
   /** Schatten von der Flamme weg (11.9), umgerechnet ins Koordinatensystem der Karte (gedreht, verkleinert): liegend
    *  auf `.face`, angehoben (auch von anderen gezogen) lang und weich auf `.lift::before` */
   const shadows = $derived.by(() => {
-    if (!flame) return null;
+    if (!shaded) return null;
     const w = (rotated ? size.h : size.w) * scale;
     const h = (rotated ? size.w : size.h) * scale;
-    const at = (height: number) => onCard(shadowAt(flame, x + w / 2, y + h / 2, height), rotated, scale);
+    const at = (height: number) => onCard(shadowFrom(flame, x + w / 2, y + h / 2, height), rotated, scale);
     return {
       face: height === null ? 'none' : `0 0 1px rgba(0, 0, 0, 0.6), ${shadowCss(at(height))}`,
       lift: `${shadowCss(at(HEIGHT.lifted), 0.42)}, ${shadowCss(at(HEIGHT.lifted / 3), 0.3)}`,
