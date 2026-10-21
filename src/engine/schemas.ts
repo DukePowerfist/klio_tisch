@@ -59,6 +59,7 @@ export function tableStateSchema<G>(parseGame: (x: unknown) => G): z.ZodType<Tab
     faceUp: z.record(z.string(), z.boolean()),
     seats: SeatsSchema,
     settings: TableSettingsSchema,
+    lamp: z.boolean(),
     game: z.unknown().transform((x) => parseGame(x)),
   }).strict() as unknown as z.ZodType<TableState<G>>;
 }
@@ -70,6 +71,7 @@ const engineEvents = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cardDrawn'), card: CardIdSchema, from: z.string(), to: z.string(), faceUp: z.boolean(), announce: z.boolean() }).strict(),
   z.object({ type: z.literal('settingsChanged'), settings: TableSettingsSchema }).strict(),
   z.object({ type: z.literal('seatsChanged'), seats: SeatsSchema }).strict(),
+  z.object({ type: z.literal('lampChanged'), lit: z.boolean(), by: z.union([z.literal('gm'), z.literal('spectator'), SeatSchema]) }).strict(),
   z.object({ type: z.literal('cardsReset'), zones: Zones }).strict(),
 ]);
 // Die Zod-Typen sind etwas weiter (string statt CardId-Vorlage); die Prüfung selbst ist dieselbe.

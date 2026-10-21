@@ -9,6 +9,10 @@ import { KlioSheet } from '../rules/klio/state';
 
 export const CHARACTER_KIND = 'klio-charakter';
 
+/** Ältestes Format mit gleichem Bogen: Charakterdateien von dort bis `FORMAT` lassen sich laden (A36; 5n hat nur den
+ *  Tisch geändert, nicht den Bogen). Ändert sich der Bogen, steigt dieser Wert, oder es kommt eine Migration dazu. */
+export const SHEET_SINCE = 3;
+
 /** Inhalt der Datei; das Foto steht als Base64 daneben, sein Name (Hash) ergibt sich beim Laden */
 const CharacterFileSchema = z.object({
   kind: z.literal(CHARACTER_KIND),
@@ -36,7 +40,7 @@ export async function readCharacter(text: string): Promise<ReadCharacter> {
   const format = (raw as { format?: unknown } | null)?.format;
   if ((raw as { kind?: unknown } | null)?.kind === CHARACTER_KIND && typeof format === 'number' && format > FORMAT) return { ok: false, reason: { key: 'plate.importNewer' } };
   const r = CharacterFileSchema.safeParse(raw);
-  if (!r.success || r.data.format !== FORMAT) return { ok: false, reason: { key: 'plate.importInvalid' } };
+  if (!r.success || r.data.format < SHEET_SINCE || r.data.format > FORMAT) return { ok: false, reason: { key: 'plate.importInvalid' } };
   if (!r.data.photo) return { ok: true, sheet: { ...r.data.sheet, photo: null }, photo: null };
   const bytes = fromBase64(r.data.photo);
   const hash = await sha256Hex(bytes);

@@ -31,7 +31,7 @@ class GameLog {
 
   constructor() {
     session.onEvents((events) => {
-      const texts = events.flatMap((e) => describe(e) ?? []);
+      const texts = events.flatMap((e) => describe(e, session.state?.seats) ?? []);
       this.add(texts.map((d) => ({ text: d.text, warn: d.level === 'warn' })));
     });
     session.onReplaced((reason) => this.add([{ text: t(`log.replaced.${reason}`), warn: false }]));

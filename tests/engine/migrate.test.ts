@@ -35,7 +35,15 @@ describe('Migrationen', () => {
   it('Format 2 → 3 (5e): Plätze ohne Farbe bleiben, wie sie sind', () => {
     const s = fresh();
     const parsed = engine.parseState({ ...structuredClone(s), format: 2 });
-    expect(parsed.format).toBe(3);
+    expect(parsed.format).toBe(FORMAT);
     expect(parsed.seats).toEqual(s.seats);
+  });
+
+  it('Format 3 → 4 (5n): alte Stände bekommen eine brennende Laterne', () => {
+    const { lamp: _, ...old } = structuredClone(fresh());
+    const parsed = engine.parseState({ ...old, format: 3 });
+    expect(parsed.format).toBe(4);
+    expect(parsed.lamp).toBe(true);
+    expect(() => engine.parseState({ ...structuredClone(fresh()), format: 5 })).toThrow(NewerFormatError);
   });
 });

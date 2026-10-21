@@ -6,12 +6,13 @@ import { ENGINE_EVENTS, EngineEventSchema, tableStateSchema } from './schemas';
 import { engineCommands, isRejection, reject } from './commands';
 import { can } from './permissions';
 import { migrate } from './migrate';
+import { lamp } from './migrations/lamp';
 import { seatColor } from './migrations/seatColor';
 import { expandZones } from './zones';
 import type { Actor, Command, CommandDef, DispatchResult, Event, Rng, Ruleset, SequencedEvent, TableState } from './types';
 
 /** Migrationen der Engine; sie hängen an derselben Formatnummer wie die des Regelwerks (7, Versionierung) */
-const ENGINE_MIGRATIONS = [seatColor];
+const ENGINE_MIGRATIONS = [seatColor, lamp];
 
 /** Höchstens so viele Runden Reaktion auf Reaktion; darüber wird der ganze Befehl abgelehnt. */
 export const MAX_REACTION_DEPTH = 8;

@@ -180,6 +180,12 @@ log:                                      # Spielprotokoll (neu)
     back: "{name} ist wieder da."
     backNoName: "Platz {n} ist wieder verbunden."
     freed: "Platz {n} ist frei."
+  lamp:                                   # Laterne (5n, 11.9); wer: Spielleitung, Name am Platz, sonst Spieler n
+    lit: "{who} hat die Laterne angezündet."
+    out: "{who} hat die Laterne gelöscht."
+    gm: Die Spielleitung
+    spectator: Ein Zuschauer
+    seatNoName: "Spieler {n}"
 
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
@@ -257,6 +263,7 @@ permissions:
   table.setSeat: Plätze vergeben und freigeben
   seat.edit: Eigenen Namen und eigene Farbe ändern
   table.setSettings: Einstellungen ändern
+  table.setLamp: Laterne anzünden und löschen
   gm.expedition: Expedition starten
   gm.oracle: Orakel ziehen
 
@@ -278,6 +285,7 @@ permissionHelp:
   table.setPlayers: Die Zahl der Plätze am Tisch ändern.
   table.setSeat: Personen auf Plätze setzen und Plätze freigeben.
   table.setSettings: Diese Einstellungen ändern. Wer das darf, kann sich auch selbst weitere Rechte geben.
+  table.setLamp: Die Laterne in der Tischmitte für alle anzünden oder löschen.
   gm.expedition: Ein Ergebnis aus der Expeditionstabelle ziehen.
   gm.oracle: Zwei Begriffe aus dem Orakel ziehen.
 

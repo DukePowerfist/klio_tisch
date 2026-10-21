@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FORMAT } from '../../src/engine/setup';
 import { sha256Hex } from '../../src/net/photos';
-import { characterFileName, readCharacter, writeCharacter } from '../../src/ui/characterFile';
+import { characterFileName, readCharacter, SHEET_SINCE, writeCharacter } from '../../src/ui/characterFile';
 import { emptySheet, type KlioSheet } from '../../src/rules/klio/state';
 
 const sheet: KlioSheet = { ...emptySheet(), name: 'Hilda', variant: 'w', trumps: ['schnelle-reflexe', null, null, null], dead: true, photo: { hash: 'b'.repeat(64), type: 'image/jpeg' } };
@@ -23,8 +23,16 @@ describe('Charakterdatei (10.1)', () => {
 
   it('kein Charakter: kaputtes JSON, Spielstand, falsches Format, ungültiger Bogen', async () => {
     const file = JSON.parse(writeCharacter(sheet, null));
-    for (const text of ['{', '{"app":"etwas"}', JSON.stringify({ ...file, format: FORMAT - 1 }), JSON.stringify({ ...file, sheet: { ...file.sheet, lamps: [] } }), JSON.stringify({ ...file, photo: '***' })]) {
+    for (const text of ['{', '{"app":"etwas"}', JSON.stringify({ ...file, format: SHEET_SINCE - 1 }), JSON.stringify({ ...file, sheet: { ...file.sheet, lamps: [] } }), JSON.stringify({ ...file, photo: '***' })]) {
       expect(await readCharacter(text), text).toEqual({ ok: false, reason: { key: 'plate.importInvalid' } });
+    }
+  });
+
+  it('ältere Dateien mit gleichem Bogen (ab Format 3, vor 5n) lassen sich laden (A36)', async () => {
+    const file = JSON.parse(writeCharacter(sheet, null));
+    expect(SHEET_SINCE).toBe(3);
+    for (let format = SHEET_SINCE; format <= FORMAT; format++) {
+      expect(await readCharacter(JSON.stringify({ ...file, format })), `Format ${format}`).toEqual({ ok: true, sheet: { ...sheet, photo: null }, photo: null });
     }
   });
 

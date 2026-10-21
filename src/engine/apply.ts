@@ -46,6 +46,9 @@ export function applyEngineEvent<G>(s: TableState<G>, e: EngineEvent): TableStat
     case 'seatsChanged':
       s.seats = structuredClone(e.seats);
       return s;
+    case 'lampChanged':
+      s.lamp = e.lit;
+      return s;
     case 'cardsReset':
       s.zones = structuredClone(e.zones);
       s.free = [];

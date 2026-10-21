@@ -21,6 +21,7 @@ player:
   table.setSeat: deny       # Plätze vergibt der Host beim Beitritt, freigeben nur die SL
   seat.edit: own            # eigener Name und eigene Farbe (5e)
   table.setSettings: deny
+  table.setLamp: deny       # Laterne für alle anzünden und löschen (5n, A38)
   gm.expedition: deny
   gm.oracle: deny
 

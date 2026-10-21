@@ -303,3 +303,30 @@ describe('Ablauf', () => {
     run(two, { type: 'zone.draw', zone: 'deck' }, player('seat2'));
   });
 });
+
+describe('Laterne (5n, 11.9)', () => {
+  it('brennt am Anfang; Löschen und Anzünden ergeben je ein Ereignis mit dem Auslöser', () => {
+    const s = fresh();
+    expect(s.lamp).toBe(true);
+    const out = run(s, { type: 'table.setLamp', lit: false });
+    expect(out.events).toEqual([{ type: 'lampChanged', lit: false, by: 'gm' }]);
+    expect(out.state.lamp).toBe(false);
+    expect(run(out.state, { type: 'table.setLamp', lit: true }).state.lamp).toBe(true);
+  });
+
+  it('gleicher Wert: kein Ereignis', () => {
+    expect(run(fresh(), { type: 'table.setLamp', lit: true }).events).toEqual([]);
+  });
+
+  it('Spieler nur mit Recht (A38); dann nennt das Ereignis seinen Platz', () => {
+    const s = fresh();
+    expectRejected(s, { type: 'table.setLamp', lit: false }, 'reject.notAllowed', player('seat2'));
+    const open = run(s, { type: 'table.setSettings', permissionOverrides: { player: { 'table.setLamp': 'allow' } } }).state;
+    expect(run(open, { type: 'table.setLamp', lit: false }, player('seat2')).events).toEqual([{ type: 'lampChanged', lit: false, by: 'seat2' }]);
+  });
+
+  it('Zurücksetzen lässt die Laterne, wie sie ist', () => {
+    const out = run(fresh(), { type: 'table.setLamp', lit: false }).state;
+    expect(run(out, { type: 'table.reset', includeCharacters: true }).state.lamp).toBe(false);
+  });
+});

@@ -136,7 +136,7 @@ test('Einstellungen: Seitenleiste mit vier Seiten, Kopf mit Seitentitel, × schl
 test('Einstellungen: Rechte in Gruppen mit Beschreibung, Schilder zur Reichweite', async ({ page }) => {
   const dialog = await openSettings(page, 'Rechte der Spieler');
   await expect(dialog.getByRole('heading', { level: 3 })).toHaveText(['Karten', 'Bogen', 'Trümpfe und Charakter', 'Spielleitung']);
-  await expect(dialog.getByRole('combobox')).toHaveCount(18);
+  await expect(dialog.getByRole('combobox')).toHaveCount(19); // seit 5n mit „Laterne anzünden und löschen“
   await expect(dialog.getByRole('combobox', { name: 'Eigenen Namen und eigene Farbe ändern' })).toHaveCount(0);
   await expect(dialog.getByRole('combobox', { name: 'Karten bewegen' })).toHaveAccessibleDescription(/Bei „nur eigener Bogen“ nichts auf fremde Bögen/);
   await expect(dialog.getByText('gilt für alle', { exact: true })).toBeVisible();

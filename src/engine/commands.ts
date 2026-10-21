@@ -45,6 +45,8 @@ const SeatEditCmd = z.object({
   name: PlayerNameSchema.optional(),
   color: SeatColorSchema.optional(),
 }).strict();
+/** Laterne anzünden oder löschen (5n, 11.9), für alle am Tisch */
+const LampCmd = z.object({ type: z.literal('table.setLamp'), lit: z.boolean() }).strict();
 const SettingsCmd = z.object({
   type: z.literal('table.setSettings'),
   automation: z.record(z.string(), z.boolean()).optional(),
@@ -297,6 +299,17 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
     },
   };
 
+  // Gleicher Wert ergibt kein Ereignis (wie die Spielerzahl); `by` nennt im Protokoll, wer es war.
+  const setLamp: CommandDef<unknown, z.infer<typeof LampCmd>> = {
+    parse: (x) => LampCmd.parse(x),
+    permission: 'table.setLamp',
+    handle: (cmd, state, actor) => (cmd.lit === state.lamp ? [] : [{
+      type: 'lampChanged',
+      lit: cmd.lit,
+      by: actor.role === 'player' ? actor.seat : actor.role,
+    }]),
+  };
+
   const setSettings: CommandDef<unknown, z.infer<typeof SettingsCmd>> = {
     parse: (x) => SettingsCmd.parse(x),
     permission: 'table.setSettings',
@@ -313,5 +326,6 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
   return {
     'cards.move': move, 'card.flip': cardFlip, 'zone.flip': zoneFlip, 'zone.draw': zoneDraw, 'zone.shuffle': zoneShuffle,
     'table.reset': reset, 'table.setPlayers': setPlayers, 'table.setSeat': setSeat, 'table.moveSeat': moveSeat, 'seat.edit': seatEdit, 'table.setSettings': setSettings,
+    'table.setLamp': setLamp,
   };
 }

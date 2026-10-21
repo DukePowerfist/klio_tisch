@@ -13,7 +13,8 @@ export type EventText = { text: string; level: 'log' | 'toast' | 'warn' };
 
 const say = (text: string, level: EventText['level'] = 'log'): EventText => ({ text, level });
 
-export function describe(e: EngineEvent | KlioEvent): EventText | null {
+/** `seats`: Namen für Einträge, die eine Person nennen (Laterne); ohne sie „Spieler n“. */
+export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>['seats']): EventText | null {
   switch (e.type) {
     case 'cardDrawn':
       return e.announce ? say(t(drawnKey(e.to), { card: cardName(e.card) }), 'toast') : null;
@@ -21,6 +22,11 @@ export function describe(e: EngineEvent | KlioEvent): EventText | null {
       return say(t('log.shuffled', { zones: e.shuffled.map(zoneName).filter(Boolean).join(', ') }));
     case 'cardsReset':
       return say(t('log.reset'));
+    case 'lampChanged': {
+      const name = e.by === 'gm' || e.by === 'spectator' ? null : seats?.[e.by].name;
+      const who = e.by === 'gm' || e.by === 'spectator' ? t(`log.lamp.${e.by}`) : name ?? t('log.lamp.seatNoName', { n: seatNo(e.by) });
+      return say(t(e.lit ? 'log.lamp.lit' : 'log.lamp.out', { who }));
+    }
     case 'charactersReset':
       return say(t('log.charactersReset'));
     case 'characterReset':

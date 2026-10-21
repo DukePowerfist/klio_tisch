@@ -86,6 +86,8 @@ export type TableState<G> = {
   /** `color`: gewählte Farbe (Kennung aus `Ruleset.seatColors`); fehlt sie, gilt die Voreinstellung des Platzes */
   seats: Record<SeatId, { occupied: boolean; name?: string; color?: string }>;
   settings: TableSettings;
+  /** Laterne in der Tischmitte brennt (Schritt 5n, 11.9); gilt für alle am Tisch */
+  lamp: boolean;
   game: G;
 };
 
@@ -115,6 +117,8 @@ export type EngineEvent =
   | { type: 'cardDrawn'; card: CardId; from: ZoneId; to: ZoneId; faceUp: boolean; announce: boolean }
   | { type: 'settingsChanged'; settings: TableSettings }
   | { type: 'seatsChanged'; seats: TableState<unknown>['seats'] }
+  /** Laterne angezündet oder gelöscht; `by` = wer (für das Protokoll) */
+  | { type: 'lampChanged'; lit: boolean; by: 'gm' | 'spectator' | SeatId }
   /** alle Karten zurück auf ihre (neu gemischten) Startplätze, verdeckt, nichts frei */
   | { type: 'cardsReset'; zones: Record<ZoneId, CardId[]> };
 

@@ -19,7 +19,7 @@ export const PERMISSION_GROUPS = {
   cards: ['cards.move', 'card.flip', 'zone.shuffle', 'zone.draw'],
   sheet: ['sheet.edit', 'sheet.photo', 'sheet.roll', 'sheet.replace'],
   trumps: ['trump.choose', 'trump.chooseFree', 'trump.remove', 'character.revive'],
-  gm: ['table.reset', 'table.setPlayers', 'table.setSeat', 'table.setSettings', 'gm.expedition', 'gm.oracle'],
+  gm: ['table.reset', 'table.setPlayers', 'table.setSeat', 'table.setSettings', 'table.setLamp', 'gm.expedition', 'gm.oracle'],
 } as const satisfies Record<string, readonly string[]>;
 
 /** Fest, nicht im Dialog: eigenen Namen und eigene Farbe darf jeder Spieler immer ändern (5f, Nutzer 2026-10-21). */
