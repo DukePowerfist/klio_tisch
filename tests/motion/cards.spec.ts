@@ -190,7 +190,9 @@ test('Schaden: die Karten der Schadenszone stoßen und schimmern rot', async ({ 
     const watch = setInterval(() => {
       for (const a of document.getAnimations()) {
         const frames = (a.effect as KeyframeEffect).getKeyframes();
-        if (frames.some((k) => String(k['translate'] ?? '').includes('8px'))) seen.add(((a.effect as KeyframeEffect).target as HTMLElement).dataset['card'] ?? '');
+        // genau der Stoß (0 → 8 px nach unten) auf einer Karte; nicht etwa das Anheben beim Greifen (`translate` auf `.lift`)
+        const card = ((a.effect as KeyframeEffect).target as HTMLElement).dataset['card'];
+        if (card && frames.some((k) => /^0(px)? 8px$/.test(String(k['translate'] ?? '')))) seen.add(card);
       }
     }, 10);
     setTimeout(() => clearInterval(watch), 5000);
