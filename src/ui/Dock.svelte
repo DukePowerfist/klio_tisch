@@ -40,7 +40,7 @@
 <style>
   /* gedimmt über den Hintergrund, nicht über opacity: Ringe und Namen bleiben voll deckend (Stream) */
   .dock { position: fixed; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 6px; z-index: 96; }
-  button { width: 30px; height: 30px; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--panel-bg) 50%, transparent); color: var(--ink); border: 1px solid var(--line); font-size: 14px; line-height: 1; cursor: pointer; transition: background 0.2s; }
+  button { width: 30px; height: 30px; padding: 0; border-radius: 50%; background: color-mix(in srgb, var(--panel-bg) 50%, transparent); color: var(--ink); border: 1px solid var(--line); font-size: 14px; line-height: 1; cursor: pointer; transition: background 0.2s, scale var(--press) ease-out; }
   .dock:hover button { background: var(--panel-bg); }
   button.seat { border: 2px solid color-mix(in srgb, var(--c) 80%, transparent); background: color-mix(in srgb, var(--c) 22%, color-mix(in srgb, var(--panel-bg) 50%, transparent)); }
   .dock:hover button.seat { background: color-mix(in srgb, var(--c) 22%, var(--panel-bg)); }

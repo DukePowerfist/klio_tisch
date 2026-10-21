@@ -238,3 +238,21 @@ test('Zahl am Stapel: springt beim Ziehen an Deck und Ablage, nicht beim Zurück
   await page.waitForTimeout(600);
   expect(await pops(page)).toEqual([]);
 });
+
+/** Namen der CSS-Animationen, die gerade laufen */
+const cssAnimations = (page: Page) => page.evaluate(() => document.getAnimations().filter((a) => 'animationName' in a).map((a) => (a as CSSAnimation).animationName));
+
+test('Fenster, Stapelmenü und Meldungen erscheinen weich; Knöpfe geben beim Drücken nach', async ({ page }) => {
+  const z = await zoneCenter(page, 'DECK');
+  await page.mouse.click(z.x, z.y);
+  expect(await cssAnimations(page)).toContain('pop-in');
+  const draw = page.getByRole('button', { name: 'Ziehen', exact: true });
+  const box = (await draw.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await expect.poll(() => draw.evaluate((e) => getComputedStyle(e).scale)).toBe('0.97');
+  await page.mouse.up();
+  await expect(page.getByRole('status')).toHaveText(/^Aufgedeckt: /);
+  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  expect(await cssAnimations(page)).toEqual(expect.arrayContaining(['fade-in', 'pop-in']));
+});

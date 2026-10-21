@@ -60,6 +60,11 @@
   --hover: 120ms;  /* Karte unter der Maus hebt sich leicht (11.6) */
   --wiggle: 250ms; /* und wackelt dabei einmal kurz */
   --count-pop: 250ms; /* Zahl am Stapel springt, wenn sie sich ändert (11.6) */
+  --pop: 150ms;    /* Fenster, Menüs und Meldungen erscheinen (11.6) */
+  --pop-from: 0.96;  /* dabei wachsen sie von dieser Größe auf 1 */
+  --rise: 12px;    /* Meldungen gleiten so weit von unten herein */
+  --press: 80ms;   /* Knöpfe geben beim Drücken nach */
+  --press-scale: 0.97;
   --glow: 0.6s;    /* Rand leuchtet nach einem fremden Zug */
   --flip: 0.4s;    /* Karte klappt um, hebt sich dabei */
   --hold: 150ms;   /* gezogene Karte hält am Ziel kurz inne, bevor sie aufgedeckt wird */
@@ -73,7 +78,16 @@
 }
 /* Effektstufe „Aus“ (11.5; data-effects setzt effectLevel.svelte.ts, ohne eigene Wahl bei „Bewegung reduzieren“):
    keine Bewegung; Karten blenden ein, gemischte Stapel und Schaden leuchten kurz am Rand auf */
-:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s; }
+:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s;
+  /* Fenster und Meldungen blenden nur ein (ohne Wachsen und Gleiten), Knöpfe geben nicht nach */
+  --pop-from: 1; --rise: 0px; --press: 0s; --press-scale: 1; }
+/* Erscheinen (11.6); in „Aus“ bleibt nur das Einblenden */
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes pop-in { from { opacity: 0; scale: var(--pop-from); } }
+@keyframes rise-in { from { opacity: 0; translate: 0 var(--rise); } }
+/* Knöpfe geben beim Drücken nach; über `scale`, damit ein vorhandenes `transform` bleibt */
+button { transition: scale var(--press) ease-out; }
+button:active:not(:disabled) { scale: var(--press-scale); }
 /* Browser ohne linear(): sonst wäre jede transition mit var(--spring) ungültig */
 @supports not (transition-timing-function: linear(0, 1)) {
   :root { --spring: ease-out; --spring-soft: ease-out; }

@@ -63,14 +63,14 @@
 
 <style>
   .menu { position: fixed; top: var(--menu-inset); right: calc(var(--table-right) + var(--menu-inset)); z-index: 97; display: flex; align-items: center; gap: 6px; font-size: 13px; }
-  .open { position: relative; width: var(--menu-size); height: var(--menu-size); padding: 0; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--panel-bg) 60%, transparent); color: var(--ink); border: 1px solid var(--line); cursor: pointer; transition: background 0.2s; }
+  .open { position: relative; width: var(--menu-size); height: var(--menu-size); padding: 0; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--panel-bg) 60%, transparent); color: var(--ink); border: 1px solid var(--line); cursor: pointer; transition: background 0.2s, scale var(--press) ease-out; }
   .open:hover, .open[aria-expanded='true'] { background: var(--panel-bg); }
   .dot { position: absolute; right: -1px; top: -1px; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--bg); background: var(--menu-local); }
   [data-health='ok'] .dot { background: var(--menu-ok); }
   [data-health='trouble'] .dot { background: var(--menu-trouble); }
   .count { opacity: 0.7; font-variant-numeric: tabular-nums; }
   .alert { display: flex; gap: 8px; align-items: center; background: var(--warn-bg); color: #fff; padding: 4px 10px; border-radius: 8px; }
-  .items { position: absolute; top: 36px; right: 0; display: flex; flex-direction: column; gap: 4px; min-width: 190px; padding: 6px; background: var(--panel-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); }
+  .items { position: absolute; top: 36px; right: 0; display: flex; flex-direction: column; gap: 4px; min-width: 190px; padding: 6px; background: var(--panel-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); transform-origin: top right; animation: pop-in var(--pop) var(--spring-soft); }
   .info { padding: 2px 6px 4px; opacity: 0.7; }
   .items button { text-align: left; }
   .items button, .alert button { background: transparent; color: var(--ink); border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font: inherit; cursor: pointer; }

@@ -71,3 +71,16 @@ test('Aus: die Zahl am Stapel springt nicht', async ({ page }) => {
   await expectCount(page, 'ABLAGE', 1);
   expect(await page.evaluate(() => document.getAnimations().filter((a) => ((a.effect as KeyframeEffect).target as HTMLElement).classList.contains('n')).length)).toBe(0);
 });
+
+test('Aus: Knöpfe geben beim Drücken nicht nach, Fenster wachsen nicht', async ({ page }) => {
+  const reset = page.getByRole('button', { name: 'Zurücksetzen' });
+  const box = (await reset.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(100);
+  expect(await reset.evaluate((e) => getComputedStyle(e).scale)).not.toBe('0.97');
+  await page.mouse.up();
+  const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
+  await expect(dialog).toBeVisible();
+  expect(await dialog.evaluate((e) => getComputedStyle(document.documentElement).getPropertyValue('--pop-from').trim())).toBe('1');
+});

@@ -100,7 +100,7 @@
   .zone.sheet { border-color: rgba(0, 0, 0, 0.35); }
   .zone.sheet .label { top: 50%; left: 50%; margin: 0; transform: translate(-50%, -50%); font-size: 9px; font-weight: 500; letter-spacing: 0.05em; color: #333; background: none; padding: 0; text-shadow: none; opacity: 0.6; }
   .zone.sheet.rotated .label { transform: translate(-50%, -50%) rotate(-90deg); }
-  .menu { position: absolute; display: flex; flex-direction: column; gap: 5px; z-index: 500000; }
+  .menu { position: absolute; display: flex; flex-direction: column; gap: 5px; z-index: 500000; animation: pop-in var(--pop) var(--spring-soft); }
   .menu button { font: inherit; font-size: 15px; padding: 8px 14px; min-width: 104px; border-radius: 7px; background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
   .menu button:hover { background: var(--button-hover); }
 </style>
