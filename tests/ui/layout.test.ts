@@ -287,3 +287,42 @@ describe('Laterne (5n, 11.9)', () => {
     expect(lampGap(lamp, { x: lamp.x - 10, y: lamp.y - 10, w: 12, h: 12 })).toBeGreaterThan(0);
   });
 });
+
+describe('Ablegen neben der Laterne (5n, F3)', () => {
+  const views = [computeLayout(content, 4, null, null), computeLayout(content, 2, null, null), computeLayout(content, 3, 'seat2', null)];
+  /** Rechteck der frei abgelegten Karte in Tischkoordinaten */
+  const rect = (L: ReturnType<typeof computeLayout>, x: number, y: number): Rect => {
+    const pos = freePosAt(L, x, y);
+    expect(pos.anchor).toBe('center');
+    const c = cardSize(L, { scale: 0.6, rotated: true });
+    return { x: L.middle.x + pos.x * L.middle.w, y: L.middle.y + pos.y * L.middle.h, ...c };
+  };
+  const inMiddle = (L: ReturnType<typeof computeLayout>, r: Rect) =>
+    r.x >= L.middle.x - 1e-6 && r.y >= L.middle.y - 1e-6 && r.x + r.w <= L.middle.x + L.middle.w + 1e-6 && r.y + r.h <= L.middle.y + L.middle.h + 1e-6;
+
+  it('mittig, von links, von rechts und von oben auf die Laterne: danach daneben, ganz in der Tischmitte', () => {
+    for (const L of views) {
+      const { cx, cy } = L.lamp;
+      for (const [x, y] of [[cx - 30, cy - 20], [cx - 70, cy - 10], [cx + 20, cy - 30], [cx - 30, L.middle.y - 40], [cx - 30, cy + 30]] as const) {
+        const r = rect(L, x, y);
+        expect(lampGap(L.lamp, r), `bei (${x}, ${y})`).toBeGreaterThanOrEqual(4 - 1e-6);
+        expect(inMiddle(L, r)).toBe(true);
+      }
+    }
+  });
+
+  it('kürzester Weg: links der Mitte nach links, rechts nach rechts, knapp über dem unteren Rand nach unten', () => {
+    const L = views[0]!;
+    const { cx, cy, r: R } = L.lamp;
+    // Lage als Anteil auf vier Stellen gespeichert, also auf etwa 0,1 TP genau
+    expect(rect(L, cx - 60, cy - 20).x + 67.2).toBeCloseTo(cx - R - 4, 1);
+    expect(rect(L, cx + 10, cy - 20).x).toBeCloseTo(cx + R + 4, 1);
+    expect(rect(L, cx - 34, cy + 30).y).toBeCloseTo(cy + R + 4, 1);
+  });
+
+  it('neben der Laterne unverändert, wie bisher', () => {
+    const L = views[0]!;
+    expect(freePosAt(L, 880, 900)).toEqual({ anchor: 'center', x: expect.closeTo((880 - L.middle.x) / L.middle.w, 4), y: expect.closeTo((900 - L.middle.y) / L.middle.h, 4) });
+    expect(rect(L, L.lamp.cx + 60, L.lamp.cy - 20).x).toBeCloseTo(L.lamp.cx + 60, 1);
+  });
+});

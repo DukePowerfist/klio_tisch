@@ -61,3 +61,25 @@ test('Licht liegt über dem Tisch, nimmt aber keine Zeigereingaben an; Stapelmen
   expect(await z('.light > .on')).toBe(450001);
   expect(await z('.ctl')).toBeGreaterThan(450002);
 });
+
+test('Karte auf die Laterne gezogen: Vorschau und Ablage daneben, nicht auf ihr (F3)', async ({ page }) => {
+  const deck = await zoneCenter(page, 'DECK');
+  const l = (await lamp(page).boundingBox())!;
+  const centre = { x: l.x + l.width / 2, y: l.y + l.height / 2 };
+  await page.mouse.move(deck.x, deck.y);
+  await page.mouse.down();
+  await page.mouse.move(centre.x, centre.y, { steps: 8 });
+  const hint = page.locator('.drop-hint');
+  await expect(hint).toHaveCount(1);
+  const shown = (await hint.boundingBox())!;
+  const dragged = await page.locator('.card.dragging').getAttribute('data-card');
+  await page.mouse.up();
+  await expect(hint).toHaveCount(0);
+  // getBoundingClientRect statt boundingBox: Playwright misst die gedrehte Karte ungedreht
+  const card = await page.locator(`.scene > [data-card="${dragged}"]`).evaluate((e) => e.getBoundingClientRect().toJSON() as DOMRect);
+  expect([card.x, card.y, card.width, card.height].map(Math.round)).toEqual([shown.x, shown.y, shown.width, shown.height].map(Math.round));
+  // Abstand der Karte zum Kreis der Laterne (Bildschirmpunkte)
+  const dx = Math.max(card.x - centre.x, 0, centre.x - (card.x + card.width));
+  const dy = Math.max(card.y - centre.y, 0, centre.y - (card.y + card.height));
+  expect(Math.hypot(dx, dy)).toBeGreaterThan(l.width / 2);
+});

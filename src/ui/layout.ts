@@ -257,7 +257,25 @@ export function freePosAt(layout: Layout, x: number, y: number): FreePos {
   const seat = sheetAt(layout, x, y);
   if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
   const c = cardSize(layout, { scale: layout.freeCardScale, rotated: true });
-  return { anchor: 'center', ...intoMiddle(layout, x, y, c.w, c.h) };
+  const m = layout.middle;
+  const at = besideLamp(layout, { x: clamp(x, m.x, m.x + m.w - c.w), y: clamp(y, m.y, m.y + m.h - c.h), ...c });
+  return { anchor: 'center', ...intoMiddle(layout, at.x, at.y, c.w, c.h) };
+}
+
+/** Mindestabstand einer abgelegten Karte zur Laterne (11.9, F3) */
+export const LAMP_GAP = 4;
+
+/** Karte (Rechteck in der Tischmitte) von der Laterne wegschieben wie vom Rand der Tischmitte (11.9, F3): berührt sie
+ *  den Kreis samt Abstand, nach links, rechts oder unten knapp neben das umgebende Quadrat (nach oben ist kein Platz),
+ *  nur ganz in der Tischmitte, auf dem kürzesten Weg. */
+function besideLamp(layout: Layout, r: Rect): { x: number; y: number } {
+  const { lamp, middle: m } = layout;
+  if (lampGap(lamp, r) >= LAMP_GAP) return r;
+  const s = lamp.r + LAMP_GAP;
+  const fits = (p: { x: number; y: number }) => p.x >= m.x && p.y >= m.y && p.x + r.w <= m.x + m.w && p.y + r.h <= m.y + m.h;
+  const options = [{ x: lamp.cx - s - r.w, y: r.y }, { x: lamp.cx + s, y: r.y }, { x: r.x, y: lamp.cy + s }].filter(fits);
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - r.x, p.y - r.y);
+  return options.sort((a, b) => dist(a) - dist(b))[0] ?? r;
 }
 
 /** Lage des Zeigers für die anderen (8.3), damit sie auch in einer anderen Ansicht über derselben Stelle steht:
