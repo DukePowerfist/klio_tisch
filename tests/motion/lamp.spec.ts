@@ -30,16 +30,18 @@ test('Löschen in 0,7 s, Anzünden in 1,4 s, an allen Lichtebenen und am Glühen
   await expect(page.locator('[data-lamp]')).toHaveAttribute('data-lit', 'true');
 });
 
-/** Versatz des letzten Schattens eines Elements, wie er auf dem Bildschirm erscheint (bei gedrehter Karte zurückgedreht) */
-async function screenShadow(page: Page, selector: string, pseudo?: string) {
-  return page.locator(selector).first().evaluate((el, pseudo) => {
+/** Versatz eines Schattens eines Elements (`first`: die erste Lage, sonst die letzte), wie er auf dem Bildschirm
+ *  erscheint (bei gedrehter Karte zurückgedreht) */
+async function screenShadow(page: Page, selector: string, pseudo?: string, first = false) {
+  return page.locator(selector).first().evaluate((el, { pseudo, first }) => {
     const shadow = getComputedStyle(el, pseudo).boxShadow;
-    const last = shadow.split(/,(?![^(]*\))/).at(-1)!;
+    const layers = shadow.split(/,(?![^(]*\))/);
+    const last = (first ? layers[0] : layers.at(-1))!;
     const [x, y] = [...last.replace(/rgba?\([^)]*\)/, '').matchAll(/-?[\d.]+px/g)].map((m) => parseFloat(m[0]));
     const card = el.closest<HTMLElement>('[data-card]');
     const rotated = !!card && card.style.transform.includes('rotate(90deg)');
     return rotated ? { x: -y!, y: x!, shadow } : { x: x!, y: y!, shadow };
-  }, pseudo);
+  }, { pseudo, first });
 }
 
 test('Schatten von der Flamme weg: Deck links unten, Kreuz rechts unten, frei liegende (gedrehte) Karte auch; gelöscht wie bisher', async ({ page }) => {
@@ -72,7 +74,8 @@ test('Gegriffene Karte wirft einen langen, weichen Schatten von der Flamme weg',
   await page.mouse.move(z.x, z.y);
   await page.mouse.down();
   await page.mouse.move(z.x + 60, z.y + 40, { steps: 4 });
-  const lifted = await screenShadow(page, '.card.dragging .lift', '::before');
+  // erste Lage: der lange Schatten (die zweite ist kürzer und weicher)
+  const lifted = await screenShadow(page, '.card.dragging .lift', '::before', true);
   const lying = await screenShadow(page, '.card.dragging .face.back');
   expect(Math.hypot(lifted.x, lifted.y)).toBeGreaterThan(4 * Math.hypot(lying.x, lying.y));
   expect(lifted.x).toBeLessThan(0);

@@ -5,7 +5,7 @@
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
   import { stackEdges, type LampBox, type ZoneBox } from './layout';
-  import { HEIGHT, shadowAt, shadowCss } from './light';
+  import { shadowAt, shadowCss } from './light';
   import { session } from './session.svelte';
   import { t, tMaybe } from './texts';
 
@@ -50,8 +50,9 @@
       if (n && countChanged(zone.id)) popCount(n);
     });
   });
-  /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab */
-  const edgeShadow = $derived(flame ? shadowCss(shadowAt(flame, zone.x + (card.w * zone.scale) / 2, zone.y + (card.h * zone.scale) / 2, HEIGHT.card)) : undefined);
+  /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab.
+   *  Kante k (k-ter Versatz) in Höhe 1 + k, wie in der Musterseite: so fällt der Stapel weich statt mit hartem Rand */
+  const edgeShadow = (k: number) => (flame ? shadowCss(shadowAt(flame, zone.x + (card.w * zone.scale) / 2, zone.y + (card.h * zone.scale) / 2, 1 + k)) : undefined);
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 
@@ -85,7 +86,7 @@
     </div>
   {/if}
   {#each edges as k (k)}
-    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})" style:box-shadow={edgeShadow}></div>
+    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})" style:box-shadow={edgeShadow(k)}></div>
   {/each}
 </div>
 

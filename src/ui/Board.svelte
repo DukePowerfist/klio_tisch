@@ -12,14 +12,14 @@
   import GmControls from './GmControls.svelte';
   import Lamp from './Lamp.svelte';
   import { lampShadows } from './lampLight.svelte';
-  import { shadowAt, shadowCss, HEIGHT } from './light';
+  import { shadowAt, shadowCss, stackHeight, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropHints, dropTarget } from './dropHint';
-  import { cardSize, clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
+  import { cardSize, clamp, computeLayout, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -98,6 +98,16 @@
   let boardEl: HTMLDivElement;
   /** Flamme für die Schatten (11.9); null bei gelöschter Laterne: dann die bisherigen Schatten */
   const flame = $derived(lampShadows.lit ? layout.lamp.flame : null);
+  /** Höhe einer liegenden Karte über dem Tisch (11.9): oberste Karte eines Stapels 2 + Zahl seiner Kanten, sonst eine
+   *  Karte. Null für die Karten darunter: Sie liegen genau unter der obersten, und jeder eigene Schatten machte den Rand
+   *  des Stapels mit jeder Karte dunkler (27 im Deck ergaben einen schwarzen Rand); die Dicke zeigen die Kanten. */
+  function heightOf(p: CardPlace): number | null {
+    const [zone, i] = p.slot.split('#');
+    const z = layout.zones[zone!];
+    if (!z || content.zones[z.template]?.fanned) return HEIGHT.card;
+    const n = table.zones[zone!]?.length ?? 0;
+    return Number(i) === n - 1 ? stackHeight(stackEdges(n)) : null;
+  }
   const feltShadow = $derived(flame ? shadowCss(shadowAt(flame, layout.middle.x + layout.middle.w / 2, layout.middle.y + layout.middle.h / 2, HEIGHT.felt)) : undefined);
   // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
   // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
@@ -398,6 +408,7 @@
           slot={p.slot}
           size={layout.card}
           {flame}
+          height={heightOf(p)}
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}
           pending={offsetOf.has(card) && off !== drag}
