@@ -36,9 +36,9 @@
   .inner.down { transform: rotateY(180deg); }
   .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); box-sizing: border-box; }
   .dragging .face { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5); }
-  .marked .face { box-shadow: 0 0 0 3px var(--mark), 0 1px 3px rgba(0, 0, 0, 0.55); }
-  /* folgt dem Zeiger eines anderen: halb durchsichtig, kurz nachgeführt wie der Zeiger selbst */
-  .card.marked { opacity: 0.6; transition: transform 0.08s linear; }
+  .marked .face { box-shadow: 0 0 0 3px var(--mark), 0 8px 18px rgba(0, 0, 0, 0.5); }
+  /* folgt dem Zeiger eines anderen: voll deckend und angehoben wie die eigene, kurz nachgeführt wie der Zeiger selbst */
+  .card.marked { transition: transform 0.08s linear; }
   .front { background: var(--card); color: var(--card-black); }
   .red .front { color: var(--card-red); }
   .back { transform: rotateY(180deg); background: repeating-linear-gradient(45deg, #24457a 0 6px, #2d5799 6px 12px); border: 4px solid var(--card); }
