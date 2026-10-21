@@ -171,6 +171,7 @@
         class="photo control"
         aria-label="Foto"
         style:left="{photoBox.x}px" style:top="{photoBox.y}px" style:width="{photoBox.w}px" style:height="{photoBox.h}px"
+        style:rotate={photoBox.rotate ? `${photoBox.rotate}deg` : undefined}
         style:background-image={photoUrl ? `url(${photoUrl})` : undefined}
         disabled={!canPhoto}
         onclick={() => fileInput?.click()}
@@ -247,7 +248,8 @@
   .tools .strike { display: block; opacity: 0.4; }
   .tools .strike:hover { opacity: 0.95; }
   .tools .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
-  .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; cursor: pointer; }
+  /* multiply: weißes Papier lässt das Foto unverändert, Rahmenlinien und Klebestreifen scheinen durch (eingeklebt) */
+  .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; mix-blend-mode: multiply; cursor: pointer; }
   .slot { position: absolute; cursor: pointer; }
   .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: 6px; }
   .slot.empty.go { color: var(--accent); font-weight: 400; }
