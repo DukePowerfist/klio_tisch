@@ -13,7 +13,7 @@ test('Übersicht: Klick öffnet das Menü, Esc und Klick daneben schließen es',
   await plate(page, 'seat2').click();
   await expect(menu(page)).toHaveAccessibleName('Platz 2');
   // lokal: nichts zu Personen; am freien Platz nur die Farbe
-  await expect(entries(page)).toHaveText(['Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter zurücksetzen']);
+  await expect(entries(page)).toHaveText(['Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter exportieren', 'Charakter importieren …', 'Charakter zurücksetzen']);
   await page.keyboard.press('Escape');
   await expect(menu(page)).toHaveCount(0);
   await plate(page, 'seat2').click();
@@ -87,4 +87,53 @@ test('Schild stört den Tisch nicht: Menü auf und zu, danach Karte ziehen', asy
   const deck = await zoneCenter(page, 'DECK');
   await dragFromTo(page, deck, await zoneCenter(page, 'GEFAHR'));
   await expectCount(page, 'GEFAHR', 1);
+});
+
+test('Charakter exportieren, zurücksetzen, importieren ergibt denselben Bogen mit Foto', async ({ page }) => {
+  const field = (f: string) => page.locator(`[data-sheet=seat2] [data-field="${f}"]`);
+  // Bogen mit Einträgen und Foto
+  await plate(page, 'seat2').click();
+  await entries(page).getByText('Charakter auswürfeln').click();
+  await plate(page, 'seat2').click();
+  let chooser = page.waitForEvent('filechooser');
+  await entries(page).getByText('Foto ändern …').click();
+  await (await chooser).setFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(page) });
+  const photo = page.locator('[data-sheet=seat2] .photo');
+  await expect(photo).toHaveCSS('background-image', /^url\(/);
+  const name = await field('name').inputValue();
+  const strength = await field('strengths.text.0').inputValue();
+
+  await plate(page, 'seat2').click();
+  const download = page.waitForEvent('download');
+  await entries(page).getByText('Charakter exportieren').click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe(`${name}.klio-charakter.json`);
+  const path = await file.path();
+
+  await plate(page, 'seat2').click();
+  await entries(page).getByText('Charakter zurücksetzen').click();
+  await entries(page).getByText('Wirklich zurücksetzen?').click();
+  await expect(field('name')).toHaveValue('');
+  await expect(photo).toHaveCSS('background-image', 'none');
+
+  // leerer Bogen: ohne Rückfrage direkt die Dateiauswahl
+  await plate(page, 'seat2').click();
+  chooser = page.waitForEvent('filechooser');
+  await entries(page).getByText('Charakter importieren …').click();
+  await (await chooser).setFiles(path);
+  await expect(page.getByRole('status')).toHaveText('Bogen 2: Charakter aus einer Datei geladen');
+  await expect(field('name')).toHaveValue(name);
+  await expect(field('strengths.text.0')).toHaveValue(strength);
+  await expect(photo).toHaveCSS('background-image', /^url\(/);
+  await ready(page, true);
+  await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue(name);
+
+  // Bogen mit Einträgen: erst „Bogen ersetzen?“; eine falsche Datei wird gemeldet und ändert nichts
+  await plate(page, 'seat2').click();
+  await entries(page).getByText('Charakter importieren …').click();
+  chooser = page.waitForEvent('filechooser');
+  await entries(page).getByText('Bogen ersetzen?').click();
+  await (await chooser).setFiles({ name: 'falsch.json', mimeType: 'application/json', buffer: Buffer.from('{"app":"etwas"}') });
+  await expect(page.getByRole('status')).toHaveText('Diese Datei ist kein Charakter des Kartentischs.');
+  await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue(name);
 });

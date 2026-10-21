@@ -283,6 +283,12 @@ plate:                                    # Menü am Namensschild (neu, Schritt 
   view: Zur Rollenansicht
   roll: Charakter auswürfeln
   photo: Foto ändern …
+  export: Charakter exportieren
+  import: Charakter importieren …
+  importTitle: Den Bogen durch einen Charakter aus einer Datei ersetzen
+  importConfirm: Bogen ersetzen?
+  importInvalid: Diese Datei ist kein Charakter des Kartentischs.
+  importNewer: Diese Charakterdatei stammt aus einer neueren Fassung des Kartentischs. Bitte die Seite neu laden.
   reset: Charakter zurücksetzen
   resetTitle: Den ganzen Bogen leeren; die Person am Platz bleibt
   resetConfirm: Wirklich zurücksetzen?

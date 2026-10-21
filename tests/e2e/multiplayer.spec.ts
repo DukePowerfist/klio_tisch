@@ -227,17 +227,41 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
 
   // Spieler in seiner Rollenansicht: Schild auf dem eigenen Bogen, alles zum eigenen Bogen, nichts zu Plätzen
   await player.locator('[data-plate=seat2]').click();
-  await expect(items(player)).toHaveText(['Name und Farbe …', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter zurücksetzen']);
+  await expect(items(player)).toHaveText(['Name und Farbe …', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter exportieren', 'Charakter importieren …', 'Charakter zurücksetzen']);
   await player.keyboard.press('Escape');
-  // am fremden Schild nur die Rollenansicht
+  // Spieler speichert seinen Charakter mit Foto, setzt zurück und lädt ihn wieder; die SL sieht Bogen und Foto
+  await player.locator('[data-plate=seat2]').click();
+  await items(player).getByText('Charakter auswürfeln').click();
+  await player.locator('[data-plate=seat2]').click();
+  let chooser = player.waitForEvent('filechooser');
+  await items(player).getByText('Foto ändern …').click();
+  await (await chooser).setFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(player) });
+  const name = player.locator('[data-sheet=seat2] [data-field=name]');
+  await expect(name).not.toHaveValue('');
+  const character = await name.inputValue();
+  await player.locator('[data-plate=seat2]').click();
+  const download = player.waitForEvent('download');
+  await items(player).getByText('Charakter exportieren').click();
+  const path = await (await download).path();
+  await player.locator('[data-plate=seat2]').click();
+  await items(player).getByText('Charakter zurücksetzen').click();
+  await items(player).getByText('Wirklich zurücksetzen?').click();
+  await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
+  await player.locator('[data-plate=seat2]').click();
+  chooser = player.waitForEvent('filechooser');
+  await items(player).getByText('Charakter importieren …').click();
+  await (await chooser).setFiles(path);
+  await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue(character);
+  await expect(gm.locator('[data-sheet=seat2] .photo')).toHaveCSS('background-image', /^url\(/, { timeout: 15_000 });
+  // am fremden Schild nur Rollenansicht und Export
   await player.keyboard.press('0');
   await player.locator('[data-plate=seat1]').click();
-  await expect(items(player)).toHaveText(['Zur Rollenansicht']);
+  await expect(items(player)).toHaveText(['Zur Rollenansicht', 'Charakter exportieren']);
   await player.keyboard.press('Escape');
 
   // SL ändert Namen der Person an Platz 2
   await gm.locator('[data-plate=seat2]').click();
-  await expect(items(gm)).toHaveText(['Name und Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter zurücksetzen', 'Umsetzen …', 'Platz freigeben']);
+  await expect(items(gm)).toHaveText(['Name und Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter exportieren', 'Charakter importieren …', 'Charakter zurücksetzen', 'Umsetzen …', 'Platz freigeben']);
   await items(gm).getByText('Name und Farbe …').click();
   const profile = gm.getByRole('dialog', { name: 'Name und Farbe: Platz 2' });
   await profile.getByRole('textbox').fill('Ida B.');

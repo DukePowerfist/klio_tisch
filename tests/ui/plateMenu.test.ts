@@ -5,7 +5,7 @@ const base: PlateContext = { can: () => true, occupied: true, online: true, host
 
 describe('Menü am Namensschild: Einträge (10.1)', () => {
   it('SL am besetzten Platz: alles außer Zuweisen, in drei Gruppen', () => {
-    expect(plateEntries(base)).toEqual([['profile', 'view'], ['roll', 'photo', 'reset'], ['move', 'release']]);
+    expect(plateEntries(base)).toEqual([['profile', 'view'], ['roll', 'photo', 'export', 'import', 'reset'], ['move', 'release']]);
   });
 
   it('SL als Host am freien Platz: Zuweisen statt Umsetzen und Freigeben, nur mit Zuschauern', () => {
@@ -15,20 +15,21 @@ describe('Menü am Namensschild: Einträge (10.1)', () => {
   });
 
   it('lokal: nichts zu Personen', () => {
-    expect(plateEntries({ ...base, online: false, host: false }).flat()).toEqual(['profile', 'view', 'roll', 'photo', 'reset']);
+    expect(plateEntries({ ...base, online: false, host: false }).flat()).toEqual(['profile', 'view', 'roll', 'photo', 'export', 'import', 'reset']);
   });
 
-  it('Spieler am fremden Platz: nur die Rollenansicht; im eigenen Rollenbogen dann gar nichts', () => {
+  it('Spieler am fremden Platz: Rollenansicht und Export; in dessen Rollenansicht nur noch der Export', () => {
     const foreign = { ...base, can: () => false };
-    expect(plateEntries(foreign)).toEqual([['view']]);
-    expect(plateEntries({ ...foreign, inRoleView: true })).toEqual([]);
+    expect(plateEntries(foreign)).toEqual([['view'], ['export']]);
+    expect(plateEntries({ ...foreign, inRoleView: true })).toEqual([['export']]);
   });
 
   it('Rechte je Eintrag', () => {
-    const only = (key: string) => plateEntries({ ...base, inRoleView: true, can: (t) => t === key }).flat();
+    const only = (key: string) => plateEntries({ ...base, inRoleView: true, can: (t) => t === key }).flat().filter((e) => e !== 'export');
     expect(only('seat.edit')).toEqual(['profile']);
     expect(only('sheet.roll')).toEqual(['roll']);
     expect(only('sheet.setPhoto')).toEqual(['photo']);
+    expect(only('sheet.import')).toEqual(['import']);
     expect(only('sheet.reset')).toEqual(['reset']);
     expect(only('table.moveSeat')).toEqual(['move']);
     expect(only('table.setSeat')).toEqual(['release']);

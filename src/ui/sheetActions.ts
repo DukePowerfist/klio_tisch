@@ -1,8 +1,14 @@
-// Aktionen zum ganzen Bogen (10.1): Foto wählen und ablegen. Genutzt vom Fotofeld am Bogen und vom Menü am Namensschild.
+// Aktionen zum ganzen Bogen (10.1): Foto wählen und ablegen (Fotofeld am Bogen und Menü am Namensschild),
+// Charakter als Datei speichern und laden (Menü am Namensschild).
 
 import type { SeatId } from '../engine/types';
+import { sheetOf } from '../rules/klio/events';
+import { characterFileName, readCharacter, writeCharacter } from './characterFile';
 import { submitOrSay } from './commands';
+import { saveFile } from './files';
 import { preparePhoto } from './photo';
+import { photos } from './photos.svelte';
+import { seatNames } from './seatNames';
 import { session } from './session.svelte';
 import { t, text } from './texts';
 import { view } from './view.svelte';
@@ -17,14 +23,39 @@ export async function setPhoto(seat: SeatId, file: File): Promise<void> {
   await submitOrSay(cmd);
 }
 
-/** Dateiauswahl öffnen und das gewählte Bild als Foto setzen (ohne festes Dateifeld, z. B. aus dem Menü) */
-export function pickPhoto(seat: SeatId): void {
+/** Dateiauswahl ohne festes Dateifeld (z. B. aus dem Menü) */
+function pickFile(accept: string, then: (file: File) => unknown): void {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'image/*';
+  input.accept = accept;
   input.onchange = () => {
     const file = input.files?.[0];
-    if (file) void setPhoto(seat, file);
+    if (file) void then(file);
   };
   input.click();
 }
+
+/** Dateiauswahl öffnen und das gewählte Bild als Foto setzen */
+export const pickPhoto = (seat: SeatId): void => pickFile('image/*', (file) => setPhoto(seat, file));
+
+/** Bogen als Charakterdatei speichern, mit Foto, sofern es in diesem Browser liegt */
+export async function exportCharacter(seat: SeatId): Promise<void> {
+  const table = session.state;
+  if (!table) return;
+  const sheet = sheetOf(table, seat);
+  const photo = sheet.photo ? await photos.get(sheet.photo.hash) : null;
+  saveFile(characterFileName(seatNames(table, seat).character), writeCharacter(sheet, photo));
+}
+
+/** Charakterdatei wählen und den Bogen damit ersetzen; das Foto kommt vorher in die Ablage bzw. zum Host */
+export const importCharacter = (seat: SeatId): void =>
+  pickFile('application/json,.json', async (file) => {
+    const r = await readCharacter(await file.text());
+    if (!r.ok) return view.say(text(r.reason), true);
+    if (r.photo) {
+      const stored = await session.addPhoto(r.photo.hash, r.photo.bytes);
+      if (!stored.ok) return view.say(text(stored.reason), true);
+    }
+    const cmd = { type: 'sheet.import', seat, sheet: r.sheet };
+    await submitOrSay(cmd);
+  });

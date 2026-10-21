@@ -31,7 +31,7 @@
   import { seatNo } from '../engine/zones';
   import { submitOrSay } from './commands';
   import { Confirm } from './confirm.svelte';
-  import { pickPhoto } from './sheetActions';
+  import { exportCharacter, importCharacter, pickPhoto } from './sheetActions';
   import { t, text } from './texts';
 
   let { seat }: { seat: SeatId } = $props();
@@ -41,6 +41,7 @@
   const occupied = $derived(table.seats[seat].occupied);
   const rollConfirm = new Confirm();
   const resetConfirm = new Confirm();
+  const importConfirm = new Confirm();
   /** aufgeklappte Auswahl (Umsetzen, Zuweisen) */
   let expanded = $state<'move' | 'assign' | null>(null);
   let root = $state<HTMLElement>();
@@ -58,9 +59,13 @@
   function roll() {
     if (rollConfirm.click(rollOverwrites(content, sheetOf(table, seat)))) run(() => submitOrSay({ type: 'sheet.roll', seat }))();
   }
+  const isEmpty = () => JSON.stringify(sheetOf(table, seat)) === JSON.stringify(emptySheet());
   function reset() {
-    const empty = JSON.stringify(sheetOf(table, seat)) === JSON.stringify(emptySheet());
-    if (resetConfirm.click(!empty)) run(() => submitOrSay({ type: 'sheet.reset', seat }))();
+    if (resetConfirm.click(!isEmpty())) run(() => submitOrSay({ type: 'sheet.reset', seat }))();
+  }
+  // Laden ersetzt den Bogen: bei Einträgen erst nachfragen, dann die Datei wählen
+  function load() {
+    if (importConfirm.click(!isEmpty())) run(() => importCharacter(seat))();
   }
   async function assign(peer: string) {
     const r = await session.assign(peer, seat);
@@ -110,6 +115,10 @@
         <button role="menuitem" title={t('sheet.rollTitle')} onclick={roll}>{rollConfirm.armed ? t('sheet.rollConfirm') : t('plate.roll')}</button>
       {:else if entry === 'photo'}
         <button role="menuitem" onclick={run(() => pickPhoto(seat))}>{t('plate.photo')}</button>
+      {:else if entry === 'export'}
+        <button role="menuitem" onclick={run(() => exportCharacter(seat))}>{t('plate.export')}</button>
+      {:else if entry === 'import'}
+        <button role="menuitem" class:danger={importConfirm.armed} title={t('plate.importTitle')} onclick={load}>{importConfirm.armed ? t('plate.importConfirm') : t('plate.import')}</button>
       {:else if entry === 'reset'}
         <button role="menuitem" class:danger={resetConfirm.armed} title={t('plate.resetTitle')} onclick={reset}>{resetConfirm.armed ? t('plate.resetConfirm') : t('plate.reset')}</button>
       {:else if entry === 'move'}
