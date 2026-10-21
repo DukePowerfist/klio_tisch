@@ -13,7 +13,8 @@
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
-  import { effects } from './effects.svelte';
+  // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
+  import './effects.svelte';
   import { cardSize, clamp, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
@@ -271,7 +272,6 @@
     }
     return m;
   });
-  const shakingCards = $derived(new Set(effects.shaking.values().flatMap((z) => table.zones[z] ?? [])));
 </script>
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
@@ -317,7 +317,6 @@
         faceUp={!!table.faceUp[card]}
         dragging={offsetOf.has(card)}
         pending={offsetOf.has(card) && off !== drag}
-        shake={shakingCards.has(card)}
         mark={remoteOf.get(card)?.color}
       />
     {/each}

@@ -4,16 +4,16 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, cause, cue, move, revealed, Tilt, timing, turn } from './animator.svelte';
+  import { appear, cause, cue, cut, events, move, revealed, strike, Tilt, timing, turn } from './animator.svelte';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, slot = '', dragging = false, pending = false, shake = false, mark, still = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, slot = '', dragging = false, pending = false, mark, still = false }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number };
     /** Platz im Stand (`CardPlace.slot`) */
     slot?: string;
-    dragging?: boolean; pending?: boolean; shake?: boolean;
+    dragging?: boolean; pending?: boolean;
     /** Farbe, wenn jemand anderes die Karte gerade zieht; sie folgt dann dessen Zeiger (8.3) */
     mark?: string | undefined;
     /** ohne Animation (Vorschau) */
@@ -54,6 +54,15 @@
       shown = { frame, transform: to, faceUp: shown?.faceUp ?? faceUp, arrives };
     });
   });
+  // Abheben und Stoß kommen aus den Ereignissen, auch wenn sich die Lage nicht ändert (nach den Bewegungen oben)
+  $effect(() => {
+    void events.seen;
+    untrack(() => {
+      const c = still ? undefined : cue(card);
+      if (c?.cut) cut(el, c.cut, z, Number(slot.split('#')[1] ?? 0), size.w * scale);
+      if (c?.strike !== undefined) strike(el, lift, c.strike);
+    });
+  });
   $effect(() => () => tilt.stop());
   $effect(() => {
     const up = faceUp;
@@ -70,7 +79,7 @@
   const back = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 </script>
 
-<div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:shake class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:--glow-c={lastMark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
+<div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} style:--mark={mark} style:--glow-c={lastMark} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
   <div bind:this={lift} class="lift">
   <div bind:this={inner} class="inner" class:down={!faceUp}>
     <div class="face front">
@@ -107,9 +116,4 @@
   .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; }
   /* Glanz beim Umklappen: schräger heller Streifen, läuft über die Fläche (animator.svelte.ts) */
   .glint { position: absolute; inset: 0; border-radius: inherit; opacity: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%) 100% 0 / 300% 100% no-repeat; }
-  .shake { animation: wob var(--shake) ease-in-out; }
-  @keyframes wob {
-    0%, 100% { translate: 0 0; } 10% { translate: -7px 2px; } 20% { translate: 7px -2px; } 30% { translate: -6px -1px; }
-    40% { translate: 6px 2px; } 50% { translate: -4px 1px; } 60% { translate: 4px -1px; } 75% { translate: -2px 0; } 90% { translate: 2px 0; }
-  }
 </style>

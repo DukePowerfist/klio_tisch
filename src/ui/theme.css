@@ -57,10 +57,12 @@
   --hold: 150ms;   /* gezogene Karte hält am Ziel kurz inne, bevor sie aufgedeckt wird */
   --shift: 0.35s;  /* Bögen und Zonen beim Ansichtswechsel */
   --shift-ease: ease;  /* Kurve dazu, auch für die Karten (11.4) */
-  --shake: 0.6s;   /* Rucken beim Mischen */
+  --cut: 0.8s;     /* Abheben im gemischten Stapel (zweimal) */
+  --strike: 0.45s; /* Stoß bei Schaden */
+  --strike-c: #d9534a;  /* roter Schimmer dabei */
 }
 @media (prefers-reduced-motion: reduce) {
-  :root { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --shake: 0s; }
+  :root { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --cut: 0s; --strike: 0s; }
 }
 html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
 button { font: inherit; }

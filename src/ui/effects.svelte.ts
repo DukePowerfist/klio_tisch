@@ -1,8 +1,9 @@
-// Ereignis → Effekt, an einer Stelle (ARCHITEKTUR.md 11): Meldungen (Texte aus eventText.ts), Rucken, Hervorhebung, Ergebnisfenster.
+// Ereignis → Effekt, an einer Stelle (ARCHITEKTUR.md 11): Meldungen (Texte aus eventText.ts), Kartenbewegungen (an
+// animator.svelte.ts), Hervorhebung, Ergebnisfenster.
 // Dauern stehen in theme.css; bei „Bewegung reduzieren“ sind die Bewegungen aus.
 
-import type { EngineEvent, SeatId, ZoneId } from '../engine/types';
-import { seatNo, seatZoneId } from '../engine/zones';
+import type { EngineEvent, SeatId } from '../engine/types';
+import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { afterReveal, noteEvents } from './animator.svelte';
 import { describe } from './eventText';
@@ -26,8 +27,6 @@ class Pulse<K> {
 }
 
 class Effects {
-  /** Zonen, deren Karten gerade rucken */
-  shaking = new Pulse<ZoneId>();
   /** Bögen, die gerade einen Treffer zeigen */
   hit = new Pulse<SeatId>();
   /** eigene Textfelder (`seat1/name`), die gerade jemand anderes geändert hat */
@@ -40,9 +39,9 @@ class Effects {
     session.onSubmit((cmd) => {
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(`${cmd['seat']}/${cmd['field']}`, { value: cmd['value'], at: Date.now() });
     });
-    session.onEvents((events, own) => {
-      // Bewegungen der Karten: eigene Züge kürzer, fremde länger, mehrere gestaffelt (11.3)
-      noteEvents(events, own);
+    session.onEvents((events, own, prev) => {
+      // Bewegungen der Karten: eigene Züge kürzer, fremde länger, mehrere gestaffelt, Mischen, Schaden (11)
+      if (session.state) noteEvents(events, own, prev, session.state);
       for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
         this.handle(e);
@@ -71,10 +70,7 @@ class Effects {
       else say();
     }
     switch (e.type) {
-      case 'zonesShuffled':
-        return this.shaking.add(e.shuffled);
       case 'damageTaken':
-        this.shaking.add([seatZoneId(e.seat, 'damage')]);
         this.hit.add([e.seat]);
         return;
       // Ergebnis sehen alle (13.1): das Fenster öffnet sich mit dem Ereignis

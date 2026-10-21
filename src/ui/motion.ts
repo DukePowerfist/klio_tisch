@@ -1,6 +1,8 @@
 // Kartenbewegungen planen (ARCHITEKTUR.md 11.2, Schritt 5g): rein, ohne DOM, testbar. Ausgeführt in animator.svelte.ts.
 
-import type { CardId, EngineEvent } from '../engine/types';
+import type { CardId, EngineEvent, TableState, ZoneId } from '../engine/types';
+import { locate, seatZoneId } from '../engine/zones';
+import type { KlioEvent } from '../rules/klio/events';
 
 /** Was eine Karte gerade zeigt: Lage aus dem Stand, wem sie folgt, und ihr Platz im Stand (`CardPlace.slot`) */
 export type Frame = {
@@ -14,10 +16,14 @@ export type Frame = {
 };
 
 /** Dauern in ms und Kurven aus theme.css; `glide` ist die Grunddauer, dazu kommt die Strecke */
-export type Timing = { glide: number; glideEase: string; land: number; flip: number; hold: number; shift: number; shiftEase: string };
+export type Timing = { glide: number; glideEase: string; land: number; flip: number; hold: number; cut: number; strike: number; shift: number; shiftEase: string };
 
-/** Was die Ereignisse eines Stands für eine Karte vorsehen: Verzögerung (Staffelung) und ob sie gezogen wurde */
-export type Cue = { delay: number; drawn: boolean };
+/** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon */
+export type Cut = { delay: number; rank: number; count: number };
+
+/** Was die Ereignisse eines Stands für eine Karte vorsehen: Verzögerung (Staffelung), ob sie gezogen wurde, Abheben
+ *  im gemischten Stapel, Stoß bei Schaden (Verzögerung in ms) */
+export type Cue = { delay: number; drawn: boolean; cut?: Cut; strike?: number };
 
 /** Wer hat die Bewegung ausgelöst? Eigene Züge laufen kürzer, fremde länger (Zuschauer sollen folgen können) */
 export type Cause = 'own' | 'foreign' | null;
@@ -60,22 +66,59 @@ export const SWAY_PER_PX = 1 / 150;
 export const SWAY_MAX = 3;
 /** Ab dieser Strecke gilt es als Flug (Aufsetzen, Bogen); darunter rückt eine Karte nur nach (Stapel) */
 export const FLIGHT_MIN = 20;
-/** Staffelung mehrerer Karten ohne Zug: Abstand, insgesamt höchstens */
+/** Staffelung mehrerer Karten ohne Zug: Abstand, insgesamt höchstens (beim Zurücksetzen mehr, es sind alle Karten) */
 export const STAGGER = 50;
 export const STAGGER_MAX = 500;
+export const STAGGER_RESET_MAX = 800;
+/** Abheben: halb so viele Karten wie im Stapel, mindestens 3, höchstens 6; nur, wenn darunter noch Karten liegen */
+export const CUT_MIN = 3;
+export const CUT_MAX = 6;
+/** Stoß bei Schaden: kurz nach dem Ereignis, wenn die Karte, die ihn auslöst, ankommt */
+export const STRIKE_DELAY = 150;
 
-/** Staffelung und Ziehen aus den Ereignissen eines Stands (11.1 „Mehrere Karten“, „Ziehen“), in Reihenfolge der Ereignisse.
- *  Mit einem Zeiger gezogene Karten staffelt die Karte selbst nicht (sie kommen gemeinsam vom Zeiger). */
-export function cues(events: readonly { type: string }[]): Map<CardId, Cue> {
+export const cutCount = (n: number): number => Math.min(CUT_MAX, Math.max(CUT_MIN, Math.floor(n / 2)));
+
+/** Was die Ereignisse eines Stands für die Karten vorsehen (11.1): Staffelung in Reihenfolge der Ereignisse, Ziehen,
+ *  Abheben in gemischten Stapeln, Stoß bei Schaden. Nur aus Ereignissen und Stand, bei allen gleich (11). Mit einem
+ *  Zeiger gezogene Karten staffelt die Karte selbst nicht (sie kommen gemeinsam vom Zeiger). */
+export function cues(events: readonly { type: string }[], prev: TableState<unknown> | null, next: TableState<unknown>, t: Timing, cause: Cause = null): Map<CardId, Cue> {
   const out = new Map<CardId, Cue>();
-  const spread = (cards: readonly CardId[]) => {
-    const step = cards.length > 1 ? Math.min(STAGGER, STAGGER_MAX / (cards.length - 1)) : 0;
-    cards.forEach((c, i) => out.set(c, { delay: Math.round(i * step), drawn: out.get(c)?.drawn ?? false }));
+  const get = (c: CardId): Cue => out.get(c) ?? { delay: 0, drawn: false };
+  const set = (c: CardId, patch: Partial<Cue>) => out.set(c, { ...get(c), ...patch });
+  /** gestaffelt; liefert die letzte Verzögerung */
+  const spread = (cards: readonly CardId[], max = STAGGER_MAX) => {
+    const step = cards.length > 1 ? Math.min(STAGGER, max / (cards.length - 1)) : 0;
+    cards.forEach((c, i) => set(c, { delay: Math.round(i * step) }));
+    return Math.round((cards.length - 1) * step);
+  };
+  /** Karten, die in eine andere Zone (bzw. aus der freien Ablage) kommen */
+  const arriving = (zones: Record<ZoneId, CardId[]>) =>
+    Object.entries(zones).flatMap(([zone, cards]) => cards.filter((c) => {
+      const was = prev && locate(prev, c);
+      return !(was && 'zone' in was && was.zone === zone);
+    }));
+  const factor = cause === 'own' ? OWN_FACTOR : cause === 'foreign' ? FOREIGN_FACTOR : 1;
+  /** Einsammeln, dann Abheben in jedem Stapel; offene Karten, die bleiben, klappen vorher um */
+  const gatherAndCut = (zones: Record<ZoneId, CardId[]>, cutZones: readonly ZoneId[], max: number) => {
+    const moving = arriving(zones);
+    const last = moving.length ? spread(moving, max) : 0;
+    let start = moving.length ? last + Math.round(GLIDE_MAX * factor) + t.land : 0;
+    const turning = cutZones.some((z) => (zones[z] ?? []).some((c) => prev?.faceUp[c] && !moving.includes(c)));
+    if (turning) start = Math.max(start, t.flip);
+    for (const zone of cutZones) {
+      const cards = zones[zone] ?? [];
+      const count = cutCount(cards.length);
+      if (cards.length <= count) continue;
+      cards.slice(-count).forEach((c, rank) => set(c, { cut: { delay: start, rank, count } }));
+    }
   };
   for (const event of events) {
-    const e = event as EngineEvent;
+    const e = event as EngineEvent | KlioEvent;
     if (e.type === 'cardsMoved' || e.type === 'cardsTurned') spread(e.cards);
-    else if (e.type === 'cardDrawn') out.set(e.card, { delay: out.get(e.card)?.delay ?? 0, drawn: true });
+    else if (e.type === 'cardDrawn') set(e.card, { drawn: true });
+    else if (e.type === 'zonesShuffled') gatherAndCut(e.zones, e.shuffled, STAGGER_MAX);
+    else if (e.type === 'cardsReset') gatherAndCut(e.zones, Object.keys(e.zones), STAGGER_RESET_MAX);
+    else if (e.type === 'damageTaken') for (const c of next.zones[seatZoneId(e.seat, 'damage')] ?? []) set(c, { strike: STRIKE_DELAY });
   }
   return out;
 }
@@ -129,6 +172,8 @@ export function arcPoints(arc: number, steps = 8): { offset: number; y: number }
 export const arrival = (g: Glide, t: Timing): number => g.delay + g.duration + (g.land ? t.land : 0);
 
 export type Turn = { delay: number; duration: number; easing: string };
+/** so schnell klappt eine Karte höchstens um (unterwegs, bei kurzem Flug) */
+export const FLIP_MIN = 200;
 
 /** Umklappen; null = sofort. `arrive`: ms, bis die Karte nach einer gerade begonnenen Bewegung am Ziel ist.
  *  Aufdecken wartet bis dahin (erst landen, dann umklappen), nach dem Ziehen noch etwas länger (Innehalten);
@@ -137,7 +182,10 @@ export function planTurn(prevFaceUp: boolean, faceUp: boolean, t: Timing, arrive
   if (prevFaceUp === faceUp || t.flip <= 0) return null;
   const easing = 'ease-in-out';
   if (faceUp && arrive > 0) return { delay: arrive + (cue?.drawn ? t.hold : 0), duration: t.flip, easing };
-  return { delay: arrive > 0 ? 0 : (cue?.delay ?? 0), duration: t.flip, easing };
+  // zudecken unterwegs: mit dem (gestaffelten) Start der Bewegung, verdeckt angekommen
+  const delay = cue?.delay ?? 0;
+  const duration = !faceUp && arrive > delay ? Math.max(FLIP_MIN, Math.min(t.flip, arrive - delay)) : t.flip;
+  return { delay, duration, easing };
 }
 
 /** CSS-Zeit („0.3s“, „350ms“) in ms */

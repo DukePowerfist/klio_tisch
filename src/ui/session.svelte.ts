@@ -31,7 +31,8 @@ import { view } from './view.svelte';
 
 export type KlioTableState = TableState<KlioState>;
 /** `own`: ausgelöst von einem Befehl aus diesem Browser */
-type Listener = (events: (EngineEvent | KlioEvent)[], own: boolean) => void;
+/** `prev`: Stand vor den Ereignissen (null beim ersten Stand) */
+type Listener = (events: (EngineEvent | KlioEvent)[], own: boolean, prev: KlioTableState | null) => void;
 type CommandListener = (cmd: { type: string; [key: string]: unknown }) => void;
 type ReplacedListener = (reason: string) => void;
 
@@ -392,7 +393,7 @@ class Session {
       this.showRemote();
     }
     if (cause && this.pending.some((d) => d.id === cause)) this.pending = this.pending.filter((d) => d.id !== cause);
-    if (events.length > 0) for (const cb of this.listeners) cb(events as (EngineEvent | KlioEvent)[], own);
+    if (events.length > 0) for (const cb of this.listeners) cb(events as (EngineEvent | KlioEvent)[], own, prev);
   }
 }
 
