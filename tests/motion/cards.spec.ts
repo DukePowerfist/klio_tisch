@@ -427,11 +427,15 @@ test('Schild, Streifen und Dock bei „nicht da“ (5l): blasser in --away, zur�
     await new Promise((r) => requestAnimationFrame(r));
     return el.getAnimations().filter((a) => (a as CSSTransition).transitionProperty === 'opacity').map((a) => Number((a.effect as KeyframeEffect).getTiming().duration));
   }, { sel, classes, on });
+  // abwarten, bis die Blende wirklich zu Ende ist: eine umgekehrte, noch laufende wird sonst verkürzt (CSS-Transitions)
+  const settle = (sel: string) => page.evaluate(async (sel) => {
+    await Promise.all(document.querySelector<HTMLElement>(sel)!.getAnimations().map((a) => a.finished));
+  }, sel);
   for (const sel of ['[data-plate=seat2]', '[data-dock=seat2]']) {
     expect(await fade(sel, ['away'], true), sel).toEqual([600]);
-    await page.waitForTimeout(700);
+    await settle(sel);
     expect(await fade(sel, ['away'], false), sel).toEqual([350]);
-    await page.waitForTimeout(400);
+    await settle(sel);
     expect(await fade(sel, ['still', 'away'], true), sel).toEqual([]);
   }
   await page.keyboard.press('1');
