@@ -1,5 +1,7 @@
 // Kartenbewegungen planen (ARCHITEKTUR.md 11.2, Schritt 5g): rein, ohne DOM, testbar. Ausgeführt in animator.svelte.ts.
 
+import type { CardId, EngineEvent } from '../engine/types';
+
 /** Was eine Karte gerade zeigt: Lage aus dem Stand, wem sie folgt, und ihr Platz im Stand (`CardPlace.slot`) */
 export type Frame = {
   x: number;
@@ -12,7 +14,10 @@ export type Frame = {
 };
 
 /** Dauern in ms und Kurven aus theme.css; `glide` ist die Grunddauer, dazu kommt die Strecke */
-export type Timing = { glide: number; glideEase: string; land: number; flip: number; shift: number; shiftEase: string };
+export type Timing = { glide: number; glideEase: string; land: number; flip: number; hold: number; shift: number; shiftEase: string };
+
+/** Was die Ereignisse eines Stands für eine Karte vorsehen: Verzögerung (Staffelung) und ob sie gezogen wurde */
+export type Cue = { delay: number; drawn: boolean };
 
 /** Wer hat die Bewegung ausgelöst? Eigene Züge laufen kürzer, fremde länger (Zuschauer sollen folgen können) */
 export type Cause = 'own' | 'foreign' | null;
@@ -32,6 +37,8 @@ export type Glide = {
   glow: boolean;
   /** kommt angehoben vom Zeiger (Schatten schon da) */
   lifted: boolean;
+  /** Start nach so vielen ms (Staffelung mehrerer Karten) */
+  delay: number;
 };
 
 /** Bewegung von der gezeigten zur neuen Lage: `jump` = sofort dort (laufende Bewegung endet), null = nichts zu tun
@@ -53,12 +60,31 @@ export const SWAY_PER_PX = 1 / 150;
 export const SWAY_MAX = 3;
 /** Ab dieser Strecke gilt es als Flug (Aufsetzen, Bogen); darunter rückt eine Karte nur nach (Stapel) */
 export const FLIGHT_MIN = 20;
+/** Staffelung mehrerer Karten ohne Zug: Abstand, insgesamt höchstens */
+export const STAGGER = 50;
+export const STAGGER_MAX = 500;
+
+/** Staffelung und Ziehen aus den Ereignissen eines Stands (11.1 „Mehrere Karten“, „Ziehen“), in Reihenfolge der Ereignisse.
+ *  Mit einem Zeiger gezogene Karten staffelt die Karte selbst nicht (sie kommen gemeinsam vom Zeiger). */
+export function cues(events: readonly { type: string }[]): Map<CardId, Cue> {
+  const out = new Map<CardId, Cue>();
+  const spread = (cards: readonly CardId[]) => {
+    const step = cards.length > 1 ? Math.min(STAGGER, STAGGER_MAX / (cards.length - 1)) : 0;
+    cards.forEach((c, i) => out.set(c, { delay: Math.round(i * step), drawn: out.get(c)?.drawn ?? false }));
+  };
+  for (const event of events) {
+    const e = event as EngineEvent;
+    if (e.type === 'cardsMoved' || e.type === 'cardsTurned') spread(e.cards);
+    else if (e.type === 'cardDrawn') out.set(e.card, { delay: out.get(e.card)?.delay ?? 0, drawn: true });
+  }
+  return out;
+}
 
 const samePose = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.scale === b.scale && a.rotated === b.rotated;
 const JUMP: Motion = { kind: 'jump' };
 
 /** Wie kommt eine Karte von `prev` nach `next`? (Fälle aus 11.2) `cause`: Auslöser der Ereignisse dieses Stands */
-export function planMove(prev: Frame, next: Frame, t: Timing, cause: Cause = null): Motion {
+export function planMove(prev: Frame, next: Frame, t: Timing, cause: Cause = null, cue?: Cue): Motion {
   // folgt dem eigenen Zeiger: ohne Verzögerung
   if (next.follow === 'own') return JUMP;
   if (samePose(prev, next)) return null;
@@ -84,6 +110,7 @@ export function planMove(prev: Frame, next: Frame, t: Timing, cause: Cause = nul
       land: moved && flight && t.land > 0,
       glow: prev.follow === 'remote' && moved,
       lifted: !free,
+      delay: free ? (cue?.delay ?? 0) : 0,
     };
   }
   // gleicher Platz, andere Lage: Ansichtswechsel oder Spielerzahl, so schnell wie Bögen und Zonen
@@ -98,9 +125,19 @@ export function arcPoints(arc: number, steps = 8): { offset: number; y: number }
   });
 }
 
-/** Umklappen; null = sofort */
-export function planTurn(prevFaceUp: boolean, faceUp: boolean, t: Timing): { duration: number; easing: string } | null {
-  return prevFaceUp !== faceUp && t.flip > 0 ? { duration: t.flip, easing: 'ease-in-out' } : null;
+/** Wann eine Karte am Ziel ist, gerechnet ab dem Start: Verzögerung, Flug, Aufsetzen */
+export const arrival = (g: Glide, t: Timing): number => g.delay + g.duration + (g.land ? t.land : 0);
+
+export type Turn = { delay: number; duration: number; easing: string };
+
+/** Umklappen; null = sofort. `arrive`: ms, bis die Karte nach einer gerade begonnenen Bewegung am Ziel ist.
+ *  Aufdecken wartet bis dahin (erst landen, dann umklappen), nach dem Ziehen noch etwas länger (Innehalten);
+ *  Zudecken geschieht unterwegs. Mehrere Karten klappen gestaffelt um. */
+export function planTurn(prevFaceUp: boolean, faceUp: boolean, t: Timing, arrive = 0, cue?: Cue): Turn | null {
+  if (prevFaceUp === faceUp || t.flip <= 0) return null;
+  const easing = 'ease-in-out';
+  if (faceUp && arrive > 0) return { delay: arrive + (cue?.drawn ? t.hold : 0), duration: t.flip, easing };
+  return { delay: arrive > 0 ? 0 : (cue?.delay ?? 0), duration: t.flip, easing };
 }
 
 /** CSS-Zeit („0.3s“, „350ms“) in ms */

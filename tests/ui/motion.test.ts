@@ -1,10 +1,11 @@
 // Kartenbewegungen planen (11.2, Schritt 5g): welcher Fall welche Bewegung auslöst.
 
 import { describe, expect, it } from 'vitest';
-import { ARC_MAX, arcPoints, cssMs, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
+import type { CardId } from '../../src/engine/types';
+import { ARC_MAX, arcPoints, arrival, cssMs, cues, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, STAGGER, STAGGER_MAX, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
 
-const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, shift: 350, shiftEase: 'ease' };
-const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, shift: 0, shiftEase: 'ease' };
+const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, shift: 350, shiftEase: 'ease' };
+const OFF: Timing = { glide: 0, glideEase: 'ease-out', land: 0, flip: 0, hold: 0, shift: 0, shiftEase: 'ease' };
 const glide = (m: ReturnType<typeof planMove>) => {
   expect(m?.kind).toBe('glide');
   return m as Glide;
@@ -76,9 +77,34 @@ describe('Bewegung je Fall', () => {
   });
 });
 
-describe('Umklappen und Zeiten', () => {
-  it('klappt nur bei Wechsel der Seite, nicht ohne Dauer', () => {
-    expect(planTurn(false, true, T)).toEqual({ duration: 350, easing: 'ease-in-out' });
+describe('Staffelung, Ziehen, Umklappen', () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => `H${i + 2}` as CardId);
+
+  it('mehrere Karten: gestaffelt in Reihenfolge des Ereignisses, insgesamt höchstens 500 ms', () => {
+    const c = cues([{ type: 'cardsMoved', cards: ids(3), from: { zone: 'deck' }, to: { zone: 'discard' } } as never]);
+    expect([...c.values()].map((x) => x.delay)).toEqual([0, STAGGER, 2 * STAGGER]);
+    const many = cues([{ type: 'cardsTurned', cards: ids(13), faceUp: true } as never]);
+    expect(many.get('H14' as CardId)!.delay).toBe(STAGGER_MAX);
+    expect(cues([{ type: 'cardDrawn', card: 'S5', from: 'deck', to: 'discard', faceUp: true, announce: true } as never]).get('S5' as CardId)).toEqual({ delay: 0, drawn: true });
+  });
+
+  it('gestaffelt gleiten nur Karten ohne Zeiger; ein gezogener Stapel landet gemeinsam', () => {
+    const cue = { delay: 100, drawn: false };
+    expect(glide(planMove(f(), f({ x: 200, slot: 'discard#2' }), T, null, cue)).delay).toBe(100);
+    expect(glide(planMove(f({ x: 50, follow: 'own' }), f({ x: 200, slot: 'discard#2' }), T, 'own', cue)).delay).toBe(0);
+  });
+
+  it('Aufdecken nach einer Bewegung: erst landen, nach dem Ziehen noch innehalten; Zudecken unterwegs', () => {
+    const g = glide(planMove(f(), f({ x: 150, slot: 'discard#0' }), T));
+    expect(arrival(g, T)).toBe(g.duration + T.land);
+    expect(planTurn(false, true, T, 400)).toEqual({ delay: 400, duration: 350, easing: 'ease-in-out' });
+    expect(planTurn(false, true, T, 400, { delay: 0, drawn: true })!.delay).toBe(400 + T.hold);
+    expect(planTurn(true, false, T, 400)!.delay).toBe(0);
+  });
+
+  it('Umklappen ohne Bewegung: sofort bzw. gestaffelt; nur bei Wechsel der Seite, nicht ohne Dauer', () => {
+    expect(planTurn(false, true, T)).toEqual({ delay: 0, duration: 350, easing: 'ease-in-out' });
+    expect(planTurn(false, true, T, 0, { delay: 100, drawn: false })!.delay).toBe(100);
     expect(planTurn(true, true, T)).toBeNull();
     expect(planTurn(false, true, OFF)).toBeNull();
   });

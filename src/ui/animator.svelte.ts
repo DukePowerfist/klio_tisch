@@ -2,7 +2,8 @@
 // Geplant wird in motion.ts; die Endlage steht schon im Element (aus dem Stand), animiert wird nur der Weg dorthin.
 // Die zuletzt gezeigte Lage merkt sich jede Karte selbst (Card.svelte); eine laufende Bewegung liefert das DOM.
 
-import { arcPoints, cssMs, type Cause, type Motion, type Timing } from './motion';
+import type { CardId } from '../engine/types';
+import { arcPoints, cssMs, cues, type Cause, type Cue, type Motion, type Timing, type Turn } from './motion';
 
 /** Kennungen der eigenen Animationen (die CSS-Animation beim Rucken bleibt unberührt) */
 const MOVE = 'move';
@@ -18,7 +19,7 @@ export function timing(): Timing {
   const v = (name: string) => css.getPropertyValue(name).trim();
   cached = {
     glide: cssMs(v('--glide')), glideEase: v('--glide-ease') || 'ease-out', land: cssMs(v('--land')),
-    flip: cssMs(v('--flip')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
+    flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
   };
   return cached;
 }
@@ -26,17 +27,48 @@ if (typeof matchMedia !== 'undefined') matchMedia('(prefers-reduced-motion: redu
 /** Dauer des Leuchtens nach einem fremden Zug */
 const glowMs = () => cssMs(getComputedStyle(document.documentElement).getPropertyValue('--glow'));
 
-// ---------- Auslöser des aktuellen Stands ----------
-// effects.svelte.ts meldet, ob die Ereignisse eines neuen Stands eigene sind; die Karten lesen es beim Neuzeichnen
-// (gleich danach, in derselben Aufgabe). Danach gilt es nicht mehr.
+// ---------- Ereignisse des aktuellen Stands ----------
+// effects.svelte.ts meldet die Ereignisse eines neuen Stands und ob es eigene sind; die Karten lesen das beim
+// Neuzeichnen (gleich danach, in derselben Aufgabe). Danach gilt es nicht mehr.
 let current: Cause = null;
+let currentCues = new Map<CardId, Cue>();
 let clear: ReturnType<typeof setTimeout> | undefined;
-export function noteCause(own: boolean): void {
+export function noteEvents(events: readonly { type: string }[], own: boolean): void {
   current = own ? 'own' : 'foreign';
+  currentCues = cues(events);
   clearTimeout(clear);
-  clear = setTimeout(() => (current = null), 0);
+  clear = setTimeout(() => {
+    current = null;
+    currentCues = new Map();
+  }, 0);
 }
 export const cause = (): Cause => current;
+export const cue = (card: CardId): Cue | undefined => currentCues.get(card);
+
+// ---------- Aufgedeckt ----------
+// Die Meldung nach dem Ziehen nennt die Karte erst, wenn man sie sieht (11.1 „Ziehen“).
+const REVEAL_FALLBACK_MS = 2000;
+const waiting = new Map<CardId, () => void>();
+/** `then` ausführen, sobald die Karte aufgedeckt zu sehen ist (spätestens nach 2 s, etwa wenn sie nicht sichtbar ist) */
+export function afterReveal(card: CardId, then: () => void): void {
+  waiting.get(card)?.();
+  let done = false;
+  const run = () => {
+    if (done) return;
+    done = true;
+    waiting.delete(card);
+    then();
+  };
+  waiting.set(card, run);
+  setTimeout(run, REVEAL_FALLBACK_MS);
+}
+/** von der Karte: jetzt (bzw. nach dieser Animation) aufgedeckt zu sehen */
+export function revealed(card: CardId, anim?: Animation): void {
+  const run = waiting.get(card);
+  if (!run) return;
+  if (anim) anim.finished.then(run, run);
+  else run();
+}
 
 const running = (el: Element, id: string) => el.getAnimations().filter((a) => a.id === id);
 const tag = (a: Animation, id: string) => ((a.id = id), a);
@@ -85,13 +117,23 @@ export function shownOffset(el: HTMLElement): { dx: number; dy: number } {
   return { dx: shown.e - end.e + (tx ?? 0), dy: shown.f - end.f + (ty ?? 0) };
 }
 
-/** Umklappen: Drehung um die senkrechte Achse, von der gezeigten zur neuen Seite. */
-export function turn(inner: HTMLElement, faceUp: boolean, plan: { duration: number; easing: string } | null): void {
-  const now = running(inner, TURN);
-  const start = now.length ? getComputedStyle(inner).rotate : faceUp ? 'y 180deg' : 'y 0deg';
+/** Umklappen: Drehung um die senkrechte Achse, von der gezeigten zur neuen Seite; dabei hebt sich die Karte
+ *  (größer, Schatten) und ein schwacher Glanz läuft über die Fläche. Liefert die Drehung (Ende = aufgedeckt). */
+export function turn(inner: HTMLElement, lift: HTMLElement, faceUp: boolean, plan: Turn | null): Animation | undefined {
+  const now = [...running(inner, TURN), ...running(lift, TURN), ...[...inner.querySelectorAll('.glint')].flatMap((g) => running(g, TURN))];
+  const start = running(inner, TURN).length ? getComputedStyle(inner).rotate : faceUp ? 'y 180deg' : 'y 0deg';
   for (const a of now) a.cancel();
-  if (!plan) return;
-  tag(inner.animate([{ rotate: start }, { rotate: faceUp ? 'y 0deg' : 'y 180deg' }], plan), TURN);
+  if (!plan) return undefined;
+  const opts: KeyframeAnimationOptions = { ...plan };
+  // bis zum Start die alte Seite zeigen (`backwards`), etwa während des Flugs; Anheben und Glanz nicht, sonst
+  // überdeckten sie bis dahin das Aufsetzen und den Schatten des Flugs
+  const spin = tag(inner.animate([{ rotate: start }, { rotate: faceUp ? 'y 0deg' : 'y 180deg' }], { ...opts, fill: 'backwards' }), TURN);
+  tag(lift.animate([{ scale: 1 }, { scale: 1.08, offset: 0.5 }, { scale: 1 }], opts), TURN);
+  tag(lift.animate([{ opacity: 0 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { ...opts, pseudoElement: '::before' }), TURN);
+  for (const g of inner.querySelectorAll('.glint')) {
+    tag(g.animate([{ opacity: 0, backgroundPosition: '100% 0' }, { opacity: 1, offset: 0.5 }, { opacity: 0, backgroundPosition: '0% 0' }], opts), TURN);
+  }
+  return spin;
 }
 
 /** Neigung beim Ziehen (11.1 „Greifen“): folgt der Geschwindigkeit des Zeigers, klingt ab, pendelt beim Loslassen zurück. */

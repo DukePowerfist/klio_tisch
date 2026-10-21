@@ -4,8 +4,8 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, cause, move, Tilt, timing, turn } from './animator.svelte';
-  import { planMove, planTurn, type Frame } from './motion';
+  import { appear, cause, cue, move, revealed, Tilt, timing, turn } from './animator.svelte';
+  import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
   let { card, x, y, scale, rotated, z, faceUp, size, slot = '', dragging = false, pending = false, shake = false, mark, still = false }: {
@@ -34,26 +34,35 @@
   const tilt = new Tilt(() => lift);
   /** Farbe der Person, die die Karte zuletzt gezogen hat: Leuchten am Ziel nach dem Loslassen */
   let lastMark = $state<string | undefined>();
-  /** zuletzt gezeigt (nicht reaktiv): Ausgangspunkt der nächsten Bewegung */
-  let shown: { frame: Frame; transform: string; faceUp: boolean } | null = null;
+  /** zuletzt gezeigt (nicht reaktiv): Ausgangspunkt der nächsten Bewegung; `arrives`: Zeitpunkt, zu dem eine gerade
+   *  begonnene Bewegung am Ziel ist (Aufdecken wartet darauf) */
+  let shown: { frame: Frame; transform: string; faceUp: boolean; arrives: number } | null = null;
   $effect(() => {
     const frame: Frame = { x, y, scale, rotated, slot, follow: dragging ? 'own' : mark ? 'remote' : null };
     const to = transform;
     untrack(() => {
+      let arrives = shown?.arrives ?? 0;
       if (shown && !still) {
-        move(el, lift, shown.transform, planMove(shown.frame, frame, timing(), cause()), z);
+        const t = timing();
+        const motion = planMove(shown.frame, frame, t, cause(), cue(card));
+        move(el, lift, shown.transform, motion, z);
+        if (motion?.kind === 'glide') arrives = performance.now() + arrival(motion, t);
         if (frame.follow) tilt.track(x);
         else if (shown.frame.follow) tilt.release();
       }
       if (mark) lastMark = mark;
-      shown = { frame, transform: to, faceUp: shown?.faceUp ?? faceUp };
+      shown = { frame, transform: to, faceUp: shown?.faceUp ?? faceUp, arrives };
     });
   });
   $effect(() => () => tilt.stop());
   $effect(() => {
     const up = faceUp;
     untrack(() => {
-      if (shown && shown.faceUp !== up && !still) turn(inner, up, planTurn(shown.faceUp, up, timing()));
+      if (shown && shown.faceUp !== up && !still) {
+        const arrive = Math.max(0, Math.round(shown.arrives - performance.now()));
+        const spin = turn(inner, lift, up, planTurn(shown.faceUp, up, timing(), arrive, cue(card)));
+        if (up) revealed(card, spin);
+      }
       if (shown) shown.faceUp = up;
     });
   });
@@ -68,8 +77,9 @@
       <div class="corner">{rank}<br />{suit}</div>
       <div class="pip">{suit}</div>
       <div class="corner bottom">{rank}<br />{suit}</div>
+      <div class="glint"></div>
     </div>
-    <div class="face back" style:background-image={back}></div>
+    <div class="face back" style:background-image={back}><div class="glint"></div></div>
   </div>
   </div>
 </div>
@@ -95,6 +105,8 @@
   .corner { position: absolute; left: 6px; top: 4px; font: 700 16px/1.05 Georgia, serif; text-align: center; }
   .corner.bottom { left: auto; top: auto; right: 6px; bottom: 4px; transform: rotate(180deg); }
   .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; }
+  /* Glanz beim Umklappen: schräger heller Streifen, läuft über die Fläche (animator.svelte.ts) */
+  .glint { position: absolute; inset: 0; border-radius: inherit; opacity: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%) 100% 0 / 300% 100% no-repeat; }
   .shake { animation: wob var(--shake) ease-in-out; }
   @keyframes wob {
     0%, 100% { translate: 0 0; } 10% { translate: -7px 2px; } 20% { translate: 7px -2px; } 30% { translate: -6px -1px; }

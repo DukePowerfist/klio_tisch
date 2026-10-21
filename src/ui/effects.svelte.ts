@@ -4,7 +4,7 @@
 import type { EngineEvent, SeatId, ZoneId } from '../engine/types';
 import { seatNo, seatZoneId } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
-import { noteCause } from './animator.svelte';
+import { afterReveal, noteEvents } from './animator.svelte';
 import { describe } from './eventText';
 import { session } from './session.svelte';
 import { t } from './texts';
@@ -41,8 +41,8 @@ class Effects {
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(`${cmd['seat']}/${cmd['field']}`, { value: cmd['value'], at: Date.now() });
     });
     session.onEvents((events, own) => {
-      // eigene Züge gleiten kürzer, fremde länger (11.3)
-      noteCause(own);
+      // Bewegungen der Karten: eigene Züge kürzer, fremde länger, mehrere gestaffelt (11.3)
+      noteEvents(events, own);
       for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
         this.handle(e);
@@ -64,7 +64,12 @@ class Effects {
 
   private handle(e: EngineEvent | KlioEvent): void {
     const d = describe(e);
-    if (d && d.level !== 'log') view.say(d.text, d.level === 'warn');
+    if (d && d.level !== 'log') {
+      const say = () => view.say(d.text, d.level === 'warn');
+      // gezogen und aufgedeckt: erst das Ziel zeigen, dann den Wert (11.1); das Protokoll trägt sofort ein
+      if (e.type === 'cardDrawn' && e.faceUp) afterReveal(e.card, say);
+      else say();
+    }
     switch (e.type) {
       case 'zonesShuffled':
         return this.shaking.add(e.shuffled);
