@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Platz wählen (8.2): Name und einer der freien, sichtbaren Plätze; oder nur zuschauen.
+  // Platz wählen (8.2): Name und einer der freien, sichtbaren Plätze; oder nur zuschauen (der Name geht dann an die SL).
   // Je Platz der Charakter und wer dort sitzt bzw. zuletzt saß (8.7), Rand in der Platzfarbe.
   import { PLAYER_NAME_MAX } from '../engine/schemas';
   import { SEATS, type TextRef } from '../engine/types';
@@ -32,7 +32,7 @@
     {/each}
   </div>
   {#if refused}<p class="problem">{text(refused)}</p>{/if}
-  <p><button class="watch" onclick={onclose}>{t('room.join.watch')}</button></p>
+  <p><button class="watch" onclick={() => { session.watch(name.trim()); onclose(); }}>{t('room.join.watch')}</button></p>
 </Modal>
 
 <style>

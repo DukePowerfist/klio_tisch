@@ -177,6 +177,30 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.mouse.move(420, 320, { steps: 5 });
   await expect(gm.locator('.cursor', { hasText: 'Bo' })).toBeVisible();
 
+  // SL setzt den Zuschauer auf Platz 3 (8.7): er sitzt sofort dort und erfährt es
+  const watchers = room.locator('.watchers');
+  await expect(watchers).toHaveText(/Bo/);
+  await watchers.getByRole('combobox', { name: 'Platz zuweisen …' }).selectOption('seat3');
+  await expect(player.getByText('Die Spielleitung hat dich auf Platz 3 gesetzt.')).toBeVisible();
+  await expect(player.locator('[data-sheet=seat3] [data-field=name]')).toBeEditable();
+  await expect(room.getByText('Keine Zuschauer verbunden.')).toBeVisible();
+  await expect(gm.locator('[data-plate=seat3]')).toHaveText('Bo');
+  // Umsetzen auf den freien Platz 2: Charakter steht in der Auswahl, Bogen und Karten bleiben am Platz
+  const move = room.getByRole('combobox', { name: 'Umsetzen …' });
+  await expect(move.locator('option[value=seat2]')).toHaveText('auf Platz 2 – Ida Weber (frei)');
+  await move.selectOption('seat2');
+  await expect(player.getByText('Die Spielleitung hat dich auf Platz 2 gesetzt (Ida Weber).')).toBeVisible();
+  await seated(player);
+  await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('Ida Weber');
+  // Umsetzen ohne Verbindung: beim nächsten Beitritt sitzt er auf dem neuen Platz und erfährt es
+  await player.goto('about:blank');
+  await expect(room.getByText('nicht verbunden', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await room.getByRole('combobox', { name: 'Umsetzen …' }).selectOption('seat4');
+  await player.goto(link);
+  await expect(player.getByText('Die Spielleitung hat dich auf Platz 4 gesetzt.')).toBeVisible({ timeout: 60_000 });
+  await expect(player.locator('[data-sheet=seat4] [data-field=name]')).toBeEditable();
+  await expect(player.getByRole('dialog', { name: 'Platz wählen' })).toHaveCount(0);
+
   // Link erneuern: der alte gilt nicht mehr
   await room.getByRole('button', { name: 'Link erneuern' }).click();
   await room.getByRole('button', { name: 'Erneuern' }).click();

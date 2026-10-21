@@ -8,10 +8,11 @@ import content from 'virtual:klio-content';
 import { createEngine } from '../engine/dispatch';
 import { can, canSome } from '../engine/permissions';
 import { cryptoRng, seededRng } from '../engine/rng';
+import { seatNo } from '../engine/zones';
 import { initialTable } from '../engine/setup';
 import type { Actor, CardId, EngineEvent, Event, SeatId, TableState, TextRef, ZoneId } from '../engine/types';
 import { Client, type ClientStatus } from '../net/client';
-import { Host, type BackupInfo } from '../net/host';
+import { Host, type BackupInfo, type Online } from '../net/host';
 import { localTransport } from '../net/local';
 import { Presence, type PointerPos, type PresenceInfo } from '../net/presence';
 import { INVALID, type CommandResult, type Role } from '../net/protocol';
@@ -25,6 +26,7 @@ import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
 import { movedCards, RemoteDrags, type RemoteDrag, type Who } from './remoteDrags';
 import { saveFile } from './files';
+import { seatNames } from './seatNames';
 import { IdbBackups, IdbStore } from './storage';
 import { t } from './texts';
 import { view } from './view.svelte';
@@ -49,6 +51,8 @@ const engine = createEngine(ruleset);
 
 const KEY = 'klio.key';
 const NAME = 'klio.name';
+/** zuletzt bekannter Platz je Raum: Umsetzen bemerken, das ohne Verbindung geschah (8.7) */
+const SEAT = (room: string) => `klio.seat.${room}`;
 const HOST_LOCK = 'klio-tisch-host';
 const CHANNEL = 'msg';
 const PRESENCE = 'presence';
@@ -80,8 +84,8 @@ class Session {
   role = $state.raw<Role | null>(null);
   /** wer hier bedient: im lokalen Betrieb und als Host die Spielleitung */
   actor = $derived<Actor>(this.mode === 'client' ? (this.role ?? { role: 'spectator' }) : { role: 'gm' });
-  /** Host: Rollen der verbundenen Mitspieler und Zuschauer */
-  online = $state.raw<Role[]>([]);
+  /** Host: verbundene Mitspieler und Zuschauer mit Rolle und Namen */
+  online = $state.raw<Online[]>([]);
   saveError = $state<string | null>(null);
   pending = $state.raw<Pending[]>([]);
   /** Mauszeiger der anderen (8.3) */
@@ -274,11 +278,14 @@ class Session {
       name: this.savedName,
       onChange: () => {
         this.status = client.status;
-        if (!sameRole(this.role, client.role)) this.role = client.role;
+        const roleChanged = !sameRole(this.role, client.role);
+        const first = this.role === null;
+        if (roleChanged) this.role = client.role;
         if (client.state && client.state !== this.state) {
           before = this.state;
           this.state = client.state;
         }
+        if (roleChanged) this.roleChanged(link.room, first, client.roleBy);
       },
       onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own, before),
       photos,
@@ -289,6 +296,23 @@ class Session {
     });
     this.client = client;
     this.status = client.status;
+  }
+
+  /** Neue Rolle (8.7): Zeiger sofort mit der neuen Rolle melden, Trumpfwahl zum alten Platz schließen. Kommt der
+   *  Platz von der SL (zugewiesen, umgesetzt, getauscht) oder ist es beim Beitritt ein anderer als zuletzt, sagen,
+   *  wohin. Wer selbst wählt oder freigegeben wurde, bekommt keine Meldung. */
+  private roleChanged(room: string, first: boolean, by: 'gm' | null): void {
+    const r = this.role;
+    const before = localStorage.getItem(SEAT(room));
+    if (r?.role === 'player') localStorage.setItem(SEAT(room), r.seat);
+    else localStorage.removeItem(SEAT(room));
+    view.trumpDialog = null;
+    this.sendMine();
+    if (r?.role !== 'player' || !this.state) return;
+    if (by !== 'gm' && !(first && before && before !== r.seat)) return;
+    const names = seatNames(this.state, r.seat);
+    const n = seatNo(r.seat);
+    view.say(names.character !== t('room.player', { n }) ? t('room.movedAs', { n, character: names.character }) : t('room.moved', { n }));
   }
 
   /** Foto soll angezeigt werden: aus der eigenen Ablage, sonst (als Client) beim Host anfragen (8.4). */
@@ -313,10 +337,23 @@ class Session {
     const a = this.actor;
     if (a.role !== 'player') {
       this.sendMine();
+      this.client?.setName(name);
       return { ok: true };
     }
     const cmd = { type: 'seat.edit', seat: a.seat, name, ...(color ? { color } : {}) };
     return this.submit(cmd);
+  }
+
+  /** Nur zuschauen (Beitrittsfenster): der Name geht an die SL, damit sie weiß, wer zuschaut (8.7). */
+  watch(name: string): void {
+    this.rememberName(name);
+    this.client?.setName(name);
+    this.sendMine();
+  }
+
+  /** SL: verbundenen Zuschauer auf einen freien Platz setzen (8.7). */
+  assign(peer: string, seat: SeatId): Promise<CommandResult> {
+    return this.host?.assign(peer, seat) ?? Promise.resolve(INVALID);
   }
 
   /** Als Zuschauer einen freien Platz nehmen; Ergebnis für die Anzeige im Beitrittsfenster. */

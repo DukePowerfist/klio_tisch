@@ -134,7 +134,18 @@ room:                                     # Mehrspielerbetrieb (neu)
   offline: nicht verbunden
   release: Freigeben
   releaseTitle: Platz freigeben, z. B. für ein neues Gerät; der Spieler wird Zuschauer und kann neu wählen
-  spectators: "Zuschauer verbunden: {n}"
+  spectators: Zuschauer
+  noSpectators: Keine Zuschauer verbunden.
+  unnamed: Zuschauer ohne Namen
+  seat: "Platz {n}"
+  move: Umsetzen …
+  moveTitle: "Person von Platz {n} auf einen anderen Platz setzen; Bogen, Karten und Farbe bleiben am Platz"
+  moveTo: "auf Platz {n}"
+  swapWith: "mit Platz {n} tauschen"
+  assign: Platz zuweisen …
+  assignTitle: "{name} auf einen freien Platz setzen"
+  moved: "Die Spielleitung hat dich auf Platz {n} gesetzt."
+  movedAs: "Die Spielleitung hat dich auf Platz {n} gesetzt ({character})."
   link: Einladungslink
   renew: Link erneuern
   renewText: Der alte Link funktioniert danach nicht mehr. Alle öffnen den neuen Link und bekommen ihren Platz zurück.
