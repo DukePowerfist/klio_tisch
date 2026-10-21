@@ -82,3 +82,33 @@ test('Gegriffene Karte wirft einen langen, weichen Schatten von der Flamme weg',
   expect(lifted.y).toBeGreaterThan(0);
   await page.mouse.up();
 });
+
+test.describe('Flackern (Voll)', () => {
+  test('in „Voll“ flackert das Licht per Inline-Stil, ohne Animationen; gelöscht hört es auf', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('klio.effects', 'full'));
+    await ready(page, true);
+    const light = page.locator('.light');
+    await expect(light).toHaveAttribute('data-flicker', '');
+    const scales = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      scales.add(await page.locator('.light > .on').evaluate((e) => e.style.scale));
+      await page.waitForTimeout(120);
+    }
+    expect(scales.size, 'das Licht bewegt sich').toBeGreaterThan(1);
+    // keine endlose Animation an den Lichtebenen
+    expect(await page.evaluate(() => document.getAnimations().filter((a) => ((a.effect as KeyframeEffect).target as HTMLElement).closest('.light')).length)).toBe(0);
+    await page.locator('button[data-lamp]').click();
+    await expect(light).not.toHaveAttribute('data-flicker');
+    expect(await page.locator('.light > .on').evaluate((e) => e.style.scale)).toBe('');
+  });
+
+  for (const level of ['calm', 'off'] as const) {
+    test(`in „${level === 'calm' ? 'Ruhig' : 'Aus'}“ ruht das Licht`, async ({ page }) => {
+      await page.addInitScript((level) => localStorage.setItem('klio.effects', level), level);
+      await ready(page, true);
+      await page.waitForTimeout(500);
+      await expect(page.locator('.light')).not.toHaveAttribute('data-flicker');
+      expect(await page.locator('.light > .on').evaluate((e) => [e.style.scale, e.style.translate])).toEqual(['', '']);
+    });
+  }
+});

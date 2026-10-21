@@ -243,7 +243,7 @@ settings:                                 # Einstellungen (neu; seit 5g für all
   # Schritt 5g: Seite „Darstellung“ (für alle, nur im eigenen Browser)
   appearance: Darstellung
   effects: Effekte
-  effectsHelp: "Aus: keine Bewegung, Karten blenden an ihrem Ziel ein. Ruhig: Karten gleiten, klappen um und heben beim Mischen ab. Voll: wie Ruhig, weitere Effekte folgen."
+  effectsHelp: "Aus: keine Bewegung, Karten blenden an ihrem Ziel ein. Ruhig: Karten gleiten, klappen um und heben beim Mischen ab. Voll: wie Ruhig, dazu flackert die Laterne; weitere Effekte folgen."
   levels: { off: Aus, calm: Ruhig, full: Voll }
 
 # Bezeichnungen der Rechte (permissions.yaml) für den Rechte-Dialog der SL
