@@ -393,3 +393,90 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await expect(plate2).toHaveClass(STILL);
   await expect(entries(/nicht mehr verbunden/)).toHaveCount(1);
 });
+
+/** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
+async function joinAs(page: Page, link: string, name: string, n: number) {
+  await page.goto(link);
+  const join = page.getByRole('dialog', { name: 'Platz wählen' });
+  await expect(join).toBeVisible({ timeout: 60_000 });
+  await join.getByRole('textbox').fill(name);
+  await join.getByRole('button', { name: new RegExp(`^Spieler ${n}`) }).click();
+  await expect(page.locator(`[data-sheet=seat${n}] [data-field=name]`)).toBeEditable({ timeout: 15_000 });
+}
+
+/** Alle Meldungen (Toast) eines Browsers ab jetzt sammeln; `toasts` liefert sie. Übersteht kein Neuladen. */
+async function watchToasts(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { toasts: string[] };
+    w.toasts = [];
+    let last = '';
+    setInterval(() => {
+      const now = document.querySelector('[role=status]')?.textContent ?? '';
+      if (now && now !== last) w.toasts.push(now);
+      last = now;
+    }, 20);
+  });
+  return () => page.evaluate(() => (window as unknown as { toasts: string[] }).toasts);
+}
+
+/** SL mit offenem Raum und Protokoll; liefert Seite, Link und Einträge im Protokoll */
+async function openTable(browser: import('@playwright/test').Browser) {
+  const gm = await (await browser.newContext()).newPage();
+  await ready(gm);
+  await fromMenu(gm, 'Mitspieler einladen');
+  await expect(gm.locator('[data-health=ok]')).toBeVisible();
+  const link = gm.url();
+  await fromMenu(gm, 'Protokoll');
+  const log = () => gm.getByRole('list', { name: 'Protokoll' }).locator('li').allTextContents();
+  return { gm, link, log };
+}
+
+test('Neuladen eines Mitspielers bei drei Browsern (5l): bei den anderen keine Meldung, kein „nicht da“, kein Eintrag', async ({ browser }) => {
+  const { gm, link, log } = await openTable(browser);
+  const ida = await (await browser.newContext()).newPage();
+  await joinAs(ida, link, 'Ida', 2);
+  const bo = await (await browser.newContext()).newPage();
+  await joinAs(bo, link, 'Bo', 3);
+  // alle sehen sich (Zeigermeldungen da), dann ruhig werden lassen
+  await expect(gm.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Bo sitzt an Platz 3.' })).toHaveCount(1);
+  await gm.waitForTimeout(4000);
+  const before = await log();
+  const atGm = await watchToasts(gm);
+  const atBo = await watchToasts(bo);
+
+  await ida.reload();
+  await expect(ida.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout: 15_000 });
+  // Abgang bemerken (einige Sekunden) und Wartezeit (5 s) abwarten
+  await gm.waitForTimeout(12_000);
+  expect(await atGm()).toEqual([]);
+  expect(await atBo()).toEqual([]);
+  expect(await log()).toEqual(before);
+  // der Dock-Knopf ist in jeder Ansicht da (Bo sieht in seiner Rollenansicht kein Schild von Platz 2)
+  for (const page of [gm, bo]) await expect(page.locator('[data-dock=seat2]')).not.toHaveClass(AWAY);
+});
+
+test('Neustart des Hosts (5l): keine Flut von „wieder da“, weder bei der SL noch bei den Spielern', async ({ browser }) => {
+  const { gm, link, log } = await openTable(browser);
+  const ida = await (await browser.newContext()).newPage();
+  await joinAs(ida, link, 'Ida', 2);
+  const bo = await (await browser.newContext()).newPage();
+  await joinAs(bo, link, 'Bo', 3);
+  await gm.waitForTimeout(4000);
+  const atIda = await watchToasts(ida);
+  const atBo = await watchToasts(bo);
+
+  await gm.reload();
+  await expect(gm.locator('[data-health=ok]')).toBeVisible({ timeout: 60_000 });
+  const before = await log();
+  const atGm = await watchToasts(gm);
+  // Spieler finden den neuen Host, ihre Zeiger kommen bei der SL an
+  await expect(ida.locator('[data-health=ok]')).toBeVisible({ timeout: 60_000 });
+  await expect(bo.locator('[data-health=ok]')).toBeVisible({ timeout: 60_000 });
+  await gm.waitForTimeout(12_000);
+  expect(await atGm()).toEqual([]);
+  expect((await log()).slice(0, (await log()).length - before.length)).toEqual([]);
+  expect(await atIda()).toEqual([]);
+  expect(await atBo()).toEqual([]);
+  // am Ende sind alle da, auch wenn die SL sie zwischendurch still als „nicht da“ gezeigt hat
+  for (const seat of ['seat2', 'seat3']) await expect(gm.locator(`[data-plate=${seat}]`)).not.toHaveClass(AWAY, { timeout: 30_000 });
+});
