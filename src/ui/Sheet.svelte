@@ -57,7 +57,9 @@
   /** Textfeld → Kästchen, das es durchstreicht */
   const strikerOf = new Map(checks.flatMap((c) => (c.strikes ? [[c.strikes, c.id] as const] : [])));
 
-  const value = (id: string) => getField(sheet, id);
+  // Narbe und Tod nach einem Treffer erst mit dem Aufprall (5k)
+  const value = (id: string) => (effects.holds(seat, id) ? false : getField(sheet, id));
+  const dead = $derived(sheet.dead && !effects.holds(seat, 'dead'));
   const struck = (id: string) => strikerOf.has(id) && value(strikerOf.get(id)!) === true;
   const hasEmptySlot = $derived(!isFull(content.trumpSources, sheet));
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
@@ -102,7 +104,7 @@
 
 <div
   class="sheet"
-  class:dead={sheet.dead}
+  class:dead
   class:hit={effects.hit.has(seat)}
   class:tools
   data-sheet={seat}
@@ -217,12 +219,12 @@
       {#if canRoll}
         <button onclick={roll} title={t('sheet.rollTitle')}>{rollConfirm.armed ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
       {/if}
-      {#if sheet.dead && canRevive}
+      {#if dead && canRevive}
         <button class="revive" onclick={() => submit({ type: 'character.revive', seat })}>{t('sheet.revive')}</button>
       {/if}
     </div>
 
-    {#if sheet.dead}
+    {#if dead}
       <svg class="dead-cross" viewBox="0 0 100 100" preserveAspectRatio="none" width={imgW} height={imgH}>
         <path d="M4 3L96 97M96 3L4 97" stroke-width="12" fill="none" stroke-linecap="round" vector-effect="non-scaling-stroke" />
       </svg>

@@ -4,7 +4,7 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, cause, cue, cut, events, fade, move, revealed, strike, Tilt, timing, turn, wobble } from './animator.svelte';
+  import { appear, cause, cue, cut, events, fade, move, revealed, strike, strikeReady, Tilt, timing, turn, wobble } from './animator.svelte';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
@@ -62,7 +62,11 @@
     untrack(() => {
       const c = still ? undefined : cue(card);
       if (c?.cut) cut(el, lift, c.cut, z, Number(slot.split('#')[1] ?? 0), size.w * scale);
-      if (c?.strike !== undefined) strike(el, lift, c.strike);
+      // Stoß erst, wenn die getroffene Karte aufgedeckt ist (5k)
+      if (c?.strike !== undefined) {
+        const delay = c.strike;
+        void strikeReady().then(() => strike(el, lift, delay));
+      }
     });
   });
   $effect(() => () => tilt.stop());

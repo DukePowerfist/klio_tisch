@@ -83,6 +83,20 @@ export const CUT_MIN = 3;
 export const CUT_MAX = 6;
 /** Stoß bei Schaden: kurz nach dem Ereignis, wenn die Karte, die ihn auslöst, ankommt */
 export const STRIKE_DELAY = 150;
+/** Narbe, Tod und Warnung erscheinen mit dem Aufprall: nach dem Aufdecken Verzögerung plus der Weg nach unten (15 % des Stoßes, 5k) */
+export const strikeImpact = (t: Timing): number => STRIKE_DELAY + Math.round(0.15 * t.strike);
+
+/** getroffene Karten, die mit diesen Ereignissen aufgedeckt werden (auf dem Schadensfeld umgedreht) */
+export function hitsTurningUp(events: readonly { type: string }[]): CardId[] {
+  const up = new Set(events.flatMap((ev) => {
+    const e = ev as EngineEvent;
+    return e.type === 'cardsTurned' && e.faceUp ? e.cards : [];
+  }));
+  return events.flatMap((ev) => {
+    const e = ev as KlioEvent;
+    return e.type === 'damageTaken' ? e.hits.filter((c) => up.has(c)) : [];
+  });
+}
 
 export const cutCount = (n: number): number => Math.max(0, Math.min(n - 1, CUT_MAX, Math.max(CUT_MIN, Math.floor(n / 2))));
 
@@ -126,6 +140,7 @@ export function cues(events: readonly { type: string }[], prev: TableState<unkno
     else if (e.type === 'cardDrawn') set(e.card, { drawn: true });
     else if (e.type === 'zonesShuffled') gatherAndCut(e.zones, e.shuffled, STAGGER_MAX);
     else if (e.type === 'cardsReset') gatherAndCut(e.zones, Object.keys(e.zones), STAGGER_RESET_MAX);
+    // der Stoß wartet zusätzlich, bis getroffene Karten aufgedeckt sind (strikeReady in animator.svelte.ts, 5k)
     else if (e.type === 'damageTaken') for (const c of next.zones[seatZoneId(e.seat, 'damage')] ?? []) set(c, { strike: STRIKE_DELAY });
   }
   return out;

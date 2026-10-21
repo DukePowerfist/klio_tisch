@@ -3,7 +3,7 @@
 // Die zuletzt gezeigte Lage merkt sich jede Karte selbst (Card.svelte); eine laufende Bewegung liefert das DOM.
 
 import type { CardId, TableState, ZoneId } from '../engine/types';
-import { arcPoints, countChanges, cssMs, cues, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
+import { arcPoints, countChanges, cssMs, cues, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn, hitsTurningUp } from './motion';
 
 /** Kennungen der eigenen Animationen (die CSS-Animation beim Rucken bleibt unberührt) */
 const MOVE = 'move';
@@ -39,6 +39,8 @@ const glowMs = () => cssMs(getComputedStyle(document.documentElement).getPropert
 // Neuzeichnen (gleich danach, in derselben Aufgabe). Danach gilt es nicht mehr.
 let current: Cause = null;
 let currentCues = new Map<CardId, Cue>();
+/** Stoß dieses Stands: wartet auf das Aufdecken der getroffenen Karten (5k) */
+let currentStrike: Promise<void> = Promise.resolve();
 let clear: ReturnType<typeof setTimeout> | undefined;
 /** zählt die Stände mit Ereignissen: Karten, deren Lage sich nicht ändert, reagieren darauf (Abheben, Stoß) */
 export const events = $state({ seen: 0 });
@@ -48,6 +50,7 @@ export const countChanged = (zone: ZoneId): boolean => counted.includes(zone);
 export function noteEvents(list: readonly { type: string }[], own: boolean, prev: TableState<unknown> | null, next: TableState<unknown>): void {
   current = own ? 'own' : 'foreign';
   currentCues = cues(list, prev, next, timing(), current);
+  currentStrike = whenRevealed(hitsTurningUp(list));
   counted = countChanges(list, prev, next);
   events.seen++;
   clearTimeout(clear);
@@ -59,6 +62,8 @@ export function noteEvents(list: readonly { type: string }[], own: boolean, prev
 }
 export const cause = (): Cause => current;
 export const cue = (card: CardId): Cue | undefined => currentCues.get(card);
+/** erfüllt, wenn der Stoß des letzten Stands beginnen darf (getroffene Karten aufgedeckt) */
+export const strikeReady = (): Promise<void> => currentStrike;
 
 // ---------- Aufgedeckt ----------
 // Die Meldung nach dem Ziehen nennt die Karte erst, wenn man sie sieht (11.1 „Ziehen“).
@@ -79,10 +84,23 @@ export function afterReveal(card: CardId, then: () => void): void {
 }
 /** von der Karte: jetzt (bzw. nach dieser Animation) aufgedeckt zu sehen */
 export function revealed(card: CardId, anim?: Animation): void {
-  const run = waiting.get(card);
-  if (!run) return;
+  const run = () => {
+    waiting.get(card)?.();
+    for (const open of gates.get(card) ?? []) open();
+    gates.delete(card);
+  };
   if (anim) anim.finished.then(run, run);
   else run();
+}
+
+// Schaden (5k): Stoß, Narbe und Tod warten, bis die getroffenen Karten aufgedeckt zu sehen sind
+const gates = new Map<CardId, (() => void)[]>();
+/** erfüllt, sobald alle Karten aufgedeckt zu sehen sind (spätestens nach 2 s); ohne Karten sofort */
+export function whenRevealed(cards: readonly CardId[]): Promise<void> {
+  return Promise.all(cards.map((card) => new Promise<void>((open) => {
+    gates.set(card, [...(gates.get(card) ?? []), open]);
+    setTimeout(open, REVEAL_FALLBACK_MS);
+  }))).then(() => undefined);
 }
 
 const running = (el: Element, id: string) => el.getAnimations().filter((a) => a.id === id);

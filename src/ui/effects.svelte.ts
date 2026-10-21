@@ -5,8 +5,9 @@
 import type { EngineEvent, SeatId } from '../engine/types';
 import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
-import { afterReveal, noteEvents } from './animator.svelte';
+import { afterReveal, noteEvents, strikeReady, timing } from './animator.svelte';
 import { describe } from './eventText';
+import { strikeImpact } from './motion';
 import { session } from './session.svelte';
 import { t } from './texts';
 import { view } from './view.svelte';
@@ -31,6 +32,9 @@ class Effects {
   hit = new Pulse<SeatId>();
   /** eigene Textfelder (`seat1/name`), die gerade jemand anderes geändert hat */
   overwritten = new Pulse<string>();
+  /** Narben und Tod, die der Bogen erst mit dem Aufprall zeigt (`seat1/scars.heart`, `seat1/dead`; 5k) */
+  private held = $state.raw<ReadonlySet<string>>(new Set());
+  holds = (seat: SeatId, what: string): boolean => this.held.has(`${seat}/${what}`);
   /** zuletzt selbst gesendeter Wert je Feld */
   private edits = new Map<string, { value: unknown; at: number }>();
 
@@ -42,11 +46,27 @@ class Effects {
     session.onEvents((events, own, prev) => {
       // Bewegungen der Karten: eigene Züge kürzer, fremde länger, mehrere gestaffelt, Mischen, Schaden (11)
       if (session.state) noteEvents(events, own, prev, session.state);
+      const later = this.holdDamage(events);
       for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
-        this.handle(e);
+        if (!later.includes(e)) this.handle(e);
       }
     });
+  }
+
+  /** Folgen eines Treffers (Narbe, Tod) erst mit dem Aufprall zeigen: nach dem Aufdecken der getroffenen Karte und
+   *  dem Weg nach unten (5k). Bis dahin zeigt der Bogen den alten Stand; das Protokoll trägt sofort ein. */
+  private holdDamage(events: readonly (EngineEvent | KlioEvent)[]): (EngineEvent | KlioEvent)[] {
+    if (!events.some((e) => e.type === 'damageTaken')) return [];
+    const later = events.filter((e) => e.type === 'scarMarked' || e.type === 'characterDied');
+    if (later.length === 0) return [];
+    const keys = later.map((e) => (e.type === 'scarMarked' ? `${e.seat}/scars.${e.scar}` : `${e.seat}/dead`));
+    this.held = new Set([...this.held, ...keys]);
+    void strikeReady().then(() => setTimeout(() => {
+      this.held = new Set([...this.held].filter((k) => !keys.includes(k)));
+      for (const e of later) this.handle(e);
+    }, strikeImpact(timing())));
+    return later;
   }
 
   /** Jemand anderes hat ein Feld geändert, das man selbst gerade bearbeitet hat: kurzer Hinweis (8.2). */

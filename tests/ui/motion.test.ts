@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { CardId } from '../../src/engine/types';
-import { ARC_MAX, arcPoints, arrival, countChanges, cssMs, cues as cuesFor, cutCount, FOLLOW_MS, GLIDE_MAX, planMove, planTurn, STAGGER, STAGGER_MAX, STAGGER_RESET_MAX, STRIKE_DELAY, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
+import { ARC_MAX, arcPoints, arrival, countChanges, cssMs, cues as cuesFor, cutCount, FOLLOW_MS, GLIDE_MAX, hitsTurningUp, planMove, planTurn, STAGGER, STAGGER_MAX, STAGGER_RESET_MAX, STRIKE_DELAY, strikeImpact, SWAY_MAX, type Frame, type Glide, type Timing } from '../../src/ui/motion';
 import { fresh, place } from '../helpers';
 
 const T: Timing = { glide: 250, glideEase: 'ease-out', land: 80, flip: 350, hold: 150, cut: 800, strike: 450, fade: 150, flash: 600, shift: 350, shiftEase: 'ease', wiggle: 250, count: 250 };
@@ -199,5 +199,22 @@ describe('Mischen, Zurücksetzen, Schaden', () => {
     expect(c.get('H2' as CardId)!.strike).toBe(STRIKE_DELAY);
     expect(c.get('S4' as CardId)!.strike).toBe(STRIKE_DELAY);
     expect(c.get('S5' as CardId)).toBeUndefined();
+  });
+});
+
+describe('Schaden: Folgen erst nach dem Aufdecken (5k)', () => {
+  it('nur getroffene Karten, die in diesem Stand aufgedeckt werden', () => {
+    const events = [
+      { type: 'cardsMoved', cards: ['H2', 'S3'], from: { zone: 'deck' }, to: { zone: 'seat1.damage' } },
+      { type: 'cardsTurned', cards: ['H2'], faceUp: true },
+      { type: 'damageTaken', seat: 'seat1', hits: ['H2', 'S3'] },
+    ];
+    expect(hitsTurningUp(events)).toEqual(['H2']);
+    expect(hitsTurningUp(events.filter((e) => e.type !== 'cardsTurned'))).toEqual([]);
+  });
+
+  it('Aufprall: Verzögerung des Stoßes plus der Weg nach unten', () => {
+    expect(strikeImpact(T)).toBe(STRIKE_DELAY + 68);
+    expect(strikeImpact(OFF)).toBe(STRIKE_DELAY);
   });
 });

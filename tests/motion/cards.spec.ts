@@ -202,6 +202,41 @@ test('Schaden: die Karten der Schadenszone stoßen und schimmern rot', async ({ 
   await expect.poll(() => page.evaluate(() => [...(window as unknown as { strikes: Set<string> }).strikes].sort())).toEqual(['H2', 'HK']);
 });
 
+test('Schaden: erst aufdecken, dann Stoß, dann Narbe und Meldung (5k)', async ({ page }) => {
+  await loadDeckTop(page, ['H2', 'HK']);
+  const deck = await zoneCenter(page, 'DECK');
+  const damage = await zoneCenter(page, 'SCHADEN');
+  await dragFromTo(page, deck, damage);
+  await page.waitForTimeout(800);
+  // Zeitpunkte im Browser: letztes Umklappen der getroffenen Karte, erster Stoß, Narbe am Bogen, Meldung
+  await page.evaluate(() => {
+    const times: Record<string, number> = {};
+    (window as unknown as { times: Record<string, number> }).times = times;
+    const watch = setInterval(() => {
+      const now = performance.now();
+      const inner = document.querySelector('[data-card=H2] .inner');
+      if (inner?.getAnimations().some((a) => a.playState === 'running')) times['flip'] = now;
+      for (const a of document.getAnimations()) {
+        const frames = (a.effect as KeyframeEffect).getKeyframes();
+        const card = ((a.effect as KeyframeEffect).target as HTMLElement).dataset['card'];
+        if (card && times['strike'] === undefined && frames.some((k) => /^0(px)? 8px$/.test(String(k['translate'] ?? '')))) times['strike'] = now;
+      }
+      if (times['scar'] === undefined && document.querySelector('[data-check="scars.heart"][aria-pressed=true]')) times['scar'] = now;
+      if (times['toast'] === undefined && /Narbe markiert/.test(document.querySelector('[role=status]')?.textContent ?? '')) times['toast'] = now;
+    }, 5);
+    setTimeout(() => clearInterval(watch), 5000);
+  });
+  await dragFromTo(page, deck, damage);
+  await expect(page.locator('[data-check="scars.heart"][aria-pressed=true]')).toHaveCount(1);
+  await expect(page.getByRole('status')).toHaveText(/Narbe markiert/);
+  const times = await page.evaluate(() => (window as unknown as { times: Record<string, number> }).times);
+  expect(times['flip'], 'die getroffene Karte klappt um').toBeDefined();
+  // Abtastung alle 5 ms: etwas Spiel
+  expect(times['strike']!).toBeGreaterThanOrEqual(times['flip']! - 10);
+  expect(times['scar']!).toBeGreaterThan(times['flip']! + 100);
+  expect(times['toast']!).toBeGreaterThan(times['flip']! + 100);
+});
+
 test('Ansichtswechsel: Karten so schnell und mit derselben Kurve wie Bögen und Zonen', async ({ page }) => {
   await page.keyboard.press('1');
   const seen = await page.evaluate(() =>
