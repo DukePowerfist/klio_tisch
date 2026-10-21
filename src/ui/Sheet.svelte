@@ -12,13 +12,14 @@
   import { submitOrSay as submit } from './commands';
   import { effects } from './effects.svelte';
   import { SHEET_FONT } from './fitText';
+  import { Confirm } from './confirm.svelte';
   import { CONTROLS_ZOOM, SHEET_W, type SheetBox } from './layout';
-  import { preparePhoto } from './photo';
   import { photos } from './photos.svelte';
   import { seatNames } from './seatNames';
+  import { setPhoto } from './sheetActions';
   import { session } from './session.svelte';
   import { whoColor } from './colors';
-  import { t, text } from './texts';
+  import { t } from './texts';
   import { anySourceOpen } from './trumpDialog';
   import { view } from './view.svelte';
 
@@ -63,18 +64,12 @@
   const canRevive = $derived(may('character.revive'));
 
   // „Auswürfeln“ fragt nach, wenn schon Einträge da sind (wie bisher 3,5 s)
-  let confirmTimer = $state<ReturnType<typeof setTimeout>>();
+  const rollConfirm = new Confirm();
   function roll() {
-    if (rollOverwrites(content, sheet) && confirmTimer === undefined) {
-      confirmTimer = setTimeout(() => (confirmTimer = undefined), 3500);
-      return;
-    }
-    clearTimeout(confirmTimer);
-    confirmTimer = undefined;
-    void submit({ type: 'sheet.roll', seat });
+    if (rollConfirm.click(rollOverwrites(content, sheet))) void submit({ type: 'sheet.roll', seat });
   }
 
-  // Foto: verkleinern, nach Inhalt benennen, ablegen (bzw. zum Host bringen), dann am Bogen eintragen
+  // Foto: über das Dateifeld, weiter in `setPhoto` (sheetActions.ts)
   let fileInput = $state<HTMLInputElement>();
   const photoHash = $derived(sheet.photo?.hash ?? null);
   const photoUrl = $derived(photoHash ? photos.urls[photoHash] : undefined);
@@ -85,11 +80,7 @@
     const file = fileInput?.files?.[0];
     if (!file) return;
     fileInput!.value = '';
-    const prepared = await preparePhoto(file).catch(() => null);
-    if (!prepared) return view.say(t('sheet.photoUnreadable'), true);
-    const stored = await session.addPhoto(prepared.hash, prepared.bytes);
-    if (!stored.ok) return view.say(text(stored.reason), true);
-    await submit({ type: 'sheet.setPhoto', seat, photo: { hash: prepared.hash, type: 'image/jpeg' } });
+    await setPhoto(seat, file);
   }
 
   // Großansicht eines Trumpfs: beim Überfahren nach 650 ms, beim Klick angeheftet
@@ -217,7 +208,7 @@
 
     <div class="sbar control" class:quiet={!own} style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
       {#if canRoll}
-        <button onclick={roll} title={t('sheet.rollTitle')}>{confirmTimer !== undefined ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
+        <button onclick={roll} title={t('sheet.rollTitle')}>{rollConfirm.armed ? t('sheet.rollConfirm') : t('sheet.roll')}</button>
       {/if}
       {#if sheet.dead && canRevive}
         <button class="revive" onclick={() => submit({ type: 'character.revive', seat })}>{t('sheet.revive')}</button>

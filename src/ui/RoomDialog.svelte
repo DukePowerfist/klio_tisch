@@ -5,6 +5,7 @@
   import { seatNo, seatVisible } from '../engine/zones';
   import Modal from './Modal.svelte';
   import { submitOrSay } from './commands';
+  import { freeSeats, moveTargets, watchers } from './seatActions';
   import { seatNames } from './seatNames';
   import { session } from './session.svelte';
   import { t, text } from './texts';
@@ -13,25 +14,9 @@
   const table = $derived(session.state!);
   const close = () => (view.gmPanel = null);
   const isOnline = (seat: string) => session.online.some((r) => r.role === 'player' && r.seat === seat);
-  const spectators = $derived(session.online.filter((r) => r.role === 'spectator'));
-  const freeSeats = $derived(SEATS.filter((s) => seatVisible(s, table) && !table.seats[s].occupied));
-
-  /** Platz mit Charakter, falls benannt: „Platz 3 – Hilda“ bzw. „auf Platz 3 – Hilda“ */
-  function withCharacter(base: string, seat: SeatId): string {
-    const { character } = seatNames(table, seat);
-    return character !== t('room.player', { n: seatNo(seat) }) ? `${base} – ${character}` : base;
-  }
-
-  /** Ziele zum Umsetzen: sichtbare Plätze; vom ausgeblendeten Platz nur freie (sonst landete der andere dort) */
-  function targets(from: SeatId): { seat: SeatId; label: string }[] {
-    const hidden = !seatVisible(from, table);
-    return SEATS.filter((s) => s !== from && seatVisible(s, table) && !(hidden && table.seats[s].occupied)).map((seat) => {
-      const names = seatNames(table, seat);
-      const n = seatNo(seat);
-      if (names.free) return { seat, label: `${withCharacter(t('room.moveTo', { n }), seat)} (${t('room.free')})` };
-      return { seat, label: `${withCharacter(t('room.swapWith', { n }), seat)}${names.person ? ` (${names.person})` : ''}` };
-    });
-  }
+  // Ziele, freie Plätze und Zuschauer aus seatActions.ts, wie im Menü am Namensschild (10.1)
+  const spectators = $derived(watchers(session.online));
+  const free = $derived(freeSeats(table));
 
   /** Auswahlliste: gewählten Wert ausführen und die Liste wieder auf ihren Titel stellen */
   function picked(e: Event & { currentTarget: HTMLSelectElement }, act: (seat: SeatId) => void) {
@@ -72,7 +57,7 @@
       </span>
       <span class="actions">
         {#if !names.free}
-          {@const to = targets(seat)}
+          {@const to = moveTargets(table, seat)}
           {#if to.length > 0}
             <select aria-label={t('room.move')} title={t('room.moveTitle', { n: seatNo(seat) })} onchange={(e) => picked(e, (dest) => submitOrSay({ type: 'table.moveSeat', from: seat, to: dest }))}>
               <option value="" selected disabled>{t('room.move')}</option>
@@ -91,12 +76,12 @@
   {:else}
     <div class="watchers">
       {#each spectators as s (s.peer)}
-        <span class="who">{#if s.name}{s.name}{:else}<i>{t('room.unnamed')}</i>{/if}</span>
+        <span class="who">{#if s.named}{s.label}{:else}<i>{s.label}</i>{/if}</span>
         <span class="actions">
-          {#if freeSeats.length > 0}
-            <select aria-label={t('room.assign')} title={t('room.assignTitle', { name: s.name || t('room.unnamed') })} onchange={(e) => picked(e, (seat) => assign(s.peer, seat))}>
+          {#if free.length > 0}
+            <select aria-label={t('room.assign')} title={t('room.assignTitle', { name: s.label })} onchange={(e) => picked(e, (seat) => assign(s.peer, seat))}>
               <option value="" selected disabled>{t('room.assign')}</option>
-              {#each freeSeats as seat (seat)}<option value={seat}>{withCharacter(t('room.seat', { n: seatNo(seat) }), seat)}</option>{/each}
+              {#each free as o (o.seat)}<option value={o.seat}>{o.label}</option>{/each}
             </select>
           {/if}
         </span>
