@@ -414,3 +414,23 @@ test('Fenster, Stapelmenü und Meldungen erscheinen weich; Knöpfe geben beim Dr
   await page.getByRole('button', { name: 'Zurücksetzen' }).click();
   expect(await cssAnimations(page)).toEqual(expect.arrayContaining(['fade-in', 'pop-in']));
 });
+
+test('Schild, Streifen und Dock bei „nicht da“ (5l): blasser in --away, zurück in --back, still ohne Übergang', async ({ page }) => {
+  // nur das CSS: Klassen direkt setzen (die Anwesenheit selbst prüfen die Netzwerktests)
+  const fade = (sel: string, classes: string[], on: boolean) => page.evaluate(async ({ sel, classes, on }) => {
+    const el = document.querySelector<HTMLElement>(sel)!;
+    for (const c of classes) el.classList.toggle(c, on);
+    await new Promise((r) => requestAnimationFrame(r));
+    return el.getAnimations().filter((a) => (a as CSSTransition).transitionProperty === 'opacity').map((a) => Number((a.effect as KeyframeEffect).getTiming().duration));
+  }, { sel, classes, on });
+  for (const sel of ['[data-plate=seat2]', '[data-dock=seat2]']) {
+    expect(await fade(sel, ['away'], true), sel).toEqual([600]);
+    await page.waitForTimeout(700);
+    expect(await fade(sel, ['away'], false), sel).toEqual([350]);
+    await page.waitForTimeout(400);
+    expect(await fade(sel, ['still', 'away'], true), sel).toEqual([]);
+  }
+  await page.keyboard.press('1');
+  await page.waitForTimeout(500);
+  expect(await fade('[data-strip=seat2]', ['away'], true)).toEqual([600]);
+});

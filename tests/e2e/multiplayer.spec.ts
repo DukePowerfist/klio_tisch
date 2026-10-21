@@ -11,6 +11,10 @@ test.setTimeout(90_000);
 const inBox = (p: { x: number; y: number } | null, r: { x: number; y: number; width: number; height: number }) =>
   !!p && p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
 
+/** Klassen am Schild und im Dock (11.7): ganzes Wort, nicht `away-fade` */
+const AWAY = /(^|\s)away(\s|$)/;
+const STILL = /(^|\s)still(\s|$)/;
+
 /** Spieler sitzt auf Platz 2: sein Bogen ist beschreibbar (Rechte, 9.3) */
 const seated = (page: Page, timeout = 5_000) => expect(page.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout });
 
@@ -322,6 +326,13 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await b.close();
   await expect(entries('Ida ist nicht mehr verbunden.')).toHaveCount(1, { timeout: 30_000 });
   await expect(gm.getByRole('status')).toHaveText('Ida ist nicht mehr verbunden.');
+  // Schild und Dock blasser, „nicht da“, mit Übergang (nicht still)
+  const plate2 = gm.locator('[data-plate=seat2]');
+  await expect(plate2).toHaveText('Idanicht da');
+  await expect(plate2).toHaveClass(AWAY);
+  await expect(plate2).not.toHaveClass(STILL);
+  await expect(gm.locator('[data-dock=seat2]')).toHaveClass(AWAY);
+  await expect(gm.locator('[data-plate=seat1]')).not.toHaveClass(AWAY);
 
   // Meldung abgeschaltet: das Protokoll trägt weiter ein
   const settings = await openSettings(gm, 'Automatik');
@@ -335,7 +346,17 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await seated(c, 60_000);
   await expect(entries('Ida ist wieder da.')).toHaveCount(1, { timeout: 30_000 });
   expect(await gm.getByRole('status').count()).toBe(0);
+  await expect(plate2).toHaveText('Ida');
+  await expect(gm.locator('[data-dock=seat2]')).not.toHaveClass(AWAY);
   // der Wechsel von A zu B war kein Gehen, das Belegen steht nur einmal da
   await expect(entries(/nicht mehr verbunden/)).toHaveCount(1);
   await expect(entries(/sitzt an Platz/)).toHaveCount(1);
+
+  // SL lädt neu, während Ida fehlt: still „nicht da“ (ohne Meldung, ohne Protokoll, ohne Übergang)
+  await c.close();
+  await gm.reload();
+  await expect(gm.locator('[data-health=ok]')).toBeVisible({ timeout: 60_000 });
+  await expect(plate2).toHaveClass(AWAY, { timeout: 30_000 });
+  await expect(plate2).toHaveClass(STILL);
+  await expect(entries(/nicht mehr verbunden/)).toHaveCount(1);
 });

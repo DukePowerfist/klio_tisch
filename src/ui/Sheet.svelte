@@ -34,6 +34,9 @@
   const image = $derived(`${import.meta.env.BASE_URL}assets/${skin.images[sheet.variant]}`);
   // Namensschild in der Übersicht und auf dem großen Bogen der Rollenansicht (10.1), nicht an den Streifen
   const names = $derived(mark !== 'strip' && session.state ? seatNames(session.state, seat) : null);
+  /** nicht verbunden (11.7): Schild und Streifen blasser, am Schild „nicht da“ */
+  const away = $derived(session.away.has(seat));
+  const still = $derived(session.awayStill.has(seat));
   const menu = $derived(names ? entriesAt(seat).length > 0 : false);
   function toggleMenu(e: MouseEvent) {
     if (view.plateMenu?.seat === seat) return void (view.plateMenu = null);
@@ -203,15 +206,17 @@
     {#if names}
       <svelte:element
         this={menu ? 'button' : 'div'}
-        class="plate"
+        class="plate away-fade"
         class:menu
+        class:away
+        class:still
         data-plate={seat}
         title={menu ? `${names.label} – ${t('plate.open')}` : names.label}
         aria-haspopup={menu ? 'menu' : undefined}
         aria-expanded={menu ? view.plateMenu?.seat === seat : undefined}
         onclick={menu ? toggleMenu : undefined}
         style:left="{plate.x}px" style:top="{plate.y}px" style:max-width="{plate.w}px" style:height="{plate.h}px" style:font-size="{plate.font}px"
-      ><b>{names.plate}</b>{#if names.free && session.mode !== 'local'}<small>{t('room.free')}</small>{/if}</svelte:element>
+      ><b>{names.plate}</b>{#if names.free && session.mode !== 'local'}<small>{t('room.free')}</small>{:else if away}<small>{t('room.away')}</small>{/if}</svelte:element>
     {/if}
 
     <div class="sbar control" class:quiet={!own} style:left="{rollAt.x}px" style:top="{rollAt.y}px" style:width="{rollAt.w}px" style:font-size="{rollAt.font}px">
@@ -230,7 +235,7 @@
     {/if}
   </div>
 
-  {#if mark === 'strip'}<div class="strip" data-strip={seat}></div>{/if}
+  {#if mark === 'strip'}<div class="strip away-fade" class:away class:still data-strip={seat}></div>{/if}
 
 </div>
 
@@ -255,7 +260,7 @@
   .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
   .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: #111; line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
-  .plate.menu { pointer-events: auto; border: 0; cursor: pointer; transition: background 0.15s, scale var(--press) ease-out; }
+  .plate.menu { pointer-events: auto; border: 0; cursor: pointer; transition: background 0.15s, scale var(--press) ease-out, opacity var(--away-t, var(--back)) ease; }
   .plate.menu:hover, .plate.menu[aria-expanded='true'] { background: color-mix(in srgb, var(--c) 80%, transparent); }
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
   .plate small { font-size: 0.6em; flex: none; opacity: 0.75; }

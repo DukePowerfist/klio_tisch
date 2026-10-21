@@ -169,3 +169,16 @@ export class Arrivals {
     return { type: 'arrived', seat: s, how, peer, self: s === this.self };
   }
 }
+
+/** Plätze, deren letzter Wechsel zwischen anwesend und „nicht da“ still war (ohne Übergang am Schild): neu still,
+ *  wer ohne Signal wechselt (Anfangszustand, erstes Erscheinen, Tausch); mit Signal („weg“, angekommen) nicht mehr. */
+export function stillAway(before: ReadonlySet<SeatId>, after: ReadonlySet<SeatId>, signals: readonly ArrivalSignal[], still: ReadonlySet<SeatId>): Set<SeatId> {
+  const loud = new Set(signals.filter((x) => x.type === 'left' || x.type === 'arrived').map((x) => x.seat));
+  const next = new Set(still);
+  for (const s of SEATS) {
+    if (before.has(s) === after.has(s)) continue;
+    if (loud.has(s)) next.delete(s);
+    else next.add(s);
+  }
+  return next;
+}

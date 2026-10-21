@@ -128,6 +128,7 @@ room:                                     # Mehrspielerbetrieb (neu)
   manageTitle: Plätze und Einladungslink
   seats: Plätze
   free: frei
+  away: nicht da                          # am Schild, wenn die Verbindung fehlt (11.7)
   last: "zuletzt {name}"
   hidden: ausgeblendet
   online: verbunden

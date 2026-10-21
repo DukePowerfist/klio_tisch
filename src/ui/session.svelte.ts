@@ -22,7 +22,7 @@ import type { Transport } from '../net/transport';
 import type { KlioEvent } from '../rules/klio/events';
 import { createKlioRuleset } from '../rules/klio/ruleset';
 import type { KlioState } from '../rules/klio/state';
-import { Arrivals, type ArrivalSignal } from './arrivals';
+import { Arrivals, stillAway, type ArrivalSignal } from './arrivals';
 import { copyText } from './clipboard';
 import { photos } from './photos.svelte';
 import { movedCards, RemoteDrags, type RemoteDrag, type Who } from './remoteDrags';
@@ -99,6 +99,8 @@ class Session {
   openZones = $state.raw<ReadonlyMap<ZoneId, Who>>(new Map());
   /** Plätze, die als „nicht da“ gezeigt werden (11.7); im lokalen Betrieb keine */
   away = $state.raw<ReadonlySet<SeatId>>(new Set());
+  /** davon bzw. wieder anwesend ohne Signal (Anfangszustand, erstes Erscheinen): am Schild ohne Übergang */
+  awayStill = $state.raw<ReadonlySet<SeatId>>(new Set());
 
   private host: Host<KlioState> | null = null;
   private client: Client<KlioState> | null = null;
@@ -229,6 +231,9 @@ class Session {
     this.presence?.close();
     this.resetArrivals();
     this.presence = new Presence(room.channel(PRESENCE), (others) => this.othersMoved(others));
+    // Anwesenheit gleich beginnen (Host: der Stand ist schon da), nicht erst mit dem nächsten Ereignis; sonst liefe
+    // ohne Ereignis und ohne Zeiger keine Frist (der erste Aufruf von Presence kommt vor dieser Zuweisung)
+    this.arrive(() => []);
     return room.channel(CHANNEL);
   }
 
@@ -255,6 +260,7 @@ class Session {
     clearTimeout(this.arrivalTimer);
     this.arrivals = null;
     this.away = new Set();
+    this.awayStill = new Set();
   }
 
   private get ownSeat(): SeatId | null {
@@ -277,7 +283,11 @@ class Session {
   private announce(signals: ArrivalSignal[], state: KlioTableState): void {
     const a = this.arrivals!;
     const away = new Set(SEATS.filter((s) => !a.present(s)));
-    if (away.size !== this.away.size || [...away].some((s) => !this.away.has(s))) this.away = away;
+    if (away.size !== this.away.size || [...away].some((s) => !this.away.has(s))) {
+      // zuerst, damit das Schild mit dem Wechsel schon weiß, ob es überblendet
+      this.awayStill = stillAway(this.away, away, signals, this.awayStill);
+      this.away = away;
+    }
     if (signals.length > 0) for (const cb of this.arrivalListeners) cb(signals, state);
     clearTimeout(this.arrivalTimer);
     const next = a.nextDeadline();

@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { SEATS, type SeatId, type TableState } from '../../src/engine/types';
 import type { PresenceInfo } from '../../src/net/presence';
-import { Arrivals, AWAY_MS, type ArrivalSignal } from '../../src/ui/arrivals';
+import { Arrivals, AWAY_MS, stillAway, type ArrivalSignal } from '../../src/ui/arrivals';
 
 type Seats = TableState<unknown>['seats'];
 type Who = PresenceInfo['who'];
@@ -228,5 +228,22 @@ describe('SL und Zuschauer', () => {
     t.who('s', null);
     t.after(AWAY_MS);
     expect(t.log).toEqual([]);
+  });
+});
+
+describe('Übergang am Schild (Teil 3)', () => {
+  const set = (...s: SeatId[]) => new Set<SeatId>(s);
+  it('ohne Signal still (Anfangszustand, erstes Erscheinen), mit Signal überblendet', () => {
+    // still „nicht da“ nach dem Laden
+    expect(stillAway(set(), set('seat2'), [], set())).toEqual(set('seat2'));
+    // weg mit Signal: überblendet, auch wenn der Platz vorher still war
+    expect(stillAway(set(), set('seat2'), [{ type: 'left', seat: 'seat2' }], set('seat2'))).toEqual(set());
+    // wieder da: überblendet; erstes Erscheinen (ohne Signal): still
+    expect(stillAway(set('seat2'), set(), [{ type: 'arrived', seat: 'seat2', how: 'back', peer: 'p', self: false }], set())).toEqual(set());
+    expect(stillAway(set('seat2'), set(), [], set())).toEqual(set('seat2'));
+  });
+
+  it('unveränderte Plätze behalten ihren Wert', () => {
+    expect(stillAway(set('seat3'), set('seat3', 'seat2'), [{ type: 'left', seat: 'seat2' }], set('seat3'))).toEqual(set('seat3'));
   });
 });
