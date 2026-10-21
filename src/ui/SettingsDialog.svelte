@@ -19,6 +19,8 @@
   const settings = $derived(session.state!.settings);
   const overrides = $derived(settings.permissionOverrides.player ?? {});
   const close = () => (view.gmPanel = null);
+  /** Bedienung per Tastatur (Schritt 5f): Fokus auf ein Element, sobald es erscheint */
+  const focus = (el: HTMLElement) => el.focus();
 
   const current = (key: string) => permissionFor('player', key, ruleset.permissions, session.state as TableState<unknown>);
 
@@ -74,12 +76,14 @@
   }
 </script>
 
-<Modal label={t('settings.title')} onclose={close} size="pane">
+<!-- Esc bricht zuerst eine offene Rückfrage ab, erst dann schließt es den Dialog -->
+<Modal label={t('settings.title')} onclose={close} onescape={() => (confirm ? ((confirm = null), true) : false)} size="pane">
   <div class="side">
     <p class="heading">{t('settings.title')}</p>
     <div role="tablist" aria-orientation="vertical" aria-label={t('settings.title')}>
       {#each pages as p (p)}
-        <button role="tab" id="settings-tab-{p}" aria-selected={p === page} aria-controls="settings-panel" class:current={p === page} onclick={() => (view.settingsPage = p)}>{t(TITLE[p])}</button>
+        <!-- beim Öffnen steht der Fokus auf der aktuellen Seite -->
+        <button {@attach (el) => { if (p === page) focus(el); }} role="tab" id="settings-tab-{p}" aria-selected={p === page} aria-controls="settings-panel" class:current={p === page} onclick={() => (view.settingsPage = p)}>{t(TITLE[p])}</button>
       {/each}
     </div>
   </div>
@@ -141,7 +145,7 @@
             <SettingRow id="backup-{b.id}" title={when.format(b.at)} description={t(`settings.backupReasons.${b.reason}`)}>
               {#if confirm === b.id}
                 <span class="ask">{t('settings.restoreConfirm')}</span>
-                <button onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
+                <button {@attach focus} onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
                 <button class="danger" onclick={() => restore(b.id)}>{t('settings.restore')}</button>
               {:else}
                 <button onclick={() => (confirm = b.id)}>{t('settings.restore')}</button>

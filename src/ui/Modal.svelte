@@ -1,16 +1,51 @@
 <script lang="ts">
   // Gemeinsames Fenster: abgedunkelter Hintergrund, Klick daneben oder Esc schließt.
   // Größe: narrow (Rückfragen, schmal), wide (Trumpf, Ergebnisse), pane (Einstellungen: feste Größe, Inhalt ordnet sich selbst).
+  // Tab bleibt im obersten Fenster (Schritt 5f), statt in den Tisch dahinter zu laufen.
   import type { Snippet } from 'svelte';
 
-  let { label, onclose, size = 'wide', children }: { label: string; onclose: () => void; size?: 'narrow' | 'wide' | 'pane'; children: Snippet } = $props();
+  let { label, onclose, onescape, size = 'wide', children }: {
+    label: string;
+    onclose: () => void;
+    /** Esc zuerst hier (z. B. offene Rückfrage abbrechen); true = erledigt, Fenster bleibt offen */
+    onescape?: () => boolean;
+    size?: 'narrow' | 'wide' | 'pane';
+    children: Snippet;
+  } = $props();
+
+  let box: HTMLDivElement;
+
+  const FOCUSABLE = 'button:not(:disabled), input:not(:disabled):not([type=hidden]):not([hidden]), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])';
+
+  function onkeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      if (!onescape?.()) onclose();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    // Nur das oberste Fenster hält den Fokus
+    const open = document.querySelectorAll('[aria-modal="true"]');
+    if (open[open.length - 1] !== box) return;
+    const items = [...box.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.getClientRects().length > 0);
+    if (items.length === 0) return e.preventDefault();
+    const first = items[0]!;
+    const last = items[items.length - 1]!;
+    const inside = box.contains(document.activeElement);
+    if (e.shiftKey && (!inside || document.activeElement === first)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (!inside || document.activeElement === last)) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape') onclose(); }} />
+<svelte:window {onkeydown} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div class="overlay" onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}>
-  <div class="box {size}" role="dialog" aria-modal="true" aria-label={label}>
+  <div class="box {size}" role="dialog" aria-modal="true" aria-label={label} bind:this={box}>
     {@render children()}
   </div>
 </div>

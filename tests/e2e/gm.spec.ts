@@ -1,6 +1,6 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { dragFromTo, expectCount, fromMenu, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
@@ -129,6 +129,71 @@ test('Einstellungen: Rechte in Gruppen mit Beschreibung, Schilder zur Reichweite
   await expect(dialog.getByText('gilt für alle', { exact: true })).toHaveCount(0);
   await expect(dialog.getByText('in diesem Browser', { exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Datei laden …' })).toHaveAccessibleDescription(/Ersetzt den Stand für alle am Tisch/);
+});
+
+/** Fokus liegt im Fenster */
+const focusInside = (dialog: Locator) => dialog.evaluate((d) => d.contains(document.activeElement));
+
+test('Einstellungen: Größe bleibt beim Seitenwechsel, öffnet auf der zuletzt gewählten Seite', async ({ page }) => {
+  const dialog = await openSettings(page, 'Automatik');
+  const size = async () => {
+    const b = (await dialog.boundingBox())!;
+    return [Math.round(b.width), Math.round(b.height)];
+  };
+  const first = await size();
+  for (const tab of ['Rechte der Spieler', 'Spielstand', 'Automatik']) {
+    await dialog.getByRole('tab', { name: tab }).click();
+    expect(await size()).toEqual(first);
+  }
+  await dialog.getByRole('tab', { name: 'Rechte der Spieler' }).click();
+  await page.keyboard.press('Escape');
+  await fromMenu(page, 'Einstellungen');
+  await expect(dialog.getByRole('tab', { name: 'Rechte der Spieler' })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('Einstellungen per Tastatur: Fokus auf der Seite, Tab bleibt im Fenster, Esc bricht erst die Rückfrage ab', async ({ page }) => {
+  await resetTable(page, false);
+  const dialog = await openSettings(page, 'Spielstand');
+  await page.keyboard.press('Escape');
+  await fromMenu(page, 'Einstellungen');
+  await expect(dialog.getByRole('tab', { name: 'Spielstand' })).toBeFocused();
+  // Tab vorwärts und rückwärts: nie auf den Tisch dahinter
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('Tab');
+    expect(await focusInside(dialog)).toBe(true);
+  }
+  for (let i = 0; i < 12; i++) {
+    await page.keyboard.press('Shift+Tab');
+    expect(await focusInside(dialog)).toBe(true);
+  }
+  // Seite per Tastatur wählen: Tab bis „Automatik“, Leertaste
+  await dialog.getByRole('tab', { name: 'Automatik' }).focus();
+  await page.keyboard.press('Space');
+  await expect(dialog.getByRole('heading', { name: 'Automatik' })).toBeVisible();
+  // Reihenfolge: Seitenleiste, × im Kopf, dann die Zeilen
+  for (const _ of ['Rechte der Spieler', 'Spielstand', 'Schließen', 'Schalter']) await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('switch', { name: /Schaden automatisch/ })).toBeFocused();
+
+  // Rückfrage beim Wiederherstellen: Esc bricht sie ab, das nächste Esc schließt
+  await dialog.getByRole('tab', { name: 'Spielstand' }).click();
+  await dialog.getByRole('button', { name: 'Wiederherstellen', exact: true }).click();
+  await expect(dialog.getByText('Stand für alle ersetzen?')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Abbrechen' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog.getByText('Stand für alle ersetzen?')).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
+test('Tab bleibt auch in den übrigen Fenstern (Zurücksetzen)', async ({ page }) => {
+  await page.getByRole('button', { name: 'Zurücksetzen', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
+  await expect(dialog).toBeVisible();
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press('Tab');
+    expect(await focusInside(dialog)).toBe(true);
+  }
 });
 
 test('Sicherung: nach versehentlichem Zurücksetzen wiederherstellen (A34)', async ({ page }) => {

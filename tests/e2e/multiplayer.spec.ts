@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, fromMenu, makePng, menuEntries, nameCharacter, openMenuAndClick, ready, setField, zoneCenter } from './helpers';
+import { expectCount, fromMenu, makePng, menuEntries, nameCharacter, openMenuAndClick, openSettings, ready, setField, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -45,6 +45,13 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(profile).toHaveCount(0);
   await expect(gm.locator('[data-dock=seat2]')).toHaveAttribute('style', /who-c-teal/);
   await expect(gm.locator('[data-plate=seat2]')).toContainText('Ida M.');
+  // Gibt die SL die Einstellungen frei, sieht der Spieler Automatik und Rechte, aber keinen Spielstand (5f)
+  const settings = await openSettings(gm, 'Rechte der Spieler');
+  await settings.getByRole('combobox', { name: 'Einstellungen ändern' }).selectOption('allow');
+  await gm.keyboard.press('Escape');
+  await openSettings(player, 'Automatik');
+  await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler']);
+  await player.keyboard.press('Escape');
   // Spieler startet in seiner Rollenansicht
   await expect.poll(async () => (await player.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
   await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
