@@ -1,6 +1,7 @@
 <script lang="ts">
   // Charakterbogen, Haut „Papier“: Bogenbild mit Feldern an festen Stellen (ARCHITEKTUR.md 10, 14).
   // Welche Felder es gibt und welcher Art, steht in sheet.yaml; Lage, Schrift und Farbton in skins/paper.yaml.
+  import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { sheetFields, type SkinBox, type SkinCheck } from '../rules/klio/content/schema';
   import { getField } from '../rules/klio/fields';
@@ -10,6 +11,7 @@
   import SheetField from './SheetField.svelte';
   import TrumpCard from './TrumpCard.svelte';
   import { submitOrSay as submit } from './commands';
+  import { arrivePlate, arriveSheet } from './animator.svelte';
   import { effects } from './effects.svelte';
   import { SHEET_FONT } from './fitText';
   import { Confirm } from './confirm.svelte';
@@ -37,6 +39,18 @@
   /** nicht verbunden (11.7): Schild und Streifen blasser, am Schild „nicht da“ */
   const away = $derived(session.away.has(seat));
   const still = $derived(session.awayStill.has(seat));
+  // Ankommen (11.7, Teil 4): neu mit Bogen und Schild, „wieder da“ nur am Schild
+  let sheetEl: HTMLDivElement;
+  let plateEl = $state<HTMLElement>();
+  const arriving = $derived(effects.arrived.has(`${seat}/new`) ? 'new' : effects.arrived.has(`${seat}/back`) ? 'back' : null);
+  $effect(() => {
+    const how = arriving;
+    if (!how) return;
+    untrack(() => {
+      if (how === 'new') arriveSheet(sheetEl);
+      if (plateEl) arrivePlate(plateEl);
+    });
+  });
   const menu = $derived(names ? entriesAt(seat).length > 0 : false);
   function toggleMenu(e: MouseEvent) {
     if (view.plateMenu?.seat === seat) return void (view.plateMenu = null);
@@ -106,6 +120,7 @@
 </script>
 
 <div
+  bind:this={sheetEl}
   class="sheet"
   class:dead
   class:hit={effects.hit.has(seat)}
@@ -206,6 +221,7 @@
     {#if names}
       <svelte:element
         this={menu ? 'button' : 'div'}
+        bind:this={plateEl}
         class="plate away-fade"
         class:menu
         class:away

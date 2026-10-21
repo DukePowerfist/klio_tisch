@@ -15,6 +15,31 @@ const inBox = (p: { x: number; y: number } | null, r: { x: number; y: number; wi
 const AWAY = /(^|\s)away(\s|$)/;
 const STILL = /(^|\s)still(\s|$)/;
 
+/** Animationen an Bogen und Schild eines Platzes beobachten (alle 10 ms, je Teil und Eigenschaften einmal);
+ *  `seen` liefert sie und beginnt neu. */
+async function watchArrival(page: Page, seat: string) {
+  await page.evaluate((seat) => {
+    const w = window as unknown as { arrival: Set<string> };
+    w.arrival = new Set();
+    setInterval(() => {
+      for (const [part, sel] of [['sheet', `[data-sheet=${seat}]`], ['plate', `[data-plate=${seat}]`]] as const) {
+        const el = document.querySelector(sel);
+        for (const a of el?.getAnimations() ?? []) {
+          if (a instanceof CSSTransition) continue;
+          const props = [...new Set((a.effect as KeyframeEffect).getKeyframes().flatMap((k) => Object.keys(k)))].filter((k) => !['offset', 'easing', 'composite', 'computedOffset'].includes(k));
+          w.arrival.add(`${part}:${props.sort().join(',')}`);
+        }
+      }
+    }, 10);
+  }, seat);
+  return () => page.evaluate(() => {
+    const w = window as unknown as { arrival: Set<string> };
+    const seen = [...w.arrival].sort();
+    w.arrival.clear();
+    return seen;
+  });
+}
+
 /** Spieler sitzt auf Platz 2: sein Bogen ist beschreibbar (Rechte, 9.3) */
 const seated = (page: Page, timeout = 5_000) => expect(page.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout });
 
@@ -301,6 +326,7 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   const link = gm.url();
   await fromMenu(gm, 'Protokoll');
   const entries = (text: string | RegExp) => gm.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: text });
+  const arrival = await watchArrival(gm, 'seat2');
 
   // Tab A nimmt Platz 2
   const browserOfIda = await browser.newContext();
@@ -314,6 +340,11 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await expect(entries('Ida sitzt an Platz 2.')).toHaveCount(1);
   // Meldung bei der SL, nicht bei Ida selbst
   await expect(gm.getByRole('status')).toHaveText('Ida sitzt an Platz 2.');
+  // Ankommen in „Aus“: nur der Rand leuchtet auf (kein Heben, das Schild blendet nicht ein)
+  await expect.poll(arrival).toEqual(['sheet:boxShadow']);
+  // bis das Leuchten (0,6 s) vorbei ist, sähe der Beobachter es weiter
+  await gm.waitForTimeout(800);
+  await arrival();
   // sofort gezählt: `toHaveCount(0)` würde warten, bis eine Meldung von selbst verschwindet
   expect(await a.getByRole('status').filter({ hasText: 'sitzt an Platz' }).count()).toBe(0);
 
@@ -346,6 +377,8 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await seated(c, 60_000);
   await expect(entries('Ida ist wieder da.')).toHaveCount(1, { timeout: 30_000 });
   expect(await gm.getByRole('status').count()).toBe(0);
+  // „wieder da“ nur am Schild, und das in „Aus“ ohne Animation
+  expect(await arrival()).toEqual([]);
   await expect(plate2).toHaveText('Ida');
   await expect(gm.locator('[data-dock=seat2]')).not.toHaveClass(AWAY);
   // der Wechsel von A zu B war kein Gehen, das Belegen steht nur einmal da

@@ -212,6 +212,38 @@ function glowEdge(lift: HTMLElement, color: string, opts: KeyframeAnimationOptio
   ], { ...opts, pseudoElement: '::after' }), CUE);
 }
 
+// ---------- Ankommen (11.7, Schritt 5l) ----------
+const cssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+/** Schatten des Bogens (Sheet.svelte), Ausgang und Ende des Hebens */
+const SHEET_SHADOW = '0 2px 10px rgba(0, 0, 0, 0.5)';
+
+/** Bogen beim Ankommen: hebt sich 3 px, Schatten wächst, Rand leuchtet einmal in der Platzfarbe (wie nach fremden
+ *  Zügen); in „Aus“ nur das Leuchten am Rand (`--flash`). Über `translate`, `.paper` trägt `transform`. */
+export function arriveSheet(sheet: HTMLElement): void {
+  const c = getComputedStyle(sheet).getPropertyValue('--c').trim();
+  const lit = `0 0 0 3px ${c}, 0 0 14px 2px ${c}`;
+  const lift = cssMs(cssVar('--arrive-lift'));
+  if (lift) {
+    sheet.animate([
+      { translate: '0 0', boxShadow: `${SHEET_SHADOW}, 0 0 0 0 transparent, 0 0 0 0 transparent` },
+      { translate: '0 -3px', boxShadow: `0 10px 24px rgba(0, 0, 0, 0.45), ${lit}`, offset: 0.3 },
+      { translate: '0 0', boxShadow: `${SHEET_SHADOW}, 0 0 0 0 transparent, 0 0 0 0 transparent` },
+    ], { duration: lift, easing: 'ease-out' });
+    return;
+  }
+  const t = timing();
+  if (t.flash) sheet.animate([{ boxShadow: `${SHEET_SHADOW}, ${lit}` }, { boxShadow: `${SHEET_SHADOW}, 0 0 0 0 transparent, 0 0 0 0 transparent` }], { duration: t.flash, easing: 'ease-out' });
+}
+
+/** Namensschild beim Ankommen und bei „wieder da“: Hintergrund aus durchsichtig in die Platzfarbe, Name blendet ein;
+ *  in „Aus“ sofort (nichts). */
+export function arrivePlate(plate: HTMLElement): void {
+  const d = cssMs(cssVar('--arrive'));
+  if (!d) return;
+  const css = getComputedStyle(plate);
+  plate.animate({ backgroundColor: ['transparent', css.backgroundColor], color: ['transparent', css.color] }, { duration: d, easing: cssVar('--spring-soft') || 'ease-out' });
+}
+
 /** Stufe „Aus“: Rückmeldung ohne Bewegung (11.5) */
 function flash(lift: HTMLElement, color: string, delay: number): void {
   const t = timing();

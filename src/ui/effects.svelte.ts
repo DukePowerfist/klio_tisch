@@ -36,6 +36,8 @@ const isDamageResult = (e: EngineEvent | KlioEvent): e is Extract<KlioEvent, { t
 class Effects {
   /** Bögen, die gerade einen Treffer zeigen */
   hit = new Pulse<SeatId>();
+  /** gerade angekommene Plätze (`seat2/new`, `seat2/back`; 11.7): Bogen und Schild zeigen es einmal */
+  arrived = new Pulse<string>();
   /** eigene Textfelder (`seat1/name`), die gerade jemand anderes geändert hat */
   overwritten = new Pulse<string>();
   /** Narben und Tod, die der Bogen erst mit dem Aufprall zeigt (`seat1/scars.heart`, `seat1/dead`; 5k) */
@@ -47,6 +49,9 @@ class Effects {
   constructor() {
     // Kommen und Gehen (11.7): Meldung bei allen außer der Person selbst, sofern die SL sie nicht abgeschaltet hat
     session.onArrivals((signals, state) => {
+      // Ankommen am Bogen (Teil 4): `seat2/new` bzw. `seat2/back`
+      const arrived = signals.flatMap((x) => (x.type === 'arrived' ? [key(x.seat, x.how)] : []));
+      if (arrived.length > 0) this.arrived.add(arrived);
       if (state.settings.automation[NOTICE_ARRIVALS] === false) return;
       const texts = signals.flatMap((s) => noticeArrival(s, state.seats) ?? []);
       if (texts.length > 0) view.say(texts.join(' '));
