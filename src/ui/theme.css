@@ -78,6 +78,8 @@
   --back: 350ms;   /* und wieder voll, wenn er zurück ist */
   --arrive: 350ms; /* Ankommen (11.7): Schild blendet in die Platzfarbe ein, auch bei „wieder da“ */
   --arrive-lift: 600ms; /* Bogen hebt sich kurz, Schatten wächst, Rand leuchtet in der Platzfarbe */
+  --ping: 500ms;   /* Ring am Zeiger nach dem Ankommen bzw. „wieder da“ (11.7) */
+  --pointer-out: 200ms; /* Zeiger der anderen blendet aus, wenn er den Tisch verlässt */
   --cut: 0.8s;     /* Abheben im gemischten Stapel (zweimal) */
   --strike: 0.45s; /* Stoß bei Schaden */
   --strike-c: #d9534a;  /* roter Schimmer dabei */
@@ -86,7 +88,7 @@
 }
 /* Effektstufe „Aus“ (11.5; data-effects setzt effectLevel.svelte.ts, ohne eigene Wahl bei „Bewegung reduzieren“):
    keine Bewegung; Karten blenden ein, gemischte Stapel und Schaden leuchten kurz am Rand auf */
-:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --away: 0s; --back: 0s; --arrive: 0s; --arrive-lift: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s;
+:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --away: 0s; --back: 0s; --arrive: 0s; --arrive-lift: 0s; --ping: 0s; --pointer-out: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s;
   /* Fenster und Meldungen blenden nur ein (ohne Wachsen und Gleiten), Knöpfe geben nicht nach */
   --pop-from: 1; --rise: 0px; --press: 0s; --press-scale: 1; }
 /* nicht verbunden (11.7): blasser, hin mit --away, zurück mit --back; still (ohne Signal) ohne Übergang */

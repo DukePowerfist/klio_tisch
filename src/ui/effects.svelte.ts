@@ -38,6 +38,11 @@ class Effects {
   hit = new Pulse<SeatId>();
   /** gerade angekommene Plätze (`seat2/new`, `seat2/back`; 11.7): Bogen und Schild zeigen es einmal */
   arrived = new Pulse<string>();
+  /** Zeiger, die beim nächsten Erscheinen über dem Tisch einmal einen Ring zeigen (Peer-IDs) */
+  pings = $state.raw<ReadonlySet<string>>(new Set());
+  pinged(peer: string): void {
+    this.pings = new Set([...this.pings].filter((p) => p !== peer));
+  }
   /** eigene Textfelder (`seat1/name`), die gerade jemand anderes geändert hat */
   overwritten = new Pulse<string>();
   /** Narben und Tod, die der Bogen erst mit dem Aufprall zeigt (`seat1/scars.heart`, `seat1/dead`; 5k) */
@@ -52,6 +57,9 @@ class Effects {
       // Ankommen am Bogen (Teil 4): `seat2/new` bzw. `seat2/back`
       const arrived = signals.flatMap((x) => (x.type === 'arrived' ? [key(x.seat, x.how)] : []));
       if (arrived.length > 0) this.arrived.add(arrived);
+      // Ring am Zeiger, sobald er über dem Tisch erscheint (Teil 5): neu oder wieder da, SL nach „weg“; nicht man selbst
+      const peers = signals.flatMap((x) => (x.type === 'arrived' && x.peer ? [x.peer] : x.type === 'gmBack' ? [x.peer] : []));
+      if (peers.length > 0) this.pings = new Set([...this.pings, ...peers]);
       if (state.settings.automation[NOTICE_ARRIVALS] === false) return;
       const texts = signals.flatMap((s) => noticeArrival(s, state.seats) ?? []);
       if (texts.length > 0) view.say(texts.join(' '));

@@ -53,6 +53,7 @@ export function describe(e: EngineEvent | KlioEvent): EventText | null {
 /** Kommen und Gehen (11.7) → Text für Protokoll und Meldung; null, wenn es nichts zu sagen gibt (neu angekommen:
  *  steht schon mit dem Belegen im Protokoll). Namen aus dem Stand: die Person am Platz, nicht der Charakter. */
 export function describeArrival(s: ArrivalSignal, seats: TableState<unknown>['seats']): string | null {
+  if (s.type === 'gmBack') return null;
   const n = seatNo(s.seat);
   const name = seats[s.seat].name;
   const named = (key: string) => (name ? t(`log.seat.${key}`, { name, n }) : t(`log.seat.${key}NoName`, { n }));

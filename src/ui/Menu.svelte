@@ -1,6 +1,8 @@
 <script lang="ts">
   // Menü oben rechts (ARCHITEKTUR.md 10, Schritt 5b Teil 4): ersetzt Raumleiste und Protokoll-Knopf.
   // Am Knopf bleibt der Zustand sichtbar (Punkt, bei der SL die Zahl der Verbundenen); Störungen erscheinen als Hinweis daneben.
+  import { untrack } from 'svelte';
+  import { popCount } from './animator.svelte';
   import { gameLog } from './log.svelte';
   import { session } from './session.svelte';
   import { t } from './texts';
@@ -17,6 +19,17 @@
     void action();
   };
 
+  // Zahl der Verbundenen springt, wenn jemand dazukommt (11.7), nicht beim Weggehen
+  let count = $state<HTMLElement>();
+  let lastCount = untrack(() => session.online.length);
+  $effect(() => {
+    const n = session.online.length;
+    untrack(() => {
+      if (n > lastCount && count) popCount(count);
+      lastCount = n;
+    });
+  });
+
   async function invite() {
     await session.invite();
     await session.copyInvite();
@@ -32,7 +45,7 @@
       {#if session.status === 'reload'}<button onclick={() => location.reload()}>{t('room.reloadButton')}</button>{/if}
     </div>
   {/if}
-  {#if session.mode === 'host'}<span class="count" title={t('room.open', { n: session.online.length })}>{session.online.length}</span>{/if}
+  {#if session.mode === 'host'}<span class="count" bind:this={count} title={t('room.open', { n: session.online.length })}>{session.online.length}</span>{/if}
   <button class="open" aria-label={t('menu.title')} aria-expanded={open} data-health={session.health} onclick={() => (open = !open)}>
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
     <span class="dot"></span>
@@ -68,7 +81,7 @@
   .dot { position: absolute; right: -1px; top: -1px; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--bg); background: var(--menu-local); }
   [data-health='ok'] .dot { background: var(--menu-ok); }
   [data-health='trouble'] .dot { background: var(--menu-trouble); }
-  .count { opacity: 0.7; font-variant-numeric: tabular-nums; }
+  .count { display: inline-block; opacity: 0.7; font-variant-numeric: tabular-nums; }
   .alert { display: flex; gap: 8px; align-items: center; background: var(--warn-bg); color: #fff; padding: 4px 10px; border-radius: 8px; }
   .items { position: absolute; top: 36px; right: 0; display: flex; flex-direction: column; gap: 4px; min-width: 190px; padding: 6px; background: var(--panel-bg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); transform-origin: top right; animation: pop-in var(--pop) var(--spring-soft); }
   .info { padding: 2px 6px 4px; opacity: 0.7; }

@@ -244,6 +244,17 @@ export function arrivePlate(plate: HTMLElement): void {
   plate.animate({ backgroundColor: ['transparent', css.backgroundColor], color: ['transparent', css.color] }, { duration: d, easing: cssVar('--spring-soft') || 'ease-out' });
 }
 
+/** Ring am Zeiger (11.7): dehnt sich einmal aus und verblasst; in „Aus“ nichts */
+export function pingRing(ring: HTMLElement): void {
+  const d = cssMs(cssVar('--ping'));
+  if (d) ring.animate([{ scale: 0.3, opacity: 0.9 }, { scale: 2.4, opacity: 0 }], { duration: d, easing: 'ease-out' });
+}
+
+/** Zeiger der anderen verschwindet (Tisch verlassen oder weg): ausblenden, in „Aus“ sofort */
+export function pointerOut(_: Element) {
+  return { duration: cssMs(cssVar('--pointer-out')), css: (k: number) => `opacity: ${k}` };
+}
+
 /** Stufe „Aus“: Rückmeldung ohne Bewegung (11.5) */
 function flash(lift: HTMLElement, color: string, delay: number): void {
   const t = timing();

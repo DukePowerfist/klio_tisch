@@ -219,6 +219,25 @@ describe('Stand', () => {
 });
 
 describe('SL und Zuschauer', () => {
+  it('SL wie ein Platz: erstes Erscheinen still, kurzer Abbruch nichts, nach „weg“ wieder da mit Ring', () => {
+    const t = table(seats());
+    expect(t.who('g1', 'gm')).toEqual([]);
+    t.who('g1', null);
+    t.after(AWAY_MS - 1);
+    expect(t.who('g2', 'gm')).toEqual([]);
+    t.who('g2', null);
+    expect(t.after(AWAY_MS)).toEqual([]);
+    expect(t.who('g3', 'gm')).toEqual([{ type: 'gmBack', peer: 'g3' }]);
+  });
+
+  it('Zuschauer: kein Signal, auch nicht beim Wiederkommen', () => {
+    const t = table(seats());
+    t.who('s1', 'spectator');
+    t.who('s1', null);
+    t.after(AWAY_MS);
+    expect(t.who('s2', 'spectator')).toEqual([]);
+  });
+
   it('ändern an den Plätzen nichts', () => {
     const t = table(seats('seat2'));
     t.who('p2', 'seat2');

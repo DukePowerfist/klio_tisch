@@ -25,7 +25,9 @@ export type ArrivalSignal =
   /** neu angekommen bzw. nach „weg“ wieder da; `peer`: dessen Zeiger (null: man selbst); `self`: man selbst */
   | { type: 'arrived'; seat: SeatId; how: 'new' | 'back'; peer: PeerId | null; self: boolean }
   /** seit `AWAY_MS` nicht mehr verbunden */
-  | { type: 'left'; seat: SeatId };
+  | { type: 'left'; seat: SeatId }
+  /** die SL ist nach „weg“ wieder da (etwa nach einem Neustart des Hosts): nur der Ring an ihrem Zeiger (Teil 5) */
+  | { type: 'gmBack'; peer: PeerId };
 
 type SeatState = {
   occupied: boolean;
@@ -46,6 +48,8 @@ export class Arrivals {
   private seats = new Map<SeatId, SeatState>();
   /** zuletzt gemeldete Rolle je Peer */
   private peers = new Map<PeerId, Who>();
+  /** die SL wie ein immer belegter Platz, aber ohne Schild, Meldung und Protokoll (Nutzer 2026-10-21) */
+  private gm: SeatState = fresh(true);
 
   /** `seats`: Plätze beim eigenen Laden bzw. beim Betreten des Raums; `self`: eigener Platz */
   constructor(seats: Seats, private self: SeatId | null, now: number) {
@@ -77,6 +81,13 @@ export class Arrivals {
       if (had.length === 0 && has.length > 0) out.push(...this.gained(s, has[0]!, movedIn));
       else if (had.length > 0 && has.length === 0) this.lost(s, movedOut, now);
     }
+    const gmBefore = [...before.values()].includes('gm');
+    const gmNow = [...after].find(([, w]) => w === 'gm')?.[0];
+    if (!gmBefore && gmNow !== undefined) {
+      const back = this.gm.seen && this.gm.away;
+      Object.assign(this.gm, { seen: true, away: false, since: null });
+      if (back) out.push({ type: 'gmBack', peer: gmNow });
+    } else if (gmBefore && gmNow === undefined) this.gm.since = now;
     return out;
   }
 
@@ -117,6 +128,7 @@ export class Arrivals {
   /** Fristen ablaufen lassen. */
   tick(now: number): ArrivalSignal[] {
     const out: ArrivalSignal[] = [];
+    if (this.gm.since !== null && now >= this.gm.since + AWAY_MS) Object.assign(this.gm, { since: null, away: true });
     for (const [s, st] of this.seats) {
       if (!st.occupied || s === this.self) continue;
       // umgesetzt, aber nicht verbunden: nur der neue Name, danach still „nicht da“
@@ -132,7 +144,7 @@ export class Arrivals {
 
   /** nächster Zeitpunkt, zu dem `tick` etwas ändern kann (null: keiner) */
   nextDeadline(): number | null {
-    const times = [...this.seats.values()].flatMap((st) => [st.pending, st.since === null ? null : st.since + AWAY_MS]);
+    const times = [...this.seats.values(), this.gm].flatMap((st) => [st.pending, st.since === null ? null : st.since + AWAY_MS]);
     const due = times.filter((t): t is number => t !== null);
     return due.length ? Math.min(...due) : null;
   }
@@ -173,7 +185,7 @@ export class Arrivals {
 /** Plätze, deren letzter Wechsel zwischen anwesend und „nicht da“ still war (ohne Übergang am Schild): neu still,
  *  wer ohne Signal wechselt (Anfangszustand, erstes Erscheinen, Tausch); mit Signal („weg“, angekommen) nicht mehr. */
 export function stillAway(before: ReadonlySet<SeatId>, after: ReadonlySet<SeatId>, signals: readonly ArrivalSignal[], still: ReadonlySet<SeatId>): Set<SeatId> {
-  const loud = new Set(signals.filter((x) => x.type === 'left' || x.type === 'arrived').map((x) => x.seat));
+  const loud = new Set(signals.flatMap((x) => (x.type === 'left' || x.type === 'arrived' ? [x.seat] : [])));
   const next = new Set(still);
   for (const s of SEATS) {
     if (before.has(s) === after.has(s)) continue;
