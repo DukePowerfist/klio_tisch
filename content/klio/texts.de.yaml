@@ -182,12 +182,11 @@ log:                                      # Spielprotokoll (neu)
     back: "{name} ist wieder da."
     backNoName: "Platz {n} ist wieder verbunden."
     freed: "Platz {n} ist frei."
-  lamp:                                   # Laterne (5n, 11.9); wer: Spielleitung, Name am Platz, sonst Spieler n
+  lamp:                                   # Laterne (5n, 11.9); wer: Spielleitung, Name am Platz, sonst room.player
     lit: "{who} hat die Laterne angezündet."
     out: "{who} hat die Laterne gelöscht."
     gm: Die Spielleitung
     spectator: Ein Zuschauer
-    seatNoName: "Spieler {n}"
 
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung

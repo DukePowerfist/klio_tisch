@@ -5,7 +5,7 @@
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
   import { stackEdges, type LampBox, type ZoneBox } from './layout';
-  import { shadowCss, shadowFrom } from './light';
+  import { shadowCss, shadowOver } from './light';
   import { session } from './session.svelte';
   import { t, tMaybe } from './texts';
 
@@ -52,7 +52,7 @@
   });
   /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab.
    *  Kante k (k-ter Versatz) in Höhe 1 + k, wie in der Musterseite: so fällt der Stapel weich statt mit hartem Rand */
-  const edgeShadow = (k: number) => shadowCss(shadowFrom(flame, zone.x + (card.w * zone.scale) / 2, zone.y + (card.h * zone.scale) / 2, 1 + k));
+  const edgeShadow = (k: number) => shadowCss(shadowOver(flame, { x: zone.x, y: zone.y, w: card.w * zone.scale, h: card.h * zone.scale }, 1 + k));
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 

@@ -7,12 +7,15 @@
   import { effectLevel } from './effectLevel.svelte';
   import { submitOrSay } from './commands';
   import type { LampBox } from './layout';
-  import { lampShadows } from './lampLight.svelte';
   import { haloGradient, IGNITE, lightGradient } from './light';
   import { session } from './session.svelte';
   import { t } from './texts';
 
-  let { lamp, light, lit }: { lamp: LampBox; light: { reach: number; ambient: number }; lit: boolean } = $props();
+  let { lamp, light, lit, shadowsLit = $bindable(true) }: {
+    lamp: LampBox; light: { reach: number; ambient: number }; lit: boolean;
+    /** Schatten von der Flamme weg (für Board.svelte): springt, wenn die Laterne am wenigsten leuchtet */
+    shadowsLit?: boolean;
+  } = $props();
 
   const base = import.meta.env.BASE_URL;
   const image = `${base}assets/table/laterne.webp`;
@@ -26,12 +29,10 @@
   const shade = $derived(lightGradient(centre, light));
   const halo = $derived(haloGradient(centre));
 
-  let layers: HTMLDivElement;
   let out: HTMLDivElement;
   let on: HTMLDivElement;
   let glow: HTMLDivElement;
-  // in zwei Zweigen gebunden (Knopf oder schlichtes Element, je nach Recht)
-  let ember = $state<HTMLDivElement>();
+  let ember: HTMLDivElement;
   /** laufender Übergang; solange er läuft oder der eigene Befehl unterwegs ist, zählt kein Klick */
   let running: Promise<unknown> | null = null;
   let sending = false;
@@ -42,15 +43,15 @@
     const { lampOn, lampOff } = timing();
     const duration = to ? lampOn : lampOff;
     // Schatten springen, wenn die Laterne am wenigsten leuchtet: beim Anzünden jetzt, beim Löschen am Ende
-    if (to || !duration) lampShadows.lit = to;
+    if (to || !duration) shadowsLit = to;
     if (!duration) return;
     const up = to ? IGNITE : [{ opacity: 1 }, { opacity: 0 }];
     const down = up.map((k) => ({ ...k, opacity: 1 - Number(k.opacity) }));
     const opts = { duration, easing: to ? 'linear' : 'ease-in' };
-    const anims = [on, glow, ember].flatMap((el) => (el ? [el.animate(up, opts)] : []));
+    const anims = [on, glow, ember].map((el) => el.animate(up, opts));
     anims.push(out.animate(down, opts));
     const r = Promise.all(anims.map((a) => a.finished.catch(() => undefined))).then(() => {
-      if (!to) lampShadows.lit = false;
+      if (!to) shadowsLit = false;
       // auch nach einem fremden Ereignis wieder frei für Klicks
       if (running === r) running = null;
     });
@@ -67,7 +68,7 @@
   $effect(() => {
     void flicker;
     const v = lit ? '1' : '0';
-    for (const el of [on, glow, ember]) if (el) el.style.opacity = v;
+    for (const el of [on, glow, ember]) el.style.opacity = v;
   });
 
   // ---------- Flackern in „Voll“ (11.9) ----------
@@ -88,19 +89,18 @@
       }
       f.v += (f.target - f.v) * 0.35;
       const bright = Math.min(1, f.v).toFixed(3);
-      glow.style.opacity = bright;
-      if (ember) ember.style.opacity = bright;
+      glow.style.opacity = ember.style.opacity = bright;
       // die Flamme wandert leicht; wird sie kleiner, reicht das Licht weniger weit
       const move = `${((Math.sin(now / 410) * 0.6 + Math.sin(now / 173) * 0.4) * 1.6).toFixed(2)}px ${(Math.cos(now / 290) * 1.2).toFixed(2)}px`;
       on.style.translate = glow.style.translate = move;
       on.style.scale = (0.97 + 0.04 * (f.v - 0.72) / 0.32).toFixed(4);
       glow.style.scale = (0.92 + 0.1 * (f.v - 0.72) / 0.32).toFixed(4);
-      layers.dataset['flicker'] = '';
     });
+    // eigene Ebenen nur während des Flackerns (die beiden sind über den ganzen Tisch groß)
+    for (const el of [on, glow]) el.style.willChange = 'translate, scale, opacity';
     return () => {
       cancelAnimationFrame(raf);
-      for (const el of [on, glow]) el.style.translate = el.style.scale = '';
-      delete layers.dataset['flicker'];
+      for (const el of [on, glow]) el.style.translate = el.style.scale = el.style.willChange = '';
     };
   });
 
@@ -108,7 +108,7 @@
   $effect(() => {
     const now = lit;
     untrack(() => {
-      if (!running) lampShadows.lit = now;
+      if (!running) shadowsLit = now;
     });
   });
 
@@ -127,21 +127,16 @@
   }
 </script>
 
-{#if may}
-  <button class="lamp control" style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px" title={t(lit ? 'gm.lampOff' : 'gm.lampOn')} aria-pressed={lit} onclick={toggle} data-lamp data-lit={lit}>
-    <img src={image} alt="" draggable="false" />
-    <div class="ember" bind:this={ember} style:mask-image={mask}></div>
-  </button>
-{:else}
-  <div class="lamp" style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px" data-lamp data-lit={lit}>
-    <img src={image} alt="" draggable="false" />
-    <div class="ember" bind:this={ember} style:mask-image={mask}></div>
-  </div>
-{/if}
+<!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein schlichtes Element -->
+<svelte:element this={may ? 'button' : 'div'} class="lamp" class:control={may} style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px"
+  title={may ? t(lit ? 'gm.lampOff' : 'gm.lampOn') : undefined} aria-pressed={may ? lit : undefined} onclick={may ? toggle : undefined} role={may ? undefined : 'presentation'} data-lamp data-lit={lit}>
+  <img src={image} alt="" draggable="false" />
+  <div class="ember" bind:this={ember} style:mask-image={mask}></div>
+</svelte:element>
 
 <!-- Hülle ohne z-index und ohne alles andere, was einen Stapelkontext bildet (opacity, transform, filter, isolation):
      sonst wäre sie eine isolierte Gruppe, und multiply hätte keinen Hintergrund (11.9). Die z-Werte stehen an den Ebenen. -->
-<div class="light" bind:this={layers} aria-hidden="true">
+<div class="light" aria-hidden="true" data-flicker={flicker ? '' : undefined}>
   <div class="out" bind:this={out} style:opacity={lit ? 0 : 1}></div>
   <div class="on" bind:this={on} style:background={shade} style:transform-origin="{centre.x}px {centre.y}px"></div>
   <div class="glow" bind:this={glow} style:background={halo} style:transform-origin="{centre.x}px {centre.y}px"></div>

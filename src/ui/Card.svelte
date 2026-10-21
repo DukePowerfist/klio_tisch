@@ -5,8 +5,8 @@
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
   import { appear, cause, cue, cut, events, fade, move, revealed, strike, Tilt, timing, turn, wobble } from './animator.svelte';
-  import type { LampBox } from './layout';
-  import { HEIGHT, onCard, shadowCss, shadowFrom } from './light';
+  import { cardSize, type LampBox } from './layout';
+  import { HEIGHT, onCard, shadowCss, shadowOver } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
   import { view } from './view.svelte';
@@ -36,15 +36,15 @@
   const lifted = $derived(dragging || !!mark);
 
   /** Schatten von der Flamme weg (11.9), umgerechnet ins Koordinatensystem der Karte (gedreht, verkleinert): liegend
-   *  auf `.face`, angehoben (auch von anderen gezogen) lang und weich auf `.lift::before` */
+   *  auf `.face`, angehoben (auch von anderen gezogen) lang und weich auf `.lift::before`; den sieht man nur angehoben
+   *  oder beim Überfahren, sonst bleibt er ungerechnet */
   const shadows = $derived.by(() => {
     if (!shaded) return null;
-    const w = (rotated ? size.h : size.w) * scale;
-    const h = (rotated ? size.w : size.h) * scale;
-    const at = (height: number) => onCard(shadowFrom(flame, x + w / 2, y + h / 2, height), rotated, scale);
+    const rect = { x, y, ...cardSize({ card: size }, { scale, rotated }) };
+    const at = (height: number) => onCard(shadowOver(flame, rect, height), rotated, scale);
     return {
       face: height === null ? 'none' : `0 0 1px rgba(0, 0, 0, 0.6), ${shadowCss(at(height))}`,
-      lift: `${shadowCss(at(HEIGHT.lifted), 0.42)}, ${shadowCss(at(HEIGHT.lifted / 3), 0.3)}`,
+      lift: lifted || hover ? `${shadowCss(at(HEIGHT.lifted), 0.42)}, ${shadowCss(at(HEIGHT.lifted / 3), 0.3)}` : undefined,
     };
   });
   const suit = $derived(SUIT_SYMBOL[suitOf(card)]);

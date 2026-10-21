@@ -23,8 +23,8 @@ export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>
     case 'cardsReset':
       return say(t('log.reset'));
     case 'lampChanged': {
-      const name = e.by === 'gm' || e.by === 'spectator' ? null : seats?.[e.by].name;
-      const who = e.by === 'gm' || e.by === 'spectator' ? t(`log.lamp.${e.by}`) : name ?? t('log.lamp.seatNoName', { n: seatNo(e.by) });
+      // Person am Platz wie bei Schild und Zeiger (seatNames): ihr Name, sonst „Spieler n“
+      const who = e.by === 'gm' || e.by === 'spectator' ? t(`log.lamp.${e.by}`) : (seats?.[e.by].name ?? '').trim() || t('room.player', { n: seatNo(e.by) });
       return say(t(e.lit ? 'log.lamp.lit' : 'log.lamp.out', { who }));
     }
     case 'charactersReset':

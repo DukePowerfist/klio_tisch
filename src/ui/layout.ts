@@ -17,6 +17,8 @@ export type ZoneBox = Rect & {
   fanY: number;
   owner: SeatId | null;
   template: string;
+  /** aufgefächert (zones.yaml `fanned`); sonst ein Stapel, dessen Dicke Kanten zeigen */
+  fanned: boolean;
   /** Stapelmenü (nur Zonen mit Aktionen) und Beschriftung, aus layouts.yaml */
   menu: MenuSide;
   label: { center: boolean; rotated: boolean; x: number | null };
@@ -118,7 +120,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
       id, ...at(M.zones[id] ?? [0, 0]),
       w: grow ? CW : (shape.w ?? CW), h: grow ? CH : (shape.h ?? CH),
       scale: grow ? 1 : (shape.scale ?? 1), fanX: shape.fanX ?? 0, fanY: shape.fanY ?? 0,
-      owner: null, template: id, ...decor(shape),
+      owner: null, template: id, fanned: !!z.fanned, ...decor(shape),
     };
   }
   // Bogenzonen: Lage aus der Haut (Bildkoordinaten), skaliert mit dem Bogen
@@ -134,7 +136,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
       zones[id] = {
         id, x: sb.x + r.x * k, y: sb.y + r.y * k, w: r.w * k, h: r.h * k,
         scale: (shape.scale ?? 1) * sb.scale, fanX: (shape.fanX ?? 0) * sb.scale, fanY: (shape.fanY ?? 0) * sb.scale,
-        owner: s, template: t, ...decor(shape),
+        owner: s, template: t, fanned: !!c.zones[t]?.fanned, ...decor(shape),
       };
     }
   }
@@ -152,7 +154,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     menu: at(M.menu),
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
-    light: { ...(role ? L.role.light : L.overview.light) },
+    light: role ? L.role.light : L.overview.light,
   };
 }
 
@@ -186,6 +188,9 @@ export type CardPlace = {
   z: number;
   /** Platz im Stand (Zone und Stelle bzw. freie Lage): Ändert er sich, bewegt sich die Karte; sonst nur die Ansicht (11.2) */
   slot: string;
+  /** Stapel (11.9): oberste Karte mit der Zahl der Kanten darunter, `under` für die Karten darunter (verdeckt) */
+  edges?: number;
+  under?: true;
 };
 
 export type Places = Partial<Record<CardId, CardPlace>>;
@@ -202,8 +207,10 @@ export function placeCards(state: TableState<unknown>, layout: Layout): Places {
     const z = layout.zones[id];
     if (!z) return;
     // Stapel liegen genau übereinander; ihre Dicke zeichnet die Zone (`stackEdges`, 11.6)
+    const top = cards.length - 1;
     cards.forEach((card, i) => {
-      out[card] = { x: z.x + i * z.fanX, y: z.y + i * z.fanY, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: `${id}#${i}` };
+      const stack = z.fanned ? {} : i === top ? { edges: stackEdges(cards.length) } : { under: true as const };
+      out[card] = { x: z.x + i * z.fanX, y: z.y + i * z.fanY, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: `${id}#${i}`, ...stack };
     });
   });
   state.free.forEach((card, i) => {
@@ -218,7 +225,7 @@ export function placeCards(state: TableState<unknown>, layout: Layout): Places {
 export const stackEdges = (n: number): number => (n >= 20 ? 3 : n >= 8 ? 2 : n >= 2 ? 1 : 0);
 
 /** Größe einer Karte auf dem Tisch (gedreht: Breite und Höhe vertauscht). */
-export function cardSize(layout: Layout, p: Pick<CardPlace, 'scale' | 'rotated'>): { w: number; h: number } {
+export function cardSize(layout: Pick<Layout, 'card'>, p: Pick<CardPlace, 'scale' | 'rotated'>): { w: number; h: number } {
   const w = layout.card.w * p.scale;
   const h = layout.card.h * p.scale;
   return p.rotated ? { w: h, h: w } : { w, h };
@@ -230,10 +237,13 @@ const frac = (v: number) => Math.round(v * 10000) / 10000;
 const relIn = (r: Rect, x: number, y: number) => ({ x: frac((x - r.x) / r.w), y: frac((y - r.y) / r.h) });
 const pointIn = (r: Rect, f: { x: number; y: number }) => ({ x: r.x + f.x * r.w, y: r.y + f.y * r.h });
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-/** Punkt in die Tischmitte geholt, Abstand `w`, `h` zum rechten und unteren Rand (6.1, A32) */
+/** Punkt in die Tischmitte geholt, Abstand `w`, `h` zum rechten und unteren Rand (6.1, A32); in Tischkoordinaten */
+const clampIntoMiddle = ({ middle: m }: Layout, x: number, y: number, w = 0, h = 0) =>
+  ({ x: clamp(x, m.x, m.x + m.w - w), y: clamp(y, m.y, m.y + m.h - h) });
+/** dasselbe als Anteil der Tischmitte */
 const intoMiddle = (layout: Layout, x: number, y: number, w = 0, h = 0) => {
-  const m = layout.middle;
-  return relIn(m, clamp(x, m.x, m.x + m.w - w), clamp(y, m.y, m.y + m.h - h));
+  const p = clampIntoMiddle(layout, x, y, w, h);
+  return relIn(layout.middle, p.x, p.y);
 };
 /** sichtbarer Bogen unter einem Punkt */
 const sheetAt = (layout: Layout, x: number, y: number) => SEATS.find((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
@@ -257,13 +267,12 @@ export function freePosAt(layout: Layout, x: number, y: number): FreePos {
   const seat = sheetAt(layout, x, y);
   if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
   const c = cardSize(layout, { scale: layout.freeCardScale, rotated: true });
-  const m = layout.middle;
-  const at = besideLamp(layout, { x: clamp(x, m.x, m.x + m.w - c.w), y: clamp(y, m.y, m.y + m.h - c.h), ...c });
-  return { anchor: 'center', ...intoMiddle(layout, at.x, at.y, c.w, c.h) };
+  const at = besideLamp(layout, { ...clampIntoMiddle(layout, x, y, c.w, c.h), ...c });
+  return { anchor: 'center', ...relIn(layout.middle, at.x, at.y) };
 }
 
 /** Mindestabstand einer abgelegten Karte zur Laterne (11.9, F3) */
-export const LAMP_GAP = 4;
+const LAMP_GAP = 4;
 
 /** Karte (Rechteck in der Tischmitte) von der Laterne wegschieben wie vom Rand der Tischmitte (11.9, F3): berührt sie
  *  den Kreis samt Abstand, nach links, rechts oder unten knapp neben das umgebende Quadrat (nach oben ist kein Platz),

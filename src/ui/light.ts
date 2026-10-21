@@ -1,7 +1,7 @@
 // Schatten von der Flamme der Laterne weg (ARCHITEKTUR.md 11.9). Rein, ohne DOM.
 // Versatz wie bei einer Punktlichtquelle: Abstand · h / (Flammenhöhe − h), höchstens MAX_OFFSET.
 
-import type { LampBox } from './layout';
+import type { LampBox, Rect } from './layout';
 
 export type Shadow = { x: number; y: number; blur: number; alpha: number };
 
@@ -30,6 +30,9 @@ export function shadowDown(h: number): Shadow {
 /** Schatten bei brennender Laterne (`flame`) von ihr weg, bei gelöschter (null) nach unten */
 export const shadowFrom = (flame: LampBox['flame'] | null, x: number, y: number, h: number): Shadow =>
   (flame ? shadowAt(flame, x, y, h) : shadowDown(h));
+
+/** Schatten eines Rechtecks (Mitte) in Höhe `h` */
+export const shadowOver = (flame: LampBox['flame'] | null, r: Rect, h: number): Shadow => shadowFrom(flame, r.x + r.w / 2, r.y + r.h / 2, h);
 
 /** Als Wert für `box-shadow`; `alpha` ersetzt die Deckkraft (etwa für eine zweite, weichere Lage) */
 export function shadowCss(s: Shadow, alpha = s.alpha): string {

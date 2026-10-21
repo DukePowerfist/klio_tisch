@@ -11,15 +11,14 @@
   import Cursors from './Cursors.svelte';
   import GmControls from './GmControls.svelte';
   import Lamp from './Lamp.svelte';
-  import { lampShadows } from './lampLight.svelte';
-  import { shadowCss, shadowFrom, stackHeight, HEIGHT } from './light';
+  import { shadowCss, shadowOver, stackHeight, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropHints, dropTarget } from './dropHint';
-  import { cardSize, clamp, computeLayout, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace } from './layout';
+  import { cardSize, clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -96,19 +95,15 @@
   type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
-  /** Flamme für die Schatten (11.9); null bei gelöschter Laterne: dann fallen sie weich nach unten (F4) */
-  const flame = $derived(lampShadows.lit ? layout.lamp.flame : null);
+  /** Schatten von der Flamme weg (11.9); setzt die Laterne: beim Anzünden am Anfang, beim Löschen am Ende des Übergangs */
+  let shadowsLit = $state(true);
+  /** Flamme für die Schatten; null bei gelöschter Laterne: dann fallen sie weich nach unten (F4) */
+  const flame = $derived(shadowsLit ? layout.lamp.flame : null);
   /** Höhe einer liegenden Karte über dem Tisch (11.9): oberste Karte eines Stapels 2 + Zahl seiner Kanten, sonst eine
    *  Karte. Null für die Karten darunter: Sie liegen genau unter der obersten, und jeder eigene Schatten machte den Rand
    *  des Stapels mit jeder Karte dunkler (27 im Deck ergaben einen schwarzen Rand); die Dicke zeigen die Kanten. */
-  function heightOf(p: CardPlace): number | null {
-    const [zone, i] = p.slot.split('#');
-    const z = layout.zones[zone!];
-    if (!z || content.zones[z.template]?.fanned) return HEIGHT.card;
-    const n = table.zones[zone!]?.length ?? 0;
-    return Number(i) === n - 1 ? stackHeight(stackEdges(n)) : null;
-  }
-  const feltShadow = $derived(shadowCss(shadowFrom(flame, layout.middle.x + layout.middle.w / 2, layout.middle.y + layout.middle.h / 2, HEIGHT.felt)));
+  const heightOf = (p: CardPlace): number | null => (p.under ? null : p.edges === undefined ? HEIGHT.card : stackHeight(p.edges));
+  const feltShadow = $derived(shadowCss(shadowOver(flame, layout.middle, HEIGHT.felt)));
   // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
   // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
   // kurz nach dem Laden); bis dahin der Grundton des Holzes.
@@ -378,16 +373,13 @@
   <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>
     <div class="scene" bind:this={sceneEl}>
       <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-shadow={feltShadow}></div>
-      <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} />
+      <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
       <GmControls at={layout.gmControls} {players} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
       {#each Object.values(layout.sheets) as box (box.seat)}
         {#if box.visible}
-          <!-- Schatten des Bogens von der Flamme weg (11.9); `display: contents`, die Variable erbt der Bogen -->
-          <div class="shade" style:--sheet-shadow={shadowCss(shadowFrom(flame, box.x + box.w / 2, box.y + box.h / 2, HEIGHT.sheet))}>
-            <Sheet {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
-          </div>
+          <Sheet --sheet-shadow={shadowCss(shadowOver(flame, box, HEIGHT.sheet))} {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
         {/if}
       {/each}
 
@@ -434,7 +426,6 @@
 <style>
   .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--room); }
   .scene { position: absolute; inset: 0; }
-  .shade { display: contents; }
   /* Holz (11.9): `border-radius` rundet die Platte ab; kein overflow: über den Rand gezogene Karten bleiben sichtbar */
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--wood) 0 0 / 100% 100% no-repeat; border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
   /* Filz als Einlage: Struktur über der Filzfarbe, dunkler Rand wie Leder, Schatten nach innen und aufs Holz */
