@@ -92,6 +92,16 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect.poll(async () => (await player.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
   await expect(gm.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue('');
 
+  // Laterne (5n), vor dem Orakel (dessen Fenster fängt sonst den Klick ab): Spieler ohne Recht kann sie nicht schalten; die SL löscht sie für alle; mit Recht zündet er sie an
+  await expect(player.locator('button[data-lamp]')).toHaveCount(0);
+  await gm.getByRole('button', { name: 'Laterne löschen' }).click();
+  await expect(player.locator('[data-lamp]')).toHaveAttribute('data-lit', 'false');
+  const rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Laterne anzünden und löschen' }).selectOption('allow');
+  await gm.keyboard.press('Escape');
+  await player.getByRole('button', { name: 'Laterne anzünden' }).click();
+  await expect(gm.locator('[data-lamp]')).toHaveAttribute('data-lit', 'true');
+
   // Spieler zieht eine Karte, SL sieht sie
   await player.keyboard.press('0');
   await openMenuAndClick(player, 'DECK', 'Ziehen');

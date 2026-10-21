@@ -31,7 +31,8 @@
 </div>
 
 <style>
-  .ctl { position: absolute; transform: translate(-100%, -100%); display: flex; gap: 10px; align-items: center; font-size: 14px; opacity: 0.7; transition: opacity 0.2s, left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); white-space: nowrap; }
+  /* über dem Licht (z 450000, 11.9): Bedienung, kein Gegenstand auf dem Tisch; eine darüber gezogene Karte liegt kurz darunter */
+  .ctl { position: absolute; z-index: 460000; transform: translate(-100%, -100%); display: flex; gap: 10px; align-items: center; font-size: 14px; opacity: 0.7; transition: opacity 0.2s, left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); white-space: nowrap; }
   .ctl:hover { opacity: 1; }
   label { display: flex; gap: 6px; align-items: center; }
   select, button { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font: inherit; cursor: pointer; }

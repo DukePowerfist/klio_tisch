@@ -10,6 +10,7 @@
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
   import GmControls from './GmControls.svelte';
+  import Lamp from './Lamp.svelte';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
@@ -362,6 +363,7 @@
   <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>
     <div class="scene" bind:this={sceneEl}>
       <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px"></div>
+      <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} />
       <GmControls at={layout.gmControls} {players} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 

@@ -29,3 +29,40 @@ export function onCard(s: Shadow, rotated: boolean, scale: number): Shadow {
   const [x, y] = rotated ? [s.y, -s.x] : [s.x, s.y];
   return { x: x / scale, y: y / scale, blur: s.blur / scale, alpha: s.alpha };
 }
+
+// ---------- Licht der Laterne (Abdunklung und Schein) ----------
+// Farben aus der Musterseite (muster/tisch.html, vom Nutzer abgenommen). Die Abdunklung wird multipliziert: Weiß
+// lässt alles, wie es ist; der Rand bekommt das Grundlicht der Ansicht (`ambient`), warm getönt.
+
+type RGB = readonly [number, number, number];
+const mix = (a: RGB, b: RGB, t: number): RGB => [0, 1, 2].map((i) => Math.round(a[i]! + (b[i]! - a[i]!) * t)) as unknown as RGB;
+const rgb = (c: RGB) => `rgb(${c.join(', ')})`;
+
+const DARK: RGB = [40, 30, 24];
+const PAPER: RGB = [255, 244, 228];
+const NEAR: RGB = [255, 241, 214];
+const WARM: RGB = [250, 222, 180];
+
+/** Radialer Verlauf der Abdunklung um die Flamme, in Tischkoordinaten; `reach` in TP, `ambient` 0 bis 1 */
+export function lightGradient(flame: { x: number; y: number }, light: { reach: number; ambient: number }): string {
+  const { reach: r, ambient } = light;
+  const edge = mix(DARK, PAPER, ambient);
+  const mid = mix(edge, WARM, 0.55);
+  return `radial-gradient(circle at ${flame.x}px ${flame.y}px, ${rgb(NEAR)} 0, ${rgb(NEAR)} ${r * 0.12}px, ${rgb(mix(NEAR, mid, 0.5))} ${r * 0.4}px, ${rgb(mid)} ${r * 0.7}px, ${rgb(edge)} ${r}px)`;
+}
+
+/** Stärke des Scheins um die Laterne (Musterseite 0,35); steckt in den Farben, weil die Deckkraft der Ebene beim
+ *  Anzünden und Löschen animiert wird */
+export const HALO = 0.35;
+
+/** Warmer Schein um die Laterne (wird mit `screen` aufgelegt) */
+export function haloGradient(flame: { x: number; y: number }, strength = HALO): string {
+  const a = (v: number) => +(v * strength).toFixed(3);
+  return `radial-gradient(circle at ${flame.x}px ${flame.y}px, rgba(255, 190, 110, ${a(0.55)}) 0, rgba(255, 160, 80, ${a(0.22)}) 90px, rgba(255, 140, 60, ${a(0.06)}) 260px, transparent 480px)`;
+}
+
+/** Anzünden: Deckkraft der Lichtebenen mit kurzem Aufflackern, dann ruhig an (Stufe „Ruhig“ und „Voll“) */
+export const IGNITE: Keyframe[] = [
+  { opacity: 0 }, { opacity: 0.5, offset: 0.1 }, { opacity: 0.2, offset: 0.15 }, { opacity: 0.7, offset: 0.25 },
+  { opacity: 0.45, offset: 0.3 }, { opacity: 0.85, offset: 0.45 }, { opacity: 0.75, offset: 0.6 }, { opacity: 1 },
+];

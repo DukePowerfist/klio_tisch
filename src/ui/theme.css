@@ -8,6 +8,7 @@
   --felt-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 -0.25'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.25 -0.08'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
   --felt-rim: #23160d;
   --felt-rim-light: rgba(255, 220, 170, 0.12);
+  --lamp-out: rgb(217, 215, 212);  /* Laterne aus (F4): der ganze Tisch gleichmäßig leicht gedämpft (0,85) */
   --ink: #f3efe3;
   --line: rgba(255, 255, 255, 0.5);
   --card: #fffdf7;
@@ -54,8 +55,8 @@
   --switch-on: #4f9a6e;
   --stack-edge: #e6dcc3;   /* Kanten unter der obersten Karte eines Stapels (11.6) */
   --stack-edge-line: rgba(0, 0, 0, 0.3);
-  --drop-hint: rgba(255, 255, 255, 0.6);     /* Umriss der Ablegestelle beim Ziehen (11.6) */
-  --drop-hint-bg: rgba(255, 255, 255, 0.08);
+  --drop-hint: rgba(255, 255, 255, 0.8);     /* Umriss der Ablegestelle beim Ziehen (11.6); heller, weil unter dem Licht (5n) */
+  --drop-hint-bg: rgba(255, 255, 255, 0.12);
   --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */
   --table-right: 0px;  /* rechter Rand von Tisch und Menüknopf; bei offenem Protokoll --log-w (App) */
   --glide: 0.25s;  /* Karte gleitet an ihren Platz: Grunddauer, dazu die Strecke (motion.ts, 11.3) */
@@ -91,10 +92,12 @@
   --strike-c: #d9534a;  /* roter Schimmer dabei */
   --fade: 150ms;   /* Stufe „Aus“: Karte blendet an der neuen Lage ein */
   --flash: 0.6s;   /* Stufe „Aus“: Rand leuchtet statt Abheben und Stoß */
+  --lamp-on: 1.4s; /* Laterne anzünden: Licht flackert auf und wird ruhig (11.9) */
+  --lamp-off: 0.7s; /* Laterne löschen */
 }
 /* Effektstufe „Aus“ (11.5; data-effects setzt effectLevel.svelte.ts, ohne eigene Wahl bei „Bewegung reduzieren“):
    keine Bewegung; Karten blenden ein, gemischte Stapel und Schaden leuchten kurz am Rand auf */
-:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --away: 0s; --back: 0s; --arrive: 0s; --arrive-lift: 0s; --ping: 0s; --pointer-out: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s;
+:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --away: 0s; --back: 0s; --arrive: 0s; --arrive-lift: 0s; --ping: 0s; --pointer-out: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s; --lamp-on: 0s; --lamp-off: 0s;
   /* Fenster und Meldungen blenden nur ein (ohne Wachsen und Gleiten), Knöpfe geben nicht nach */
   --pop-from: 1; --rise: 0px; --press: 0s; --press-scale: 1; }
 /* nicht verbunden (11.7): blasser, hin mit --away, zurück mit --back; still (ohne Signal) ohne Übergang */

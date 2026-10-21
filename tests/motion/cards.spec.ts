@@ -13,6 +13,9 @@ test.beforeEach(async ({ page }) => ready(page));
  *  Playwright, sonst sind kurze Animationen schon vorbei). */
 function pressAndWatch(page: Page, label: string): Promise<{ anims: Anim[]; at: number }> {
   return page.evaluate(async (label) => {
+    // erst warten, bis nichts mehr läuft: sonst hält der Test etwa das Wackeln der Karte unter der Maus (11.6), das
+    // unter Last später beginnt, für die Animation des Knopfs
+    for (let i = 0; i < 200 && document.getAnimations().length; i++) await new Promise((r) => setTimeout(r, 5));
     [...document.querySelectorAll('button')].find((b) => b.textContent === label)!.click();
     const at = performance.now();
     for (let i = 0; i < 100 && !document.getAnimations().length; i++) await new Promise((r) => setTimeout(r, 5));

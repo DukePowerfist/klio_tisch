@@ -97,6 +97,8 @@ gm:
   players: Spieler
   reset: Zurücksetzen
   settings: Einstellungen
+  lampOn: Laterne anzünden                # Tooltip an der Laterne (5n), nur mit Recht
+  lampOff: Laterne löschen
 
 reset:
   title: Tisch zurücksetzen?

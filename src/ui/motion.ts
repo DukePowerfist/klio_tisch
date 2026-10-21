@@ -25,6 +25,8 @@ export type Timing = {
   viewOut: number; viewIn: number;
   /** Wackeln beim Überfahren, Springen der Zahl am Stapel (11.6) */
   wiggle: number; count: number;
+  /** Laterne anzünden und löschen (11.9) */
+  lampOn: number; lampOff: number;
 };
 
 /** Abheben nach dem Mischen (11.1): die Karte gehört zu den oberen `count` ihres Stapels, `rank` 0 = unterste davon.

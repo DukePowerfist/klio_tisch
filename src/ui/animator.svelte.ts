@@ -25,6 +25,7 @@ export function timing(): Timing {
     fade: cssMs(v('--fade')), flash: cssMs(v('--flash')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
     viewOut: cssMs(v('--view-out')), viewIn: cssMs(v('--view-in')),
     wiggle: cssMs(v('--wiggle')), count: cssMs(v('--count-pop')),
+    lampOn: cssMs(v('--lamp-on')), lampOff: cssMs(v('--lamp-off')),
   };
   return cached;
 }

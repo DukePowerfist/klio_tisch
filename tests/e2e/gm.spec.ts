@@ -88,6 +88,11 @@ test('Einstellungen: Meldung bei Kommen und Gehen in eigener Gruppe auf „Autom
   await expect(notice).toBeChecked();
   await expect(group).toContainText('Das Protokoll trägt es immer ein.');
   await notice.uncheck();
+  // Das Kästchen springt sofort um, der Stand erst nach dem Speichern (wie im Test darunter): erst neu öffnen,
+  // dann neu laden; sonst lädt die Seite manchmal vor dem Speichern neu
+  await page.keyboard.press('Escape');
+  await fromMenu(page, 'Einstellungen');
+  await expect(notice).not.toBeChecked();
   await page.reload();
   await ready(page);
   await openSettings(page, 'Automatik');
