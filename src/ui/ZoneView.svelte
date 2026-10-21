@@ -2,12 +2,14 @@
   // Eine Zone: Rahmen, Beschriftung mit Anzahl, bei Stapeln das Menü aus den Aktionen in zones.yaml.
   // Lage von Menü und Beschriftung kommt aus layouts.yaml (ZoneBox.menu, ZoneBox.label).
   import content from 'virtual:klio-content';
-  import type { ZoneBox } from './layout';
+  import { stackEdges, type ZoneBox } from './layout';
   import { session } from './session.svelte';
   import { t, tMaybe } from './texts';
 
-  let { zone, count, open, hot, mark, fixedMenu, onToggle, onAction }: {
+  let { zone, count, card, open, hot, mark, fixedMenu, onToggle, onAction }: {
     zone: ZoneBox; count: number; open: boolean; hot: boolean;
+    /** Kartengröße bei Maßstab 1 (für die Kanten eines Stapels) */
+    card: { w: number; h: number };
     /** Farbe, wenn jemand anderes das Menü dieses Stapels offen hat (8.3) */
     mark: string | undefined;
     fixedMenu: { x: number; y: number };
@@ -31,6 +33,8 @@
       below: 'left:50%;top:calc(100% + 32px);transform:translateX(-50%)',
     }[zone.menu],
   );
+  // Stapel (ohne `fanned` in zones.yaml, wie beim Greifen): versetzte Kanten unter der obersten Karte zeigen die Dicke
+  const edges = $derived(Array.from({ length: content.zones[zone.template]?.fanned ? 0 : stackEdges(count) }, (_, i) => i + 1).reverse());
   const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
 </script>
 
@@ -63,6 +67,9 @@
       {/each}
     </div>
   {/if}
+  {#each edges as k (k)}
+    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * 2 * zone.scale}px {k * 2 * zone.scale}px" style:filter="brightness({1 - k * 0.07})"></div>
+  {/each}
 </div>
 
 <style>
@@ -71,6 +78,8 @@
   /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
   .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }
   .zone.fan { border-color: rgba(255, 255, 255, 0.2); background: none; }
+  /* Kanten eines Stapels: Kartengröße, ab der Ecke der Zone (innerhalb des Rahmens), nach rechts unten versetzt */
+  .edge { position: absolute; left: -2px; top: -2px; box-sizing: border-box; border-radius: 7px; background: var(--stack-edge); border: 1px solid var(--stack-edge-line); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); pointer-events: none; }
   .label { position: absolute; left: 0; top: 100%; margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: #fff; background: rgba(0, 0, 0, 0.45); padding: 2px 8px; border-radius: 6px; text-shadow: 0 1px 2px #000; pointer-events: none; }
   .center .label { left: 50%; transform: translateX(-50%); }
   .fan .label { font-size: 12px; font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }

@@ -179,10 +179,9 @@ export function placeCards(state: TableState<unknown>, layout: Layout): Places {
   Object.entries(state.zones).forEach(([id, cards], k) => {
     const z = layout.zones[id];
     if (!z) return;
-    const fanned = z.fanX || z.fanY;
+    // Stapel liegen genau übereinander; ihre Dicke zeichnet die Zone (`stackEdges`, 11.6)
     cards.forEach((card, i) => {
-      const stack = fanned ? 0 : Math.min(i, 12) * 0.4;
-      out[card] = { x: z.x + i * z.fanX + stack, y: z.y + i * z.fanY + stack, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: `${id}#${i}` };
+      out[card] = { x: z.x + i * z.fanX, y: z.y + i * z.fanY, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: `${id}#${i}` };
     });
   });
   state.free.forEach((card, i) => {
@@ -192,6 +191,9 @@ export function placeCards(state: TableState<unknown>, layout: Layout): Places {
   });
   return out;
 }
+
+/** Dicke eines Stapels (11.6): so viele versetzte Kanten zeigt die Zone unter der obersten Karte */
+export const stackEdges = (n: number): number => (n >= 20 ? 3 : n >= 8 ? 2 : n >= 2 ? 1 : 0);
 
 /** Größe einer Karte auf dem Tisch (gedreht: Breite und Höhe vertauscht). */
 export function cardSize(layout: Layout, p: Pick<CardPlace, 'scale' | 'rotated'>): { w: number; h: number } {

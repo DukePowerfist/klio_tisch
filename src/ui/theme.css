@@ -46,6 +46,8 @@
   --pane-rule: rgba(255, 255, 255, 0.14);
   --switch-off: rgba(255, 255, 255, 0.22);
   --switch-on: #4f9a6e;
+  --stack-edge: #e6dcc3;   /* Kanten unter der obersten Karte eines Stapels (11.6) */
+  --stack-edge-line: rgba(0, 0, 0, 0.3);
   --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */
   --table-right: 0px;  /* rechter Rand von Tisch und Menüknopf; bei offenem Protokoll --log-w (App) */
   --glide: 0.25s;  /* Karte gleitet an ihren Platz: Grunddauer, dazu die Strecke (motion.ts, 11.3) */

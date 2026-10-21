@@ -337,7 +337,7 @@
 
     {#each layout.zoneList as zone (zone.id)}
       {@const openedBy = session.openZones.get(zone.id)}
-      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+      <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} card={layout.card} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
     {/each}
 
     {#each cards as [card, p] (card)}

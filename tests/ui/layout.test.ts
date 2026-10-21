@@ -1,7 +1,7 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
+import { cardSize, computeLayout, freePosAt, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
 
 describe('Ansichten', () => {
@@ -82,14 +82,19 @@ describe('Ansichten', () => {
 });
 
 describe('Karten und Ablegen', () => {
-  it('Stapel leicht versetzt, Fächer mit festem Abstand, frei liegende gedreht am Anker', () => {
+  it('Dicke eines Stapels: keine Kante bei einer Karte, dann 1, 2 und 3 Kanten ab 2, 8 und 20 Karten', () => {
+    expect([0, 1, 2, 7, 8, 19, 20, 52].map(stackEdges)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+  });
+
+  it('Stapel genau übereinander, Fächer mit festem Abstand, frei liegende gedreht am Anker', () => {
     let s = place(fresh(), 'danger', ['H2', 'H3'], true);
     s = lay(s, 'S5', { anchor: 'seat1', x: 0.5, y: 0.5 });
     const L = computeLayout(content, 4, null, null);
     const p = placeCards(s, L);
     expect(p.H3!.x - p.H2!.x).toBeCloseTo(26);
     const deck = s.zones['deck']!;
-    expect(p[deck[1]!]!.x - p[deck[0]!]!.x).toBeCloseTo(0.4);
+    expect(p[deck.at(-1)!]).toMatchObject({ x: L.zones['deck']!.x, y: L.zones['deck']!.y });
+    expect(p[deck[0]!]).toMatchObject({ x: L.zones['deck']!.x, y: L.zones['deck']!.y });
     expect(p.S5).toMatchObject({ rotated: true, scale: 0.6, x: L.sheets.seat1.x + L.sheets.seat1.w / 2 });
   });
 
