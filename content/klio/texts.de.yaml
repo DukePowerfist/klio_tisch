@@ -23,6 +23,22 @@ zones:
   resistTitle: WIDERSTÄNDE
   actions: { shuffle: Mischen, flip: Umdrehen, draw: Ziehen }
 
+stack:                                    # Stapelmenü (neu, Schritt 5o, ARCHITEKTUR.md 10.2); Einträge wie zones.actions
+  keys: { draw: Z, flip: U, shuffle: M }   # Kürzel bei offenem Menü
+  drawTitle: "Oberste Karte {to} ziehen ({key})"
+  drawTo: { discard: auf die Ablage, display: in die Auslage }
+  flipTitle: "Oberste Karte umdrehen ({key})"
+  shuffleTitle: "Stapel mischen ({key})"
+  gatherTitle: "Stapel mischen; holt {cards} {from} zurück{others} ({key})"
+  gatherFrom: { discard: aus der Ablage, display: aus der Auslage }
+  others: " ({n} davon nach {names})"
+  names: { deck: Deck, diamonds_easy: Leicht, diamonds_medium: Mittel, diamonds_hard: Schwierig, clubs: Kreuz }
+  and: und
+  cardsOne: 1 Karte
+  cardsMany: "{n} Karten"
+  confirm: "{cards} zurückholen?"
+  empty: Stapel leer
+
 toast:
   drawn: "Aufgedeckt: {card}"
   drawnTo:                                # abweichende Meldung je Ziel

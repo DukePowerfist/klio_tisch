@@ -46,6 +46,25 @@
   --menu-trouble: #d9534a;
   --menu-size: 30px;
   --menu-inset: 12px;
+  /* Menüstil (Schritt 5o, 10.2; Variante B „Grün, fein“, an muster/menue.html gewählt): Stapelmenü, ab 5p alle Menüs */
+  --menu-bg: #17332a;
+  --menu-rim: rgba(255, 255, 255, 0.22);
+  --menu-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --menu-radius: 10px;
+  --menu-pad: 8px;
+  --menu-w: 208px;          /* fest, reicht für die längste Rückfrage („12 Karten zurückholen?“, D5) */
+  --menu-head: rgba(243, 239, 227, 0.8);
+  --menu-count: rgba(243, 239, 227, 0.55);
+  --menu-main: #2c5a47;     /* Hauptknopf („Ziehen“) */
+  --menu-main-hover: #336650;
+  --menu-main-disabled: rgba(44, 90, 71, 0.3);  /* kaum vom Panel abgesetzt, Schrift darauf noch 3 : 1 (D4) */
+  --menu-item-hover: rgba(243, 239, 227, 0.08);
+  --menu-rule: rgba(255, 255, 255, 0.14);
+  --menu-disabled: #8a8174; /* ausgegraute Schrift, 3,6 : 1 gegen das Panel (D4) */
+  --menu-confirm: rgba(243, 239, 227, 0.12);   /* Rückfrage: Fläche und feiner Rahmen, kein Rot (D5) */
+  --menu-confirm-rim: rgba(243, 239, 227, 0.45);
+  --menu-focus: #f3efe3;
+  --menu-danger: #e0907e;   /* gedämpftes Rot für gefährliche Einträge (5p) */
   /* Einstellungen (Schritt 5f): Seitenleiste, gewählte Seite, feine Trennlinien */
   --pane-side: #132b23;
   --pane-current: #2c5a47;
@@ -118,3 +137,31 @@ button:active:not(:disabled) { scale: var(--press-scale); }
 }
 html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
 button { font: inherit; }
+
+/* Menüstil (10.2): Panel, Kopf, Einträge, Hauptknopf, Trennlinie, Zipfel. Ausgegraut heißt aria-disabled (bleibt
+   fokussierbar, Grund im Tooltip); keine pauschale Deckkraft (D4). Der Zipfel sitzt an der Kante zum Anker,
+   data-side ist die Seite des Panels vom Anker aus, --tip seine Lage auf der Kante (placeMenu). */
+.menu-panel { position: fixed; z-index: 98; box-sizing: border-box; width: var(--menu-w); padding: var(--menu-pad); display: flex; flex-direction: column; gap: 4px;
+  background: var(--menu-bg); border: 1px solid var(--menu-rim); border-radius: var(--menu-radius); box-shadow: var(--menu-shadow);
+  color: var(--ink); font-size: 14px; animation: pop-in var(--pop) var(--spring-soft); }
+.menu-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px 4px; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--menu-head); white-space: nowrap; }
+.menu-head .count { color: var(--menu-count); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+.menu-item { display: block; width: 100%; box-sizing: border-box; min-height: 30px; padding: 5px 10px; border: 1px solid transparent; border-radius: 6px;
+  background: transparent; color: var(--ink); font-size: 14px; text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer;
+  transition: scale var(--press) ease-out, background-color 80ms; }
+.menu-item:hover { background: var(--menu-item-hover); }
+.menu-item:focus { outline: none; }
+.menu-item:focus-visible { outline: 2px solid var(--menu-focus); outline-offset: 1px; }
+.menu-main { min-height: 34px; background: var(--menu-main); font-size: 15px; font-weight: 600; }
+.menu-main:hover { background: var(--menu-main-hover); }
+.menu-item[aria-disabled='true'] { color: var(--menu-disabled); background: transparent; cursor: default; }
+.menu-item[aria-disabled='true']:active { scale: 1; }
+.menu-main[aria-disabled='true'] { background: var(--menu-main-disabled); }
+.menu-item.armed { background: var(--menu-confirm); border-color: var(--menu-confirm-rim); }
+.menu-item.danger { color: var(--menu-danger); }
+.menu-rule { height: 0; margin: 3px 2px; border: 0; border-top: 1px solid var(--menu-rule); }
+.menu-tip { position: absolute; width: 11px; height: 11px; box-sizing: border-box; background: var(--menu-bg); border: 1px solid var(--menu-rim); rotate: 45deg; }
+.menu-tip[data-side='left'] { right: -7px; top: calc(var(--tip) - 6px); border-left-color: transparent; border-bottom-color: transparent; }
+.menu-tip[data-side='right'] { left: -7px; top: calc(var(--tip) - 6px); border-right-color: transparent; border-top-color: transparent; }
+.menu-tip[data-side='below'] { top: -7px; left: calc(var(--tip) - 6px); border-right-color: transparent; border-bottom-color: transparent; }
+.menu-tip[data-side='above'] { bottom: -7px; left: calc(var(--tip) - 6px); border-left-color: transparent; border-top-color: transparent; }
