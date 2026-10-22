@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, fromMenu, holdOver, makePng, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, zoneCenter } from './helpers';
+import { expectCount, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -51,7 +51,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.goto(link);
   const join = player.getByRole('dialog', { name: 'Platz wählen' });
   await expect(join).toBeVisible({ timeout: 60_000 });
-  await expect(gm.locator('.menu .count')).toHaveText('1');
+  await expect(gm.locator('.menu > .count')).toHaveText('1');
   await expect(join.getByRole('button', { name: /^Spieler 2/ })).toHaveText(/^Spieler 2\s*frei$/);
   await join.getByRole('textbox').fill('Ida');
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
@@ -64,6 +64,15 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Darstellung']);
   await player.keyboard.press('Escape');
   expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Protokoll']);
+  // Kopf mit dem Verbindungszustand (5p): SL „Raum offen“ mit Zahl, Spieler „Verbunden“
+  await menuButton(gm).click();
+  await expect(gm.locator('[data-top-menu] .menu-head')).toHaveText('Raum offen1');
+  await expect(gm.locator('[data-top-menu] .menu-head .count')).toHaveText('1');
+  await gm.keyboard.press('Escape');
+  await menuButton(player).click();
+  await expect(player.locator('[data-top-menu] .menu-head')).toHaveText('Verbunden');
+  await player.keyboard.press('Escape');
+  await expect(player.locator('[data-top-menu]')).toHaveCount(0);
   // Name und Farbe ändern (5e): bei der SL sofort an Schild und Dock; Farben anderer Plätze nicht wählbar
   await fromMenu(player, 'Name und Farbe …');
   const profile = player.getByRole('dialog', { name: 'Name und Farbe' });

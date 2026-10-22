@@ -294,7 +294,7 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
   // Einstellungen nur noch im Menü, nicht in der SL-Leiste
   await expect(page.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
   await button.click();
-  await expect(page.locator('.items button')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Protokoll']);
+  await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Protokoll']);
   await page.locator('.panel').click({ position: { x: 20, y: 20 } });
-  await expect(page.locator('.items')).toHaveCount(0);
+  await expect(page.locator('[data-top-menu]')).toHaveCount(0);
 });

@@ -90,7 +90,8 @@ export async function saveArchive(page: Page, dialog: Locator) {
 /** Einträge im Menü oben rechts (danach wieder zu) */
 export async function menuEntries(page: Page): Promise<string[]> {
   await menuButton(page).click();
-  const entries = await page.locator('.items button').allTextContents();
+  // ohne den Zusatz rechts („offen“ am Protokoll)
+  const entries = await page.locator('[data-top-menu] .menu-item').evaluateAll((els) => els.map((el) => el.firstChild?.textContent ?? ''));
   await menuButton(page).click();
   return entries;
 }

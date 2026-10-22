@@ -14,7 +14,7 @@ async function watch(page: Page) {
     const w = window as unknown as { seen: string[] };
     w.seen = [];
     const done = new Set<Animation>();
-    const parts: [string, string][] = [['sheet', '[data-sheet=seat2]'], ['plate', '[data-plate=seat2]'], ['dock', '[data-dock=seat2]'], ['count', '.menu .count']];
+    const parts: [string, string][] = [['sheet', '[data-sheet=seat2]'], ['plate', '[data-plate=seat2]'], ['dock', '[data-dock=seat2]'], ['count', '.menu > .count']];
     setInterval(() => {
       for (const a of document.getAnimations()) {
         if (done.has(a)) continue;
