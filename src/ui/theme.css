@@ -53,8 +53,9 @@
   --menu-radius: 10px;
   --menu-pad: 8px;
   --menu-w: 208px;          /* fest, reicht für die längste Rückfrage („12 Karten zurückholen?“, D5) */
+  --menu-w-wide: 240px;     /* Namensschild-Menü und Menü oben rechts (5p): „Charakter importieren …“, Namen beim Umsetzen */
   --menu-head: rgba(243, 239, 227, 0.8);
-  --menu-count: rgba(243, 239, 227, 0.55);
+  --menu-count: rgba(243, 239, 227, 0.62);  /* Zahl, Name im Kopf, „offen“, Pfeil; 4,7 : 1 auch beim Überfahren (5p) */
   --menu-main: #2c5a47;     /* Hauptknopf („Ziehen“) */
   --menu-main-hover: #336650;
   --menu-main-disabled: rgba(44, 90, 71, 0.3);  /* kaum vom Panel abgesetzt, Schrift darauf noch 3 : 1 (D4) */
@@ -64,7 +65,7 @@
   --menu-confirm: rgba(243, 239, 227, 0.12);   /* Rückfrage: Fläche und feiner Rahmen, kein Rot (D5) */
   --menu-confirm-rim: rgba(243, 239, 227, 0.45);
   --menu-focus: #f3efe3;
-  --menu-danger: #e0907e;   /* gedämpftes Rot für gefährliche Einträge (5p) */
+  --menu-danger: #eda593;   /* gedämpftes Rot für gefährliche Rückfragen (5p), 4,8 : 1 auf der Rückfragefläche */
   /* Einstellungen (Schritt 5f): Seitenleiste, gewählte Seite, feine Trennlinien */
   --pane-side: #132b23;
   --pane-current: #2c5a47;
@@ -160,6 +161,26 @@ button { font: inherit; }
 .menu-item.armed { background: var(--menu-confirm); border-color: var(--menu-confirm-rim); }
 .menu-item.danger { color: var(--menu-danger); }
 .menu-rule { height: 0; margin: 3px 2px; border: 0; border-top: 1px solid var(--menu-rule); }
+/* Menüs im neuen Stil (5p, 10.4): breite Variante, Einblenden vom Zipfel aus (ohne Zipfel von der Ecke am Anker; --tip
+   am Panel), Name rechts im Kopf, Inhalt unter dem Kopf scrollt bei Höchsthöhe, Zusatz rechts im Eintrag, aufklappende
+   Einträge mit Pfeil und Unterpunkten */
+.menu-panel.wide { width: var(--menu-w-wide); }
+.menu-panel[data-side='below'] { transform-origin: var(--tip, 0px) 0; }
+.menu-panel[data-side='above'] { transform-origin: var(--tip, 0px) 100%; }
+.menu-panel[data-side='left'] { transform-origin: 100% var(--tip, 0px); }
+.menu-panel[data-side='right'] { transform-origin: 0 var(--tip, 0px); }
+.menu-head > span:first-child { flex: none; }
+.menu-head .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0.01em; color: var(--menu-count); }
+.menu-body { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto; margin: 0 calc(-1 * var(--menu-pad)); padding: 0 var(--menu-pad); scrollbar-width: thin; }
+.menu-item { text-overflow: ellipsis; }
+.menu-note { float: right; margin-left: 10px; font-size: 12.5px; color: var(--menu-count); }
+.menu-item.expands { position: relative; padding-right: 26px; }
+.menu-item.expands::after { content: ''; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; margin-top: -5px; border: solid var(--menu-count); border-width: 0 1.5px 1.5px 0; rotate: 45deg; transition: rotate var(--pop) ease-out, margin-top var(--pop) ease-out; }
+.menu-item.expands[aria-expanded='true'] { background: var(--menu-item-hover); }
+.menu-item.expands[aria-expanded='true']::after { rotate: 225deg; margin-top: -1px; }
+.menu-subs { display: flex; flex-direction: column; gap: 2px; margin: 0 0 2px 12px; padding-left: 6px; border-left: 1px solid var(--menu-rule); }
+.menu-subs .menu-item { min-height: 28px; padding-left: 8px; }
+.menu-subs .unnamed { font-style: italic; }
 .menu-tip { position: absolute; width: 11px; height: 11px; box-sizing: border-box; background: var(--menu-bg); border: 1px solid var(--menu-rim); rotate: 45deg; }
 .menu-tip[data-side='left'] { right: -7px; top: calc(var(--tip) - 6px); border-left-color: transparent; border-bottom-color: transparent; }
 .menu-tip[data-side='right'] { left: -7px; top: calc(var(--tip) - 6px); border-right-color: transparent; border-top-color: transparent; }

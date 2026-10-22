@@ -21,6 +21,9 @@ export type Toast = { text: string; warn: boolean; id: number };
 /** Geometrie des offenen Stapelmenüs am Bildschirm (10.2), beim Öffnen von Board.svelte berechnet: Stapel im Endmaß,
  *  Ziel von „Ziehen“, nutzbarer Bereich, Seiten nach Vorliebe */
 export type StackMenuAt = { zone: ZoneId; anchor: Rect; avoid: Rect[]; area: Area; sides: Side[] };
+/** Geometrie des offenen Namensschild-Menüs (10.4), beim Öffnen von Board.svelte berechnet: Schild am Bildschirm
+ *  (Breite gemessen), nutzbarer Bereich */
+export type PlateMenuAt = { seat: SeatId; anchor: Rect; area: Area };
 
 class ViewState {
   /** null = Draufsicht, sonst Rollenansicht dieses Platzes */
@@ -55,8 +58,8 @@ class ViewState {
   settingsPage = $state<SettingsPage>('automation');
   /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
   bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
-  /** offenes Menü am Namensschild (10.1): Platz und Lage am Bildschirm (unter dem Schild) */
-  plateMenu = $state<{ seat: SeatId; x: number; y: number; above: number } | null>(null);
+  /** offenes Menü am Namensschild (10.1, 10.4): Platz und Geometrie beim Öffnen */
+  plateMenu = $state<PlateMenuAt | null>(null);
   /** Profilfenster für einen bestimmten Platz, geöffnet aus dem Menü am Namensschild */
   profileFor = $state<SeatId | null>(null);
   toast = $state<Toast | null>(null);
@@ -73,6 +76,12 @@ class ViewState {
   closeStack(): void {
     this.open = null;
     this.stackMenu = null;
+  }
+
+  /** Menü am Namensschild öffnen; das Stapelmenü schließt */
+  openPlate(at: PlateMenuAt): void {
+    this.closeStack();
+    this.plateMenu = at;
   }
 
   setRole(r: SeatId | null): void {

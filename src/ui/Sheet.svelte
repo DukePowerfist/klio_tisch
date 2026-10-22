@@ -3,6 +3,7 @@
   // Welche Felder es gibt und welcher Art, steht in sheet.yaml; Lage, Schrift und Farbton in skins/paper.yaml.
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
+  import type { SeatId } from '../engine/types';
   import { sheetFields, type SkinBox, type SkinCheck } from '../rules/klio/content/schema';
   import { getField } from '../rules/klio/fields';
   import type { KlioSheet } from '../rules/klio/state';
@@ -25,7 +26,8 @@
   import { view } from './view.svelte';
 
   /** Zuordnung (10): Namensschild in der Draufsicht, Farbstreifen an den kleinen Bögen der Rollenansicht, null = eigener Bogen der Rollenansicht */
-  let { box, sheet, mark }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null } = $props();
+  /** `onPlate`: Menü am Namensschild öffnen (Board.svelte rechnet die Lage), mit der gemessenen Breite des Schilds */
+  let { box, sheet, mark, onPlate }: { box: SheetBox; sheet: KlioSheet; mark: 'plate' | 'strip' | null; onPlate: (seat: SeatId, width: number) => void } = $props();
 
   const skin = content.skinPaper;
   const [imgW, imgH] = skin.size;
@@ -50,11 +52,10 @@
     });
   });
   const menu = $derived(names ? entriesAt(seat).length > 0 : false);
+  // Breite ohne Transformationen (R7): direkt nach dem Klick gäbe der Rahmen das Nachgeben beim Drücken mit
   function toggleMenu(e: MouseEvent) {
     if (view.plateMenu?.seat === seat) return void (view.plateMenu = null);
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    view.closeStack();
-    view.plateMenu = { seat, x: r.left, y: r.bottom + 4, above: r.top - 4 };
+    onPlate(seat, (e.currentTarget as HTMLElement).offsetWidth);
   }
   const plate = skin.nameplate;
   // Bedienelemente (10, Schritt 5b): am eigenen Bogen der Rollenansicht immer und deutlich, sonst klein erst ab CONTROLS_ZOOM

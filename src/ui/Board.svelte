@@ -18,12 +18,13 @@
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropCenter, dropHints, dropTarget } from './dropHint';
-  import { clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace, type Rect } from './layout';
+  import { clamp, computeLayout, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
   import { t } from './texts';
-  import { view, type StackMenuAt } from './view.svelte';
+  import type { Area } from './stackMenu';
+  import { view, type PlateMenuAt, type StackMenuAt } from './view.svelte';
 
   let { table }: { table: KlioTableState } = $props();
 
@@ -332,36 +333,63 @@
     openedWhere = menuWhere;
   }
 
-  // ---------- Stapelmenü (10.2): Geometrie beim Öffnen, Schließen, sobald der Stapel woanders steht ----------
+  /** Menü am Namensschild (10.4): öffnen mit der Lage des Schilds am Bildschirm */
+  function openPlate(seat: SeatId, width: number) {
+    view.openPlate(plateMenuAt(seat, width));
+    openedWhere = menuWhere;
+  }
+
+  // ---------- Stapelmenü und Namensschild-Menü (10.2, 10.4): Geometrie beim Öffnen, Schließen, sobald der Anker woanders steht ----------
   /** Abstand des Menüs zum Rand der sichtbaren Tischfläche (N8) */
   const MENU_MARGIN = 8;
-  /** Bildschirmrechtecke für StackMenu.svelte: Stapel im Endmaß nach dem Öffnen (`growOnOpen`), Ziel von „Ziehen“,
-   *  sichtbare Tischfläche ohne Dock und Menüknopf (`data-menu-avoid`). Danach wird nichts nachgeführt. */
-  function menuAt(zone: ZoneId): StackMenuAt {
-    const L = computeLayout(content, players, view.role, zone);
-    const stage = stageEl!.getBoundingClientRect();
-    const toScreen = (r: Rect): Rect => ({ x: stage.left + geo.tx + r.x * sc, y: stage.top + geo.ty + r.y * sc, w: r.w * sc, h: r.h * sc });
-    const to = content.zones[zone]?.actions?.draw?.to;
-    const target = to ? L.zones[to] : undefined;
-    const box = L.zones[zone]!;
+  const toScreen = (stage: DOMRect, r: Rect): Rect => ({ x: stage.left + geo.tx + r.x * sc, y: stage.top + geo.ty + r.y * sc, w: r.w * sc, h: r.h * sc });
+  /** sichtbare Tischfläche ohne Dock und Menüknopf (`data-menu-avoid`) */
+  function menuArea(stage: DOMRect): Area {
     const blocked = [...document.querySelectorAll('[data-menu-avoid]')].map((el) => {
       const r = el.getBoundingClientRect();
       return { x: r.left, y: r.top, w: r.width, h: r.height };
     });
+    return { bounds: { x: stage.left + MENU_MARGIN, y: stage.top + MENU_MARGIN, w: stage.width - 2 * MENU_MARGIN, h: stage.height - 2 * MENU_MARGIN }, blocked };
+  }
+  /** Bildschirmrechtecke für StackMenu.svelte: Stapel im Endmaß nach dem Öffnen (`growOnOpen`), Ziel von „Ziehen“,
+   *  nutzbarer Bereich. Danach wird nichts nachgeführt. */
+  function menuAt(zone: ZoneId): StackMenuAt {
+    const L = computeLayout(content, players, view.role, zone);
+    const stage = stageEl!.getBoundingClientRect();
+    const to = content.zones[zone]?.actions?.draw?.to;
+    const target = to ? L.zones[to] : undefined;
+    const box = L.zones[zone]!;
     return {
       zone,
-      anchor: toScreen(box),
-      avoid: target ? [toScreen(target)] : [],
-      area: { bounds: { x: stage.left + MENU_MARGIN, y: stage.top + MENU_MARGIN, w: stage.width - 2 * MENU_MARGIN, h: stage.height - 2 * MENU_MARGIN }, blocked },
+      anchor: toScreen(stage, box),
+      avoid: target ? [toScreen(stage, target)] : [],
+      area: menuArea(stage),
       sides: box.menu === 'left' ? ['left', 'right'] : ['right', 'left'],
     };
   }
-  /** Lage des offenen Stapels am Bildschirm: Maßstab, Verschiebung, Fenstergröße, Ansicht, Lage im Layout (N4) */
-  const menuWhere = $derived(view.open ? JSON.stringify([sc, geo.tx, geo.ty, stageW, stageH, view.role, layout.zones[view.open]]) : null);
+  /** Schild am Bildschirm (R7): Lage und Höhe aus Layout und Haut, die Breite gemessen (`skin.nameplate.w` ist nur
+   *  die Höchstbreite, das Schild ist so breit wie sein Text), alles in Bildpunkten des Bogenbilds */
+  function plateMenuAt(seat: SeatId, width: number): PlateMenuAt {
+    const box = layout.sheets[seat];
+    const plate = content.skinPaper.nameplate;
+    const k = (SHEET_W * box.scale) / content.skinPaper.size[0];
+    const stage = stageEl!.getBoundingClientRect();
+    return { seat, anchor: toScreen(stage, { x: box.x + plate.x * k, y: box.y + plate.y * k, w: width * k, h: plate.h * k }), area: menuArea(stage) };
+  }
+  /** Lage des Ankers am Bildschirm: Maßstab, Verschiebung, Fenstergröße, Ansicht, Lage im Layout (N4); beim Schild
+   *  die Lage des Bogens samt `visible`, so schließt das Menü auch, wenn der Platz verschwindet */
+  const menuWhere = $derived.by(() => {
+    const at = view.open ? layout.zones[view.open] : view.plateMenu ? layout.sheets[view.plateMenu.seat] : null;
+    return at ? JSON.stringify([sc, geo.tx, geo.ty, stageW, stageH, view.role, at]) : null;
+  });
   let openedWhere: string | null = null;
-  // eine Regel statt aufgezählter Auslöser: steht der Stapel woanders, schließt das Menü
+  // eine Regel statt aufgezählter Auslöser, für beide Menüs: steht der Anker woanders, schließt das Menü
   $effect(() => {
-    if (view.stackMenu && menuWhere !== openedWhere) untrack(() => view.closeStack());
+    if ((view.stackMenu || view.plateMenu) && menuWhere !== openedWhere)
+      untrack(() => {
+        view.closeStack();
+        view.plateMenu = null;
+      });
   });
 
   function onDblClick(e: MouseEvent) {
@@ -415,7 +443,7 @@
 
       {#each Object.values(layout.sheets) as box (box.seat)}
         {#if box.visible}
-          <Sheet --sheet-shadow={shadowCss(shadowOver(flame, box, HEIGHT.sheet))} {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} />
+          <Sheet --sheet-shadow={shadowCss(shadowOver(flame, box, HEIGHT.sheet))} {box} sheet={sheetOf(table, box.seat)} mark={layout.role === null ? 'plate' : box.seat === layout.role ? null : 'strip'} onPlate={openPlate} />
         {/if}
       {/each}
 

@@ -312,6 +312,13 @@ menu:                                     # Menü oben rechts (neu, Schritt 5b)
   title: Menü
   profile: Name und Farbe …
   name: Name …
+  logOpen: offen                          # rechts am Eintrag „Protokoll“, solange es offen ist (5p)
+  state:                                  # Kopf des Menüs: Verbindungszustand (5p, 10.4)
+    local: Lokal
+    open: Raum offen
+    connecting: Verbinde …
+    connected: Verbunden
+    trouble: Störung
 
 plate:                                    # Menü am Namensschild (neu, Schritt 5j); Umsetzen und Zuweisen wie im Raumfenster (room.*)
   title: "Platz {n}"

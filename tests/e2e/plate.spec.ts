@@ -137,3 +137,32 @@ test('Charakter exportieren, zurücksetzen, importieren ergibt denselben Bogen m
   await expect(page.getByRole('status')).toHaveText('Diese Datei ist kein Charakter des Kartentischs.');
   await expect(page.locator('[data-sheet=seat2] [data-field=name]')).toHaveValue(name);
 });
+
+// ---------- Schritt 5p, Teil 2: eine Schließregel mit dem Stapelmenü (10.4, N4, R6) ----------
+
+test('Fenstergröße schließt das Menü', async ({ page }) => {
+  await plate(page, 'seat1').click();
+  await expect(menu(page)).toBeVisible();
+  await page.setViewportSize({ width: 1500, height: 860 });
+  await expect(menu(page)).toHaveCount(0);
+});
+
+test('Spielerzahl: Menü schließt, wenn der Platz verschwindet oder der Bogen woanders steht, sonst bleibt es', async ({ page }) => {
+  const players = page.getByRole('combobox', { name: 'Spieler' });
+  // 4 → 3: Platz 4 verschwindet
+  await plate(page, 'seat4').click();
+  await players.selectOption('3');
+  await expect(page.locator('[data-sheet=seat4]')).toHaveCount(0);
+  await expect(menu(page)).toHaveCount(0);
+  // 3 → 4: Platz 1 bleibt, wo er ist, das Menü bleibt offen
+  const before = await plate(page, 'seat1').boundingBox();
+  await plate(page, 'seat1').click();
+  await players.selectOption('4');
+  await expect(page.locator('[data-sheet=seat4]')).toHaveCount(1);
+  expect(await plate(page, 'seat1').boundingBox()).toEqual(before);
+  await expect(menu(page)).toHaveAccessibleName('Platz 1');
+  // 4 → 2: größere Bögen, Platz 1 steht woanders
+  await players.selectOption('2');
+  await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
+  await expect(menu(page)).toHaveCount(0);
+});

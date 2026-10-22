@@ -47,9 +47,10 @@
   /** aufgeklappte Auswahl (Umsetzen, Zuweisen) */
   let expanded = $state<'move' | 'assign' | null>(null);
   let root = $state<HTMLElement>();
-  /** Lage beim Öffnen (das Menü schließt, sobald sich die Ansicht ändert) */
-  const at = { ...view.plateMenu! };
-  let top = $state(at.y);
+  /** Schild am Bildschirm beim Öffnen; steht es woanders, schließt Board.svelte das Menü (N4) */
+  const anchor = view.plateMenu!.anchor;
+  const below = anchor.y + anchor.h + 4;
+  let top = $state(below);
 
   const close = () => (view.plateMenu = null);
   /** ausführen und schließen; erst ausführen, denn nach dem Schließen liest `seat` schon den leeren Stand von außen */
@@ -74,13 +75,8 @@
   // passt es nicht unter das Schild, steht das Menü darüber
   $effect(() => {
     const h = root?.offsetHeight ?? 0;
-    top = at.y + h > innerHeight - 8 && at.above - h > 8 ? at.above - h : at.y;
-  });
-
-  // Ansicht gewechselt, gezoomt oder verschoben: Das Schild ist woanders, das Menü schließt
-  const where = `${view.role}|${view.zoom}|${view.ox}|${view.oy}`;
-  $effect(() => {
-    if (`${view.role}|${view.zoom}|${view.ox}|${view.oy}` !== where) close();
+    const above = anchor.y - 4;
+    top = below + h > innerHeight - 8 && above - h > 8 ? above - h : below;
   });
   // Ohne Einträge (z. B. Recht entzogen) gibt es nichts zu zeigen
   $effect(() => {
@@ -102,7 +98,7 @@
 
 <svelte:window onpointerdown={outside} onkeydowncapture={onKey} />
 
-<div class="plate-menu control" role="menu" aria-label={t('plate.title', { n: seatNo(seat) })} data-plate-menu={seat} bind:this={root} style:left="{Math.max(8, Math.min(at.x, innerWidth - 230))}px" style:top="{top}px">
+<div class="plate-menu control" role="menu" aria-label={t('plate.title', { n: seatNo(seat) })} data-plate-menu={seat} bind:this={root} style:left="{Math.max(8, Math.min(anchor.x, innerWidth - 230))}px" style:top="{top}px">
   {#each groups as group, i (i)}
     {#if i > 0}<hr />{/if}
     {#each group as entry (entry)}
