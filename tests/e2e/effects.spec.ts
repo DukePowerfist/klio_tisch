@@ -38,8 +38,8 @@ test('Ruhig bewegt die Karten auch bei „Bewegung reduzieren“, Aus nur mit Ei
   const again = await openSettings(page, 'Darstellung');
   await again.getByRole('combobox', { name: 'Effekte' }).selectOption('off');
   await page.keyboard.press('Escape');
-  // das Stapelmenü ist noch offen
-  await page.getByRole('button', { name: 'Ziehen', exact: true }).click();
+  // der Klick auf das Menü oben rechts hat das Stapelmenü geschlossen (Klick daneben, 10.2)
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expect.poll(() => cardAnimations(page)).toContain('opacity');
   expect(await cardAnimations(page)).not.toContain('transform');
   await expectCount(page, 'ABLAGE', 2);

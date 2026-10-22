@@ -39,8 +39,8 @@ export type DrawRule = { to: ZoneId; faceUp: boolean; announce: boolean };
 export type ZoneActions = {
   shuffle?: { gather?: GatherRule[] };
   draw?: DrawRule;
-  /** `top`: oberste Karte umdrehen; `draw`: wirkt wie Ziehen */
-  flip?: 'top' | 'draw';
+  /** `top`: oberste Karte umdrehen (an jedem Stapel, seit 5o auch am Kreuz, F4) */
+  flip?: 'top';
   /** Doppelklick auf eine verdeckte Karte dieses Stapels wirkt wie Ziehen */
   cardDoubleClick?: { faceDown: 'draw' };
 };

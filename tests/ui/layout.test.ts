@@ -15,7 +15,6 @@ describe('Ansichten', () => {
     expect(L.middle.x + L.middle.w / 2).toBe(1760 / 2);
     // gegenüber der alten Datei um 48 nach links (5d)
     expect(L.zones['deck']).toMatchObject({ x: 760 - 48, y: 440, w: 80, h: 112, scale: 1 });
-    expect(L.menu).toEqual({ x: 1102, y: 120 });
     expect(L.gmControls).toEqual({ x: 1230 - 40, y: 980 - 26 });
   });
 
@@ -58,7 +57,6 @@ describe('Ansichten', () => {
       const dx = role.middle.x - over.middle.x;
       expect({ ...role.middle, x: role.middle.x - dx }).toEqual(over.middle);
       for (const z of over.zoneList.filter((z) => !z.owner)) expect(role.zones[z.id]).toEqual({ ...z, x: z.x + dx });
-      expect(role.menu).toEqual({ ...over.menu, x: over.menu.x + dx });
       expect(role.resistTitle).toEqual({ ...over.resistTitle, x: over.resistTitle.x + dx });
       expect(role.gmControls).toEqual({ ...over.gmControls, x: over.gmControls.x + dx });
     }
@@ -269,7 +267,6 @@ describe('Laterne (5n, 11.9)', () => {
           expect(lampGap(L.lamp, label), `Beschriftung ${id}`).toBeGreaterThan(0);
         }
         expect(lampGap(L.lamp, { x: L.resistTitle.x, y: L.resistTitle.y, w: 200, h: 20 })).toBeGreaterThan(0);
-        expect(lampGap(L.lamp, { x: L.menu.x, y: L.menu.y, w: 110, h: 140 })).toBeGreaterThan(0);
       }
     }
   });

@@ -13,6 +13,7 @@
   import ResultDialog from './ResultDialog.svelte';
   import RoomDialog from './RoomDialog.svelte';
   import SettingsDialog from './SettingsDialog.svelte';
+  import StackMenu from './StackMenu.svelte';
   import Toast from './Toast.svelte';
   import TrumpDialog from './TrumpDialog.svelte';
   import { session } from './session.svelte';
@@ -73,6 +74,10 @@
   {/if}
   {#if plateSeat}
     {#key plateSeat}<PlateMenu seat={plateSeat} />{/key}
+  {/if}
+  <!-- Stapelmenü (10.2): jedes Öffnen ein neues Menü mit der Geometrie von diesem Moment -->
+  {#if view.stackMenu}
+    {#key view.stackMenu}<StackMenu />{/key}
   {/if}
   {#if view.profileFor}
     {#key view.profileFor}<ProfileDialog for={view.profileFor} onclose={() => (view.profileFor = null)} />{/key}

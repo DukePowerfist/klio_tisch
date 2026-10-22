@@ -131,9 +131,9 @@ function scene(W: number, H: number, role: SeatId | null, zone: ZoneId, log = fa
 }
 
 const TARGET: Record<string, ZoneId> = { deck: 'discard', diamonds_easy: 'display', diamonds_medium: 'display', diamonds_hard: 'display', clubs: 'discard' };
-/** bevorzugte Seite (N2); kommt in Teil 3 nach layouts.yaml */
+/** bevorzugte Seite aus layouts.yaml (N2): Deck und Leicht links, sonst rechts */
 const PREFERRED: Record<string, Side> = { deck: 'left', diamonds_easy: 'left', diamonds_medium: 'right', diamonds_hard: 'right', clubs: 'right' };
-const sidesFor = (zone: string): Side[] => (PREFERRED[zone] === 'left' ? ['left', 'right'] : ['right', 'left']);
+const sidesFor = (side: Side): Side[] => (side === 'left' ? ['left', 'right'] : ['right', 'left']);
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const inside = (r: Rect, b: Rect) => r.x >= b.x && r.y >= b.y && r.x + r.w <= b.x + b.w && r.y + r.h <= b.y + b.h;
@@ -153,7 +153,8 @@ describe('Stapelmenü: Lage am Stapel mit den echten Maßen (10.2)', () => {
         const { L, toScreen, area } = scene(W, H, role, zone, log);
         const anchor = toScreen(L.zones[zone]!);
         const target = toScreen(L.zones[TARGET[zone]!]!);
-        const p = placeMenu(anchor, [target], area, PANEL, sidesFor(zone));
+        expect(L.zones[zone]!.menu, zone).toBe(PREFERRED[zone]);
+        const p = placeMenu(anchor, [target], area, PANEL, sidesFor(L.zones[zone]!.menu));
         const r = { x: p.x, y: p.y, ...PANEL };
         expect({ zone, side: p.side, fallback: p.fallback, top: p.y === anchor.y }).toEqual({ zone, side: PREFERRED[zone], fallback: false, top: true });
         expect(inside(r, area.bounds), zone).toBe(true);

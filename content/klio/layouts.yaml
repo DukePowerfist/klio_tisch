@@ -8,16 +8,16 @@ board: [ 1760, 990 ]
 seatColors: [ coral, sky, green, violet, teal, pink, indigo, raspberry ]
 card: [ 80, 112 ]
 freeCardScale: 0.6
-# shapes: Größe, Kartenmaßstab, Fächerabstand; menu = Lage des Stapelmenüs (fixed = an `menu` der Tischmitte,
-# left/right/below); label = Beschriftung (center, rotated, x = Anteil)
+# shapes: Größe, Kartenmaßstab, Fächerabstand; menu = bevorzugte Seite des Stapelmenüs (left/right, ohne Angabe right;
+# so gesetzt, wie sie im Normalfall herauskommt, ARCHITEKTUR.md 10.2); label = Beschriftung (center, rotated, x = Anteil)
 shapes:
   deck: { w: 80, h: 112, menu: left }
   discard: { w: 80, h: 112 }
   display: { w: 80, h: 112 }
-  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
-  diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
-  diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: fixed, label: { center: true } }
-  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: below, label: { center: true } }
+  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: left, label: { center: true } }  # rechts läge es über der Auslage
+  diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: right, label: { center: true } }
+  diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: right, label: { center: true } }
+  clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: right, label: { center: true } }
   danger: { w: 330, h: 70, scale: 0.6, fanX: 26 }
   progress: { w: 330, h: 70, scale: 0.6, fanX: 26 }
   seat.damage: { scale: 1, label: { rotated: true, x: 0.22 } }
@@ -37,7 +37,6 @@ middle:
     danger: [ 22, 630 ]
     progress: [ 22, 750 ]
     clubs: [ 432, 630 ]
-  menu: [ 572, 110 ]
   resistTitle: [ 22, 606 ]
   gmControlsInset: [ 40, 26 ]
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild

@@ -168,10 +168,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
     handle(cmd, state) {
       const zc = zoneOf(cmd.zone, state);
       if (isRejection(zc)) return zc;
-      const flip = zc.actions?.flip;
-      if (flip === 'top') return flipTop(zc, state);
-      if (flip === 'draw') return draw(zc, state);
-      return reject('reject.noAction');
+      return zc.actions?.flip === 'top' ? flipTop(zc, state) : reject('reject.noAction');
     },
   };
 

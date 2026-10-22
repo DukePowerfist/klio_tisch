@@ -38,7 +38,7 @@
 
 <svelte:window onpointerdown={(e) => { if (open && !root?.contains(e.target as Node)) open = false; }} />
 
-<div class="menu control" bind:this={root}>
+<div class="menu control" data-menu-avoid bind:this={root}>
   {#if session.trouble}
     <div class="alert" role="alert">
       {session.statusText}

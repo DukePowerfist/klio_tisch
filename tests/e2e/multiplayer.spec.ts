@@ -168,6 +168,17 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.waitForTimeout(400);
   await player.mouse.click(hard.x, hard.y);
   await expect(gm.locator('.zone.marked')).toHaveCount(0);
+  // Esc und Klick daneben schließen das Menü (5o): die Markierung verschwindet ebenso
+  await player.waitForTimeout(400);
+  await player.mouse.click(hard.x, hard.y);
+  await expect(gm.locator('.zone.marked', { hasText: 'SCHWIERIG' })).toBeVisible();
+  await player.keyboard.press('Escape');
+  await expect(gm.locator('.zone.marked')).toHaveCount(0);
+  await player.waitForTimeout(400);
+  await player.mouse.click(hard.x, hard.y);
+  await expect(gm.locator('.zone.marked', { hasText: 'SCHWIERIG' })).toBeVisible();
+  await player.mouse.click(5, hard.y);
+  await expect(gm.locator('.zone.marked')).toHaveCount(0);
   // anderer Stapel: wieder markiert
   await openMenuAndClick(player, 'DECK', 'Ziehen');
   await expect(gm.locator('.zone.marked')).toHaveCount(1);
@@ -387,6 +398,29 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
 });
 
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
+test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausgegraut, ohne jedes Recht schließt es', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('0');
+  const deck = await zoneCenter(player, 'DECK');
+  await player.mouse.click(deck.x, deck.y);
+  const item = (name: string) => player.locator('[data-stack-menu]').getByRole('menuitem', { name, exact: true });
+  await expect(item('Mischen')).not.toHaveAttribute('aria-disabled', 'true');
+
+  const rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Stapel mischen' }).selectOption('deny');
+  await expect(item('Mischen')).toHaveAttribute('aria-disabled', 'true');
+  await expect(item('Mischen')).toHaveAttribute('title', 'Dafür fehlt dir die Berechtigung.');
+  await expect(item('Ziehen')).not.toHaveAttribute('aria-disabled', 'true');
+  await rights.getByRole('combobox', { name: 'Karten ziehen' }).selectOption('deny');
+  await expect(item('Ziehen')).toHaveAttribute('aria-disabled', 'true');
+  await rights.getByRole('combobox', { name: 'Karten umdrehen' }).selectOption('deny');
+  await expect(player.locator('[data-stack-menu]')).toHaveCount(0);
+  // ohne jedes Recht ist der Stapel kein Knopf mehr
+  await expect(player.locator('[data-zone=deck]')).not.toHaveAttribute('role', 'button');
+});
+
 async function joinAs(page: Page, link: string, name: string, n: number) {
   await page.goto(link);
   const join = page.getByRole('dialog', { name: 'Platz wählen' });

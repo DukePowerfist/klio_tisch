@@ -22,7 +22,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="dock control">
+<div class="dock control" data-menu-avoid>
   {#each SEATS.slice(0, players) as seat, i (seat)}
     {@const names = session.state ? seatNames(session.state, seat) : null}
     <button

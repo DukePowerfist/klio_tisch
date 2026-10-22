@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test, type Locator } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, stackItem, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -257,14 +257,14 @@ test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abg
 test('Protokoll: Spalte rechts über das Menü, neueste oben, offen oder zu bleibt nach Neuladen', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expectCount(page, 'ABLAGE', 1);
-  await page.getByRole('button', { name: 'Mischen', exact: true }).click(); // Menü bleibt offen
+  await stackItem(page, 'Mischen').click(); // Menü bleibt offen
   await expectCount(page, 'ABLAGE', 0);
   await fromMenu(page, 'Protokoll');
   const log = page.getByRole('list', { name: 'Protokoll' });
   await expect(log.locator('li').first()).toContainText('Gemischt: DECK');
   await expect(log.locator('li').nth(1)).toContainText('Aufgedeckt:');
-  // bleibt beim Weiterspielen offen; der Tisch rückt zur Seite
-  await page.getByRole('button', { name: 'Ziehen', exact: true }).click(); // Stapelmenü ist noch offen
+  // bleibt beim Weiterspielen offen; der Tisch rückt zur Seite (und das Stapelmenü ist dabei zugegangen, 10.2)
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expect(log.locator('li')).toHaveCount(3);
   const column = (await page.locator('aside.log').boundingBox())!;
   await expect.poll(async () => { const b = (await page.locator('.board').boundingBox())!; return b.x + b.width; }).toBeLessThanOrEqual(column.x + 1);

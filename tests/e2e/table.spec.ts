@@ -1,7 +1,7 @@
 // Tisch im lokalen Betrieb (Schritt 3a): Stapel, Ziehen und Ablegen, Ansichten, Speichern.
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, stackItem, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -16,23 +16,27 @@ test('Karo ziehen: offen in die Auslage; Karo mischen holt sie zurück', async (
   await openMenuAndClick(page, 'LEICHT', 'Ziehen');
   await expect(page.getByRole('status')).toHaveText(/^Ausliegend: Karo [2-6]$/);
   await expectCount(page, 'LEICHT', 4);
-  await page.getByRole('button', { name: 'Mischen', exact: true }).click();
+  await stackItem(page, 'Mischen').click();
   await expectCount(page, 'LEICHT', 5);
 });
 
 test('Deck mischen nimmt die Ablage auf', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
-  await page.getByRole('button', { name: 'Ziehen', exact: true }).click();
+  await stackItem(page, 'Ziehen').click();
   await expectCount(page, 'ABLAGE', 2);
-  await page.getByRole('button', { name: 'Mischen', exact: true }).click();
+  await stackItem(page, 'Mischen').click();
   await expectCount(page, 'ABLAGE', 0);
   await expectCount(page, 'DECK', 27);
 });
 
-test('Kreuz: „Umdrehen“ wirkt wie Ziehen', async ({ page }) => {
+test('Kreuz: „Umdrehen“ dreht die oberste Karte um, statt zu ziehen (F4)', async ({ page }) => {
+  const faceUp = page.locator('[data-card] .inner:not(.down)');
+  const before = await faceUp.count();
   await openMenuAndClick(page, 'KREUZ', 'Umdrehen');
-  await expect(page.getByRole('status')).toHaveText(/^Aufgedeckt: Kreuz/);
-  await expectCount(page, 'KREUZ', 11);
+  await expect(faceUp).toHaveCount(before + 1);
+  await expectCount(page, 'KREUZ', 12);
+  await expectCount(page, 'ABLAGE', 0);
+  await expect(page.getByRole('status')).toHaveCount(0);
 });
 
 test('Karte in die Gefahr ziehen, dann frei auf den Tisch, Stand bleibt nach Neuladen', async ({ page }) => {

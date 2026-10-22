@@ -18,17 +18,18 @@
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropCenter, dropHints, dropTarget } from './dropHint';
-  import { clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
+  import { clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
   import { t } from './texts';
-  import { view } from './view.svelte';
+  import { view, type StackMenuAt } from './view.svelte';
 
   let { table }: { table: KlioTableState } = $props();
 
   let stageW = $state(0);
   let stageH = $state(0);
+  let stageEl = $state<HTMLElement>();
 
   // Spielerzahl als eigener Wert: die Geometrie ändert sich nur, wenn sie sich ändert, nicht bei jedem Befehl
   const players = $derived(table.settings.players);
@@ -326,8 +327,42 @@
 
   function toggleMenu(zone: ZoneId) {
     if (panned) return;
-    view.open = view.open === zone ? null : zone;
+    if (view.open === zone) return view.closeStack();
+    view.openStack(menuAt(zone));
+    openedWhere = menuWhere;
   }
+
+  // ---------- Stapelmenü (10.2): Geometrie beim Öffnen, Schließen, sobald der Stapel woanders steht ----------
+  /** Abstand des Menüs zum Rand der sichtbaren Tischfläche (N8) */
+  const MENU_MARGIN = 8;
+  /** Bildschirmrechtecke für StackMenu.svelte: Stapel im Endmaß nach dem Öffnen (`growOnOpen`), Ziel von „Ziehen“,
+   *  sichtbare Tischfläche ohne Dock und Menüknopf (`data-menu-avoid`). Danach wird nichts nachgeführt. */
+  function menuAt(zone: ZoneId): StackMenuAt {
+    const L = computeLayout(content, players, view.role, zone);
+    const stage = stageEl!.getBoundingClientRect();
+    const toScreen = (r: Rect): Rect => ({ x: stage.left + geo.tx + r.x * sc, y: stage.top + geo.ty + r.y * sc, w: r.w * sc, h: r.h * sc });
+    const to = content.zones[zone]?.actions?.draw?.to;
+    const target = to ? L.zones[to] : undefined;
+    const box = L.zones[zone]!;
+    const blocked = [...document.querySelectorAll('[data-menu-avoid]')].map((el) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    });
+    return {
+      zone,
+      anchor: toScreen(box),
+      avoid: target ? [toScreen(target)] : [],
+      area: { bounds: { x: stage.left + MENU_MARGIN, y: stage.top + MENU_MARGIN, w: stage.width - 2 * MENU_MARGIN, h: stage.height - 2 * MENU_MARGIN }, blocked },
+      sides: box.menu === 'left' ? ['left', 'right'] : ['right', 'left'],
+    };
+  }
+  /** Lage des offenen Stapels am Bildschirm: Maßstab, Verschiebung, Fenstergröße, Ansicht, Lage im Layout (N4) */
+  const menuWhere = $derived(view.open ? JSON.stringify([sc, geo.tx, geo.ty, stageW, stageH, view.role, layout.zones[view.open]]) : null);
+  let openedWhere: string | null = null;
+  // eine Regel statt aufgezählter Auslöser: steht der Stapel woanders, schließt das Menü
+  $effect(() => {
+    if (view.stackMenu && menuWhere !== openedWhere) untrack(() => view.closeStack());
+  });
 
   function onDblClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
@@ -361,6 +396,7 @@
 
 <div
   class="stage"
+  bind:this={stageEl}
   bind:clientWidth={stageW}
   bind:clientHeight={stageH}
   onwheel={onWheel}
@@ -385,7 +421,7 @@
 
       {#each layout.zoneList as zone (zone.id)}
         {@const openedBy = session.openZones.get(zone.id)}
-        <ZoneView {zone} {flame} count={table.zones[zone.id]?.length ?? 0} card={layout.card} open={view.open === zone.id} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} fixedMenu={layout.menu} onToggle={() => toggleMenu(zone.id)} onAction={(a) => submit({ type: `zone.${a}`, zone: zone.id })} />
+        <ZoneView {zone} {flame} count={table.zones[zone.id]?.length ?? 0} card={layout.card} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} onToggle={() => toggleMenu(zone.id)} />
       {/each}
 
       {#each cards as [card, p] (card)}

@@ -2,7 +2,7 @@
 // Gemessen wird an den laufenden Animationen (Web Animations API) direkt nach dem Auslösen, nicht an Bildern.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, holdOver, openSettings, ready, resetTable, saveArchive, zoneCenter } from '../e2e/helpers';
+import { dragFromTo, expectCount, holdOver, openSettings, ready, resetTable, saveArchive, stackItem, zoneCenter } from '../e2e/helpers';
 
 type Anim = { card: string | null; part: string; props: string[]; delay: number; duration: number; easing: string };
 
@@ -38,7 +38,7 @@ function pressAndWatch(page: Page, label: string): Promise<{ anims: Anim[]; at: 
 async function openMenu(page: Page, zone: string) {
   const z = await zoneCenter(page, zone);
   await page.mouse.click(z.x, z.y);
-  await expect(page.getByRole('button', { name: 'Ziehen', exact: true })).toBeVisible();
+  await expect(stackItem(page, 'Ziehen')).toBeVisible();
 }
 
 test('Ziehen: verdeckt im Bogen über den anderen, Innehalten, dann Aufdecken; Meldung erst danach', async ({ page }) => {
@@ -143,7 +143,7 @@ test('Greifen im Flug: der Zug beginnt an der gezeigten Lage, die Karte springt 
 
 test('Mischen: Karten der Ablage fliegen gestaffelt ein, danach heben sich die oberen Karten ab', async ({ page }) => {
   await openMenu(page, 'DECK');
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Ziehen', exact: true }).click();
+  for (let i = 0; i < 3; i++) await stackItem(page, 'Ziehen').click();
   await expectCount(page, 'ABLAGE', 3);
   await page.waitForTimeout(1500);
   const { anims } = await pressAndWatch(page, 'Mischen');
@@ -379,7 +379,7 @@ const pops = (page: Page) => page.evaluate(() => [...(window as unknown as { pop
 test('Zahl am Stapel: springt beim Ziehen an Deck und Ablage, nicht beim Zurücksetzen', async ({ page }) => {
   await watchCounts(page);
   await openMenu(page, 'DECK');
-  await page.getByRole('button', { name: 'Ziehen', exact: true }).click();
+  await stackItem(page, 'Ziehen').click();
   await expect.poll(() => pops(page)).toEqual(['ABLAGE', 'DECK']);
   await page.waitForTimeout(1500);
   await watchCounts(page);
@@ -396,7 +396,7 @@ test('Fenster, Stapelmenü und Meldungen erscheinen weich; Knöpfe geben beim Dr
   const z = await zoneCenter(page, 'DECK');
   await page.mouse.click(z.x, z.y);
   expect(await cssAnimations(page)).toContain('pop-in');
-  const draw = page.getByRole('button', { name: 'Ziehen', exact: true });
+  const draw = stackItem(page, 'Ziehen');
   const box = (await draw.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

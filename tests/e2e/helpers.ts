@@ -20,10 +20,14 @@ export async function dragFromTo(page: Page, from: { x: number; y: number }, to:
   await page.mouse.up();
 }
 
+/** Eintrag im offenen Stapelmenü (10.2) */
+export const stackItem = (page: Page, action: 'Mischen' | 'Umdrehen' | 'Ziehen') =>
+  page.locator('[data-stack-menu]').getByRole('menuitem', { name: action, exact: true });
+
 export async function openMenuAndClick(page: Page, zoneLabel: string, action: 'Mischen' | 'Umdrehen' | 'Ziehen') {
   const z = await zoneCenter(page, zoneLabel);
   await page.mouse.click(z.x, z.y);
-  await page.getByRole('button', { name: action, exact: true }).click();
+  await stackItem(page, action).click();
 }
 
 /** Anzahl an einer Tischzone; wartet im Browser, bis sie stimmt. */

@@ -11,7 +11,7 @@ clubs:
   actions:
     shuffle: {}
     draw: { to: discard, faceUp: true, announce: true }
-    flip: draw                         # Menü „Umdrehen“ = Ziehen
+    flip: top                          # seit 5o wie an jedem Stapel (F4; vorher wirkte es wie Ziehen)
     cardDoubleClick: { faceDown: draw } # verdeckte Karte dieses Stapels: wie Ziehen
 
 diamonds_easy:

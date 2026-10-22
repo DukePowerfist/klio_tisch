@@ -53,6 +53,7 @@
   function toggleMenu(e: MouseEvent) {
     if (view.plateMenu?.seat === seat) return void (view.plateMenu = null);
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    view.closeStack();
     view.plateMenu = { seat, x: r.left, y: r.bottom + 4, above: r.top - 4 };
   }
   const plate = skin.nameplate;

@@ -143,10 +143,14 @@ describe('Umdrehen, Ziehen, Mischen', () => {
     expect(k.faceUp[k.zones['display']![0] as never]).toBe(true);
   });
 
-  it('„Umdrehen“: Deck und Karo drehen die oberste Karte, Kreuz zieht', () => {
-    const top = base.zones['deck']!.at(-1)!;
-    expect(run(base, { type: 'zone.flip', zone: 'deck' }).state.faceUp[top as never]).toBe(true);
-    expect(run(base, { type: 'zone.flip', zone: 'clubs' }).state.zones['discard']).toHaveLength(1);
+  it('„Umdrehen“: jeder Stapel dreht die oberste Karte an Ort und Stelle um, auch Kreuz (F4)', () => {
+    for (const zone of ['deck', 'diamonds_easy', 'clubs']) {
+      const top = base.zones[zone]!.at(-1)!;
+      const { state } = run(base, { type: 'zone.flip', zone });
+      expect(state.faceUp[top as never], zone).toBe(true);
+      expect(state.zones[zone], zone).toEqual(base.zones[zone]);
+    }
+    expect(run(base, { type: 'zone.flip', zone: 'clubs' }).state.zones['discard']).toEqual([]);
   });
 
   it('leerer Stapel: Ziehen tut nichts; Ablage hat kein Ziehen', () => {

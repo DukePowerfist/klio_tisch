@@ -3,6 +3,8 @@
 import { tick, untrack } from 'svelte';
 import { SeatSchema } from '../engine/schemas';
 import type { SeatId, ZoneId } from '../engine/types';
+import type { Rect } from './layout';
+import type { Area, Side } from './stackMenu';
 import { setCutting, timing } from './animator.svelte';
 import { effectLevel } from './effectLevel.svelte';
 import type { SettingsPage } from './settingsPages';
@@ -15,6 +17,10 @@ function storedRole(): SeatId | null {
 }
 
 export type Toast = { text: string; warn: boolean; id: number };
+
+/** Geometrie des offenen Stapelmenüs am Bildschirm (10.2), beim Öffnen von Board.svelte berechnet: Stapel im Endmaß,
+ *  Ziel von „Ziehen“, nutzbarer Bereich, Seiten nach Vorliebe */
+export type StackMenuAt = { zone: ZoneId; anchor: Rect; avoid: Rect[]; area: Area; sides: Side[] };
 
 class ViewState {
   /** null = Draufsicht, sonst Rollenansicht dieses Platzes */
@@ -34,7 +40,9 @@ class ViewState {
   zoom = $state(1);
   ox = $state(0);
   oy = $state(0);
+  /** offenes Stapelmenü (geteilt: Rahmen bei den anderen, `growOnOpen`); `stackMenu` trägt die Geometrie dazu */
   open = $state<ZoneId | null>(null);
+  stackMenu = $state<StackMenuAt | null>(null);
   /** offener Trumpf-Dialog für diesen Bogen */
   trumpDialog = $state<SeatId | null>(null);
   /** offenes Ergebnisfenster (Expedition bzw. Orakel), geöffnet durch das Ereignis */
@@ -54,6 +62,18 @@ class ViewState {
   toast = $state<Toast | null>(null);
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
   private toastId = 0;
+
+  /** Stapelmenü öffnen; immer nur ein Menü offen, das am Namensschild schließt (10.2) */
+  openStack(at: StackMenuAt): void {
+    this.plateMenu = null;
+    this.open = at.zone;
+    this.stackMenu = at;
+  }
+
+  closeStack(): void {
+    this.open = null;
+    this.stackMenu = null;
+  }
 
   setRole(r: SeatId | null): void {
     // ohne Abhängigkeiten: Aufrufer in einem Effekt (App.svelte, Platz beim Beitritt) liefen sonst bei jedem Wechsel

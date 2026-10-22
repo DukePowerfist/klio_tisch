@@ -7,7 +7,8 @@ import type { PointerPos } from '../net/presence';
 import type { KlioContent } from '../rules/klio/content/validate';
 
 export type Rect = { x: number; y: number; w: number; h: number };
-export type MenuSide = 'fixed' | 'left' | 'right' | 'below';
+/** bevorzugte Seite des Stapelmenüs (10.2) */
+export type MenuSide = 'left' | 'right';
 
 export type ZoneBox = Rect & {
   id: ZoneId;
@@ -19,7 +20,7 @@ export type ZoneBox = Rect & {
   template: string;
   /** aufgefächert (zones.yaml `fanned`); sonst ein Stapel, dessen Dicke Kanten zeigen */
   fanned: boolean;
-  /** Stapelmenü (nur Zonen mit Aktionen) und Beschriftung, aus layouts.yaml */
+  /** bevorzugte Seite des Stapelmenüs (nur Zonen mit Aktionen) und Beschriftung, aus layouts.yaml */
   menu: MenuSide;
   label: { center: boolean; rotated: boolean; x: number | null };
 };
@@ -44,7 +45,6 @@ export type Layout = {
   resistTitle: { x: number; y: number };
   /** rechte untere Ecke der SL-Leiste */
   gmControls: { x: number; y: number };
-  menu: { x: number; y: number };
   freeCardScale: number;
   lamp: LampBox;
   /** Licht der Laterne in dieser Ansicht: Reichweite in TP, Grundlicht am Rand */
@@ -109,7 +109,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
 
   const zones: Record<ZoneId, ZoneBox> = {};
   const decor = (shape: (typeof L.shapes)[string] | undefined) => ({
-    menu: shape?.menu ?? 'below',
+    menu: shape?.menu ?? 'right',
     label: { center: !!shape?.label?.center, rotated: !!shape?.label?.rotated, x: shape?.label?.x ?? null },
   });
   for (const [id, z] of Object.entries(c.zones)) {
@@ -151,7 +151,6 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     zoneList: Object.values(zones),
     resistTitle: at(M.resistTitle),
     gmControls: at([middle.w - M.gmControlsInset[0], middle.h - M.gmControlsInset[1]]),
-    menu: at(M.menu),
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
     light: role ? L.role.light : L.overview.light,

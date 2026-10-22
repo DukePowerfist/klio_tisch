@@ -1,43 +1,31 @@
 <script lang="ts">
-  // Eine Zone: Rahmen, Beschriftung mit Anzahl, bei Stapeln das Menü aus den Aktionen in zones.yaml.
-  // Lage von Menü und Beschriftung kommt aus layouts.yaml (ZoneBox.menu, ZoneBox.label).
+  // Eine Zone: Rahmen, Beschriftung mit Anzahl, Kanten. Ein Klick auf einen Stapel öffnet sein Menü (StackMenu.svelte,
+  // seit 5o außerhalb des skalierten Tisches). Lage der Beschriftung aus layouts.yaml (ZoneBox.label).
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
   import { stackEdges, type LampBox, type ZoneBox } from './layout';
   import { shadowCss, shadowOver } from './light';
   import { session } from './session.svelte';
+  import { STACK_ACTIONS } from './stackMenu';
   import { t, tMaybe } from './texts';
 
-  let { zone, count, card, open, hot, mark, fixedMenu, flame = null, onToggle, onAction }: {
-    zone: ZoneBox; count: number; open: boolean; hot: boolean;
+  let { zone, count, card, hot, mark, flame = null, onToggle }: {
+    zone: ZoneBox; count: number; hot: boolean;
     /** Flamme der Laterne für die Schatten der Kanten (11.9); null: Laterne aus, Schatten nach unten */
     flame?: LampBox['flame'] | null;
     /** Kartengröße bei Maßstab 1 (für die Kanten eines Stapels) */
     card: { w: number; h: number };
     /** Farbe, wenn jemand anderes das Menü dieses Stapels offen hat (8.3) */
     mark: string | undefined;
-    fixedMenu: { x: number; y: number };
-    onToggle: () => void; onAction: (a: MenuAction) => void;
+    onToggle: () => void;
   } = $props();
 
-  type MenuAction = 'shuffle' | 'flip' | 'draw';
-  /** Reihenfolge im Menü wie bisher; angezeigt wird, was die Zone kann */
-  const MENU: MenuAction[] = ['shuffle', 'flip', 'draw'];
-
-  // nur Aktionen, die die Zone kann und die man darf (9.3)
-  const actions = $derived(MENU.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined && session.can({ type: `zone.${a}`, zone: zone.id })));
+  // Knopf nur, wenn man an diesem Stapel mindestens eine Aktion darf (9.3; Zuschauer: kein Knopf)
+  const actions = $derived(STACK_ACTIONS.filter((a) => content.zones[zone.template]?.actions?.[a] !== undefined && session.can({ type: `zone.${a}`, zone: zone.id })));
   const onSheet = $derived(zone.owner !== null);
   const label = $derived(t(`zones.${zone.template}`));
   const title = $derived(tMaybe(`zones.${zone.template}Title`));
-  const menuStyle = $derived(
-    {
-      fixed: `left:${fixedMenu.x - zone.x}px;top:${fixedMenu.y - zone.y}px`,
-      left: 'right:calc(100% + 8px);top:0',
-      right: 'left:calc(100% + 8px);top:0',
-      below: 'left:50%;top:calc(100% + 32px);transform:translateX(-50%)',
-    }[zone.menu],
-  );
   // Stapel (ohne `fanned` in zones.yaml, wie beim Greifen): versetzte Kanten unter der obersten Karte zeigen die Dicke
   const edges = $derived(Array.from({ length: zone.fanned ? 0 : stackEdges(count) }, (_, i) => i + 1).reverse());
   /** Versatz je Kante: 2 px mal Maßstab; in verkleinerten Zonen etwas mehr, sonst sieht man die Kante dort kaum */
@@ -73,17 +61,11 @@
   {title}
   role={actions.length ? 'button' : undefined}
   tabindex={actions.length ? 0 : undefined}
-  onclick={(e) => { if (actions.length && !(e.target as HTMLElement).closest('.menu')) onToggle(); }}
+  data-zone={zone.id}
+  onclick={() => { if (actions.length) onToggle(); }}
 >
   {#if label}
     <div class="label" style={labelStyle}>{label}{#if !onSheet}<span class="n" bind:this={n}>{count}</span>{/if}</div>
-  {/if}
-  {#if open && actions.length}
-    <div class="menu control" style={menuStyle}>
-      {#each actions as a (a)}
-        <button onclick={() => onAction(a)}>{t(`zones.actions.${a}`)}</button>
-      {/each}
-    </div>
   {/if}
   {#each edges as k (k)}
     <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})" style:box-shadow={edgeShadow(k)}></div>
@@ -107,7 +89,4 @@
   .zone.sheet { border-color: rgba(0, 0, 0, 0.35); }
   .zone.sheet .label { top: 50%; left: 50%; margin: 0; transform: translate(-50%, -50%); font-size: 9px; font-weight: 500; letter-spacing: 0.05em; color: #333; background: none; padding: 0; text-shadow: none; opacity: 0.6; }
   .zone.sheet.rotated .label { transform: translate(-50%, -50%) rotate(-90deg); }
-  .menu { position: absolute; display: flex; flex-direction: column; gap: 5px; z-index: 500000; animation: pop-in var(--pop) var(--spring-soft); }
-  .menu button { font: inherit; font-size: 15px; padding: 8px 14px; min-width: 104px; border-radius: 7px; background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
-  .menu button:hover { background: var(--button-hover); }
 </style>
