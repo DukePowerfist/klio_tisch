@@ -119,6 +119,12 @@
           </SettingRow>
         </section>
       {:else if page === 'permissions'}
+        <!-- Voreinstellungen oben, nicht unter der langen Liste (Nutzer, 5r) -->
+        <section class="defaults">
+          <SettingRow id="defaults" title={t('settings.defaults')} description={t('settings.defaultsHelp')}>
+            <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides(Object.fromEntries(Object.keys(overrides).map((k) => [k, null])))}>{t('settings.restore')}</button>
+          </SettingRow>
+        </section>
         {#each groups as g (g.id)}
           {@const groupHelp = tMaybe(`settings.groupHelp.${g.id}`)}
           <section aria-labelledby="group-{g.id}">
@@ -136,11 +142,6 @@
             {/each}
           </section>
         {/each}
-        <section class="defaults">
-          <SettingRow id="defaults" title={t('settings.defaults')} description={t('settings.defaultsHelp')}>
-            <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides(Object.fromEntries(Object.keys(overrides).map((k) => [k, null])))}>{t('settings.restore')}</button>
-          </SettingRow>
-        </section>
       {:else if page === 'appearance'}
         <SettingRow id="effects" title={t('settings.effects')} description={t('settings.effectsHelp')}>
           <select value={effectLevel.level} aria-labelledby="effects-title" aria-describedby="effects-desc"
@@ -205,7 +206,7 @@
   h3 { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }
   section:first-child h3 { margin-top: 10px; }
   .note { margin: 0 0 4px; }
-  .defaults { margin-top: 14px; border-top: 1px solid var(--pane-rule); }
+  .defaults { margin-bottom: 4px; border-bottom: 1px solid var(--pane-rule); }
   .ask { font-size: 13px; }
   /* Schalter: Kästchen mit role="switch", nur anders gezeichnet */
   .switch { appearance: none; position: relative; width: 36px; height: 20px; margin: 0; border-radius: 10px; background: var(--switch-off); cursor: pointer; transition: background var(--glide); }
