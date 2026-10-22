@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createEngine } from '../../src/engine/dispatch';
 import { cryptoRng, seededRng, shuffled } from '../../src/engine/rng';
 import { initialTable } from '../../src/engine/setup';
-import type { EngineEventOf, Ruleset } from '../../src/engine/types';
+import type { CardId, EngineEventOf, Ruleset } from '../../src/engine/types';
 import { GM, SPECTATOR, engine, expectRejected, fresh, place, player, run, type K } from '../helpers';
 
 const allCards = (s: K) => [...Object.values(s.zones).flat(), ...s.free];
@@ -207,6 +207,48 @@ describe('Umdrehen, Ziehen, Mischen', () => {
     expect(state.zones['diamonds_medium']).toContain('D7');
     expect(state.zones['diamonds_easy']).toContain('D2');
   });
+
+  describe('Einsammeln in Sonderfällen (5r)', () => {
+    const table = (zones: Ruleset<null>['zones'], start: Record<string, CardId[]>): Ruleset<null> => ({
+      id: 't', version: '1', initialGame: () => null, parseGame: () => null,
+      deck: { start }, zones, commands: {}, events: {}, migrations: [], seatColors: ['a', 'b', 'c', 'd'], reactions: [],
+      permissions: { gm: 'all', player: {}, spectator: 'none' },
+    });
+    const shuffle = (r: Ruleset<null>, zones: Record<string, CardId[]>, zone: string) => {
+      const s = initialTable(r, seededRng(1));
+      Object.assign(s.zones, zones);
+      const out = createEngine(r).dispatch(s, { type: 'zone.shuffle', zone }, GM, seededRng(1));
+      if ('rejected' in out) throw new Error(out.reason.key);
+      return out.state.zones;
+    };
+
+    it('aus dem eigenen Stapel: endet, keine Karte geht verloren', () => {
+      const r = table([{ id: 'a', actions: { shuffle: { gather: [{ from: 'a' }] } } }], { a: ['H2', 'H3', 'H4'] });
+      expect(shuffle(r, {}, 'a')['a']!.sort()).toEqual(['H2', 'H3', 'H4']);
+    });
+
+    it('Heimat gleich Quelle: Karte bleibt liegen, die Schleife endet', () => {
+      const r = table([{ id: 'a', actions: { shuffle: { gather: [{ from: 'b', to: 'home' }] } } }, { id: 'b' }], { b: ['H2', 'H3'] });
+      const z = shuffle(r, {}, 'a');
+      expect(z['b']).toEqual(['H2', 'H3']);
+      expect(z['a']).toEqual([]);
+    });
+
+    it('jede Karte nur vom ersten passenden Eintrag, auch wenn sie dabei in eine spätere Quelle kommt', () => {
+      const r = table([
+        { id: 'a', actions: { shuffle: { gather: [{ from: 'b', to: 'home' }, { from: 'c' }] } } }, { id: 'b' }, { id: 'c' },
+      ], { c: ['H2'] });
+      const z = shuffle(r, { b: ['H2'], c: [] }, 'a');
+      expect(z).toMatchObject({ a: [], b: [], c: ['H2'] });
+    });
+
+    it('Fehler in der Einstellung bricht beim Start ab', () => {
+      const tpl = table([{ id: 'a', actions: { shuffle: { gather: [{ from: 'damage' }] } } }, { id: 'damage', perSeat: true }], {});
+      expect(() => createEngine(tpl)).toThrow(/unbekannter Zone damage/);
+      expect(() => createEngine(table([{ id: 'a', actions: { draw: { to: 'x', faceUp: true, announce: false } } }], {}))).toThrow(/unbekannter Zone x/);
+      expect(() => createEngine(table([{ id: 'a', actions: { draw: { to: 'a', faceUp: true, announce: false } } }], {}))).toThrow(/eigenen Stapel/);
+    });
+  });
 });
 
 describe('Ablauf', () => {
@@ -236,7 +278,7 @@ describe('Ablauf', () => {
   it('Reaktionen, die sich endlos auslösen, brechen den ganzen Befehl ab', () => {
     const loop: Ruleset<null> = {
       id: 'loop', version: '1', initialGame: () => null, parseGame: () => null,
-      deck: { start: {} }, zones: [{ id: 'a', actions: { draw: { to: 'a', faceUp: true, announce: false } } }],
+      deck: { start: {} }, zones: [{ id: 'a', actions: { draw: { to: 'b', faceUp: true, announce: false } } }, { id: 'b' }],
       commands: {}, events: { ping: { parse: (x) => x as { type: 'ping' }, apply: (s) => s } }, migrations: [], seatColors: ['a', 'b', 'c', 'd'],
       reactions: [{ id: 'echo', react: () => [{ type: 'ping' }] }],
       permissions: { gm: 'all', player: {}, spectator: 'none' },

@@ -200,20 +200,28 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       const rule = zc.actions?.shuffle;
       if (!rule) return reject('reject.noAction');
 
-      // Einsammeln: Einträge der Reihe nach, jede Karte nur vom ersten passenden (7, gather)
+      // Einsammeln: Einträge der Reihe nach, jede Karte nur vom ersten passenden (7, gather). Die Quellen
+      // stehen in der Zonentabelle, das prüft `createEngine`.
       const next: Record<ZoneId, CardId[]> = {};
       const get = (id: ZoneId) => (next[id] ??= [...(state.zones[id] ?? [])]);
       const receivers = new Set<ZoneId>([zc.id]);
+      const taken = new Set<CardId>();
       get(zc.id);
       for (const g of rule.gather ?? []) {
         const rest: CardId[] = [];
-        for (const card of get(g.from)) {
-          if (g.suit && suitOf(card) !== g.suit) {
+        for (const card of [...get(g.from)]) {
+          if (taken.has(card) || (g.suit && suitOf(card) !== g.suit)) {
             rest.push(card);
             continue;
           }
           const dest = g.to === 'home' ? home.get(card) : zc.id;
           if (!dest) return reject('reject.noHome');
+          taken.add(card);
+          // schon am Ziel: bleibt liegen (`rest` ersetzt die Quelle unten)
+          if (dest === g.from) {
+            rest.push(card);
+            continue;
+          }
           get(dest).push(card);
           receivers.add(dest);
         }

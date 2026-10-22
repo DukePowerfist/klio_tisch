@@ -8,7 +8,7 @@ import { can } from './permissions';
 import { migrate } from './migrate';
 import { lamp } from './migrations/lamp';
 import { seatColor } from './migrations/seatColor';
-import { expandZones } from './zones';
+import { expandZones, type ZoneTable } from './zones';
 import type { Actor, Command, CommandDef, DispatchResult, Event, Rng, Ruleset, SequencedEvent, TableState } from './types';
 
 /** Migrationen der Engine; sie hängen an derselben Formatnummer wie die des Regelwerks (7, Versionierung) */
@@ -29,8 +29,22 @@ export type Engine<G> = {
   parseEvent(input: unknown): Event;
 };
 
+/** Fehler in der Zonen-Einstellung beim Start melden, nicht erst beim Klick: Ziehen und Einsammeln nur aus bzw.
+ *  in echte Zonen (Vorlagen wie `damage` zählen nicht), Ziehen nicht in den eigenen Stapel. */
+function checkZoneActions(zones: ZoneTable): void {
+  for (const [id, zc] of zones) {
+    const to = zc.actions?.draw?.to;
+    if (to !== undefined && !zones.has(to)) throw new Error(`Zone ${id}: Ziehen nach unbekannter Zone ${to}`);
+    if (to === id) throw new Error(`Zone ${id}: Ziehen in den eigenen Stapel`);
+    for (const g of zc.actions?.shuffle?.gather ?? []) {
+      if (!zones.has(g.from)) throw new Error(`Zone ${id}: Einsammeln aus unbekannter Zone ${g.from}`);
+    }
+  }
+}
+
 export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
   const zones = expandZones(ruleset.zones);
+  checkZoneActions(zones);
   const base = engineCommands(zones, ruleset);
   for (const key of Object.keys(ruleset.commands)) {
     if (key in base) throw new Error(`Regelwerk überschreibt Engine-Befehl ${key}`);
