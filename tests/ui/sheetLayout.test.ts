@@ -198,62 +198,58 @@ describe('Bögen in allen Ansichten (5q): frei liegende Karten auf Bögen', () =
 });
 
 describe('Bögen in allen Ansichten (5q): Regel für die Abstände', () => {
-  type Spread = 'even' | 'out';
-  /** Inhalte mit anderem Abstand bzw. anderer Verteilung des Rests quer zum Filz (F1), unabhängig von layouts.yaml */
-  const variant = (spacing: number, spread: Spread) => ({ ...content, layouts: { ...content.layouts, sheets: { spacing, spread } } });
+  /** Inhalte mit anderem Abstand, unabhängig von layouts.yaml */
+  const variant = (spacing: number) => ({ ...content, layouts: { ...content.layouts, sheets: { spacing } } });
   const E = 1e-6;
 
-  it('kein Abstand unter spacing; Rest in der Höhe gleich, quer zum Filz nach F1; Maßstab der größtmögliche', () => {
+  it('kein Abstand unter spacing; Rest auf beiden Seiten gleich; Maßstab der größtmögliche', () => {
     for (const spacing of [16, 24, 32]) {
-      for (const spread of ['even', 'out'] as const) {
-        const c = variant(spacing, spread);
-        for (const n of PLAYERS) {
-          for (const role of [null, ...seatsFor(n)]) {
-            const L = computeLayout(c, n, role, null);
-            const B = L.board;
-            const felt = { l: L.middle.x - FELT_RIM, r: L.middle.x + L.middle.w + FELT_RIM };
-            // Spalten: Bögen untereinander links oder rechts vom Filz; `top` = Reserve für den Menüknopf
-            const cols: { seats: SeatId[]; side: 'left' | 'right'; top?: number }[] = role
-              ? [{ seats: [role], side: 'left' }, { seats: seatsFor(n).filter((s) => s !== role), side: 'right', top: c.layouts.role.sheets.others.top }]
-              : c.layouts.overview.sheets.columns.map((col, i) => ({ seats: col.filter((s) => seatVisibleFor(s, n)), side: i ? 'right' as const : 'left' as const }));
-            // Gruppen mit einem gemeinsamen Maßstab: Draufsicht alle Spalten, Rollenansicht jede Spalte für sich
-            const groups = role ? cols.map((col) => [col]) : [cols];
-            for (const group of groups.filter((g) => g.some((col) => col.seats.length))) {
-              let tight = false;
-              const scales = new Set<number>();
-              for (const { seats, side, top } of group.filter((col) => col.seats.length)) {
-                const bs = seats.map((s) => L.sheets[s]);
-                const what = `Abstand ${spacing}, ${spread}, ${n} Spieler, ${role ?? 'Draufsicht'}, ${seats.join('+')}`;
-                const [x0, x1] = side === 'left' ? [0, felt.l] : [felt.r, B.w];
-                const first = bs[0]!;
-                const last = bs.at(-1)!;
-                const toEdge = side === 'left' ? first.x - x0 : x1 - (first.x + first.w);
-                const toFelt = side === 'left' ? x1 - (first.x + first.w) : first.x - x0;
-                const above = first.y - (top ?? 0);
-                const below = B.h - (last.y + last.h);
-                for (const b of bs) {
-                  scales.add(b.scale);
-                  expect(b.x, `${what}: Spalte bündig`).toBeCloseTo(first.x, 6);
-                }
-                bs.slice(1).forEach((b, j) => expect(b.y - (bs[j]!.y + bs[j]!.h), `${what}: dazwischen`).toBeCloseTo(spacing, 6));
-                expect(toEdge, `${what}: zur Kante`).toBeGreaterThanOrEqual(spacing - E);
-                expect(toFelt, `${what}: zum Filz`).toBeGreaterThanOrEqual(spacing - E);
-                expect(below, `${what}: unten`).toBeGreaterThanOrEqual(spacing - E);
-                if (top === undefined) {
-                  expect(above, `${what}: oben wie unten`).toBeCloseTo(below, 6);
-                } else {
-                  expect(above, `${what}: oben genau an der Reserve`).toBeCloseTo(0, 6);
-                }
-                if (spread === 'even') expect(toEdge, `${what}: seitlich gleich`).toBeCloseTo(toFelt, 6);
-                else expect(toFelt, `${what}: am Filz`).toBeCloseTo(spacing, 6);
-                // größtmöglich: in einer Richtung kein Rest
-                const wide = Math.abs(toEdge + toFelt - 2 * spacing) < E;
-                const high = Math.abs(below - spacing) < E;
-                tight ||= wide || high;
+      const c = variant(spacing);
+      for (const n of PLAYERS) {
+        for (const role of [null, ...seatsFor(n)]) {
+          const L = computeLayout(c, n, role, null);
+          const B = L.board;
+          const felt = { l: L.middle.x - FELT_RIM, r: L.middle.x + L.middle.w + FELT_RIM };
+          // Spalten: Bögen untereinander links oder rechts vom Filz; `top` = Reserve für den Menüknopf
+          const cols: { seats: SeatId[]; side: 'left' | 'right'; top?: number }[] = role
+            ? [{ seats: [role], side: 'left' }, { seats: seatsFor(n).filter((s) => s !== role), side: 'right', top: c.layouts.role.sheets.others.top }]
+            : c.layouts.overview.sheets.columns.map((col, i) => ({ seats: col.filter((s) => seatVisibleFor(s, n)), side: i ? 'right' as const : 'left' as const }));
+          // Gruppen mit einem gemeinsamen Maßstab: Draufsicht alle Spalten, Rollenansicht jede Spalte für sich
+          const groups = role ? cols.map((col) => [col]) : [cols];
+          for (const group of groups.filter((g) => g.some((col) => col.seats.length))) {
+            let tight = false;
+            const scales = new Set<number>();
+            for (const { seats, side, top } of group.filter((col) => col.seats.length)) {
+              const bs = seats.map((s) => L.sheets[s]);
+              const what = `Abstand ${spacing}, ${n} Spieler, ${role ?? 'Draufsicht'}, ${seats.join('+')}`;
+              const [x0, x1] = side === 'left' ? [0, felt.l] : [felt.r, B.w];
+              const first = bs[0]!;
+              const last = bs.at(-1)!;
+              const toEdge = side === 'left' ? first.x - x0 : x1 - (first.x + first.w);
+              const toFelt = side === 'left' ? x1 - (first.x + first.w) : first.x - x0;
+              const above = first.y - (top ?? 0);
+              const below = B.h - (last.y + last.h);
+              for (const b of bs) {
+                scales.add(b.scale);
+                expect(b.x, `${what}: Spalte bündig`).toBeCloseTo(first.x, 6);
               }
-              expect(scales.size, 'ein Maßstab je Gruppe').toBeLessThanOrEqual(1);
-              expect(tight, `Abstand ${spacing}, ${spread}, ${n} Spieler, ${role ?? 'Draufsicht'}: Maßstab der größtmögliche`).toBe(true);
+              bs.slice(1).forEach((b, j) => expect(b.y - (bs[j]!.y + bs[j]!.h), `${what}: dazwischen`).toBeCloseTo(spacing, 6));
+              expect(toEdge, `${what}: zur Kante`).toBeGreaterThanOrEqual(spacing - E);
+              expect(toFelt, `${what}: zum Filz`).toBeGreaterThanOrEqual(spacing - E);
+              expect(below, `${what}: unten`).toBeGreaterThanOrEqual(spacing - E);
+              if (top === undefined) {
+                expect(above, `${what}: oben wie unten`).toBeCloseTo(below, 6);
+              } else {
+                expect(above, `${what}: oben genau an der Reserve`).toBeCloseTo(0, 6);
+              }
+              expect(toEdge, `${what}: seitlich gleich`).toBeCloseTo(toFelt, 6);
+              // größtmöglich: in einer Richtung kein Rest
+              const wide = Math.abs(toEdge + toFelt - 2 * spacing) < E;
+              const high = Math.abs(below - spacing) < E;
+              tight ||= wide || high;
             }
+            expect(scales.size, 'ein Maßstab je Gruppe').toBeLessThanOrEqual(1);
+            expect(tight, `Abstand ${spacing}, ${n} Spieler, ${role ?? 'Draufsicht'}: Maßstab der größtmögliche`).toBe(true);
           }
         }
       }

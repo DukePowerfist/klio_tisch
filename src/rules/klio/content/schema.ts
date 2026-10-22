@@ -184,7 +184,7 @@ export const LayoutsFile = z.object({
     size: Point, zones: z.record(z.string(), Point), resistTitle: Point, gmControlsInset: Point,
     lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
   }).strict(),
-  sheets: z.object({ spacing: z.number().nonnegative(), spread: z.enum(['even', 'out']) }).strict(),
+  sheets: z.object({ spacing: z.number().nonnegative() }).strict(),
   overview: z.object({
     middle: Point,
     light: Light,

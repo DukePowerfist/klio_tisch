@@ -43,10 +43,9 @@ middle:
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
   lamp: { at: [ 350, 60 ], size: 104, flame: [ 0.5024, 0.4561 ], height: 260 }
 # Bögen (Schritt 5q, ARCHITEKTUR.md 10.3): ein Abstand ab der sichtbaren Kante des Lederrands, zur Tischkante, zum Filz und
-# zwischen zwei Bögen. Jede Gruppe von Bögen so groß, wie sie mit diesem Abstand neben den Filz passt; der Rest liegt in der
-# Höhe oben und unten gleich. spread = Rest quer zum Filz: even (Bogen mittig im Streifen) oder out (Bogen am Filz, Rest an
-# der Tischkante); vorläufig zum Ausprobieren (F1), danach bleibt nur eine Variante.
-sheets: { spacing: 24, spread: even }
+# zwischen zwei Bögen. Jede Gruppe von Bögen so groß, wie sie mit diesem Abstand neben den Filz passt; der Rest liegt auf
+# beiden Seiten gleich (Bogen mittig in seinem Streifen).
+sheets: { spacing: 24 }
 overview:
   middle: [ 530, 10 ]
   # Licht der Laterne je Ansicht: Reichweite in TP, Grundlicht am Rand (0 = schwarz, 1 = ungedämpft)

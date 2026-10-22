@@ -79,12 +79,12 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
   const at = ([x, y]: readonly [number, number]) => ({ x: mx + x, y: my + y });
 
   // Bögen (5q, ARCHITEKTUR.md 10.3): Spalten links und rechts neben dem Filz samt Rand, je Gruppe ein Maßstab
-  const { spacing: sp, spread } = L.sheets;
-  const left = { x0: 0, x1: mx - FELT_RIM, felt: 'right' as const };
-  const right = { x0: mx + M.size[0] + FELT_RIM, x1: BW, felt: 'left' as const };
+  const sp = L.sheets.spacing;
+  const left = { x0: 0, x1: mx - FELT_RIM };
+  const right = { x0: mx + M.size[0] + FELT_RIM, x1: BW };
   const sheets = Object.fromEntries(SEATS.map((s) => [s, hiddenSheet(s)])) as Record<SeatId, SheetBox>;
-  /** Bögen untereinander in ihrer Spalte; `top` = Reserve oben (dann bündig), sonst in der Höhe mittig */
-  type Column = { seats: SeatId[]; strip: typeof left | typeof right; top?: number; opacity: number };
+  /** Bögen untereinander in ihrer Spalte, quer zum Filz mittig; `top` = Reserve oben (dann bündig), sonst in der Höhe mittig */
+  type Column = { seats: SeatId[]; strip: typeof left; top?: number; opacity: number };
   const placeGroup = (cols: Column[]) => {
     const used = cols.filter((c) => c.seats.length);
     const fit = ({ seats, strip, top }: Column) => {
@@ -95,7 +95,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     const [w, h] = [SHEET_W * m, SHEET_H * m];
     for (const { seats, strip, top, opacity } of used) {
       const rest = strip.x1 - strip.x0 - 2 * sp - w;
-      const x = strip.x0 + sp + (spread === 'even' ? rest / 2 : strip.felt === 'right' ? rest : 0);
+      const x = strip.x0 + sp + rest / 2;
       const total = seats.length * h + (seats.length - 1) * sp;
       const y0 = top ?? (BH - total) / 2;
       seats.forEach((s, j) => (sheets[s] = { seat: s, x, y: y0 + j * (h + sp), w, h, scale: m, visible: true, opacity }));
