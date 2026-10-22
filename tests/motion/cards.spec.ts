@@ -146,7 +146,9 @@ test('Mischen: Karten der Ablage fliegen gestaffelt ein, danach heben sich die o
   for (let i = 0; i < 3; i++) await stackItem(page, 'Ziehen').click();
   await expectCount(page, 'ABLAGE', 3);
   await page.waitForTimeout(1500);
-  const { anims } = await pressAndWatch(page, 'Mischen');
+  // Mischen holt die Ablage zurück: erst die Rückfrage, beobachtet wird der bestätigende Klick
+  await stackItem(page, 'Mischen').click();
+  const { anims } = await pressAndWatch(page, '3 Karten zurückholen?');
   const flights = anims.filter((a) => a.part.startsWith('card') && a.props.includes('translate') && !a.props.includes('zIndex'));
   expect(flights.map((a) => a.delay).sort((a, b) => a - b)).toEqual([0, 50, 100]);
   const cuts = anims.filter((a) => a.props.includes('translate') && a.props.includes('zIndex'));

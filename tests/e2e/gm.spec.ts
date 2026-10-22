@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test, type Locator } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, stackItem, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, shuffleBack, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -257,7 +257,7 @@ test('Spielstand als Datei speichern und wieder laden; ungültige Datei wird abg
 test('Protokoll: Spalte rechts über das Menü, neueste oben, offen oder zu bleibt nach Neuladen', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await expectCount(page, 'ABLAGE', 1);
-  await stackItem(page, 'Mischen').click(); // Menü bleibt offen
+  await shuffleBack(page, 1); // Menü bleibt offen
   await expectCount(page, 'ABLAGE', 0);
   await fromMenu(page, 'Protokoll');
   const log = page.getByRole('list', { name: 'Protokoll' });

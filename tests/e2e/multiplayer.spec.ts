@@ -421,6 +421,27 @@ test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausg
   await expect(player.locator('[data-zone=deck]')).not.toHaveAttribute('role', 'button');
 });
 
+test('Stapelmenü (5o): Rückfrage beim Mischen verfällt, wenn jemand anderes inzwischen Karten in die Ablage legt', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('0');
+  await openMenuAndClick(player, 'DECK', 'Ziehen');
+  await expectCount(gm, 'ABLAGE', 1);
+  const shuffle = player.locator('[data-stack-menu]').getByRole('menuitem').nth(2);
+  await shuffle.click();
+  await expect(shuffle).toHaveText('1 Karte zurückholen?');
+  // die SL zieht: jetzt kämen zwei Karten zurück, die Rückfrage gilt nicht mehr
+  await openMenuAndClick(gm, 'DECK', 'Ziehen');
+  await expectCount(player, 'ABLAGE', 2);
+  await expect(shuffle).toHaveText('Mischen');
+  // erneut: neue Rückfrage mit der neuen Zahl, dann mischt der zweite Klick
+  await shuffle.click();
+  await expect(shuffle).toHaveText('2 Karten zurückholen?');
+  await shuffle.click();
+  await expectCount(gm, 'ABLAGE', 0);
+});
+
 async function joinAs(page: Page, link: string, name: string, n: number) {
   await page.goto(link);
   const join = page.getByRole('dialog', { name: 'Platz wählen' });

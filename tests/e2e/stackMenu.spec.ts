@@ -1,7 +1,7 @@
 // Stapelmenü (Schritt 5o, ARCHITEKTUR.md 10.2): Lage am Stapel, gleicher Aufbau, Ausgrauen, Schließen.
 
 import { expect, test, type Page } from '@playwright/test';
-import { fromMenu, openMenuAndClick, ready, stackItem, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, openMenuAndClick, ready, stackItem, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -113,6 +113,8 @@ test('letzte Karte ziehen: Ziehen und Umdrehen werden ausgegraut mit Grund, Men�
   await expect(stackItem(page, 'Ziehen')).toBeFocused();
   await expect(menu(page).locator('.count')).toHaveText('0');
   await stackItem(page, 'Mischen').click();
+  await expect(menu(page).getByRole('menuitem').nth(2)).toHaveText('5 Karten zurückholen?');
+  await menu(page).getByRole('menuitem').nth(2).click();
   await expect(menu(page).locator('.count')).toHaveText('5');
   await expect(stackItem(page, 'Ziehen')).not.toHaveAttribute('aria-disabled', 'true');
 });
@@ -192,4 +194,102 @@ test('Spielerzahl ändern bewegt die Stapel nicht: das Menü bleibt offen und am
   await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
   await expect(menu(page)).toBeVisible();
   expect((await menu(page).boundingBox())!).toEqual(m);
+});
+
+// ---------- Teil 4: Rückfrage beim Mischen (F1, N6) und Kürzel (F2, N5) ----------
+
+const count = (page: Page) => menu(page).locator('.count');
+
+test('leeres Deck mit Karten in der Ablage: nur Mischen, Rückfrage nennt die Anzahl, danach liegen die Karo in ihren Stapeln', async ({ page }) => {
+  // eine Karo-Karte auf die Ablage, dann das Deck mit Z leer ziehen
+  await dragFromTo(page, await zoneCenter(page, 'LEICHT'), await zoneCenter(page, 'ABLAGE'));
+  await expectCount(page, 'LEICHT', 4);
+  await open(page, STACKS[0]);
+  for (let i = 0; i < 27; i++) await page.keyboard.press('z');
+  await expect(count(page)).toHaveText('0');
+  await expect(stackItem(page, 'Ziehen')).toHaveAttribute('aria-disabled', 'true');
+  await expect(stackItem(page, 'Umdrehen')).toHaveAttribute('aria-disabled', 'true');
+  const shuffle = menu(page).getByRole('menuitem').nth(2);
+  await expect(shuffle).toHaveAttribute('title', 'Stapel mischen; holt 28 Karten aus der Ablage zurück (1 davon nach Leicht) (M)');
+  await shuffle.click();
+  await expect(shuffle).toHaveText('28 Karten zurückholen?');
+  await expect(shuffle).toHaveClass(/armed/);
+  await expectCount(page, 'ABLAGE', 28);
+  await shuffle.click();
+  await expect(count(page)).toHaveText('27');
+  await expectCount(page, 'ABLAGE', 0);
+  await expectCount(page, 'LEICHT', 5);
+  await expect(shuffle).toHaveText('Mischen');
+});
+
+test('Mischen ohne etwas einzusammeln mischt sofort, ohne Rückfrage', async ({ page }) => {
+  await fromMenu(page, 'Protokoll');
+  await open(page, STACKS[0]);
+  await stackItem(page, 'Mischen').click();
+  await expect(stackItem(page, 'Mischen')).not.toHaveClass(/armed/);
+  await expect(page.getByRole('list', { name: 'Protokoll' }).locator('li').first()).toContainText('Gemischt: DECK');
+});
+
+test('Rückfrage verfällt nach 3,5 s, beim Schließen und beim Wechsel zu einem anderen Stapel', async ({ page }) => {
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
+  const shuffle = menu(page).getByRole('menuitem').nth(2);
+  // Frist
+  await shuffle.click();
+  await expect(shuffle).toHaveText('1 Karte zurückholen?');
+  await page.waitForTimeout(3700);
+  await expect(shuffle).toHaveText('Mischen');
+  await expectCount(page, 'ABLAGE', 1);
+  // Schließen und neu öffnen
+  await shuffle.click();
+  await page.keyboard.press('Escape');
+  await open(page, STACKS[0]);
+  await expect(menu(page).getByRole('menuitem').nth(2)).toHaveText('Mischen');
+  // anderer Stapel und zurück
+  await menu(page).getByRole('menuitem').nth(2).click();
+  await open(page, STACKS[1]);
+  await open(page, STACKS[0]);
+  await expect(menu(page).getByRole('menuitem').nth(2)).toHaveText('Mischen');
+  await expectCount(page, 'ABLAGE', 1);
+});
+
+test('Kürzel: Z, U, M groß und klein; nicht mit Strg, Alt oder Meta; gehaltenes M bestätigt nicht', async ({ page }) => {
+  await open(page, STACKS[0]);
+  await page.keyboard.press('Shift+Z');
+  await expect(count(page)).toHaveText('26');
+  await page.keyboard.press('z');
+  await expect(count(page)).toHaveText('25');
+  for (const k of ['Control+z', 'Alt+m', 'Meta+u', 'Control+Shift+Z']) await page.keyboard.press(k);
+  await expect(count(page)).toHaveText('25');
+  await expect(stackItem(page, 'Mischen')).toHaveText('Mischen');
+  // U dreht die oberste Karte um, das Menü bleibt
+  const faceUp = page.locator('[data-card] .inner:not(.down)');
+  const before = await faceUp.count();
+  await page.keyboard.press('u');
+  await expect(faceUp).toHaveCount(before + 1);
+  await expect(menu(page)).toBeVisible();
+  // gehaltenes M: der erste Druck fragt nach, die Wiederholung bestätigt nicht
+  const shuffle = menu(page).getByRole('menuitem').nth(2);
+  await page.keyboard.down('m');
+  await page.keyboard.down('m');
+  await page.keyboard.down('m');
+  await page.keyboard.up('m');
+  await expect(shuffle).toHaveText('2 Karten zurückholen?');
+  await expectCount(page, 'ABLAGE', 2);
+  // ein zweites, neues M bestätigt
+  await page.keyboard.press('M');
+  await expectCount(page, 'ABLAGE', 0);
+  await expect(count(page)).toHaveText('27');
+});
+
+test('Kürzel wirken nur bei offenem Menü und nicht in Textfeldern', async ({ page }) => {
+  await page.keyboard.press('z');
+  await expectCount(page, 'DECK', 27);
+  await open(page, STACKS[0]);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('1');
+  const name = page.locator('[data-sheet=seat1] [data-field="name"]');
+  await name.click();
+  await expect(menu(page)).toHaveCount(0);
+  await name.press('z');
+  await expectCount(page, 'DECK', 27);
 });

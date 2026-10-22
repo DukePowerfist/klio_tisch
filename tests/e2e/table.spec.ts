@@ -1,7 +1,7 @@
 // Tisch im lokalen Betrieb (Schritt 3a): Stapel, Ziehen und Ablegen, Ansichten, Speichern.
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, stackItem, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, shuffleBack, stackItem, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -16,7 +16,7 @@ test('Karo ziehen: offen in die Auslage; Karo mischen holt sie zurück', async (
   await openMenuAndClick(page, 'LEICHT', 'Ziehen');
   await expect(page.getByRole('status')).toHaveText(/^Ausliegend: Karo [2-6]$/);
   await expectCount(page, 'LEICHT', 4);
-  await stackItem(page, 'Mischen').click();
+  await shuffleBack(page, 1);
   await expectCount(page, 'LEICHT', 5);
 });
 
@@ -24,7 +24,7 @@ test('Deck mischen nimmt die Ablage auf', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await stackItem(page, 'Ziehen').click();
   await expectCount(page, 'ABLAGE', 2);
-  await stackItem(page, 'Mischen').click();
+  await shuffleBack(page, 2);
   await expectCount(page, 'ABLAGE', 0);
   await expectCount(page, 'DECK', 27);
 });

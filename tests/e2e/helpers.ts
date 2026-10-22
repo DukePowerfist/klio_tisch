@@ -24,6 +24,14 @@ export async function dragFromTo(page: Page, from: { x: number; y: number }, to:
 export const stackItem = (page: Page, action: 'Mischen' | 'Umdrehen' | 'Ziehen') =>
   page.locator('[data-stack-menu]').getByRole('menuitem', { name: action, exact: true });
 
+/** Mischen, das n Karten von woanders zurückholt: erster Klick fragt nach, zweiter mischt (10.2, F1) */
+export async function shuffleBack(page: Page, n: number) {
+  const item = page.locator('[data-stack-menu]').getByRole('menuitem').nth(2);
+  await item.click();
+  await expect(item).toHaveText(`${n === 1 ? '1 Karte' : `${n} Karten`} zurückholen?`);
+  await item.click();
+}
+
 export async function openMenuAndClick(page: Page, zoneLabel: string, action: 'Mischen' | 'Umdrehen' | 'Ziehen') {
   const z = await zoneCenter(page, zoneLabel);
   await page.mouse.click(z.x, z.y);
