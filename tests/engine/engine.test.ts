@@ -310,6 +310,11 @@ describe('Ablauf', () => {
     expectRejected(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }, 'reject.notAllowed', player('seat2'));
   });
 
+  it('Platz belegen: Name ohne Leerzeichen am Rand, nur Leerzeichen = ohne Namen (5r)', () => {
+    expect(run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: ' Anna ' }).state.seats.seat2).toEqual({ occupied: true, name: 'Anna' });
+    expect(run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: '   ' }).state.seats.seat2).toEqual({ occupied: true });
+  });
+
   it('freier Platz merkt sich, wer zuletzt dort saß (8.7)', () => {
     const s = run(fresh(), { type: 'table.setSeat', seat: 'seat2', occupied: true, name: 'Ida' }).state;
     const freed = run(s, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state;

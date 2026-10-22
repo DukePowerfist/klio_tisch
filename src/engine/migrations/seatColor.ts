@@ -4,4 +4,4 @@
 
 import type { Migration } from '../types';
 
-export const seatColor: Migration = { from: 2, migrate: (stored) => stored };
+export const seatColorStep: Migration = { from: 2, migrate: (stored) => stored };

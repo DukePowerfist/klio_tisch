@@ -3,4 +3,4 @@
 
 import type { Migration } from '../types';
 
-export const lamp: Migration = { from: 3, migrate: (stored) => ({ ...(stored as object), lamp: true }) };
+export const lampStep: Migration = { from: 3, migrate: (stored) => ({ ...(stored as object), lamp: true }) };

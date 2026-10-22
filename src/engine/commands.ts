@@ -16,6 +16,9 @@ export const rejectWith = (reason: TextRef): Rejection => ({ rejected: true, rea
 
 export const isRejection = (x: unknown): x is Rejection => typeof x === 'object' && x !== null && 'rejected' in x;
 
+/** Name ohne Leerzeichen am Rand; leer = ohne Namen */
+const cleanName = (name: string | undefined): string | undefined => name?.trim() || undefined;
+
 /** Eintrag eines Platzes ohne leere Felder */
 const seatInfo = (occupied: boolean, name: string | undefined, color: string | undefined) =>
   ({ occupied, ...(name ? { name } : {}), ...(color ? { color } : {}) });
@@ -274,7 +277,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       }
       // die Farbe gehört zum Platz und bleibt beim Wechsel der Person
       const { color, name: last } = state.seats[cmd.seat];
-      const name = cmd.occupied ? cmd.name : last;
+      const name = cmd.occupied ? cleanName(cmd.name) : last;
       return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: seatInfo(cmd.occupied, name, color) } }];
     },
   };
@@ -312,7 +315,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       const info = { ...state.seats[cmd.seat] };
       if (cmd.name !== undefined) {
         if (!info.occupied) return reject('reject.seatFree');
-        const name = cmd.name.trim();
+        const name = cleanName(cmd.name);
         if (name) info.name = name;
         else delete info.name;
       }
