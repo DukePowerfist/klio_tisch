@@ -55,6 +55,9 @@ export type Layout = {
 export const SHEET_W = 380;
 const SHEET_H = 537;
 
+/** sichtbarer Lederrand um den Filz in TP (`box-shadow` an `.panel` in Board.svelte); die Abstände der Bögen zählen ab hier (10.3) */
+export const FELT_RIM = 7;
+
 /** Ab diesem Zoom zeigen die Bögen ihre kleinen Bedienelemente; am eigenen Bogen der Rollenansicht immer (ARCHITEKTUR.md 10). */
 export const CONTROLS_ZOOM = 1.3;
 
@@ -75,36 +78,36 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
   /** Punkt relativ zur Tischmitte → Tisch */
   const at = ([x, y]: readonly [number, number]) => ({ x: mx + x, y: my + y });
 
-  const sheets = {} as Record<SeatId, SheetBox>;
-  if (role) {
-    const own = (BH - 2 * L.role.sheets.own.y) / SHEET_H;
-    const o = L.role.sheets.others;
-    // Spalte rechts: so groß, wie alle in die Höhe passen, höchstens maxScale
-    const n = SEATS.filter((s) => s !== role && visible(s)).length;
-    const m = Math.min(o.maxScale, (BH - o.top - o.bottomMargin - (n - 1) * o.gap) / (n * SHEET_H));
-    const sw = SHEET_W * m;
-    const sh = SHEET_H * m;
-    let k = 0;
-    for (const s of SEATS) {
-      if (s === role) sheets[s] = { seat: s, x: L.role.sheets.own.x, y: L.role.sheets.own.y, w: SHEET_W * own, h: SHEET_H * own, scale: own, visible: true, opacity: 1 };
-      else if (visible(s)) sheets[s] = { seat: s, x: o.x + (o.w - sw) / 2, y: o.top + k++ * (sh + o.gap), w: sw, h: sh, scale: m, visible: true, opacity: o.opacity };
-      else sheets[s] = hiddenSheet(s);
+  // Bögen (5q, ARCHITEKTUR.md 10.3): Spalten links und rechts neben dem Filz samt Rand, je Gruppe ein Maßstab
+  const { spacing: sp, spread } = L.sheets;
+  const left = { x0: 0, x1: mx - FELT_RIM, felt: 'right' as const };
+  const right = { x0: mx + M.size[0] + FELT_RIM, x1: BW, felt: 'left' as const };
+  const sheets = Object.fromEntries(SEATS.map((s) => [s, hiddenSheet(s)])) as Record<SeatId, SheetBox>;
+  /** Bögen untereinander in ihrer Spalte; `top` = Reserve oben (dann bündig), sonst in der Höhe mittig */
+  type Column = { seats: SeatId[]; strip: typeof left | typeof right; top?: number; opacity: number };
+  const placeGroup = (cols: Column[]) => {
+    const used = cols.filter((c) => c.seats.length);
+    const fit = ({ seats, strip, top }: Column) => {
+      const n = seats.length;
+      return Math.min((strip.x1 - strip.x0 - 2 * sp) / SHEET_W, (BH - (top ?? sp) - n * sp) / (n * SHEET_H));
+    };
+    const m = Math.min(...used.map(fit));
+    const [w, h] = [SHEET_W * m, SHEET_H * m];
+    for (const { seats, strip, top, opacity } of used) {
+      const rest = strip.x1 - strip.x0 - 2 * sp - w;
+      const x = strip.x0 + sp + (spread === 'even' ? rest / 2 : strip.felt === 'right' ? rest : 0);
+      const total = seats.length * h + (seats.length - 1) * sp;
+      const y0 = top ?? (BH - total) / 2;
+      seats.forEach((s, j) => (sheets[s] = { seat: s, x, y: y0 + j * (h + sp), w, h, scale: m, visible: true, opacity }));
     }
+  };
+  if (role) {
+    const o = L.role.sheets.others;
+    placeGroup([{ seats: [role], strip: left, opacity: 1 }]);
+    placeGroup([{ seats: SEATS.filter((s) => s !== role && visible(s)), strip: right, top: o.top, opacity: o.opacity }]);
   } else {
-    const o = L.overview.sheets;
-    const m = players <= 2 ? o.scaleUpTo2Players : o.scaleFrom3Players;
-    const ww = SHEET_W * m;
-    const hh = SHEET_H * m;
-    o.columns.forEach((col, ci) => {
-      const shown = col.filter(visible);
-      const total = shown.length * hh + (shown.length - 1) * o.gap;
-      for (const s of col) {
-        const j = shown.indexOf(s);
-        sheets[s] = j < 0
-          ? hiddenSheet(s)
-          : { seat: s, x: ci ? BW - o.margin - ww : o.margin, y: (BH - total) / 2 + j * (hh + o.gap), w: ww, h: hh, scale: m, visible: true, opacity: 1 };
-      }
-    });
+    const [a, b] = L.overview.sheets.columns;
+    placeGroup([{ seats: a.filter(visible), strip: left, opacity: 1 }, { seats: b.filter(visible), strip: right, opacity: 1 }]);
   }
 
   const zones: Record<ZoneId, ZoneBox> = {};

@@ -18,7 +18,7 @@
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropCenter, dropHints, dropTarget } from './dropHint';
-  import { clamp, computeLayout, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
+  import { clamp, computeLayout, FELT_RIM, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -433,7 +433,7 @@
 >
   <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>
     <div class="scene" bind:this={sceneEl}>
-      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-shadow={feltShadow} style:background-image={felt}></div>
+      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-rim-w="{FELT_RIM}px" style:--felt-shadow={feltShadow} style:background-image={felt}></div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
       <GmControls at={layout.gmControls} {players} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
@@ -491,7 +491,7 @@
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--wood) 0 0 / 100% 100% no-repeat; border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }
   /* Filz als Einlage: Struktur über der Filzfarbe, dunkler Rand wie Leder, Schatten nach innen und aufs Holz */
   .panel { position: absolute; background: var(--felt) center / cover no-repeat; border-radius: 56px; box-sizing: border-box;
-    box-shadow: 0 0 0 6px var(--felt-rim), 0 0 0 7px var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
+    box-shadow: 0 0 0 calc(var(--felt-rim-w) - 1px) var(--felt-rim), 0 0 0 var(--felt-rim-w) var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
   .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }

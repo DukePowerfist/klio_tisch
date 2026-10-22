@@ -42,17 +42,21 @@ middle:
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
   lamp: { at: [ 350, 60 ], size: 104, flame: [ 0.5024, 0.4561 ], height: 260 }
+# Bögen (Schritt 5q, ARCHITEKTUR.md 10.3): ein Abstand ab der sichtbaren Kante des Lederrands, zur Tischkante, zum Filz und
+# zwischen zwei Bögen. Jede Gruppe von Bögen so groß, wie sie mit diesem Abstand neben den Filz passt; der Rest liegt in der
+# Höhe oben und unten gleich. spread = Rest quer zum Filz: even (Bogen mittig im Streifen) oder out (Bogen am Filz, Rest an
+# der Tischkante); vorläufig zum Ausprobieren (F1), danach bleibt nur eine Variante.
+sheets: { spacing: 24, spread: even }
 overview:
   middle: [ 530, 10 ]
   # Licht der Laterne je Ansicht: Reichweite in TP, Grundlicht am Rand (0 = schwarz, 1 = ungedämpft)
   light: { reach: 1050, ambient: 0.3 }
-  sheets: { margin: 14, gap: 14, scaleUpTo2Players: 1.2, scaleFrom3Players: 0.9, columns: [ [ seat1, seat3 ], [ seat2, seat4 ] ] }
+  sheets: { columns: [ [ seat1, seat3 ], [ seat2, seat4 ] ] }
 role:
   middle: [ 710, 10 ]
   # weiter und heller als in der Draufsicht: der eigene Bogen liegt links unten weit von der Laterne
   light: { reach: 1500, ambient: 0.45 }
   sheets:
-    own: { x: 14, y: 10, scale: fit }
-    # Spalte rechts: andere Bögen untereinander, mittig; oben 60 Reserve für den Menüknopf (y 10 + 60).
-    # Maßstab: höchstens maxScale, sonst so groß, wie alle in die Höhe passen.
-    others: { x: 1420, w: 330, top: 70, gap: 8, bottomMargin: 10, maxScale: 0.85, opacity: 0.88 }
+    # eigener Bogen links neben der Tischmitte; Spalte rechts: andere Bögen untereinander, oben bündig unter der
+    # Reserve für den Menüknopf (top, ab der Tischkante)
+    others: { top: 70, opacity: 0.88 }

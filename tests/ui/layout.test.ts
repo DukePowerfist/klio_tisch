@@ -5,49 +5,33 @@ import { cardSize, computeLayout, freePosAt, lampGap, placeCards, pointerAt, poi
 import { content, fresh, lay, place } from '../helpers';
 
 describe('Ansichten', () => {
-  it('Draufsicht mit 4 Spielern: Bögen 0,9-fach links und rechts, Tischmitte mittig dazwischen', () => {
+  // Lage und Maßstab der Bögen prüft der Regeltest in sheetLayout.test.ts (5q)
+  it('Draufsicht: Tischmitte mittig zwischen den Bögen, Plätze über der Spielerzahl ausgeblendet', () => {
     const L = computeLayout(content, 4, null, null);
-    const hh = 537 * 0.9;
-    expect(L.sheets.seat1).toMatchObject({ x: 14, y: (990 - (2 * hh + 14)) / 2, scale: 0.9, visible: true });
-    expect(L.sheets.seat2.x).toBeCloseTo(1760 - 14 - 380 * 0.9);
-    expect(L.sheets.seat3.y).toBeCloseTo(L.sheets.seat1.y + hh + 14);
     expect(L.middle).toEqual({ x: 530, y: 10, w: 700, h: 970 });
     expect(L.middle.x + L.middle.w / 2).toBe(1760 / 2);
+    expect(L.sheets.seat1.x).toBeLessThan(L.middle.x);
+    expect(L.sheets.seat2.x).toBeGreaterThan(L.middle.x + L.middle.w);
+    expect(L.sheets.seat3.y).toBeGreaterThan(L.sheets.seat1.y);
     // gegenüber der alten Datei um 48 nach links (5d)
     expect(L.zones['deck']).toMatchObject({ x: 760 - 48, y: 440, w: 80, h: 112, scale: 1 });
     expect(L.gmControls).toEqual({ x: 1230 - 40, y: 980 - 26 });
-  });
-
-  it('Draufsicht mit 2 Spielern: Bögen 1,2-fach; Plätze 3 und 4 ausgeblendet', () => {
-    const L = computeLayout(content, 2, null, null);
-    expect(L.sheets.seat1.scale).toBe(1.2);
-    expect(L.sheets.seat3.visible).toBe(false);
-    expect(L.zones['seat3.damage']).toBeUndefined();
-    expect(L.middle).toEqual({ x: 530, y: 10, w: 700, h: 970 });
-    expect(L.middle.x - (L.sheets.seat1.x + L.sheets.seat1.w)).toBeCloseTo(60);
+    const two = computeLayout(content, 2, null, null);
+    expect(two.sheets.seat3.visible).toBe(false);
+    expect(two.zones['seat3.damage']).toBeUndefined();
   });
 
   it('Rollenansicht: eigener Bogen groß links, Tischmitte daneben, andere rechts untereinander', () => {
     const L = computeLayout(content, 4, 'seat2', null);
     expect(L.role).toBe('seat2');
-    expect(L.sheets.seat2).toMatchObject({ x: 14, y: 10, scale: 970 / 537 });
     expect(L.middle).toEqual({ x: 710, y: 10, w: 700, h: 970 });
-    // 4 Spieler: drei Bögen passen in die Höhe der Spalte (oben 60 Reserve für den Menüknopf)
-    const m = (990 - 70 - 10 - 2 * 8) / (3 * 537);
-    expect(m).toBeCloseTo(0.555, 3);
-    expect(L.sheets.seat1).toMatchObject({ y: 70, opacity: 0.88 });
-    expect(L.sheets.seat1.scale).toBeCloseTo(m);
-    expect(L.sheets.seat1.x + L.sheets.seat1.w / 2).toBeCloseTo(1420 + 330 / 2);
-    expect(L.sheets.seat3.y).toBeCloseTo(70 + 537 * m + 8);
-    expect(L.sheets.seat4.y + L.sheets.seat4.h).toBeCloseTo(980);
+    expect(L.sheets.seat2.x + L.sheets.seat2.w).toBeLessThan(L.middle.x);
+    expect(L.sheets.seat2.scale).toBeGreaterThan(3 * L.sheets.seat1.scale);
+    for (const s of ['seat1', 'seat3', 'seat4'] as const) expect(L.sheets[s]).toMatchObject({ opacity: 0.88 });
+    expect(L.sheets.seat1.x).toBeGreaterThan(L.middle.x + L.middle.w);
+    expect(L.sheets.seat1.y).toBe(70);
+    expect(L.sheets.seat3.y).toBeGreaterThan(L.sheets.seat1.y);
     expect(L.zones['clubs']).toMatchObject({ x: 1010 - 48 - 530 + 710, y: 640 });
-  });
-
-  it('Rollenansicht: kleine Bögen bei 2 Spielern 0,85, bei 3 Spielern so groß, wie zwei in die Höhe passen', () => {
-    expect(computeLayout(content, 2, 'seat2', null).sheets.seat1.scale).toBe(0.85);
-    const three = computeLayout(content, 3, 'seat2', null);
-    expect(three.sheets.seat1.scale).toBeCloseTo((990 - 70 - 10 - 8) / (2 * 537));
-    expect(three.sheets.seat3.y + three.sheets.seat3.h).toBeCloseTo(980);
   });
 
   it('Tischmitte ist in beiden Ansichten gleich, nur verschoben', () => {
@@ -66,10 +50,10 @@ describe('Ansichten', () => {
     const L = computeLayout(content, 4, null, null);
     const s = L.sheets.seat1;
     const dmg = L.zones['seat1.damage']!;
-    expect(dmg.x).toBeCloseTo(s.x + 298 * 0.9, 0);
-    expect(dmg.y).toBeCloseTo(s.y + 72 * 0.9, 0);
-    expect(dmg.scale).toBeCloseTo(0.9);
-    expect(L.zones['seat1.notes']!.fanX).toBeCloseTo(36);
+    expect(dmg.x).toBeCloseTo(s.x + 298 * s.scale, 0);
+    expect(dmg.y).toBeCloseTo(s.y + 72 * s.scale, 0);
+    expect(dmg.scale).toBeCloseTo(s.scale);
+    expect(L.zones['seat1.notes']!.fanX).toBeCloseTo(40 * s.scale);
   });
 
   it('geöffneter Karo-Stapel wächst auf volle Kartengröße', () => {
@@ -177,11 +161,13 @@ describe('Zeiger der anderen (8.3): Rollenansicht → Draufsicht', () => {
   });
 
   it('frei liegende Karte über einem Bogen: die Karte geht vor', () => {
-    // in der Rollenansicht ragt S5 vom Spielbereich in den eigenen Bogen
-    const s = withFree(-30 / role.middle.w, 0.3);
+    // in der Rollenansicht ragt S5 vom Spielbereich in den eigenen Bogen: 20 TP links von dessen rechtem Rand
+    const own = role.sheets.seat2;
+    const s = withFree((own.x + own.w - 20 - role.middle.x) / role.middle.w, 0.3);
     const p = placeCards(s, role).S5!;
     const x = p.x + 4;
-    expect(x).toBeLessThan(role.sheets.seat2.x + role.sheets.seat2.w);
+    expect(x).toBeGreaterThan(own.x);
+    expect(x).toBeLessThan(own.x + own.w);
     const pos = pointerPosAt(role, placeCards(s, role), s.free, x, p.y + 20, []);
     expect(pos).toMatchObject({ card: 'S5' });
     within(pointerAt(over, placeCards(s, over), pos), cardRect(placeCards(s, over).S5!));

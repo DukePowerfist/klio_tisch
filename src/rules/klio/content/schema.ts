@@ -184,23 +184,16 @@ export const LayoutsFile = z.object({
     size: Point, zones: z.record(z.string(), Point), resistTitle: Point, gmControlsInset: Point,
     lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
   }).strict(),
+  sheets: z.object({ spacing: z.number().nonnegative(), spread: z.enum(['even', 'out']) }).strict(),
   overview: z.object({
     middle: Point,
     light: Light,
-    sheets: z.object({
-      margin: z.number(), gap: z.number(), scaleUpTo2Players: z.number(), scaleFrom3Players: z.number(),
-      columns: z.tuple([z.array(SeatSchema), z.array(SeatSchema)]),
-    }).strict(),
+    sheets: z.object({ columns: z.tuple([z.array(SeatSchema), z.array(SeatSchema)]) }).strict(),
   }).strict(),
   role: z.object({
     middle: Point,
     light: Light,
-    sheets: z.object({
-      own: z.object({ x: z.number(), y: z.number(), scale: z.literal('fit') }).strict(),
-      others: z.object({
-        x: z.number(), w: z.number(), top: z.number(), gap: z.number(), bottomMargin: z.number(), maxScale: z.number(), opacity: z.number(),
-      }).strict(),
-    }).strict(),
+    sheets: z.object({ others: z.object({ top: z.number().nonnegative(), opacity: z.number() }).strict() }).strict(),
   }).strict(),
 }).strict();
 
