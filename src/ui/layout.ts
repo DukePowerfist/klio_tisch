@@ -80,18 +80,20 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
 
   // Bögen (5q, ARCHITEKTUR.md 10.3): Spalten links und rechts neben dem Filz samt Rand, je Gruppe ein Maßstab
   const sp = L.sheets.spacing;
-  const left = { x0: 0, x1: mx - FELT_RIM };
-  const right = { x0: mx + M.size[0] + FELT_RIM, x1: BW };
+  type Strip = { x0: number; x1: number };
+  const left: Strip = { x0: 0, x1: mx - FELT_RIM };
+  const right: Strip = { x0: mx + M.size[0] + FELT_RIM, x1: BW };
   const sheets = Object.fromEntries(SEATS.map((s) => [s, hiddenSheet(s)])) as Record<SeatId, SheetBox>;
   /** Bögen untereinander in ihrer Spalte, quer zum Filz mittig; `top` = Reserve oben (dann bündig), sonst in der Höhe mittig */
-  type Column = { seats: SeatId[]; strip: typeof left; top?: number; opacity: number };
+  type Column = { seats: SeatId[]; strip: Strip; top?: number; opacity: number };
   const placeGroup = (cols: Column[]) => {
-    const used = cols.filter((c) => c.seats.length);
+    const used = cols.filter((col) => col.seats.length);
     const fit = ({ seats, strip, top }: Column) => {
       const n = seats.length;
       return Math.min((strip.x1 - strip.x0 - 2 * sp) / SHEET_W, (BH - (top ?? sp) - n * sp) / (n * SHEET_H));
     };
     const m = Math.min(...used.map(fit));
+    if (!(m > 0)) throw new Error(`layouts.yaml: sheets.spacing ${sp} lässt neben dem Filz keinen Platz für Bögen`);
     const [w, h] = [SHEET_W * m, SHEET_H * m];
     for (const { seats, strip, top, opacity } of used) {
       const rest = strip.x1 - strip.x0 - 2 * sp - w;

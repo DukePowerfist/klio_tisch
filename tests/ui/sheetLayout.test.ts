@@ -225,8 +225,8 @@ describe('Bögen in allen Ansichten (5q): Regel für die Abstände', () => {
               const [x0, x1] = side === 'left' ? [0, felt.l] : [felt.r, B.w];
               const first = bs[0]!;
               const last = bs.at(-1)!;
-              const toEdge = side === 'left' ? first.x - x0 : x1 - (first.x + first.w);
-              const toFelt = side === 'left' ? x1 - (first.x + first.w) : first.x - x0;
+              const gapL = first.x - x0;
+              const gapR = x1 - (first.x + first.w);
               const above = first.y - (top ?? 0);
               const below = B.h - (last.y + last.h);
               for (const b of bs) {
@@ -234,17 +234,17 @@ describe('Bögen in allen Ansichten (5q): Regel für die Abstände', () => {
                 expect(b.x, `${what}: Spalte bündig`).toBeCloseTo(first.x, 6);
               }
               bs.slice(1).forEach((b, j) => expect(b.y - (bs[j]!.y + bs[j]!.h), `${what}: dazwischen`).toBeCloseTo(spacing, 6));
-              expect(toEdge, `${what}: zur Kante`).toBeGreaterThanOrEqual(spacing - E);
-              expect(toFelt, `${what}: zum Filz`).toBeGreaterThanOrEqual(spacing - E);
+              expect(gapL, `${what}: links`).toBeGreaterThanOrEqual(spacing - E);
+              expect(gapR, `${what}: rechts`).toBeGreaterThanOrEqual(spacing - E);
               expect(below, `${what}: unten`).toBeGreaterThanOrEqual(spacing - E);
               if (top === undefined) {
                 expect(above, `${what}: oben wie unten`).toBeCloseTo(below, 6);
               } else {
                 expect(above, `${what}: oben genau an der Reserve`).toBeCloseTo(0, 6);
               }
-              expect(toEdge, `${what}: seitlich gleich`).toBeCloseTo(toFelt, 6);
+              expect(gapL, `${what}: seitlich gleich`).toBeCloseTo(gapR, 6);
               // größtmöglich: in einer Richtung kein Rest
-              const wide = Math.abs(toEdge + toFelt - 2 * spacing) < E;
+              const wide = Math.abs(gapL + gapR - 2 * spacing) < E;
               const high = Math.abs(below - spacing) < E;
               tight ||= wide || high;
             }
@@ -253,6 +253,12 @@ describe('Bögen in allen Ansichten (5q): Regel für die Abstände', () => {
           }
         }
       }
+    }
+  });
+
+  it('zu großer Abstand bricht laut ab statt Bögen mit negativem Maßstab', () => {
+    for (const role of [null, 'seat1' as const]) {
+      expect(() => computeLayout(variant(400), 4, role, null)).toThrow(/sheets\.spacing 400/);
     }
   });
 });
