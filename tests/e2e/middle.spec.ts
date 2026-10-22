@@ -1,7 +1,7 @@
 // Gemeinsame Tischmitte (Schritt 5d, ARCHITEKTUR.md 10): Abnahme in der Oberfläche.
 
 import { expect, test, type Page } from '@playwright/test';
-import { box, dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, zoneCenter, type Box } from './helpers';
+import { box, dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, setPlayers, zoneCenter, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -88,7 +88,7 @@ test('Rollenansicht: kein Bogen unter dem Menüknopf, bei 2 bis 4 Spielern, mit 
       if (log) await fromMenu(page, 'Protokoll');
       for (const players of ['2', '3', '4']) {
         await page.keyboard.press('0');
-        await page.getByRole('combobox').selectOption(players);
+        await setPlayers(page, Number(players));
         await page.keyboard.press('1');
         await settled(page);
         const m = (await menu.boundingBox())!;

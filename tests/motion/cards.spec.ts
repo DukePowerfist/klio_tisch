@@ -238,15 +238,15 @@ test('Schaden: erst aufdecken, dann Stoß, dann Narbe und Meldung (5k)', async (
 type Seen = { kind: string; on: string; props: string[]; to: string | null; duration: number };
 
 /** Tasten im Browser drücken bzw. die Spielerzahl wählen (ohne Umweg über Playwright, der Schnitt dauert nur etwa
- *  0,3 s) und 600 ms lang jedes Bild alle laufenden Animationen und CSS-Übergänge sammeln, je einmal. `dock`: Ansicht im
+ *  0,3 s; die Spielerzahl im vorher geöffneten Fenster „Tisch“) und 600 ms lang jedes Bild alle laufenden Animationen und CSS-Übergänge sammeln, je einmal. `dock`: Ansicht im
  *  Dock direkt danach. */
-function keysAndWatch(page: Page, keys: string[], players?: number): Promise<{ seen: Seen[]; dock: string | null }> {
+async function keysAndWatch(page: Page, keys: string[], players?: number): Promise<{ seen: Seen[]; dock: string | null }> {
+  // Spielerzahl seit 5s in den Einstellungen: das Fenster vorher öffnen, im Browser nur noch die Zahl wählen
+  if (players) await openSettings(page, 'Tisch');
   return page.evaluate(async ({ keys, players }) => {
     for (const key of keys) document.body.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
     if (players) {
-      const select = document.querySelector<HTMLSelectElement>('.ctl select')!;
-      select.value = String(players);
-      select.dispatchEvent(new Event('change', { bubbles: true }));
+      document.querySelector<HTMLInputElement>(`input[name=players][value="${players}"]`)!.click();
     }
     await new Promise((r) => requestAnimationFrame(r));
     const dock = document.querySelector<HTMLElement>('.dock button.on')?.dataset['dock'] ?? 'overview';

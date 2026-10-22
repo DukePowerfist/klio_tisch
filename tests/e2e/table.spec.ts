@@ -1,7 +1,7 @@
 // Tisch im lokalen Betrieb (Schritt 3a): Stapel, Ziehen und Ablegen, Ansichten, Speichern.
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, shuffleBack, stackItem, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, nameCharacter, openMenuAndClick, ready, setPlayers, shuffleBack, stackItem, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -111,7 +111,7 @@ test('Zuordnung der Bögen: Namensschild in der Draufsicht und am großen Bogen,
 
   // ausgeblendete Plätze: kein Schild, kein Dock-Knopf
   await page.keyboard.press('0');
-  await page.getByRole('combobox').selectOption('3');
+  await setPlayers(page, 3);
   await expect(page.locator('[data-plate=seat4]')).toHaveCount(0);
   await expect(page.locator('[data-dock=seat4]')).toHaveCount(0);
 });

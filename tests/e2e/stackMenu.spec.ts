@@ -1,7 +1,7 @@
 // Stapelmenü (Schritt 5o, ARCHITEKTUR.md 10.2): Lage am Stapel, gleicher Aufbau, Ausgrauen, Schließen.
 
 import { expect, test, type Page } from '@playwright/test';
-import { box, dragFromTo, expectCount, expectInStage, fromMenu, openMenuAndClick, ready, stackItem, zoneCenter, type Box } from './helpers';
+import { box, dragFromTo, expectCount, expectInStage, fromMenu, openMenuAndClick, ready, setPlayersByKeyboard, stackItem, zoneCenter, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -184,7 +184,7 @@ test('nur ein Menü offen: Stapelmenü schließt das Namensschild-Menü und umge
 
 test('Spielerzahl ändern bewegt die Stapel nicht: das Menü bleibt offen und am Stapel', async ({ page }) => {
   const { m } = await open(page, STACKS[2]);
-  await page.getByRole('combobox', { name: 'Spieler' }).selectOption('2');
+  await setPlayersByKeyboard(page, 2);
   await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
   await expect(menu(page)).toBeVisible();
   expect((await menu(page).boundingBox())!).toEqual(m);

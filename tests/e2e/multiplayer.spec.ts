@@ -269,6 +269,38 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
 });
 
 
+test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne überzählige Linie; Spielerzahl folgt fremder Änderung', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await player.goto(link);
+  const join = player.getByRole('dialog', { name: 'Platz wählen' });
+  await expect(join).toBeVisible({ timeout: 60_000 });
+  await join.getByRole('button', { name: /^Spieler 2/ }).click();
+  await seated(player);
+  const bar = player.getByRole('group', { name: 'Spielleitung' });
+  // ohne Recht keine Leiste
+  await expect(player.locator('.ctl')).toHaveCount(0);
+  // nur Expedition: eine Gruppe, also keine Linie
+  let rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Expedition starten' }).selectOption('allow');
+  await gm.keyboard.press('Escape');
+  await expect(bar.getByRole('button')).toHaveText(['Expedition']);
+  await expect(player.locator('.ctl .group')).toHaveCount(1);
+  // Spielerzahl ohne die übrigen Einstellungen: Seiten „Tisch“ und „Darstellung“
+  rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Spielerzahl ändern' }).selectOption('allow');
+  await gm.keyboard.press('Escape');
+  const own = await openSettings(player, 'Tisch');
+  await expect(own.getByRole('tab')).toHaveText(['Tisch', 'Darstellung']);
+  // die SL hat dieselbe Seite offen; ändert der Spieler die Zahl, folgt ihre Auswahl
+  const theirs = await openSettings(gm, 'Tisch');
+  await own.getByRole('radio', { name: '3', exact: true }).check();
+  await expect(theirs.getByRole('radio', { name: '3', exact: true })).toBeChecked();
+  await expect(gm.locator('[data-sheet=seat4]')).toHaveCount(0);
+  await theirs.getByRole('radio', { name: '2', exact: true }).check();
+  await expect(own.getByRole('radio', { name: '2', exact: true })).toBeChecked();
+});
+
 test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder, SL setzt um, gibt frei, weist zu', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();

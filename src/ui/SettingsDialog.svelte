@@ -3,6 +3,7 @@
   // Gespeichert im Stand (settings), also für alle gleich; die Voreinstellung bleibt in permissions.yaml.
   // Dazu für die SL im eigenen Browser: Spielstand als Datei und automatische Sicherungen (8.2, A34).
   // Seit 5g für alle: Seite „Darstellung“ mit der Effektstufe (nur im eigenen Browser, 11.5).
+  // Seit 5s: Seite „Tisch“ mit der Spielerzahl (vorher in der SL-Leiste, 10.5).
   import { permissionFor } from '../engine/permissions';
   import type { PermissionValue, TableState, TextRef } from '../engine/types';
   import type { BackupInfo } from '../net/host';
@@ -38,7 +39,7 @@
   // ---------- Spielstand (nur beim Host, nicht bei Mitspielern) ----------
   const isHost = $derived(session.mode !== 'client');
   // ---------- Seiten (Schritt 5f): Seitenleiste links, Seite rechts ----------
-  const pages = $derived(visiblePages(isHost, session.can({ type: 'table.setSettings' })));
+  const pages = $derived(visiblePages(isHost, session.can({ type: 'table.setSettings' }), session.can({ type: 'table.setPlayers' })));
   const page = $derived(openPage(view.settingsPage, pages));
   const groups = permissionGroups(Object.keys(defaults));
   let backups = $state<BackupInfo[]>([]);
@@ -69,6 +70,13 @@
   }
 
   const when = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+  // ---------- Spielerzahl (5s): native Radios, folgen dem Stand; abgelehnt springt die Auswahl zurück ----------
+  const PLAYERS = [1, 2, 3, 4];
+  let chosen = $derived(settings.players);
+  async function setPlayers() {
+    if (!(await submitOrSay({ type: 'table.setPlayers', players: chosen }))) chosen = settings.players;
+  }
 
   /** Nur Abweichungen von der Voreinstellung werden gespeichert. */
   function setPermission(key: string, value: PermissionValue) {
@@ -101,7 +109,16 @@
       </button>
     </header>
     <div class="body" role="tabpanel" id="settings-panel" aria-labelledby="settings-tab-{page}">
-      {#if page === 'automation'}
+      {#if page === 'table'}
+        <SettingRow id="players" title={t('settings.players')} description={t('settings.playersHelp')}>
+          <!-- Name aus dem Titel der Zeile; ein Tabstopp, Pfeiltasten vom Browser -->
+          <fieldset class="numbers" aria-labelledby="players-title" aria-describedby="players-desc">
+            {#each PLAYERS as n (n)}
+              <label><input type="radio" name="players" value={n} bind:group={chosen} onchange={setPlayers} /><span>{n}</span></label>
+            {/each}
+          </fieldset>
+        </SettingRow>
+      {:else if page === 'automation'}
         {#each ruleset.reactions as r (r.id)}
           {@const id = `auto-${r.id}`}
           {@const desc = tMaybe(`settings.automationHelp.${r.id}`)}
@@ -214,4 +231,11 @@
   .switch:checked { background: var(--switch-on); }
   .switch:checked::before { transform: translateX(16px); }
   .switch:focus-visible { outline: 2px solid var(--accent-hint); outline-offset: 2px; }
+  /* Spielerzahl (5s): Zahlenreihe aus nativen Radios; das Kästchen liegt unsichtbar über der Zahl und nimmt den Klick */
+  .numbers { display: flex; gap: 4px; margin: 0; padding: 0; border: none; }
+  .numbers label { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--pane-rule); border-radius: 6px; font-variant-numeric: tabular-nums; }
+  .numbers label:hover { background: var(--button-hover); }
+  .numbers label:has(:checked) { background: var(--pane-current); border-color: var(--menu-confirm-rim); font-weight: 600; }
+  .numbers input { appearance: none; position: absolute; inset: 0; margin: 0; border-radius: inherit; cursor: pointer; }
+  .numbers input:focus-visible { outline: 2px solid var(--accent-hint); outline-offset: 2px; }
 </style>

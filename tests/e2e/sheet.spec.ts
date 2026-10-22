@@ -1,7 +1,7 @@
 // Bögen und Trümpfe im lokalen Betrieb (Schritt 3b).
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, makePng, ready, setField as setSeatField, zoneCenter, zoomIn } from './helpers';
+import { dragFromTo, makePng, ready, setField as setSeatField, setPlayers, zoneCenter, zoomIn } from './helpers';
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
 
@@ -124,7 +124,7 @@ test('Bedienelemente: kleine erst ab Zoom 1,3, am eigenen Bogen der Rollenansich
   await expect(strike('seat1')).toBeHidden();
   // bei 2 wie bei 4 Spielern: ab Zoom 1,3 sichtbar, beim Herauszoomen wieder verborgen
   for (const players of ['4', '2']) {
-    await page.getByRole('combobox').selectOption(players);
+    await setPlayers(page, Number(players));
     await page.mouse.move(800, 450);
     const w0 = (await page.locator('.board').boundingBox())!.width;
     await page.mouse.wheel(0, -200); // Zoom etwa 1,27

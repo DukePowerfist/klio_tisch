@@ -1,12 +1,13 @@
 // Seiten des Einstellungsdialogs (Schritt 5f): Reihenfolge, Sichtbarkeit, Seite beim Öffnen.
 
-export const SETTINGS_PAGES = ['automation', 'permissions', 'game', 'appearance'] as const;
+export const SETTINGS_PAGES = ['table', 'automation', 'permissions', 'game', 'appearance'] as const;
 export type SettingsPage = (typeof SETTINGS_PAGES)[number];
 
 /** „Darstellung“ (nur für einen selbst) sieht jeder (5g); „Automatik“ und „Rechte“ nur, wer die Einstellungen ändern
- *  darf; „Spielstand“ (Datei, Sicherungen) nur der Host. */
-export const visiblePages = (isHost: boolean, canSettings: boolean): SettingsPage[] =>
-  SETTINGS_PAGES.filter((p) => (p === 'appearance' ? true : p === 'game' ? isHost : canSettings));
+ *  darf; „Spielstand“ (Datei, Sicherungen) nur der Host; „Tisch“ (Spielerzahl, 5s) wer die Spielerzahl ändern darf,
+ *  auch ohne die übrigen Einstellungen. */
+export const visiblePages = (isHost: boolean, canSettings: boolean, canPlayers: boolean): SettingsPage[] =>
+  SETTINGS_PAGES.filter((p) => (p === 'appearance' ? true : p === 'game' ? isHost : p === 'table' ? canPlayers : canSettings));
 
 /** Zuletzt gewählte Seite, sofern es sie hier gibt; sonst die erste. */
 export const openPage = (last: SettingsPage, pages: readonly SettingsPage[]): SettingsPage => (pages.includes(last) ? last : pages[0]!);

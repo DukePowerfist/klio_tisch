@@ -1,7 +1,7 @@
 // Menü am Namensschild im lokalen Betrieb (Schritt 5j, ARCHITEKTUR.md 10.1). Mit Mitspielern: multiplayer.spec.ts.
 
 import { expect, test, type Page } from '@playwright/test';
-import { box, dragFromTo, expectCount, expectInStage, expectTipAt, makePng, nameCharacter, ready, zoneCenter } from './helpers';
+import { box, dragFromTo, expectCount, expectInStage, expectTipAt, makePng, nameCharacter, ready, setPlayersByKeyboard, zoneCenter } from './helpers';
 
 const plate = (page: Page, seat: string) => page.locator(`[data-plate=${seat}]`);
 const menu = (page: Page) => page.getByRole('menu');
@@ -148,21 +148,20 @@ test('Fenstergröße schließt das Menü', async ({ page }) => {
 });
 
 test('Spielerzahl: Menü schließt, wenn der Platz verschwindet oder der Bogen woanders steht, sonst bleibt es', async ({ page }) => {
-  const players = page.getByRole('combobox', { name: 'Spieler' });
   // 4 → 3: Platz 4 verschwindet
   await plate(page, 'seat4').click();
-  await players.selectOption('3');
+  await setPlayersByKeyboard(page, 3);
   await expect(page.locator('[data-sheet=seat4]')).toHaveCount(0);
   await expect(menu(page)).toHaveCount(0);
   // 3 → 4: Platz 1 bleibt, wo er ist, das Menü bleibt offen
   const before = await plate(page, 'seat1').boundingBox();
   await plate(page, 'seat1').click();
-  await players.selectOption('4');
+  await setPlayersByKeyboard(page, 4);
   await expect(page.locator('[data-sheet=seat4]')).toHaveCount(1);
   expect(await plate(page, 'seat1').boundingBox()).toEqual(before);
   await expect(menu(page)).toHaveAccessibleName('Platz 1');
   // 4 → 2: größere Bögen, Platz 1 steht woanders
-  await players.selectOption('2');
+  await setPlayersByKeyboard(page, 2);
   await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
   await expect(menu(page)).toHaveCount(0);
 });

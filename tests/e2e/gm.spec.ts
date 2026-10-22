@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test, type Locator } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, shuffleBack, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -35,10 +35,10 @@ test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) 
 
 test('Spielerzahl blendet Bögen und Dock-Knöpfe aus, nichts geht verloren', async ({ page }) => {
   await nameCharacter(page, 'seat3', 'Ida');
-  await page.getByRole('combobox').selectOption('2');
+  await setPlayers(page, 2);
   await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
   await expect(page.getByTitle('Ich bin Spieler 3')).toHaveCount(0);
-  await page.getByRole('combobox').selectOption('4');
+  await setPlayers(page, 4);
   await expect(page.locator('[data-sheet=seat3] [data-field=name]')).toHaveValue('Ida');
 });
 
@@ -126,9 +126,9 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await expect(dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' })).toBeDisabled();
 });
 
-test('Einstellungen: Seitenleiste mit vier Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
+test('Einstellungen: Seitenleiste mit fünf Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
   const dialog = await openSettings(page, 'Spielstand');
-  await expect(dialog.getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler', 'Spielstand', 'Darstellung']);
+  await expect(dialog.getByRole('tab')).toHaveText(['Tisch', 'Automatik', 'Rechte der Spieler', 'Spielstand', 'Darstellung']);
   await expect(dialog.getByRole('tab', { name: 'Spielstand' })).toHaveAttribute('aria-selected', 'true');
   await expect(dialog.getByRole('heading', { name: 'Spielstand' })).toBeVisible();
   await expect(dialog.getByRole('tabpanel', { name: 'Spielstand' })).toBeVisible();
@@ -345,4 +345,28 @@ test('SL-Leiste im kleinen Fenster mit Protokoll: eine Zeile, im Filz, über kei
     const z = await rect(`[data-zone=${zone}]`);
     expect(bar.t >= z.b || bar.r <= z.l || bar.l >= z.r, zone).toBe(true);
   }
+});
+
+test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp und Pfeiltasten, nicht mehr in der Leiste', async ({ page }) => {
+  const bar = page.getByRole('group', { name: 'Spielleitung' });
+  await expect(bar.getByRole('button')).toHaveText(['Expedition', 'Orakel', 'Zurücksetzen']);
+  await expect(page.getByRole('combobox')).toHaveCount(0);
+  const dialog = await openSettings(page, 'Tisch');
+  const radios = dialog.getByRole('radio');
+  await expect(radios).toHaveCount(4);
+  await expect(dialog.getByRole('radio', { name: '4', exact: true })).toBeChecked();
+  await expect(dialog.getByRole('group', { name: 'Spielerzahl' })).toBeVisible();
+  // Tab vom Knopf „Schließen“ (davor im Fenster) springt auf die gewählte Zahl, Pfeil nach links wählt die nächste
+  await dialog.getByRole('button', { name: 'Schließen' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('radio', { name: '4', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(dialog.getByRole('radio', { name: '3', exact: true })).toBeChecked();
+  await expect(page.locator('[data-sheet=seat4]')).toHaveCount(0);
+  // ein Tabstopp für die ganze Reihe
+  await page.keyboard.press('Tab');
+  await expect(radios.first()).not.toBeFocused();
+  await expect(dialog.getByRole('radio', { name: '2', exact: true })).not.toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-dock^=seat]')).toHaveCount(3);
 });

@@ -3,16 +3,17 @@
   // (Einstellungen seit Schritt 5b im Menü oben rechts). Seit 5s im Menüstil (10.5): eine Fläche, Gruppen mit feinen
   // Linien, feste Bildschirmgröße durch Gegenskalierung wie bei den Zeigern. Immer eine Zeile: passt sie nicht in den
   // Filz, wird sie als Ganzes gerade so klein, dass sie passt (nie kleiner als früher, als sie voll mitskalierte).
-  // Jeder Knopf nur mit dem passenden Recht (9.3); ohne ein einziges Recht keine Leiste.
+  // Jeder Knopf nur mit dem passenden Recht (9.3); ohne ein einziges Recht keine Leiste. Die Spielerzahl steht seit 5s
+  // in den Einstellungen (Seite „Tisch“).
   import { submitOrSay } from './commands';
   import { session } from './session.svelte';
   import { t } from './texts';
   import { view } from './view.svelte';
 
-  let { at, maxW, scale, players }: { at: { x: number; y: number }; maxW: number; scale: number; players: number } = $props();
+  let { at, maxW, scale }: { at: { x: number; y: number }; maxW: number; scale: number } = $props();
 
   const draw = $derived(session.can({ type: 'gm.expedition' }) || session.can({ type: 'gm.oracle' }));
-  const any = $derived(draw || session.can({ type: 'table.setPlayers' }) || session.can({ type: 'table.reset' }));
+  const any = $derived(draw || session.can({ type: 'table.reset' }));
   /** natürliche Breite (offsetWidth sieht keine Transformation), ändert sich mit den Rechten */
   let width = $state(0);
   /** Maßstab der Leiste im Tisch: 1 / Tischmaßstab, höchstens so groß, dass sie in maxW (TP) passt */
@@ -30,16 +31,6 @@
           {#if session.can({ type: 'gm.oracle' })}
             <button class="menu-item" title={t('gm.oracleTitle')} onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.oracle')}</button>
           {/if}
-        </div>
-      {/if}
-      {#if session.can({ type: 'table.setPlayers' })}
-        <div class="group">
-          <label>
-            {t('gm.players')}
-            <select value={players} onchange={(e) => submitOrSay({ type: 'table.setPlayers', players: Number(e.currentTarget.value) })}>
-              {#each [1, 2, 3, 4] as n (n)}<option value={n}>{n}</option>{/each}
-            </select>
-          </label>
         </div>
       {/if}
       {#if session.can({ type: 'table.reset' })}
@@ -61,9 +52,4 @@
   .rows { display: flex; overflow: hidden; }
   .group { display: flex; gap: 4px; align-items: center; padding: 3px 6px; margin-left: -1px; border-left: 1px solid var(--menu-rule); }
   button.menu-item { width: auto; min-height: 36px; padding: 5px 12px; }
-  label { display: flex; gap: 8px; align-items: center; padding-left: 6px; color: var(--menu-head); }
-  select { min-height: 36px; background: transparent; color: var(--ink); border: 1px solid var(--menu-rim); border-radius: 6px; padding: 3px 9px; font: inherit; cursor: pointer; }
-  select:focus { outline: none; }
-  select:focus-visible { outline: 2px solid var(--menu-focus); outline-offset: 1px; }
-  option { background: var(--menu-bg); }
 </style>

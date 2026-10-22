@@ -103,6 +103,32 @@ export async function openSettings(page: Page, tab: string) {
   return dialog;
 }
 
+/** Spielerzahl über die Einstellungsseite „Tisch“ wählen und das Fenster wieder schließen (5s) */
+export async function setPlayers(page: Page, n: number) {
+  const dialog = await openSettings(page, 'Tisch');
+  await dialog.getByRole('radio', { name: String(n), exact: true }).check();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+}
+
+/** Dasselbe nur mit der Tastatur: ohne Zeigerklick daneben bleiben offene Stapel- und Namensschild-Menüs offen, so
+ *  lässt sich prüfen, was eine neue Spielerzahl mit ihnen macht. Schließt das Fenster über den Knopf, nicht mit Esc
+ *  (Esc schlösse auch das offene Menü). */
+export async function setPlayersByKeyboard(page: Page, n: number) {
+  const press = async (target: Locator, key = 'Enter') => {
+    await target.focus();
+    await page.keyboard.press(key);
+  };
+  await press(menuButton(page));
+  await press(page.getByRole('button', { name: 'Einstellungen', exact: true }));
+  const dialog = page.getByRole('dialog', { name: 'Einstellungen' });
+  await press(dialog.getByRole('tab', { name: 'Tisch', exact: true }));
+  await press(dialog.getByRole('radio', { name: String(n), exact: true }), 'Space');
+  await expect(dialog.getByRole('radio', { name: String(n), exact: true })).toBeChecked();
+  await press(dialog.getByRole('button', { name: 'Schließen' }));
+  await expect(dialog).toHaveCount(0);
+}
+
 /** Spielstand über die offene Einstellungsseite „Spielstand“ als Datei speichern und gelesen zurückgeben */
 export async function saveArchive(page: Page, dialog: Locator) {
   const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);

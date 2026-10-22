@@ -112,7 +112,6 @@ gm:
   rerollAll: Alles neu
   redraw: Neu ziehen
   close: Schließen
-  players: Spielerzahl
   reset: Zurücksetzen
   settings: Einstellungen
   lampOn: Laterne anzünden                # Tooltip an der Laterne (5n), nur mit Recht
@@ -211,6 +210,9 @@ presence:                                 # Mauszeiger der anderen (neu)
 
 settings:                                 # Einstellungen (neu; seit 5g für alle, Automatik und Rechte nur mit Recht)
   title: Einstellungen
+  table: Tisch                            # Seite mit der Spielerzahl (5s), vorher in der SL-Leiste
+  players: Spielerzahl
+  playersHelp: Wie viele Plätze am Tisch sind. Weniger Plätze blenden Bögen aus; Karten und Einträge bleiben erhalten.
   automation: Automatik
   automationIds:
     damage: Schaden automatisch auswerten (Narbe, Tod)

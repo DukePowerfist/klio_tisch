@@ -6,16 +6,22 @@ const keys = Object.keys(content.permissions.player);
 
 describe('Seiten der Einstellungen', () => {
   it('Spielstand nur beim Host, Automatik und Rechte nur mit Recht, Darstellung für alle (5g)', () => {
-    expect(visiblePages(true, true)).toEqual(['automation', 'permissions', 'game', 'appearance']);
-    expect(visiblePages(false, true)).toEqual(['automation', 'permissions', 'appearance']);
-    expect(visiblePages(false, false)).toEqual(['appearance']);
+    expect(visiblePages(true, true, true)).toEqual(['table', 'automation', 'permissions', 'game', 'appearance']);
+    expect(visiblePages(false, true, false)).toEqual(['automation', 'permissions', 'appearance']);
+    expect(visiblePages(false, false, false)).toEqual(['appearance']);
+  });
+
+  it('Tisch mit dem Recht auf die Spielerzahl, auch ohne die übrigen Einstellungen (5s)', () => {
+    expect(visiblePages(false, false, true)).toEqual(['table', 'appearance']);
+    expect(visiblePages(true, true, false)).not.toContain('table');
   });
 
   it('öffnet auf der zuletzt gewählten Seite, fehlt sie, auf der ersten', () => {
-    expect(openPage('permissions', visiblePages(false, true))).toBe('permissions');
-    expect(openPage('game', visiblePages(true, true))).toBe('game');
-    expect(openPage('game', visiblePages(false, true))).toBe('automation');
-    expect(openPage('automation', visiblePages(false, false))).toBe('appearance');
+    expect(openPage('permissions', visiblePages(false, true, false))).toBe('permissions');
+    expect(openPage('game', visiblePages(true, true, true))).toBe('game');
+    expect(openPage('game', visiblePages(false, true, false))).toBe('automation');
+    expect(openPage('automation', visiblePages(false, false, false))).toBe('appearance');
+    expect(openPage('automation', visiblePages(false, false, true))).toBe('table');
   });
 });
 
