@@ -121,7 +121,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(player.getByRole('dialog', { name: 'Orakel' })).toBeVisible();
   await expect(player.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Neu ziehen' })).toHaveCount(0);
   // Spieler hat keine SL-Leiste
-  await expect(player.getByRole('button', { name: 'Expedition starten' })).toHaveCount(0);
+  await expect(player.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
 
   // Neu laden: derselbe Platz kommt von selbst zurück
   await player.reload();

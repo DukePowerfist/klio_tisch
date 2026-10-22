@@ -45,6 +45,8 @@ export type Layout = {
   resistTitle: { x: number; y: number };
   /** rechte untere Ecke der SL-Leiste */
   gmControls: { x: number; y: number };
+  /** Höchstbreite der SL-Leiste in TP: Filz ohne den Abstand rechts und links (10.5) */
+  gmControlsMaxW: number;
   freeCardScale: number;
   lamp: LampBox;
   /** Licht der Laterne in dieser Ansicht: Reichweite in TP, Grundlicht am Rand */
@@ -156,6 +158,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     zoneList: Object.values(zones),
     resistTitle: at(M.resistTitle),
     gmControls: at([middle.w - M.gmControlsInset[0], middle.h - M.gmControlsInset[1]]),
+    gmControlsMaxW: middle.w - 2 * M.gmControlsInset[0],
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
     light: role ? L.role.light : L.overview.light,

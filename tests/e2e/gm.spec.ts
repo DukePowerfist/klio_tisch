@@ -9,7 +9,7 @@ test('Expedition: vier Tabellen; „neu“ würfelt nur die eigene Zeile; Esc sc
   // Protokoll vorher öffnen: Daran sieht der Test, wann ein Ereignis angekommen ist
   await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
-  await page.getByRole('button', { name: 'Expedition starten' }).click();
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition starten' });
   const rows = dialog.locator('.row b');
   await expect(rows).toHaveCount(4);
@@ -297,4 +297,52 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
   await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Protokoll']);
   await page.locator('.panel').click({ position: { x: 20, y: 20 } });
   await expect(page.locator('[data-top-menu]')).toHaveCount(0);
+});
+
+test('SL-Leiste: gleich groß bei jedem Zoom und in großen Fenstern, rechte untere Ecke am Anker im Filz (5s)', async ({ page }) => {
+  const bar = page.getByRole('group', { name: 'Spielleitung' });
+  /** Größe der Leiste und Abstand ihrer rechten unteren Ecke zu der des Filzes, in Tischpunkten */
+  const measure = () =>
+    page.evaluate(() => {
+      const b = document.querySelector('.ctl')!.getBoundingClientRect();
+      const f = document.querySelector('.panel')!.getBoundingClientRect();
+      const sc = f.width / 700;
+      return { w: b.width, h: b.height, dx: (f.right - b.right) / sc, dy: (f.bottom - b.bottom) / sc };
+    });
+  await expect(bar).toBeVisible();
+  const start = await measure();
+  expect(start.h).toBeGreaterThanOrEqual(42);
+  expect(start.dx).toBeCloseTo(40, 0);
+  expect(start.dy).toBeCloseTo(26, 0);
+
+  const panel = (await page.locator('.panel').boundingBox())!;
+  await page.mouse.move(panel.x + panel.width / 2, panel.y + panel.height / 2);
+  await page.mouse.wheel(0, -600);
+  await expect.poll(async () => (await measure()).dx).toBeCloseTo(40, 0);
+  const zoomed = await measure();
+  expect(zoomed.w).toBeCloseTo(start.w, 0);
+  expect(zoomed.h).toBeCloseTo(start.h, 0);
+  expect(zoomed.dy).toBeCloseTo(26, 0);
+
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await expect.poll(async () => (await measure()).h).toBeCloseTo(start.h, 0);
+});
+
+test('SL-Leiste im kleinen Fenster mit Protokoll: eine Zeile, im Filz, über keinem Stapel (5s)', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await fromMenu(page, 'Protokoll');
+  await expect(page.locator('aside.log')).toBeVisible();
+  const rect = (sel: string) => page.locator(sel).first().evaluate((e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; });
+  const bar = await rect('.ctl');
+  const felt = await rect('.panel');
+  // eine Zeile: Höhe zu Breite wie bei voller Größe (etwa 36 px Knöpfe plus Rand), nicht zwei- oder dreizeilig
+  const full = await page.locator('.ctl .menu-item').first().evaluate((e) => (e as HTMLElement).offsetHeight);
+  const scaleOf = await page.locator('.ctl').evaluate((e) => e.getBoundingClientRect().width / (e as HTMLElement).offsetWidth);
+  expect(bar.b - bar.t).toBeLessThan((full + 20) * scaleOf);
+  expect(bar.l).toBeGreaterThanOrEqual(felt.l);
+  expect(bar.r).toBeLessThanOrEqual(felt.r);
+  for (const zone of ['progress', 'clubs', 'danger']) {
+    const z = await rect(`[data-zone=${zone}]`);
+    expect(bar.t >= z.b || bar.r <= z.l || bar.l >= z.r, zone).toBe(true);
+  }
 });
