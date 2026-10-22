@@ -28,11 +28,12 @@
   const current = (key: string) => permissionFor('player', key, ruleset.permissions, session.state as TableState<unknown>);
 
   function setAutomation(id: string, on: boolean) {
-    void submitOrSay({ type: 'table.setSettings', automation: { ...settings.automation, [id]: on } });
+    void submitOrSay({ type: 'table.setSettings', automation: { [id]: on } });
   }
 
-  const setOverrides = (player: Record<string, PermissionValue>) =>
-    void submitOrSay({ type: 'table.setSettings', permissionOverrides: { ...settings.permissionOverrides, player } });
+  /** Nur die Änderung senden (5r); `null` = zurück zur Voreinstellung */
+  const setOverrides = (player: Record<string, PermissionValue | null>) =>
+    void submitOrSay({ type: 'table.setSettings', permissionOverrides: { player } });
 
   // ---------- Spielstand (nur beim Host, nicht bei Mitspielern) ----------
   const isHost = $derived(session.mode !== 'client');
@@ -71,8 +72,7 @@
 
   /** Nur Abweichungen von der Voreinstellung werden gespeichert. */
   function setPermission(key: string, value: PermissionValue) {
-    const { [key]: _, ...rest } = overrides;
-    setOverrides(value === defaults[key] ? rest : { ...rest, [key]: value });
+    setOverrides({ [key]: value === defaults[key] ? null : value });
   }
 </script>
 
@@ -138,7 +138,7 @@
         {/each}
         <section class="defaults">
           <SettingRow id="defaults" title={t('settings.defaults')} description={t('settings.defaultsHelp')}>
-            <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides({})}>{t('settings.restore')}</button>
+            <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides(Object.fromEntries(Object.keys(overrides).map((k) => [k, null])))}>{t('settings.restore')}</button>
           </SettingRow>
         </section>
       {:else if page === 'appearance'}

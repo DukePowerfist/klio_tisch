@@ -414,3 +414,27 @@ describe('Laterne (5n, 11.9)', () => {
     expect(run(out, { type: 'table.reset', includeCharacters: true }).state.lamp).toBe(false);
   });
 });
+
+describe('Einstellungen ergänzen statt ersetzen (5r)', () => {
+  it('zwei schnelle Klicks auf demselben alten Stand: beide Änderungen bleiben', () => {
+    const old = fresh();
+    // beide Befehle sind gebaut, bevor die Antwort des Hosts zurück ist
+    const first = { type: 'table.setSettings', automation: { damage: false } };
+    const second = { type: 'table.setSettings', automation: { 'notice.arrivals': false } };
+    const s = run(run(old, first).state, second).state;
+    expect(s.settings.automation).toMatchObject({ damage: false, 'notice.arrivals': false });
+
+    const p = run(run(old, { type: 'table.setSettings', permissionOverrides: { player: { 'cards.move': 'own' } } }).state,
+      { type: 'table.setSettings', permissionOverrides: { player: { 'zone.draw': 'deny' } } }).state;
+    expect(p.settings.permissionOverrides.player).toEqual({ 'cards.move': 'own', 'zone.draw': 'deny' });
+  });
+
+  it('null nimmt eine Ausnahme zurück, andere Rollen und Schlüssel bleiben', () => {
+    let s = run(fresh(), { type: 'table.setSettings', permissionOverrides: { player: { 'cards.move': 'own', 'zone.draw': 'deny' }, spectator: { 'card.flip': 'allow' } } }).state;
+    s = run(s, { type: 'table.setSettings', permissionOverrides: { player: { 'zone.draw': null } } }).state;
+    expect(s.settings.permissionOverrides).toEqual({ player: { 'cards.move': 'own' }, spectator: { 'card.flip': 'allow' } });
+    // „Voreinstellungen“: null für jede gesetzte Ausnahme
+    s = run(s, { type: 'table.setSettings', permissionOverrides: { player: { 'cards.move': null } } }).state;
+    expect(s.settings.permissionOverrides.player).toEqual({});
+  });
+});

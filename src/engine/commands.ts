@@ -51,10 +51,12 @@ const SeatEditCmd = z.object({
 }).strict();
 /** Laterne anzünden oder löschen (5n, 11.9), für alle am Tisch */
 const LampCmd = z.object({ type: z.literal('table.setLamp'), lit: z.boolean() }).strict();
+/** Nur die gesendeten Schlüssel ändern sich (5r); `null` nimmt eine Ausnahme zurück auf die Voreinstellung. */
+const OverrideChanges = z.record(z.string(), PermissionValueSchema.nullable());
 const SettingsCmd = z.object({
   type: z.literal('table.setSettings'),
   automation: z.record(z.string(), z.boolean()).optional(),
-  permissionOverrides: z.object({ player: z.record(z.string(), PermissionValueSchema).optional(), spectator: z.record(z.string(), PermissionValueSchema).optional() }).strict().optional(),
+  permissionOverrides: z.object({ player: OverrideChanges.optional(), spectator: OverrideChanges.optional() }).strict().optional(),
 }).strict();
 
 type S = TableState<unknown>;
@@ -337,14 +339,23 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
   const setSettings: CommandDef<unknown, z.infer<typeof SettingsCmd>> = {
     parse: (x) => SettingsCmd.parse(x),
     permission: 'table.setSettings',
-    handle: (cmd, state) => [{
-      type: 'settingsChanged',
-      settings: {
-        ...state.settings,
-        automation: cmd.automation ?? state.settings.automation,
-        permissionOverrides: cmd.permissionOverrides ?? state.settings.permissionOverrides,
-      },
-    }],
+    handle(cmd, state) {
+      const permissionOverrides = { ...state.settings.permissionOverrides };
+      for (const role of ['player', 'spectator'] as const) {
+        const changes = cmd.permissionOverrides?.[role];
+        if (!changes) continue;
+        const merged = { ...permissionOverrides[role] };
+        for (const [key, value] of Object.entries(changes)) {
+          if (value === null) delete merged[key];
+          else merged[key] = value;
+        }
+        permissionOverrides[role] = merged;
+      }
+      return [{
+        type: 'settingsChanged',
+        settings: { ...state.settings, automation: { ...state.settings.automation, ...cmd.automation }, permissionOverrides },
+      }];
+    },
   };
 
   return {
