@@ -5,13 +5,17 @@ import { dragFromTo, expectCount, holdOver, ready, zoneCenter } from '../e2e/hel
 
 test.beforeEach(async ({ page }) => ready(page));
 
-/** Laterne klicken und die danach laufenden Animationen an Licht und Glühen liefern */
+/** Laterne klicken und die danach laufenden Animationen an Licht und Glühen liefern. Der Übergang beginnt erst mit
+ *  dem Ereignis, also nach dem Weg des Befehls über den Host (lokal meist etwa 25 ms, unter Last über 150 ms): warten,
+ *  bis die erste Ebene läuft, höchstens 2 s; alle vier werden im selben Zug gestartet. */
 function clickAndWatch(page: Page) {
   return page.evaluate(async () => {
+    const layer = (a: Animation) => ((a.effect as KeyframeEffect).target as HTMLElement).className.split(' ')[0];
+    const t0 = performance.now();
     document.querySelector<HTMLElement>('button[data-lamp]')!.click();
-    await new Promise((r) => setTimeout(r, 50));
+    while (!document.getAnimations().some((a) => layer(a) === 'out') && performance.now() - t0 < 2000) await new Promise((r) => setTimeout(r, 5));
     return document.getAnimations()
-      .map((a) => ({ on: ((a.effect as KeyframeEffect).target as HTMLElement).className.split(' ')[0], duration: Number((a.effect as KeyframeEffect).getTiming().duration) }))
+      .map((a) => ({ on: layer(a), duration: Number((a.effect as KeyframeEffect).getTiming().duration) }))
       .filter((a) => ['out', 'on', 'glow', 'ember'].includes(a.on!))
       .sort((a, b) => a.on!.localeCompare(b.on!));
   });
