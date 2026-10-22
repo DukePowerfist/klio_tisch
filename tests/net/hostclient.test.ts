@@ -1,6 +1,6 @@
 // Schritt 2b: Host und Clients ohne Oberfläche, über eine Verbindung im Speicher.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
 import type { SeatId } from '../../src/engine/types';
 import { Client, type ClientOptions } from '../../src/net/client';
@@ -507,7 +507,8 @@ describe('Fotos (8.4)', () => {
     expect(photos.photos.get(hash)).toEqual(bytes);
     b.client.requestPhoto(hash);
     await settle(net, host);
-    expect(mine.photos.get(hash)).toEqual(bytes);
+    // der Client prüft die Prüfsumme im Hintergrund, darauf wartet `settle` nicht
+    await vi.waitFor(() => expect(mine.photos.get(hash)).toEqual(bytes));
   });
 
   it('Inhalt passt nicht zum Namen oder Zuschauer lädt hoch: abgelehnt', async () => {
@@ -535,7 +536,7 @@ describe('Fotos (8.4)', () => {
     a.client.requestPhoto(hash);
     const host2 = await startHost();
     await settle(net, host2);
-    expect(mine.photos.get(hash)).toEqual(bytes);
+    await vi.waitFor(() => expect(mine.photos.get(hash)).toEqual(bytes));
   });
 });
 

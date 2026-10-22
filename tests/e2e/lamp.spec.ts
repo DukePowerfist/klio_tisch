@@ -74,8 +74,11 @@ test('Karte auf die Laterne gezogen: Vorschau und Ablage daneben, nicht auf ihr 
   await page.mouse.up();
   await expect(hint).toHaveCount(0);
   // getBoundingClientRect statt boundingBox: Playwright misst die gedrehte Karte ungedreht
-  const card = await page.locator(`.scene > [data-card="${dragged}"]`).evaluate((e) => e.getBoundingClientRect().toJSON() as DOMRect);
-  expect([card.x, card.y, card.width, card.height].map(Math.round)).toEqual([shown.x, shown.y, shown.width, shown.height].map(Math.round));
+  const rect = () => page.locator(`.scene > [data-card="${dragged}"]`).evaluate((e) => e.getBoundingClientRect().toJSON() as DOMRect);
+  const round = (r: { x: number; y: number; width: number; height: number }) => [r.x, r.y, r.width, r.height].map(Math.round);
+  // nach dem Loslassen kommt die neue Lage erst mit der Antwort des Hosts: so lange warten, nicht sofort messen
+  await expect.poll(async () => round(await rect())).toEqual(round(shown));
+  const card = await rect();
   // Abstand der Karte zum Kreis der Laterne (Bildschirmpunkte)
   const dx = Math.max(card.x - centre.x, 0, centre.x - (card.x + card.width));
   const dy = Math.max(card.y - centre.y, 0, centre.y - (card.y + card.height));
