@@ -103,6 +103,8 @@ trumpDialog:
 
 gm:
   bar: Spielleitung                       # Name der Leiste unten rechts für Bildschirmleser (5s, 10.5)
+  barCollapse: Leiste einfahren           # Knopf rechts neben dem Filz (5s, Teil 4)
+  barExpand: Leiste ausfahren
   expedition: Expedition starten          # auch Titel des Ergebnisfensters
   expeditionShort: Expedition             # Knopf in der Leiste (5s), der lange Text steht im Tooltip
   expeditionTitle: Expedition starten (Spielleitung)

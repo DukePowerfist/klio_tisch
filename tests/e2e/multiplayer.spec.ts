@@ -269,7 +269,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
 });
 
 
-test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne überzählige Linie; Spielerzahl folgt fremder Änderung', async ({ browser }) => {
+test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne überzählige Linie, Einfahren nur im eigenen Browser; Spielerzahl folgt fremder Änderung', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
   await player.goto(link);
@@ -278,14 +278,21 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
   await seated(player);
   const bar = player.getByRole('group', { name: 'Spielleitung' });
-  // ohne Recht keine Leiste
+  // ohne Recht keine Leiste und kein Knopf zum Einfahren
   await expect(player.locator('.ctl')).toHaveCount(0);
+  await expect(player.locator('.toggle')).toHaveCount(0);
   // nur Expedition: eine Gruppe, also keine Linie
   let rights = await openSettings(gm, 'Rechte der Spieler');
   await rights.getByRole('combobox', { name: 'Expedition starten' }).selectOption('allow');
   await gm.keyboard.press('Escape');
   await expect(bar.getByRole('button')).toHaveText(['Expedition']);
   await expect(player.locator('.ctl .group')).toHaveCount(1);
+  // Einfahren gilt nur im eigenen Browser: die SL fährt ein, beim Spieler bleibt die Leiste
+  await gm.getByRole('button', { name: 'Leiste einfahren' }).click();
+  await expect(gm.locator('.ctl')).toHaveCount(0);
+  await expect(bar.getByRole('button')).toHaveText(['Expedition']);
+  await expect(player.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
+  await gm.getByRole('button', { name: 'Leiste ausfahren' }).click();
   // Spielerzahl ohne die übrigen Einstellungen: Seiten „Tisch“ und „Darstellung“
   rights = await openSettings(gm, 'Rechte der Spieler');
   await rights.getByRole('combobox', { name: 'Spielerzahl ändern' }).selectOption('allow');

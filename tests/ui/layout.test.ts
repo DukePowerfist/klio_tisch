@@ -4,6 +4,23 @@ import { describe, expect, it } from 'vitest';
 import { cardSize, computeLayout, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
 
+describe('Knopf zum Einfahren der SL-Leiste (5s, 10.5)', () => {
+  it('rechts neben der Tischmitte, in jeder Ansicht und bei jeder Spielerzahl ohne einen Bogen zu berühren', () => {
+    for (const players of [1, 2, 3, 4]) {
+      const roles = [null, ...(['seat1', 'seat2', 'seat3', 'seat4'] as const).slice(0, players)];
+      for (const role of roles) {
+        const L = computeLayout(content, players, role, null);
+        const { x, d } = L.gmToggle;
+        const right = L.middle.x + L.middle.w;
+        const label = `${players} Spieler, Ansicht ${role ?? 'Draufsicht'}`;
+        expect(x - d / 2, label).toBeGreaterThan(right);
+        for (const s of Object.values(L.sheets).filter((b) => b.visible && b.x > right)) expect(x + d / 2, `${label}, ${s.seat}`).toBeLessThan(s.x);
+        expect(d, label).toBe(29);
+      }
+    }
+  });
+});
+
 describe('Ansichten', () => {
   // Lage und Maßstab der Bögen prüft der Regeltest in sheetLayout.test.ts (5q)
   it('Draufsicht: Tischmitte mittig zwischen den Bögen, Plätze über der Spielerzahl ausgeblendet', () => {

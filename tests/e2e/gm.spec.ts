@@ -370,3 +370,42 @@ test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-dock^=seat]')).toHaveCount(3);
 });
+
+test('SL-Leiste einfahren (5s): nur der Knopf bleibt, außerhalb des Filzes und neben keinem Bogen; bleibt nach dem Neuladen', async ({ page }) => {
+  const toggle = page.getByRole('button', { name: 'Leiste einfahren' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await toggle.focus();
+  // ohne Bewegung (reduzierte Bewegung) springt sie: sofort weg, keine Animation
+  expect(await page.evaluate(() => { (document.activeElement as HTMLElement).click(); return document.querySelector('#gm-bar')?.getAnimations().length ?? 0; })).toBe(0);
+  const expand = page.getByRole('button', { name: 'Leiste ausfahren' });
+  await expect(expand).toHaveAttribute('aria-expanded', 'false');
+  await expect(expand).toBeFocused();
+  await expect(page.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
+  await ready(page, true);
+  await expect(page.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
+  /** Knopf rechts außerhalb des Filzes samt Rand und neben keinem Bogen */
+  const outside = async (label: string) => {
+    const r = await page.evaluate(() => {
+      const box = (el: Element) => el.getBoundingClientRect();
+      const b = box(document.querySelector('.toggle')!);
+      const f = box(document.querySelector('.panel')!);
+      const sheets = [...document.querySelectorAll('[data-sheet]')].map(box);
+      return { left: b.left, right: b.right, felt: f.right, hits: sheets.filter((s) => b.right > s.left && b.left < s.right && b.bottom > s.top && b.top < s.bottom).length };
+    });
+    expect(r.left, label).toBeGreaterThanOrEqual(r.felt);
+    expect(r.hits, label).toBe(0);
+  };
+  await outside('Draufsicht');
+  await page.keyboard.press('1');
+  await expect.poll(async () => (await page.locator('[data-sheet=seat1]').boundingBox())!.x).toBeLessThan(50);
+  await outside('Rollenansicht');
+  await page.keyboard.press('0');
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await fromMenu(page, 'Protokoll');
+  await outside('kleines Fenster mit Protokoll');
+  await expand.click();
+  await expect(page.getByRole('group', { name: 'Spielleitung' }).getByRole('button')).toHaveText(['Expedition', 'Orakel', 'Zurücksetzen']);
+  await ready(page, true);
+  await expect(page.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
+});

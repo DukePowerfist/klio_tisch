@@ -432,3 +432,26 @@ test('Schild, Streifen und Dock bei „nicht da“ (5l): blasser in --away, zur�
   await page.waitForTimeout(500);
   expect(await fade('[data-strip=seat2]', ['away'], true)).toEqual([600]);
 });
+
+test('SL-Leiste ein- und ausfahren (5s): vom Knopf her mit --shift, Knopf bleibt stehen', async ({ page }) => {
+  await page.waitForTimeout(1000); // nach dem Laden setzt sich der Tisch noch (Übergänge an left und top)
+  const watch = (name: string) =>
+    page.evaluate(async (name) => {
+      const toggle = document.querySelector<HTMLButtonElement>(`.toggle[aria-label="${name}"]`)!;
+      const before = toggle.getBoundingClientRect();
+      toggle.click();
+      await new Promise((r) => requestAnimationFrame(r));
+      const bar = document.querySelector('#gm-bar');
+      const durations = (bar?.getAnimations() ?? []).map((a) => (a.effect as KeyframeEffect).getTiming().duration);
+      await new Promise((r) => setTimeout(r, 500));
+      const after = document.querySelector('.toggle')!.getBoundingClientRect();
+      return { durations, moved: Math.hypot(after.x - before.x, after.y - before.y) };
+    }, name);
+  const closing = await watch('Leiste einfahren');
+  expect(closing.durations).toEqual([350]);
+  expect(closing.moved).toBeLessThan(1);
+  await expect(page.locator('#gm-bar')).toHaveCount(0);
+  const opening = await watch('Leiste ausfahren');
+  expect(opening.durations).toEqual([350]);
+  expect(opening.moved).toBeLessThan(1);
+});

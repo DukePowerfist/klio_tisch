@@ -435,7 +435,7 @@
     <div class="scene" bind:this={sceneEl}>
       <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-rim-w="{FELT_RIM}px" style:--felt-shadow={feltShadow} style:background-image={felt}></div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
-      <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} scale={sc} />
+      <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} toggle={layout.gmToggle} scale={sc} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
       {#each Object.values(layout.sheets) as box (box.seat)}
