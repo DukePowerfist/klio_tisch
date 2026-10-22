@@ -15,7 +15,7 @@
   let { onclose, for: target }: { onclose: () => void; for?: SeatId } = $props();
 
   const table = $derived(session.state!);
-  const own = $derived(session.actor.role === 'player' ? session.actor.seat : null);
+  const own = $derived(session.ownSeat);
   /** fremder Platz (nicht der eigene) */
   const other = $derived(target !== undefined && target !== own ? target : null);
   const seat = $derived(other ?? own);

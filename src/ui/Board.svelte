@@ -17,8 +17,8 @@
   import { shownOffset } from './animator.svelte';
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
-  import { dropHints, dropTarget } from './dropHint';
-  import { cardSize, clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
+  import { dropCenter, dropHints, dropTarget } from './dropHint';
+  import { clamp, computeLayout, placeCards, pointerAt, pointerPosAt, zoneAt, type CardPlace } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -120,7 +120,7 @@
     preload('holz.webp', (css) => (wood = css));
     preload('filz.webp', (css) => (felt = css));
   });
-  /** Hülle über dem Filz: blendet beim Ansichtswechsel ab und auf (11.8) */
+  /** Hülle über dem Filz mit den Karten (direkte Kinder), Zonen und Bögen */
   let sceneEl: HTMLDivElement;
   // Ansichtswechsel (11.8, seit 5n): es blendet der ganze Tisch ab, Filz und Licht rücken mit der Tischmitte
   $effect(() => view.attachFade(boardEl));
@@ -131,13 +131,6 @@
   let lastClick = { card: null as CardId | null, t: 0 };
   let preview = $state<CardId | null>(null);
 
-  /** Mitte der ersten gezogenen Karte in Tischkoordinaten. */
-  function dropPoint(d: PendingDrop): [number, number] | null {
-    const p = places[d.cards[0]!];
-    if (!p) return null;
-    const s = cardSize(layout, p);
-    return [p.x + d.dx + s.w / 2, p.y + d.dy + s.h / 2];
-  }
   /** Zeiger beim Ziehen (Tischpunkte): Ziel, wenn die Kartenmitte über keiner Zone liegt */
   let dragPointer = $state<[number, number] | null>(null);
   /** Vorschau der Ablegestelle (11.6): Probelauf des Befehls, den das Loslassen senden würde */
@@ -148,7 +141,7 @@
   });
   /** Zone unter der gezogenen Karte (hervorgehoben, Ziel beim Loslassen) */
   const hot = $derived.by(() => {
-    const c = drag?.moved ? dropPoint(drag) : null;
+    const c = drag?.moved ? dropCenter(layout, places, drag) : null;
     return c ? (zoneAt(layout, c[0], c[1])?.id ?? null) : null;
   });
 
@@ -179,6 +172,12 @@
     pan = { x: e.clientX, y: e.clientY, moved: false };
   }
 
+  /** Darf man die Karte an dieser Stelle greifen? Im Stapel nur die oberste; dieselbe Regel wie beim Host (zones.yaml
+   *  `fanned`), nicht der Abstand aus layouts.yaml */
+  function topOrFanned(where: { zone: ZoneId; index: number }): boolean {
+    return !!layout.zones[where.zone]?.fanned || where.index === table.zones[where.zone]!.length - 1;
+  }
+
   function grab(card: CardId, e: PointerEvent) {
     const where = locate(table, card);
     if (!where) return;
@@ -186,12 +185,9 @@
     let from: CardSource = { free: true };
     if ('zone' in where) {
       const list = table.zones[where.zone]!;
-      const zone = layout.zones[where.zone];
-      // dieselbe Regel wie beim Host (zones.yaml), nicht der Abstand aus layouts.yaml
-      const fanned = !!(zone && content.zones[zone.template]?.fanned);
       // Stapel: nur die oberste Karte; mit Umschalt die Karte samt den darüberliegenden
       if (e.shiftKey) grabbed = list.slice(where.index);
-      else if (!fanned && where.index !== list.length - 1) return;
+      else if (!topOrFanned(where)) return;
       from = { zone: where.zone };
     }
     e.preventDefault();
@@ -273,9 +269,7 @@
     const where = locate(table, card);
     if (!where) return false;
     if ('zone' in where) {
-      const zone = layout.zones[where.zone];
-      const fanned = !!(zone && content.zones[zone.template]?.fanned);
-      if (!fanned && where.index !== table.zones[where.zone]!.length - 1) return false;
+      if (!topOrFanned(where)) return false;
       return session.can({ type: 'cards.move', cards: [card], from: { zone: where.zone }, to: { zone: where.zone } });
     }
     const pos = table.freePos[card];
@@ -438,7 +432,6 @@
   .panel { position: absolute; background: var(--felt) center / cover no-repeat; border-radius: 56px; box-sizing: border-box;
     box-shadow: 0 0 0 6px var(--felt-rim), 0 0 0 7px var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
-  /* in der Bühne: rückt mit dem Tisch zur Seite, wenn das Protokoll offen ist */
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
   .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   .preview { position: absolute; right: 16px; bottom: 16px; pointer-events: none; z-index: 99; }

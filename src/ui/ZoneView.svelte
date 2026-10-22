@@ -39,7 +39,7 @@
     }[zone.menu],
   );
   // Stapel (ohne `fanned` in zones.yaml, wie beim Greifen): versetzte Kanten unter der obersten Karte zeigen die Dicke
-  const edges = $derived(Array.from({ length: content.zones[zone.template]?.fanned ? 0 : stackEdges(count) }, (_, i) => i + 1).reverse());
+  const edges = $derived(Array.from({ length: zone.fanned ? 0 : stackEdges(count) }, (_, i) => i + 1).reverse());
   /** Versatz je Kante: 2 px mal Maßstab; in verkleinerten Zonen etwas mehr, sonst sieht man die Kante dort kaum */
   const step = $derived(zone.scale < 1 ? 2.5 : 2 * zone.scale);
   // Zahl springt, wenn Ereignisse sie ändern (nicht beim Laden und Zurücksetzen, 11.6)

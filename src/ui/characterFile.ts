@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { FORMAT } from '../engine/setup';
 import type { TextRef } from '../engine/types';
-import { PhotoDataSchema, sha256Hex, toBase64 } from '../net/photos';
+import { fromBase64, PhotoDataSchema, sha256Hex, toBase64 } from '../net/photos';
 import { KlioSheet } from '../rules/klio/state';
 
 export const CHARACTER_KIND = 'klio-charakter';
@@ -49,10 +49,3 @@ export async function readCharacter(text: string): Promise<ReadCharacter> {
 
 /** Dateiname nach dem Charakter, ohne Zeichen, die Dateisysteme stören */
 export const characterFileName = (character: string): string => `${character.replace(/[\\/:*?"<>|]+/g, '').trim() || 'Charakter'}.klio-charakter.json`;
-
-function fromBase64(data: string): Uint8Array<ArrayBuffer> {
-  const text = atob(data);
-  const bytes = new Uint8Array(text.length);
-  for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
-  return bytes;
-}

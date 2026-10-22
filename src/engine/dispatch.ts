@@ -15,7 +15,7 @@ import type { Actor, Command, CommandDef, DispatchResult, Event, Rng, Ruleset, S
 const ENGINE_MIGRATIONS = [seatColor, lamp];
 
 /** Höchstens so viele Runden Reaktion auf Reaktion; darüber wird der ganze Befehl abgelehnt. */
-export const MAX_REACTION_DEPTH = 8;
+const MAX_REACTION_DEPTH = 8;
 
 export type Engine<G> = {
   ruleset: Ruleset<G>;

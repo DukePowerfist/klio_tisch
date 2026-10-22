@@ -16,6 +16,10 @@ export const rejectWith = (reason: TextRef): Rejection => ({ rejected: true, rea
 
 export const isRejection = (x: unknown): x is Rejection => typeof x === 'object' && x !== null && 'rejected' in x;
 
+/** Eintrag eines Platzes ohne leere Felder */
+const seatInfo = (occupied: boolean, name: string | undefined, color: string | undefined) =>
+  ({ occupied, ...(name ? { name } : {}), ...(color ? { color } : {}) });
+
 
 const MoveCmd = z.object({
   type: z.literal('cards.move'),
@@ -246,8 +250,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       // die Farbe gehört zum Platz und bleibt beim Wechsel der Person
       const { color, name: last } = state.seats[cmd.seat];
       const name = cmd.occupied ? cmd.name : last;
-      const info = { occupied: cmd.occupied, ...(name ? { name } : {}), ...(color ? { color } : {}) };
-      return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: info } }];
+      return [{ type: 'seatsChanged', seats: { ...state.seats, [cmd.seat]: seatInfo(cmd.occupied, name, color) } }];
     },
   };
 
@@ -264,14 +267,12 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       if (!from.occupied) return reject('reject.seatFree');
       if (!seatVisible(cmd.to, state)) return reject('reject.hiddenSeat');
       if (to.occupied && !seatVisible(cmd.from, state)) return reject('reject.hiddenSeat');
-      const seat = (occupied: boolean, name: string | undefined, color: string | undefined) =>
-        ({ occupied, ...(name ? { name } : {}), ...(color ? { color } : {}) });
       return [{
         type: 'seatsChanged',
         seats: {
           ...state.seats,
-          [cmd.to]: seat(true, from.name, to.color),
-          [cmd.from]: to.occupied ? seat(true, to.name, from.color) : seat(false, from.name, from.color),
+          [cmd.to]: seatInfo(true, from.name, to.color),
+          [cmd.from]: to.occupied ? seatInfo(true, to.name, from.color) : seatInfo(false, from.name, from.color),
         },
       }];
     },

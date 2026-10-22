@@ -53,7 +53,7 @@ export type Layout = {
 
 /** Grundbreite eines Bogens auf dem Tisch bei Maßstab 1 (wie bisher 380 × 537). */
 export const SHEET_W = 380;
-export const SHEET_H = 537;
+const SHEET_H = 537;
 
 /** Ab diesem Zoom zeigen die Bögen ihre kleinen Bedienelemente; am eigenen Bogen der Rollenansicht immer (ARCHITEKTUR.md 10). */
 export const CONTROLS_ZOOM = 1.3;
@@ -172,7 +172,7 @@ export function lampGap(lamp: LampBox, r: Rect): number {
 }
 
 /** Rechteck eines Ankers für frei liegende Karten. */
-export function anchorRect(layout: Layout, anchor: AnchorId): Rect | null {
+function anchorRect(layout: Layout, anchor: AnchorId): Rect | null {
   if (anchor === 'center') return layout.middle;
   const s = layout.sheets[anchor];
   return s.visible ? s : null;
@@ -255,7 +255,7 @@ export function zoneAt(layout: Layout, x: number, y: number): ZoneBox | null {
 }
 
 /** Umkehrung von `freePosAt`: Punkt auf dem Tisch in dieser Ansicht; null, wenn der Anker (Bogen) ausgeblendet ist. */
-export function pointAt(layout: Layout, pos: FreePos): { x: number; y: number } | null {
+function pointAt(layout: Layout, pos: FreePos): { x: number; y: number } | null {
   const r = anchorRect(layout, pos.anchor);
   return r && pointIn(r, pos);
 }

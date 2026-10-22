@@ -3,7 +3,7 @@
 import { tick, untrack } from 'svelte';
 import { SeatSchema } from '../engine/schemas';
 import type { SeatId, ZoneId } from '../engine/types';
-import { timing } from './animator.svelte';
+import { setCutting, timing } from './animator.svelte';
 import { effectLevel } from './effectLevel.svelte';
 import type { SettingsPage } from './settingsPages';
 
@@ -22,7 +22,14 @@ class ViewState {
   /** zuletzt gewählte Ansicht: gilt sofort (Dock), `role` wechselt erst im Schnitt (11.8) */
   chosen = $state<SeatId | null>(this.role);
   /** Schnitt beim Ansichtswechsel (11.8): Bögen, Zonen und Karten springen, statt zu gleiten */
-  cutting = $state(false);
+  #cutting = $state(false);
+  get cutting(): boolean {
+    return this.#cutting;
+  }
+  set cutting(v: boolean) {
+    this.#cutting = v;
+    setCutting(v);
+  }
   /** Zoom 1–5, Verschiebung in Tischkoordinaten relativ zur Mitte */
   zoom = $state(1);
   ox = $state(0);

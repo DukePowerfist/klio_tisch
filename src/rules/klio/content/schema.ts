@@ -19,9 +19,10 @@ const byRank = <T extends z.ZodType>(entry: T) =>
 //   level: 1
 //   name: Schnelle Reflexe
 //   text: Du hast Vorteil auf alle Körper-Reaktionen.
+export const TrumpCategory = z.enum(['K', 'V', 'P', 'X']);
 export const Trump = z.object({
   id: TrumpId,
-  category: z.enum(['K', 'V', 'P', 'X']),
+  category: TrumpCategory,
   attributes: z.array(Attr).min(1).max(3),
   level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   name: z.string().min(1),
@@ -38,7 +39,8 @@ export const TrumpsFile = z.array(Trump);
 //   S:
 //     "2": Historiker …
 export const RollTable = z.object({ H: byRank(Gendered), S: byRank(Gendered) }).strict();
-export const TablesFile = z.record(z.enum(['I', 'II', 'III', 'IV', 'V', 'VI', 'VIII']), RollTable);
+const TableKey = z.enum(['I', 'II', 'III', 'IV', 'V', 'VI', 'VIII']);
+export const TablesFile = z.record(TableKey, RollTable);
 
 // ---------- expedition.yaml ----------
 // expedition:
@@ -98,7 +100,6 @@ export const ZonesFile = z.record(z.string(), ZoneEntry);
 //   …
 // zones: [damage, notes, collect]      # Bogenzonen aus zones.yaml (perSeat)
 // roll: { attributeTotal: 4 }
-const TableKey = z.enum(['I', 'II', 'III', 'IV', 'V', 'VI', 'VIII']);
 export const SheetField = z.object({
   kind: z.enum(['text', 'number', 'check', 'counter', 'photo', 'trumpSlot', 'overlay']),
   count: z.number().int().positive().optional(),

@@ -3,11 +3,12 @@
 
 import type { SeatId, TextRef } from '../engine/types';
 import { attrValue, ATTRS, steps, type Attr, type BlockContext, type Choices, type Trump } from '../rules/klio/blocks';
+import { TrumpCategory } from '../rules/klio/content/schema';
 import type { KlioContent } from '../rules/klio/content/validate';
 import { sourceStatus, stepSkipped, stepsOf, trumpProblem, type Source, type StepName } from '../rules/klio/trumps';
 
-export type Category = 'K' | 'V' | 'P' | 'X';
-export const CATEGORIES: Category[] = ['K', 'V', 'P', 'X'];
+export type Category = Trump['category'];
+export const CATEGORIES = TrumpCategory.options;
 
 /** Gewählter Weg: ein Eintrag aus trump-sources.yaml oder die freie Wahl. */
 export type SourcePath = { kind: 'source'; source: Source; improveOnly: boolean };

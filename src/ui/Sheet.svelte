@@ -73,7 +73,7 @@
 
   // Narbe und Tod nach einem Treffer erst mit dem Aufprall (5k)
   const checked = (id: string) => !effects.holds(seat, id) && getField(sheet, id) === true;
-  const dead = $derived(sheet.dead && !effects.holds(seat, 'dead'));
+  const dead = $derived(effects.shownDead(seat, sheet));
   const struck = (id: string) => strikerOf.has(id) && checked(strikerOf.get(id)!);
   const hasEmptySlot = $derived(!isFull(content.trumpSources, sheet));
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));

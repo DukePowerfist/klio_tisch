@@ -71,7 +71,7 @@ export function lightGradient(flame: { x: number; y: number }, light: { reach: n
 
 /** Stärke des Scheins um die Laterne (Musterseite 0,35); steckt in den Farben, weil die Deckkraft der Ebene beim
  *  Anzünden und Löschen animiert wird */
-export const HALO = 0.35;
+const HALO = 0.35;
 
 /** Warmer Schein um die Laterne (wird mit `screen` aufgelegt) */
 export function haloGradient(flame: { x: number; y: number }, strength = HALO): string {

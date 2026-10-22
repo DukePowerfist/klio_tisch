@@ -1,7 +1,7 @@
 // Was die anderen gerade tun (ARCHITEKTUR.md 8.3, Schritt 5b): gezogene Karten, die dem Zeiger folgen,
 // und angewählte Stapel. Reine Logik ohne Svelte; die Zeit kommt von außen (testbar).
 
-import { locate } from '../engine/zones';
+import { arrivingCards } from './motion';
 import type { CardId, EngineEvent, Event, TableState, ZoneId } from '../engine/types';
 import type { PeerId } from '../net/transport';
 import type { PointerPos, PresenceInfo } from '../net/presence';
@@ -145,12 +145,7 @@ export function movedCards(events: readonly Event[], prev: TableState<unknown> |
         out.add(e.card);
         break;
       case 'zonesShuffled':
-        for (const [zone, cards] of Object.entries(e.zones)) {
-          for (const c of cards) {
-            const was = prev && locate(prev, c);
-            if (!(was && 'zone' in was && was.zone === zone)) out.add(c);
-          }
-        }
+        for (const c of arrivingCards(e.zones, prev)) out.add(c);
         break;
       case 'cardsReset':
         for (const c of Object.values(e.zones).flat()) out.add(c);

@@ -20,7 +20,6 @@ const EDIT_MS = 5 * 60_000;
 class Pulse<K> {
   private items = $state.raw<ReadonlySet<K>>(new Set());
   has = (k: K): boolean => this.items.has(k);
-  values = (): K[] => [...this.items];
   add(keys: K[], until: Promise<unknown> = new Promise((r) => setTimeout(r, PULSE_MS))): void {
     this.items = new Set([...this.items, ...keys]);
     void until.then(() => (this.items = new Set([...this.items].filter((k) => !keys.includes(k)))));
@@ -48,6 +47,8 @@ class Effects {
   /** Narben und Tod, die der Bogen erst mit dem Aufprall zeigt (`seat1/scars.heart`, `seat1/dead`; 5k) */
   private held = new Pulse<string>();
   holds = (seat: SeatId, what: string): boolean => this.held.has(key(seat, what));
+  /** tot, sobald der Bogen es zeigt (erst mit dem Aufprall, 5k): Kreuz am Bogen, „Wiederbeleben“ im Menü */
+  shownDead = (seat: SeatId, sheet: { dead: boolean }): boolean => sheet.dead && !this.holds(seat, 'dead');
   /** zuletzt selbst gesendeter Wert je Feld */
   private edits = new Map<string, { value: unknown; at: number }>();
 

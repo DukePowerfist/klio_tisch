@@ -4,11 +4,11 @@
   import { SEATS, type SeatId } from '../engine/types';
   import { seatNo, seatVisible } from '../engine/zones';
   import Modal from './Modal.svelte';
-  import { submitOrSay } from './commands';
+  import { assignOrSay as assign, submitOrSay } from './commands';
   import { freeSeats, moveTargets, watchers } from './seatActions';
   import { seatNames } from './seatNames';
   import { session } from './session.svelte';
-  import { t, text } from './texts';
+  import { t } from './texts';
   import { view } from './view.svelte';
 
   const table = $derived(session.state!);
@@ -25,10 +25,6 @@
     if (seat) act(seat);
   }
 
-  async function assign(peer: string, seat: SeatId) {
-    const r = await session.assign(peer, seat);
-    if (!r.ok) view.say(text(r.reason), true);
-  }
   let confirmRenew = $state(false);
 
   async function renew() {
@@ -48,7 +44,7 @@
       <span>{numbered}</span>
       <span class="who">
         {#if !seatVisible(seat, table)}<i>{t('room.hidden')}</i>{/if}
-        {#if names.character !== numbered}<span class="character">{names.character}</span>{' · '}{/if}
+        {#if names.named}<span class="character">{names.character}</span>{' · '}{/if}
         {#if !names.free}
           {names.person} <small class:on>{t(on ? 'room.online' : 'room.offline')}</small>
         {:else}

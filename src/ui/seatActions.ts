@@ -14,8 +14,8 @@ export type Watcher = { peer: string; label: string; named: boolean };
 
 /** Platz mit Charakter, falls benannt: „Platz 3 – Hilda“ bzw. „auf Platz 3 – Hilda“ */
 export function withCharacter(table: KlioTable, base: string, seat: SeatId): string {
-  const { character } = seatNames(table, seat);
-  return character !== t('room.player', { n: seatNo(seat) }) ? `${base} – ${character}` : base;
+  const { character, named } = seatNames(table, seat);
+  return named ? `${base} – ${character}` : base;
 }
 
 /** Ziele zum Umsetzen: sichtbare Plätze; vom ausgeblendeten Platz nur freie (sonst landete der andere dort) */

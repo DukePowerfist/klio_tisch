@@ -4,13 +4,13 @@
 import type { SeatId } from '../engine/types';
 import { sheetOf } from '../rules/klio/events';
 import { characterFileName, readCharacter, writeCharacter } from './characterFile';
-import { submitOrSay } from './commands';
+import { sayIfRejected, submitOrSay } from './commands';
 import { saveFile } from './files';
 import { preparePhoto } from './photo';
 import { photos } from './photos.svelte';
 import { seatNames } from './seatNames';
 import { session } from './session.svelte';
-import { t, text } from './texts';
+import { t } from './texts';
 import { view } from './view.svelte';
 
 /** Foto verkleinern, nach Inhalt benennen, ablegen (bzw. zum Host bringen), dann am Bogen eintragen */
@@ -18,7 +18,7 @@ export async function setPhoto(seat: SeatId, file: File): Promise<void> {
   const prepared = await preparePhoto(file).catch(() => null);
   if (!prepared) return view.say(t('sheet.photoUnreadable'), true);
   const stored = await session.addPhoto(prepared.hash, prepared.bytes);
-  if (!stored.ok) return view.say(text(stored.reason), true);
+  if (!sayIfRejected(stored)) return;
   const cmd = { type: 'sheet.setPhoto', seat, photo: { hash: prepared.hash, type: 'image/jpeg' } };
   await submitOrSay(cmd);
 }
@@ -51,10 +51,10 @@ export async function exportCharacter(seat: SeatId): Promise<void> {
 export const importCharacter = (seat: SeatId): void =>
   pickFile('application/json,.json', async (file) => {
     const r = await readCharacter(await file.text());
-    if (!r.ok) return view.say(text(r.reason), true);
+    if (!sayIfRejected(r)) return;
     if (r.photo) {
       const stored = await session.addPhoto(r.photo.hash, r.photo.bytes);
-      if (!stored.ok) return view.say(text(stored.reason), true);
+      if (!sayIfRejected(stored)) return;
     }
     const cmd = { type: 'sheet.import', seat, sheet: r.sheet };
     await submitOrSay(cmd);

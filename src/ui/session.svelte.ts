@@ -263,7 +263,8 @@ class Session {
     this.awayStill = new Set();
   }
 
-  private get ownSeat(): SeatId | null {
+  /** eigener Platz; null für SL und Zuschauer */
+  get ownSeat(): SeatId | null {
     const r = this.actor;
     return r.role === 'player' ? r.seat : null;
   }
@@ -392,7 +393,7 @@ class Session {
     if (by !== 'gm' && !(first && before && before !== r.seat)) return;
     const names = seatNames(this.state, r.seat);
     const n = seatNo(r.seat);
-    view.say(names.character !== t('room.player', { n }) ? t('room.movedAs', { n, character: names.character }) : t('room.moved', { n }));
+    view.say(names.named ? t('room.movedAs', { n, character: names.character }) : t('room.moved', { n }));
   }
 
   /** Foto soll angezeigt werden: aus der eigenen Ablage, sonst (als Client) beim Host anfragen (8.4). */

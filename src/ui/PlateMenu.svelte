@@ -16,7 +16,7 @@
     return plateEntries({
       can: (type) => session.can({ type, seat }),
       occupied: table.seats[seat].occupied,
-      dead: sheetOf(table, seat).dead && !effects.holds(seat, 'dead'),
+      dead: effects.shownDead(seat, sheetOf(table, seat)),
       online: session.mode !== 'local',
       host: session.mode === 'host',
       inRoleView: view.role === seat,
@@ -31,10 +31,10 @@
   import { rollOverwrites } from '../rules/klio/generators/rollSheet';
   import { emptySheet } from '../rules/klio/state';
   import { seatNo } from '../engine/zones';
-  import { submitOrSay } from './commands';
+  import { assignOrSay, submitOrSay } from './commands';
   import { Confirm } from './confirm.svelte';
   import { exportCharacter, importCharacter, pickPhoto } from './sheetActions';
-  import { t, text } from './texts';
+  import { t } from './texts';
 
   let { seat }: { seat: SeatId } = $props();
 
@@ -69,10 +69,7 @@
   function load() {
     if (importConfirm.click(!isEmpty())) run(() => importCharacter(seat))();
   }
-  async function assign(peer: string) {
-    const r = await session.assign(peer, seat);
-    if (!r.ok) view.say(text(r.reason), true);
-  }
+  const assign = (peer: string) => assignOrSay(peer, seat);
 
   // passt es nicht unter das Schild, steht das Menü darüber
   $effect(() => {

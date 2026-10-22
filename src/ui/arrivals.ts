@@ -42,7 +42,6 @@ type SeatState = {
 };
 
 const fresh = (occupied: boolean): SeatState => ({ occupied, seen: false, away: false, since: null, pending: null });
-const isSeat = (who: Who | undefined): who is SeatId => who !== undefined && who !== 'gm' && who !== 'spectator';
 
 export class Arrivals {
   private seats = new Map<SeatId, SeatState>();
@@ -154,7 +153,7 @@ export class Arrivals {
   }
 
   private peerAt(s: SeatId): PeerId | null {
-    for (const [p, w] of this.peers) if (isSeat(w) && w === s) return p;
+    for (const [p, w] of this.peers) if (w === s) return p;
     return null;
   }
 

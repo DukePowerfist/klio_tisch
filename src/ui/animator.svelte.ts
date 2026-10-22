@@ -3,6 +3,7 @@
 // Die zuletzt gezeigte Lage merkt sich jede Karte selbst (Card.svelte); eine laufende Bewegung liefert das DOM.
 
 import type { CardId, TableState, ZoneId } from '../engine/types';
+import { clamp } from './layout';
 import { arcPoints, countChanges, cssMs, cues, hitsTurningUp, STRIKE_IMPACT, strikeImpact, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
 
 /** Kennungen der eigenen Animationen (die CSS-Animation beim Rucken bleibt unberührt) */
@@ -13,28 +14,39 @@ const CUE = 'cue';
 /** Stapelung während eines Flugs: über den liegenden Karten, unter gezogenen (400000) und dem Stapelmenü */
 const FLYING_Z = 300000;
 
-let cached: Timing | null = null;
+/** dazu, was nur hier gebraucht wird: Leuchten nach fremden Zügen, Stoß, Ankommen (11.7) */
+type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; arriveLift: number; arriveEase: string; ping: number; pointerOut: number };
+let cached: AllTiming | null = null;
+let cachedCut: AllTiming | null = null;
+/** Schnitt beim Ansichtswechsel (11.8, view.svelte.ts): `shift` ist dann 0, wie `--shift` unter `[data-cut]` */
+let cutting = false;
+export const setCutting = (v: boolean): void => {
+  cutting = v;
+};
 /** Dauern und Kurven aus theme.css; neu gelesen, wenn sich die Effektstufe ändert (`resetTiming`) */
-export function timing(): Timing {
-  if (cached) return cached;
+export function timing(): AllTiming {
+  if (!cached) cached = readTiming();
+  return cutting ? (cachedCut ??= { ...cached, shift: 0 }) : cached;
+}
+function readTiming(): AllTiming {
   const css = getComputedStyle(document.documentElement);
   const v = (name: string) => css.getPropertyValue(name).trim();
-  cached = {
+  return {
     glide: cssMs(v('--glide')), glideEase: v('--glide-ease') || 'ease-out', land: cssMs(v('--land')),
     flip: cssMs(v('--flip')), hold: cssMs(v('--hold')), cut: cssMs(v('--cut')), strike: cssMs(v('--strike')),
     fade: cssMs(v('--fade')), flash: cssMs(v('--flash')), shift: cssMs(v('--shift')), shiftEase: v('--shift-ease') || 'ease',
     viewOut: cssMs(v('--view-out')), viewIn: cssMs(v('--view-in')),
     wiggle: cssMs(v('--wiggle')), count: cssMs(v('--count-pop')),
     lampOn: cssMs(v('--lamp-on')), lampOff: cssMs(v('--lamp-off')),
+    glow: cssMs(v('--glow')), strikeColor: v('--strike-c') || 'red',
+    arrive: cssMs(v('--arrive')), arriveLift: cssMs(v('--arrive-lift')), arriveEase: v('--spring-soft') || 'ease-out',
+    ping: cssMs(v('--ping')), pointerOut: cssMs(v('--pointer-out')),
   };
-  return cached;
 }
 /** Effektstufe gewechselt: Werte neu lesen */
 export const resetTiming = (): void => {
-  cached = null;
+  cached = cachedCut = null;
 };
-/** Dauer des Leuchtens nach einem fremden Zug */
-const glowMs = () => cssMs(getComputedStyle(document.documentElement).getPropertyValue('--glow'));
 
 // ---------- Ereignisse des aktuellen Stands ----------
 // effects.svelte.ts meldet die Ereignisse eines neuen Stands und ob es eigene sind; die Karten lesen das beim
@@ -108,14 +120,14 @@ export function revealed(card: CardId, anim?: Animation): void {
   else run();
 }
 
-const running = (el: Element, id: string) => el.getAnimations().filter((a) => a.id === id);
+const running = (el: Element, ...ids: string[]) => el.getAnimations().filter((a) => ids.includes(a.id));
 const tag = (a: Animation, id: string) => ((a.id = id), a);
 
 /** Lage: von der gezeigten (laufende Bewegung) bzw. zuletzt gezeigten Lage `from` zur Endlage im Element.
  *  `lift` trägt Aufsetzen und Drehung unterwegs, `z` ist die Stapelung am Ziel. */
 export function move(el: HTMLElement, lift: HTMLElement, from: string, motion: Motion, z: number): void {
   if (!motion) return;
-  const now = [...running(el, MOVE), ...running(lift, MOVE), ...running(el, CUE), ...running(lift, CUE)];
+  const now = [...running(el, MOVE, CUE), ...running(lift, MOVE, CUE)];
   const start = now.length ? getComputedStyle(el).transform : from;
   for (const a of now) a.cancel();
   if (motion.kind === 'jump') return;
@@ -147,8 +159,7 @@ export function move(el: HTMLElement, lift: HTMLElement, from: string, motion: M
   const t = timing();
   const end = motion.delay + motion.duration;
   if (motion.land) tag(lift.animate([{ scale: 1 }, { scale: 0.98, offset: 0.4 }, { scale: 1 }], { duration: t.land, delay: end, easing: 'ease-out' }), MOVE);
-  const glow = glowMs();
-  if (motion.glow && glow) tag(lift.animate([{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }], { duration: glow, delay: end, pseudoElement: '::after' }), MOVE);
+  if (motion.glow && t.glow) tag(lift.animate([{ opacity: 0 }, { opacity: 1, offset: 0.25 }, { opacity: 0 }], { duration: t.glow, delay: end, pseudoElement: '::after' }), MOVE);
 }
 
 /** Abheben im gemischten Stapel (11.1): Die oberen Karten gleiten eine halbe Kartenbreite zur Seite und schieben sich
@@ -177,7 +188,7 @@ export function cut(el: HTMLElement, lift: HTMLElement, c: Cut, z: number, index
 const WIGGLE = 'wiggle';
 export function wobble(el: HTMLElement, lift: HTMLElement): void {
   const t = timing();
-  if (!t.wiggle || running(el, MOVE).length || running(lift, MOVE).length || running(lift, WIGGLE).length) return;
+  if (!t.wiggle || running(el, MOVE).length || running(lift, MOVE, WIGGLE).length) return;
   tag(lift.animate([
     { transform: 'rotate(0deg)' }, { transform: 'rotate(1.2deg)', offset: 0.3 }, { transform: 'rotate(-0.6deg)', offset: 0.65 }, { transform: 'rotate(0deg)' },
   ], { duration: t.wiggle, easing: 'ease-out', composite: 'add' }), WIGGLE);
@@ -196,7 +207,7 @@ export function strike(el: HTMLElement, lift: HTMLElement, delay: number): void 
 }
 function strikeNow(el: HTMLElement, lift: HTMLElement, delay: number): void {
   const t = timing();
-  const red = getComputedStyle(document.documentElement).getPropertyValue('--strike-c').trim() || 'red';
+  const red = t.strikeColor;
   // Stufe „Aus“: nur der rote Schimmer
   if (!t.strike) return flash(lift, red, delay);
   const opts = { duration: t.strike, delay, easing: 'ease-out' };
@@ -214,7 +225,6 @@ function glowEdge(lift: HTMLElement, color: string, opts: KeyframeAnimationOptio
 }
 
 // ---------- Ankommen (11.7, Schritt 5l) ----------
-const cssVar = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 /** Schatten des Bogens (Sheet.svelte), Ausgang und Ende des Hebens */
 const SHEET_SHADOW = '0 2px 10px rgba(0, 0, 0, 0.5)';
 
@@ -223,7 +233,8 @@ const SHEET_SHADOW = '0 2px 10px rgba(0, 0, 0, 0.5)';
 export function arriveSheet(sheet: HTMLElement): void {
   const c = getComputedStyle(sheet).getPropertyValue('--c').trim();
   const lit = `0 0 0 3px ${c}, 0 0 14px 2px ${c}`;
-  const lift = cssMs(cssVar('--arrive-lift'));
+  const t = timing();
+  const lift = t.arriveLift;
   if (lift) {
     sheet.animate([
       { translate: '0 0', boxShadow: `${SHEET_SHADOW}, 0 0 0 0 transparent, 0 0 0 0 transparent` },
@@ -232,28 +243,27 @@ export function arriveSheet(sheet: HTMLElement): void {
     ], { duration: lift, easing: 'ease-out' });
     return;
   }
-  const t = timing();
   if (t.flash) sheet.animate([{ boxShadow: `${SHEET_SHADOW}, ${lit}` }, { boxShadow: `${SHEET_SHADOW}, 0 0 0 0 transparent, 0 0 0 0 transparent` }], { duration: t.flash, easing: 'ease-out' });
 }
 
 /** Namensschild beim Ankommen und bei „wieder da“: Hintergrund aus durchsichtig in die Platzfarbe, Name blendet ein;
  *  in „Aus“ sofort (nichts). */
 export function arrivePlate(plate: HTMLElement): void {
-  const d = cssMs(cssVar('--arrive'));
-  if (!d) return;
+  const t = timing();
+  if (!t.arrive) return;
   const css = getComputedStyle(plate);
-  plate.animate({ backgroundColor: ['transparent', css.backgroundColor], color: ['transparent', css.color] }, { duration: d, easing: cssVar('--spring-soft') || 'ease-out' });
+  plate.animate({ backgroundColor: ['transparent', css.backgroundColor], color: ['transparent', css.color] }, { duration: t.arrive, easing: t.arriveEase });
 }
 
 /** Ring am Zeiger (11.7): dehnt sich einmal aus und verblasst; in „Aus“ nichts */
 export function pingRing(ring: HTMLElement): void {
-  const d = cssMs(cssVar('--ping'));
+  const d = timing().ping;
   if (d) ring.animate([{ scale: 0.3, opacity: 0.9 }, { scale: 2.4, opacity: 0 }], { duration: d, easing: 'ease-out' });
 }
 
 /** Zeiger der anderen verschwindet (Tisch verlassen oder weg): ausblenden, in „Aus“ sofort */
 export function pointerOut(_: Element) {
-  return { duration: cssMs(cssVar('--pointer-out')), css: (k: number) => `opacity: ${k}` };
+  return { duration: timing().pointerOut, css: (k: number) => `opacity: ${k}` };
 }
 
 /** Stufe „Aus“: Rückmeldung ohne Bewegung (11.5) */
@@ -313,7 +323,7 @@ export class Tilt {
     const now = performance.now();
     if (this.last) {
       const v = (x - this.last.x) / Math.max(8, now - this.last.t);
-      this.target = Math.max(-TILT_MAX, Math.min(TILT_MAX, v * TILT_PER_SPEED));
+      this.target = clamp(v * TILT_PER_SPEED, -TILT_MAX, TILT_MAX);
     }
     this.last = { x, t: now };
     if (!this.frame) this.frame = requestAnimationFrame(this.step);

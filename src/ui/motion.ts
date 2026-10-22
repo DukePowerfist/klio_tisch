@@ -1,7 +1,7 @@
 // Kartenbewegungen planen (ARCHITEKTUR.md 11.2, Schritt 5g): rein, ohne DOM, testbar. Ausgeführt in animator.svelte.ts.
 
 import type { CardId, EngineEvent, TableState, ZoneId } from '../engine/types';
-import { locate, seatZoneId } from '../engine/zones';
+import { seatZoneId } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 
 /** Was eine Karte gerade zeigt: Lage aus dem Stand, wem sie folgt, und ihr Platz im Stand (`CardPlace.slot`) */
@@ -104,6 +104,16 @@ export function hitsTurningUp(events: readonly { type: string }[]): CardId[] {
   });
 }
 
+/** Karten, die in eine andere Zone (bzw. aus der freien Ablage) kommen; `prev` = Stand davor */
+export function arrivingCards(zones: Record<ZoneId, CardId[]>, prev: TableState<unknown> | null): CardId[] {
+  const was = new Map<CardId, ZoneId>();
+  if (prev) for (const [zone, cards] of Object.entries(prev.zones)) for (const c of cards) was.set(c, zone);
+  return Object.entries(zones).flatMap(([zone, cards]) => cards.filter((c) => was.get(c) !== zone));
+}
+
+/** Dauer je nach Auslöser: eigene Züge schneller, fremde langsamer */
+const factorOf = (cause: Cause): number => (cause === 'own' ? OWN_FACTOR : cause === 'foreign' ? FOREIGN_FACTOR : 1);
+
 export const cutCount = (n: number): number => Math.max(0, Math.min(n - 1, CUT_MAX, Math.max(CUT_MIN, Math.floor(n / 2))));
 
 /** Was die Ereignisse eines Stands für die Karten vorsehen (11.1): Staffelung in Reihenfolge der Ereignisse, Ziehen,
@@ -119,19 +129,14 @@ export function cues(events: readonly { type: string }[], prev: TableState<unkno
     cards.forEach((c, i) => set(c, { delay: Math.round(i * step) }));
     return Math.round((cards.length - 1) * step);
   };
-  /** Karten, die in eine andere Zone (bzw. aus der freien Ablage) kommen */
-  const arriving = (zones: Record<ZoneId, CardId[]>) =>
-    Object.entries(zones).flatMap(([zone, cards]) => cards.filter((c) => {
-      const was = prev && locate(prev, c);
-      return !(was && 'zone' in was && was.zone === zone);
-    }));
-  const factor = cause === 'own' ? OWN_FACTOR : cause === 'foreign' ? FOREIGN_FACTOR : 1;
+  const factor = factorOf(cause);
   /** Einsammeln, dann Abheben in jedem Stapel; offene Karten, die bleiben, klappen vorher um */
   const gatherAndCut = (zones: Record<ZoneId, CardId[]>, cutZones: readonly ZoneId[], max: number) => {
-    const moving = arriving(zones);
+    const moving = arrivingCards(zones, prev);
+    const moves = new Set(moving);
     const last = moving.length ? spread(moving, max) : 0;
     let start = moving.length ? last + Math.round(GLIDE_MAX * factor) + t.land : 0;
-    const turning = cutZones.some((z) => (zones[z] ?? []).some((c) => prev?.faceUp[c] && !moving.includes(c)));
+    const turning = cutZones.some((z) => (zones[z] ?? []).some((c) => prev?.faceUp[c] && !moves.has(c)));
     if (turning) start = Math.max(start, t.flip);
     for (const zone of cutZones) {
       const cards = zones[zone] ?? [];
@@ -175,7 +180,7 @@ export function planMove(prev: Frame, next: Frame, t: Timing, cause: Cause = nul
     const by = prev.follow === 'own' ? 'own' : prev.follow === 'remote' ? 'foreign' : cause;
     const dx = next.x - prev.x;
     const dist = Math.hypot(dx, next.y - prev.y);
-    const factor = by === 'own' ? OWN_FACTOR : by === 'foreign' ? FOREIGN_FACTOR : 1;
+    const factor = factorOf(by);
     const flight = dist >= FLIGHT_MIN;
     // zurück an den Ausgangsort (gleicher Platz) setzt nicht auf: die Karte hat ihn nie verlassen
     const moved = prev.slot !== next.slot;

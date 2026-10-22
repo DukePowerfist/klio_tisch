@@ -9,7 +9,6 @@
   import { HEIGHT, onCard, shadowCss, shadowOver } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
-  import { view } from './view.svelte';
 
   let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = HEIGHT.card, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
@@ -68,9 +67,9 @@
     untrack(() => {
       let arrives = shown?.arrives ?? 0;
       if (shown && !still) {
-        // Schnitt beim Ansichtswechsel (11.8): gleicher Platz springt; nicht über `still`, das auch Umklappen,
-        // Abheben und Stoß aus Ereignissen im selben Bild unterdrücken würde
-        const t = view.cutting ? { ...timing(), shift: 0 } : timing();
+        // Schnitt beim Ansichtswechsel (11.8): gleicher Platz springt (`shift` ist dann 0); nicht über `still`, das
+        // auch Umklappen, Abheben und Stoß aus Ereignissen im selben Bild unterdrücken würde
+        const t = timing();
         const motion = planMove(shown.frame, frame, t, cause(), cue(card));
         move(el, lift, shown.transform, motion, z);
         if (motion?.kind === 'glide') arrives = performance.now() + arrival(motion, t);
@@ -113,7 +112,7 @@
   const back = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 </script>
 
-<div bind:this={el} transition:appear={{ still: still || view.cutting }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} class:hover style:--mark={mark} style:--glow-c={lastMark} style:--face-shadow={shadows?.face} style:--lift-shadow={shadows?.lift} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
+<div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} class:hover style:--mark={mark} style:--glow-c={lastMark} style:--face-shadow={shadows?.face} style:--lift-shadow={shadows?.lift} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
   <div bind:this={lift} class="lift">
   <div bind:this={inner} class="inner" class:down={!faceUp}>
     <div class="face front">

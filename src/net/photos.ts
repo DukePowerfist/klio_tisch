@@ -23,10 +23,15 @@ export function toBase64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
-/** Empfangenes Foto entpacken; null, wenn der Inhalt nicht zum Namen passt. */
-export async function unpackPhoto(hash: string, data: string): Promise<Uint8Array | null> {
+export function fromBase64(data: string): Uint8Array<ArrayBuffer> {
   const text = atob(data);
   const bytes = new Uint8Array(text.length);
   for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i);
+  return bytes;
+}
+
+/** Empfangenes Foto entpacken; null, wenn der Inhalt nicht zum Namen passt. */
+export async function unpackPhoto(hash: string, data: string): Promise<Uint8Array | null> {
+  const bytes = fromBase64(data);
   return (await sha256Hex(bytes)) === hash ? bytes : null;
 }

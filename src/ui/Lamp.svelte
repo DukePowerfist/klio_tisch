@@ -61,15 +61,10 @@
   /** flackert gerade: „Voll“, Schalter an (eigene Wahl, 11.9) und Laterne brennt */
   const flicker = $derived(effectLevel.flickering && lit);
 
-  // Deckkraft von Licht, Schein und Glühen aus dem Stand. Gesetzt im Skript statt mit `style:`, weil das Flackern
-  // dieselbe Eigenschaft bewegt; ein Übergang (WAAPI) liegt während er läuft darüber. Läuft auch, wenn das Flackern
-  // endet: Dessen Aufräumen setzt die Deckkraft nicht selbst, weil Svelte dort noch den alten Wert von `lit` liefert
-  // (Fehler 2026-10-22: gelöscht in „Voll“ glühte die Laterne weiter).
-  $effect(() => {
-    void flicker;
-    const v = lit ? '1' : '0';
-    for (const el of [on, glow, ember]) el.style.opacity = v;
-  });
+  /** Deckkraft von Licht, Schein und Glühen aus dem Stand; das Flackern wirkt über `--flicker` darauf, nicht auf
+   *  `opacity` selbst. Ein Übergang (WAAPI) liegt, während er läuft, darüber. */
+  const opacity = $derived(lit ? 1 : 0);
+  const flickered = $derived(`calc(var(--flicker, 1) * ${opacity})`);
 
   // ---------- Flackern in „Voll“ (11.9) ----------
   // Geglättetes Rauschen, gelegentlich ein Zucken, etwa 30 Werte pro Sekunde. Nur Inline-Stil an den Lichtebenen und
@@ -89,7 +84,7 @@
       }
       f.v += (f.target - f.v) * 0.35;
       const bright = Math.min(1, f.v).toFixed(3);
-      glow.style.opacity = ember.style.opacity = bright;
+      for (const el of [glow, ember]) el.style.setProperty('--flicker', bright);
       // die Flamme wandert leicht; wird sie kleiner, reicht das Licht weniger weit
       const move = `${((Math.sin(now / 410) * 0.6 + Math.sin(now / 173) * 0.4) * 1.6).toFixed(2)}px ${(Math.cos(now / 290) * 1.2).toFixed(2)}px`;
       on.style.translate = glow.style.translate = move;
@@ -101,6 +96,7 @@
     return () => {
       cancelAnimationFrame(raf);
       for (const el of [on, glow]) el.style.translate = el.style.scale = el.style.willChange = '';
+      for (const el of [glow, ember]) el.style.removeProperty('--flicker');
     };
   });
 
@@ -131,15 +127,15 @@
 <svelte:element this={may ? 'button' : 'div'} class="lamp" class:control={may} style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px"
   title={may ? t(lit ? 'gm.lampOff' : 'gm.lampOn') : undefined} aria-pressed={may ? lit : undefined} onclick={may ? toggle : undefined} role={may ? undefined : 'presentation'} data-lamp data-lit={lit}>
   <img src={image} alt="" draggable="false" />
-  <div class="ember" bind:this={ember} style:mask-image={mask}></div>
+  <div class="ember" bind:this={ember} style:mask-image={mask} style:opacity={flickered}></div>
 </svelte:element>
 
 <!-- Hülle ohne z-index und ohne alles andere, was einen Stapelkontext bildet (opacity, transform, filter, isolation):
      sonst wäre sie eine isolierte Gruppe, und multiply hätte keinen Hintergrund (11.9). Die z-Werte stehen an den Ebenen. -->
 <div class="light" aria-hidden="true" data-flicker={flicker ? '' : undefined}>
   <div class="out" bind:this={out} style:opacity={lit ? 0 : 1}></div>
-  <div class="on" bind:this={on} style:background={shade} style:transform-origin="{centre.x}px {centre.y}px"></div>
-  <div class="glow" bind:this={glow} style:background={halo} style:transform-origin="{centre.x}px {centre.y}px"></div>
+  <div class="on" bind:this={on} style:opacity={opacity} style:background={shade} style:transform-origin="{centre.x}px {centre.y}px"></div>
+  <div class="glow" bind:this={glow} style:opacity={flickered} style:background={halo} style:transform-origin="{centre.x}px {centre.y}px"></div>
 </div>
 
 <style>

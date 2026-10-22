@@ -10,6 +10,8 @@ import { t } from './texts';
 export type SeatNames = {
   /** Charaktername, ohne Namen „Spieler n“ */
   character: string;
+  /** Charakter mit eigenem Namen (nicht „Spieler n“) */
+  named: boolean;
   /** Name der Person am Platz; leer, wenn frei oder ohne Namen */
   person: string;
   /** beides zusammen, z. B. für Tooltips */
@@ -28,5 +30,5 @@ export function seatNames(state: KlioTable, seat: SeatId): SeatNames {
   const character = sheetOf(state, seat).name.trim() || numbered;
   const name = (s.name ?? '').trim();
   const person = s.occupied ? name : '';
-  return { character, person, label: person ? `${character} · ${person}` : character, plate: person || numbered, free: !s.occupied, last: s.occupied ? '' : name };
+  return { character, named: character !== numbered, person, label: person ? `${character} · ${person}` : character, plate: person || numbered, free: !s.occupied, last: s.occupied ? '' : name };
 }
