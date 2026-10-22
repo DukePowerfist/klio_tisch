@@ -1,7 +1,7 @@
 // Menü am Namensschild im lokalen Betrieb (Schritt 5j, ARCHITEKTUR.md 10.1). Mit Mitspielern: multiplayer.spec.ts.
 
-import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, makePng, ready, zoneCenter } from './helpers';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { dragFromTo, expectCount, makePng, nameCharacter, ready, zoneCenter } from './helpers';
 
 const plate = (page: Page, seat: string) => page.locator(`[data-plate=${seat}]`);
 const menu = (page: Page) => page.getByRole('menu');
@@ -165,4 +165,103 @@ test('Spielerzahl: Menü schließt, wenn der Platz verschwindet oder der Bogen w
   await players.selectOption('2');
   await expect(page.locator('[data-sheet=seat3]')).toHaveCount(0);
   await expect(menu(page)).toHaveCount(0);
+});
+
+// ---------- Schritt 5p, Teil 3: Menüstil, Kopf, Zipfel, Lage (10.4) ----------
+
+const panel = (page: Page) => page.locator('[data-plate-menu]');
+const rect = async (l: Locator) => (await l.boundingBox())!;
+/** ganz im Fenster (8 px Rand) */
+async function expectInside(page: Page) {
+  const m = await rect(panel(page));
+  const v = page.viewportSize()!;
+  expect(m.x).toBeGreaterThanOrEqual(8 - 0.5);
+  expect(m.y).toBeGreaterThanOrEqual(8 - 0.5);
+  expect(m.x + m.width).toBeLessThanOrEqual(v.width - 8 + 0.5);
+  expect(m.y + m.height).toBeLessThanOrEqual(v.height - 8 + 0.5);
+}
+/** Zipfel zeigt auf die Mitte des Schilds */
+async function expectTipAtPlate(page: Page, seat: string) {
+  const p = await rect(plate(page, seat));
+  const tip = await rect(panel(page).locator('.menu-tip'));
+  expect(Math.abs(tip.x + tip.width / 2 - (p.x + p.width / 2))).toBeLessThan(1.5);
+}
+
+test('Kopf: „Platz n“ mit Charaktername, ohne Namen nur „Platz n“; langer Name gekürzt, ganz im Tooltip', async ({ page }) => {
+  await plate(page, 'seat2').click();
+  await expect(panel(page).locator('.menu-head')).toHaveText('Platz 2');
+  await expect(panel(page).locator('.menu-head .name')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  const long = 'Wilhelmine Adelheid von Hohenstein-Eberstadt';
+  await nameCharacter(page, 'seat2', long);
+  await plate(page, 'seat2').click();
+  const name = panel(page).locator('.menu-head .name');
+  await expect(name).toHaveText(long);
+  await expect(name).toHaveCSS('text-transform', 'none');
+  await expect(panel(page).locator('.menu-head')).toHaveAttribute('title', long);
+  expect(await name.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(panel(page)).toHaveCSS('width', '240px');
+});
+
+test('am Schild: unter dem Schild mit Zipfel auf dessen Mitte, sonst darüber, immer ganz sichtbar', async ({ page }) => {
+  for (const size of [{ width: 1280, height: 720 }, { width: 1600, height: 900 }]) {
+    await page.setViewportSize(size);
+    for (const seat of ['seat1', 'seat2', 'seat3', 'seat4']) {
+      await plate(page, seat).click();
+      await expect(panel(page)).toBeVisible();
+      await expectInside(page);
+      await expectTipAtPlate(page, seat);
+      const p = await rect(plate(page, seat));
+      const m = await rect(panel(page));
+      const side = await panel(page).getAttribute('data-side');
+      if (side === 'below') expect(m.y).toBeGreaterThan(p.y + p.height);
+      else expect(m.y + m.height).toBeLessThan(p.y);
+      // die oberen Schilder: darunter
+      if (seat === 'seat1' || seat === 'seat2') expect(side).toBe('below');
+      await page.keyboard.press('Escape');
+    }
+  }
+});
+
+test('passt auf keiner Seite: rutscht ins Fenster über das Schild, ohne Zipfel (R2, F1 a)', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 420 });
+  await plate(page, 'seat3').click();
+  await expect(panel(page)).toBeVisible();
+  await expectInside(page);
+  await expect(panel(page).locator('.menu-tip')).toHaveCount(0);
+  const p = await rect(plate(page, 'seat3'));
+  const m = await rect(panel(page));
+  expect(m.x).toBeCloseTo(p.x, 0);
+  expect(m.y).toBeLessThan(p.y);
+  expect(m.y + m.height).toBeGreaterThan(p.y + p.height);
+});
+
+test('sehr kleines Fenster: Höchsthöhe, der Inhalt scrollt, der Kopf bleibt (R2)', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 260 });
+  await plate(page, 'seat2').click();
+  await expectInside(page);
+  const body = panel(page).locator('.menu-body');
+  expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+  const head = await rect(panel(page).locator('.menu-head'));
+  await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  expect(await rect(panel(page).locator('.menu-head'))).toEqual(head);
+  await expect(entries(page).getByText('Charakter zurücksetzen')).toBeInViewport();
+});
+
+test('Rückfragen: Fläche mit Rahmen; Zurücksetzen und Importieren im gedämpften Rot, Auswürfeln ohne', async ({ page }) => {
+  // ausgewürfelt: Auswürfeln überschreibt, also fragt es nach
+  await plate(page, 'seat2').click();
+  await entries(page).getByText('Charakter auswürfeln').click();
+  await plate(page, 'seat2').click();
+  await entries(page).getByText('Charakter zurücksetzen').click();
+  const reset = entries(page).getByText('Wirklich zurücksetzen?');
+  await expect(reset).toHaveClass(/armed/);
+  await expect(reset).toHaveCSS('color', 'rgb(237, 165, 147)');
+  await expect(reset).toHaveCSS('border-top-color', 'rgba(243, 239, 227, 0.45)');
+  await entries(page).getByText('Charakter importieren …').click();
+  await expect(entries(page).getByText('Bogen ersetzen?')).toHaveCSS('color', 'rgb(237, 165, 147)');
+  await entries(page).getByText('Charakter auswürfeln').click();
+  const roll = entries(page).getByText('Überschreiben?');
+  await expect(roll).toHaveClass(/armed/);
+  await expect(roll).toHaveCSS('color', 'rgb(243, 239, 227)');
 });

@@ -205,6 +205,29 @@ export function placeMenu(anchor: Rect, avoid: Rect[], area: Area, panel: { w: n
   return { x: b.r.x, y: b.r.y, side: b.side, tip: b.tip, fallback: true };
 }
 
+/**
+ * Lage des Namensschild-Menüs (10.4). Beim Öffnen (`side` null) unter dem Schild, sonst darüber; eine Seite zählt nur,
+ * wenn das Menü dort ganz sichtbar ist und der Zipfel noch aufs Schild zeigt (nicht weit zur Seite geschoben).
+ * Danach nur noch die gewählte Seite, kein Sprung (R1). Passt sie nicht (mehr), der Ersatzfall (R2, F1 a): waagerecht
+ * am Schild, senkrecht ins Fenster geschoben und dabei über das Schild, ohne Zipfel, möglichst ohne Gesperrtes zu
+ * verdecken; beim Öffnen auf der Seite mit mehr Platz.
+ */
+export function placePlateMenu(anchor: Rect, area: Area, panel: { w: number; h: number }, side: 'below' | 'above' | null): Placement {
+  const sides = side ? [side] : (['below', 'above'] as const);
+  for (const s of sides) {
+    const p = placeMenu(anchor, [], area, panel, [s]);
+    if (!p.fallback && p.tip !== null) return p;
+  }
+  const { bounds, blocked } = area;
+  const s = side ?? (bounds.y + bounds.h - (anchor.y + anchor.h) >= anchor.y - bounds.y ? 'below' : 'above');
+  const x = clampTo(anchor.x, bounds.x, bounds.x + bounds.w - panel.w);
+  const fit = (y: number) => clampTo(y, bounds.y, bounds.y + bounds.h - panel.h);
+  const start = fit(mainAt(s, anchor, panel));
+  const ys = [start, ...blocked.flatMap((b) => [b.y - panel.h, b.y + b.h]).map(fit)].sort((p, q) => Math.abs(p - start) - Math.abs(q - start));
+  const y = ys.find((v) => blocked.every((b) => !overlap({ x, y: v, ...panel }, b))) ?? start;
+  return { x, y, side: s, tip: null, fallback: true };
+}
+
 /** wie clamp, aber bei zu kleinem Bereich bündig mit dessen Anfang */
 const clampTo = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi));
 

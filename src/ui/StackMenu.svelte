@@ -97,9 +97,11 @@
   bind:this={root}
   style:left="{place?.x ?? 0}px"
   style:top="{place?.y ?? 0}px"
+  data-side={place?.side}
+  style:--tip={place?.tip != null ? `${place.tip}px` : null}
   style:visibility={place ? null : 'hidden'}
 >
-  {#if place && place.tip !== null}<div class="menu-tip" data-side={place.side} style:--tip="{place.tip}px"></div>{/if}
+  {#if place && place.tip !== null}<div class="menu-tip" data-side={place.side}></div>{/if}
   <div class="menu-head"><span>{label}</span><span class="count">{count}</span></div>
   {#each entries as e, i (e.action)}
     {#if i === 1}<hr class="menu-rule" />{/if}

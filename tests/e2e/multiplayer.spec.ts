@@ -398,6 +398,54 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
 });
 
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
+test('Namensschild-Menü (5p): Höhe ändert sich bei offenem Menü; es bleibt auf seiner Seite, ganz sichtbar, Zipfel am Schild', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  const menu = player.locator('[data-plate-menu]');
+  const inside = async (page: Page) => {
+    const m = (await page.locator('[data-plate-menu]').boundingBox())!;
+    const v = page.viewportSize()!;
+    expect(m.y).toBeGreaterThanOrEqual(7.5);
+    expect(m.y + m.height).toBeLessThanOrEqual(v.height - 7.5);
+  };
+
+  // R1: die SL entzieht ein Recht, eine Gruppe wird kürzer, ohne Aufklappen
+  await player.locator('[data-plate=seat2]').click();
+  await expect(menu.getByRole('menuitem', { name: 'Charakter zurücksetzen' })).toBeVisible();
+  const side = await menu.getAttribute('data-side');
+  const before = (await menu.boundingBox())!;
+  const rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Charakter zurücksetzen und laden' }).selectOption('deny');
+  await expect(menu.getByRole('menuitem', { name: 'Charakter zurücksetzen' })).toHaveCount(0);
+  await expect.poll(async () => (await menu.boundingBox())!.height).toBeLessThan(before.height);
+  await expect(menu).toHaveAttribute('data-side', side!);
+  await expect(menu.locator('.menu-tip')).toHaveCount(1);
+  await inside(player);
+  await rights.getByRole('combobox', { name: 'Charakter zurücksetzen und laden' }).selectOption('allow');
+  await gm.keyboard.press('Escape');
+
+  // Aufklappen bei der SL: Liste im Menü, Pfeil offen, langer Name gekürzt mit Tooltip; Menü bleibt auf seiner Seite
+  await nameCharacter(gm, 'seat3', 'Wilhelmine Adelheid von Hohenstein-Eberstadt');
+  for (const size of [{ width: 1280, height: 720 }, { width: 1280, height: 480 }]) {
+    await gm.setViewportSize(size);
+    await gm.locator('[data-plate=seat2]').click();
+    const gmMenu = gm.locator('[data-plate-menu]');
+    const opened = await gmMenu.getAttribute('data-side');
+    const move = gmMenu.getByRole('menuitem', { name: 'Umsetzen …' });
+    await move.click();
+    await expect(move).toHaveAttribute('aria-expanded', 'true');
+    const target = gmMenu.locator('.menu-subs').getByRole('menuitem').filter({ hasText: 'Platz 3' });
+    await expect(target).toHaveAttribute('title', 'auf Platz 3 – Wilhelmine Adelheid von Hohenstein-Eberstadt (frei)');
+    expect(await target.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    await expect(gmMenu).toHaveAttribute('data-side', opened!);
+    await inside(gm);
+    // stößt es an, rutscht es über das Schild, ohne Zipfel (R2)
+    if (size.height === 480) await expect(gmMenu.locator('.menu-tip')).toHaveCount(0);
+    await gm.keyboard.press('Escape');
+  }
+});
+
 test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausgegraut, ohne jedes Recht schließt es', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
