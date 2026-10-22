@@ -43,13 +43,13 @@ export type Layout = {
   /** dieselben Zonen als Liste (Trefferprüfung beim Ziehen) */
   zoneList: ZoneBox[];
   resistTitle: { x: number; y: number };
-  /** rechte untere Ecke der SL-Leiste */
+  /** rechte untere Ecke der SL-Leiste ohne Lasche: am rechten Filzrand, unten mit Abstand (10.5) */
   gmControls: { x: number; y: number };
-  /** Höchstbreite der SL-Leiste in TP: Filz ohne den Abstand rechts und links (10.5) */
+  /** Höchstbreite der SL-Leiste ohne Lasche in TP: Filz ohne den Abstand links (10.5) */
   gmControlsMaxW: number;
-  /** Knopf zum Einfahren der SL-Leiste (10.5): Mitte in x und größter Durchmesser in TP, im Spalt rechts neben dem
-   *  Filz (Lederrand und Abstand der Bögen, dort liegen nie Karten), je 1 TP Rand */
-  gmToggle: { x: number; d: number };
+  /** Breite der Lasche zum Einfahren in TP (10.5): der Spalt rechts neben dem Filz (Lederrand und Abstand der Bögen,
+   *  dort liegen nie Karten) ohne 1 TP Rand zum Bogen */
+  gmTab: number;
   freeCardScale: number;
   lamp: LampBox;
   /** Licht der Laterne in dieser Ansicht: Reichweite in TP, Grundlicht am Rand */
@@ -60,8 +60,8 @@ export type Layout = {
 export const SHEET_W = 380;
 const SHEET_H = 537;
 
-/** Rand des Knopfs zum Einfahren der SL-Leiste zum Filz und zum Bogen in TP (10.5) */
-const TOGGLE_RIM = 1;
+/** Abstand der Lasche der SL-Leiste zum Bogen daneben in TP (10.5) */
+const TAB_RIM = 1;
 
 /** sichtbarer Lederrand um den Filz in TP (`box-shadow` an `.panel` in Board.svelte); die Abstände der Bögen zählen ab hier (10.3) */
 export const FELT_RIM = 7;
@@ -163,9 +163,9 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     zones,
     zoneList: Object.values(zones),
     resistTitle: at(M.resistTitle),
-    gmControls: at([middle.w - M.gmControlsInset[0], middle.h - M.gmControlsInset[1]]),
-    gmControlsMaxW: middle.w - 2 * M.gmControlsInset[0],
-    gmToggle: { x: middle.x + middle.w + (FELT_RIM + sp) / 2, d: FELT_RIM + sp - 2 * TOGGLE_RIM },
+    gmControls: at([middle.w, middle.h - M.gmControlsInset[1]]),
+    gmControlsMaxW: middle.w - M.gmControlsInset[0],
+    gmTab: FELT_RIM + sp - TAB_RIM,
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
     light: role ? L.role.light : L.overview.light,

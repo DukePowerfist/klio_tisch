@@ -433,7 +433,7 @@ test('Schild, Streifen und Dock bei „nicht da“ (5l): blasser in --away, zur�
   expect(await fade('[data-strip=seat2]', ['away'], true)).toEqual([600]);
 });
 
-test('SL-Leiste ein- und ausfahren (5s): vom Knopf her mit --shift, Knopf bleibt stehen', async ({ page }) => {
+test('SL-Leiste ein- und ausfahren (5s): in die Lasche hinein mit --shift, Lasche bleibt stehen', async ({ page }) => {
   await page.waitForTimeout(1000); // nach dem Laden setzt sich der Tisch noch (Übergänge an left und top)
   const watch = (name: string) =>
     page.evaluate(async (name) => {

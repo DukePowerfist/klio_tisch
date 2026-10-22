@@ -299,26 +299,29 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
   await expect(page.locator('[data-top-menu]')).toHaveCount(0);
 });
 
-test('SL-Leiste: gleich groß bei jedem Zoom und in großen Fenstern, rechte untere Ecke am Anker im Filz (5s)', async ({ page }) => {
+test('SL-Leiste: gleich groß bei jedem Zoom und in großen Fenstern, Knöpfe bis an den Filzrand, Lasche daneben (5s)', async ({ page }) => {
   const bar = page.getByRole('group', { name: 'Spielleitung' });
-  /** Größe der Leiste und Abstand ihrer rechten unteren Ecke zu der des Filzes, in Tischpunkten */
+  /** Größe der Leiste, Abstand der Naht (Ende der Knöpfe) zum rechten Filzrand, Breite der Lasche und Abstand unten, in TP */
   const measure = () =>
     page.evaluate(() => {
       const b = document.querySelector('.ctl')!.getBoundingClientRect();
+      const knobs = document.querySelector('#gm-bar')!.getBoundingClientRect();
       const f = document.querySelector('.panel')!.getBoundingClientRect();
       const sc = f.width / 700;
-      return { w: b.width, h: b.height, dx: (f.right - b.right) / sc, dy: (f.bottom - b.bottom) / sc };
+      // Breite nur der Knöpfe: die Lasche ist im Tisch fest breit (der Spalt) und wächst beim Zoomen mit
+      return { w: knobs.width, h: b.height, dx: (f.right - knobs.right) / sc, tab: (b.right - f.right) / sc, dy: (f.bottom - b.bottom) / sc };
     });
   await expect(bar).toBeVisible();
   const start = await measure();
   expect(start.h).toBeGreaterThanOrEqual(42);
-  expect(start.dx).toBeCloseTo(40, 0);
+  expect(Math.abs(start.dx)).toBeLessThan(1);
+  expect(start.tab).toBeCloseTo(30, 0);
   expect(start.dy).toBeCloseTo(26, 0);
 
   const panel = (await page.locator('.panel').boundingBox())!;
   await page.mouse.move(panel.x + panel.width / 2, panel.y + panel.height / 2);
   await page.mouse.wheel(0, -600);
-  await expect.poll(async () => (await measure()).dx).toBeCloseTo(40, 0);
+  await expect.poll(async () => Math.abs((await measure()).dx)).toBeLessThan(1);
   const zoomed = await measure();
   expect(zoomed.w).toBeCloseTo(start.w, 0);
   expect(zoomed.h).toBeCloseTo(start.h, 0);
@@ -334,13 +337,14 @@ test('SL-Leiste im kleinen Fenster mit Protokoll: eine Zeile, im Filz, über kei
   await expect(page.locator('aside.log')).toBeVisible();
   const rect = (sel: string) => page.locator(sel).first().evaluate((e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; });
   const bar = await rect('.ctl');
+  const knobs = await rect('#gm-bar');
   const felt = await rect('.panel');
   // eine Zeile: Höhe zu Breite wie bei voller Größe (etwa 36 px Knöpfe plus Rand), nicht zwei- oder dreizeilig
   const full = await page.locator('.ctl .menu-item').first().evaluate((e) => (e as HTMLElement).offsetHeight);
   const scaleOf = await page.locator('.ctl').evaluate((e) => e.getBoundingClientRect().width / (e as HTMLElement).offsetWidth);
   expect(bar.b - bar.t).toBeLessThan((full + 20) * scaleOf);
   expect(bar.l).toBeGreaterThanOrEqual(felt.l);
-  expect(bar.r).toBeLessThanOrEqual(felt.r);
+  expect(knobs.r).toBeLessThanOrEqual(felt.r + 1);
   for (const zone of ['progress', 'clubs', 'danger']) {
     const z = await rect(`[data-zone=${zone}]`);
     expect(bar.t >= z.b || bar.r <= z.l || bar.l >= z.r, zone).toBe(true);
@@ -371,7 +375,7 @@ test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp
   await expect(page.locator('[data-dock^=seat]')).toHaveCount(3);
 });
 
-test('SL-Leiste einfahren (5s): nur der Knopf bleibt, außerhalb des Filzes und neben keinem Bogen; bleibt nach dem Neuladen', async ({ page }) => {
+test('SL-Leiste einfahren (5s): nur die Lasche bleibt, außerhalb des Filzes und neben keinem Bogen; bleibt nach dem Neuladen', async ({ page }) => {
   const toggle = page.getByRole('button', { name: 'Leiste einfahren' });
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await toggle.focus();
@@ -384,7 +388,7 @@ test('SL-Leiste einfahren (5s): nur der Knopf bleibt, außerhalb des Filzes und 
   await expect(page.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
   await ready(page, true);
   await expect(page.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
-  /** Knopf rechts außerhalb des Filzes samt Rand und neben keinem Bogen */
+  /** Lasche rechts außerhalb des Filzes und neben keinem Bogen */
   const outside = async (label: string) => {
     const r = await page.evaluate(() => {
       const box = (el: Element) => el.getBoundingClientRect();
@@ -393,7 +397,7 @@ test('SL-Leiste einfahren (5s): nur der Knopf bleibt, außerhalb des Filzes und 
       const sheets = [...document.querySelectorAll('[data-sheet]')].map(box);
       return { left: b.left, right: b.right, felt: f.right, hits: sheets.filter((s) => b.right > s.left && b.left < s.right && b.bottom > s.top && b.top < s.bottom).length };
     });
-    expect(r.left, label).toBeGreaterThanOrEqual(r.felt);
+    expect(r.left, label).toBeGreaterThanOrEqual(r.felt - 1);
     expect(r.hits, label).toBe(0);
   };
   await outside('Draufsicht');

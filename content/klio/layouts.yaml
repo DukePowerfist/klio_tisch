@@ -24,7 +24,8 @@ shapes:
   seat.notes: { scale: 1, fanX: 40 }
   seat.collect: { scale: 0.4, fanY: 12, label: { rotated: true } }
 # Tischmitte: Größe; darin alles relativ zu ihrer linken oberen Ecke. Sie ist zugleich der Spielbereich (Filz,
-# Anker frei liegender Karten). gmControlsInset = Abstand der rechten unteren Ecke der SL-Leiste von ihrer rechten unteren Ecke.
+# Anker frei liegender Karten). gmControlsInset = Abstand der SL-Leiste zum Filzrand: links mindestens (x), unten (y);
+# rechts reicht sie seit 5s bis an den Filzrand, ihre Lasche liegt im Spalt daneben (ARCHITEKTUR.md 10.5).
 middle:
   size: [ 700, 970 ]
   zones:

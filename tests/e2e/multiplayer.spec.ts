@@ -278,7 +278,7 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
   await seated(player);
   const bar = player.getByRole('group', { name: 'Spielleitung' });
-  // ohne Recht keine Leiste und kein Knopf zum Einfahren
+  // ohne Recht keine Leiste und keine Lasche
   await expect(player.locator('.ctl')).toHaveCount(0);
   await expect(player.locator('.toggle')).toHaveCount(0);
   // nur Expedition: eine Gruppe, also keine Linie
@@ -289,7 +289,7 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await expect(player.locator('.ctl .group')).toHaveCount(1);
   // Einfahren gilt nur im eigenen Browser: die SL fährt ein, beim Spieler bleibt die Leiste
   await gm.getByRole('button', { name: 'Leiste einfahren' }).click();
-  await expect(gm.locator('.ctl')).toHaveCount(0);
+  await expect(gm.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
   await expect(bar.getByRole('button')).toHaveText(['Expedition']);
   await expect(player.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
   await gm.getByRole('button', { name: 'Leiste ausfahren' }).click();

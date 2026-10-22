@@ -4,18 +4,18 @@ import { describe, expect, it } from 'vitest';
 import { cardSize, computeLayout, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
 
-describe('Knopf zum Einfahren der SL-Leiste (5s, 10.5)', () => {
-  it('rechts neben der Tischmitte, in jeder Ansicht und bei jeder Spielerzahl ohne einen Bogen zu berühren', () => {
+describe('SL-Leiste mit Lasche (5s, 10.5)', () => {
+  it('Leiste bis an den Filzrand, Lasche im Spalt daneben, in jeder Ansicht und bei jeder Spielerzahl ohne einen Bogen zu berühren', () => {
     for (const players of [1, 2, 3, 4]) {
       const roles = [null, ...(['seat1', 'seat2', 'seat3', 'seat4'] as const).slice(0, players)];
       for (const role of roles) {
         const L = computeLayout(content, players, role, null);
-        const { x, d } = L.gmToggle;
         const right = L.middle.x + L.middle.w;
         const label = `${players} Spieler, Ansicht ${role ?? 'Draufsicht'}`;
-        expect(x - d / 2, label).toBeGreaterThan(right);
-        for (const s of Object.values(L.sheets).filter((b) => b.visible && b.x > right)) expect(x + d / 2, `${label}, ${s.seat}`).toBeLessThan(s.x);
-        expect(d, label).toBe(29);
+        expect(L.gmControls.x, label).toBe(right);
+        for (const s of Object.values(L.sheets).filter((b) => b.visible && b.x > right)) expect(right + L.gmTab, `${label}, ${s.seat}`).toBeLessThan(s.x);
+        expect(L.gmTab, label).toBe(30);
+        expect(L.gmControlsMaxW, label).toBe(L.middle.w - 40);
       }
     }
   });
@@ -32,7 +32,7 @@ describe('Ansichten', () => {
     expect(L.sheets.seat3.y).toBeGreaterThan(L.sheets.seat1.y);
     // gegenüber der alten Datei um 48 nach links (5d)
     expect(L.zones['deck']).toMatchObject({ x: 760 - 48, y: 440, w: 80, h: 112, scale: 1 });
-    expect(L.gmControls).toEqual({ x: 1230 - 40, y: 980 - 26 });
+    expect(L.gmControls).toEqual({ x: 1230, y: 980 - 26 });
     const two = computeLayout(content, 2, null, null);
     expect(two.sheets.seat3.visible).toBe(false);
     expect(two.zones['seat3.damage']).toBeUndefined();
