@@ -62,9 +62,8 @@
   $effect(() => {
     if (!root) return;
     const el = root;
-    const measure = () => (size = { w: el.offsetWidth, h: el.offsetHeight });
-    measure();
-    const ro = new ResizeObserver(measure);
+    // meldet sich auch gleich nach observe(), das ist die erste Messung
+    const ro = new ResizeObserver(() => (size = { w: el.offsetWidth, h: el.offsetHeight }));
     ro.observe(el);
     return () => ro.disconnect();
   });
@@ -73,7 +72,7 @@
   const place = $derived.by(() => {
     if (!size) return null;
     const p = placePlateMenu(at.anchor, at.area, size, side);
-    side ??= p.side === 'above' ? 'above' : 'below';
+    side ??= p.side as 'below' | 'above';
     return p;
   });
 

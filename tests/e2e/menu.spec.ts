@@ -1,22 +1,20 @@
 // Menü oben rechts im Menüstil (Schritt 5p, ARCHITEKTUR.md 10.4). Kopf bei SL und Spieler: multiplayer.spec.ts.
 
 import { expect, test, type Page } from '@playwright/test';
-import { fromMenu, menuButton, ready } from './helpers';
+import { box, expectInStage, expectTipAt, fromMenu, menuButton, ready } from './helpers';
 
 const panel = (page: Page) => page.locator('[data-top-menu]');
-const rect = async (page: Page, sel: string) => (await page.locator(sel).boundingBox())!;
 
 test.beforeEach(async ({ page }) => ready(page));
 
-/** Zipfel auf der Mitte des Knopfs, Panel darunter und ganz im Fenster */
+/** Zipfel auf der Mitte des Knopfs, Panel darunter, rechts bündig mit ihm und ganz in der Tischfläche */
 async function expectAtButton(page: Page) {
-  const b = (await menuButton(page).boundingBox())!;
-  const tip = await rect(page, '[data-top-menu] .menu-tip');
-  const m = await rect(page, '[data-top-menu]');
-  expect(Math.abs(tip.x + tip.width / 2 - (b.x + b.width / 2))).toBeLessThan(1.5);
+  const b = await box(menuButton(page));
+  const m = await box(panel(page));
+  await expectTipAt(panel(page), b);
   expect(m.y).toBeGreaterThan(b.y + b.height);
   expect(m.x + m.width).toBeCloseTo(b.x + b.width, 0);
-  expect(m.x).toBeGreaterThanOrEqual(0);
+  await expectInStage(page, m);
 }
 
 test('lokal: Kopf „Lokal“ ohne Zahl, Menüstil, Zipfel auf den Knopf', async ({ page }) => {

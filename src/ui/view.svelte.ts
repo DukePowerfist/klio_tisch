@@ -45,7 +45,7 @@ class ViewState {
   oy = $state(0);
   /** offenes Stapelmenü (geteilt: Rahmen bei den anderen, `growOnOpen`); `stackMenu` trägt die Geometrie dazu */
   open = $state<ZoneId | null>(null);
-  stackMenu = $state<StackMenuAt | null>(null);
+  stackMenu = $state.raw<StackMenuAt | null>(null);
   /** offener Trumpf-Dialog für diesen Bogen */
   trumpDialog = $state<SeatId | null>(null);
   /** offenes Ergebnisfenster (Expedition bzw. Orakel), geöffnet durch das Ereignis */
@@ -59,7 +59,7 @@ class ViewState {
   /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
   bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
   /** offenes Menü am Namensschild (10.1, 10.4): Platz und Geometrie beim Öffnen */
-  plateMenu = $state<PlateMenuAt | null>(null);
+  plateMenu = $state.raw<PlateMenuAt | null>(null);
   /** Profilfenster für einen bestimmten Platz, geöffnet aus dem Menü am Namensschild */
   profileFor = $state<SeatId | null>(null);
   toast = $state<Toast | null>(null);
@@ -76,6 +76,12 @@ class ViewState {
   closeStack(): void {
     this.open = null;
     this.stackMenu = null;
+  }
+
+  /** beide Menüs zu (Stapel und Namensschild) */
+  closeMenus(): void {
+    this.closeStack();
+    this.plateMenu = null;
   }
 
   /** Menü am Namensschild öffnen; das Stapelmenü schließt */

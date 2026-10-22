@@ -100,6 +100,6 @@
   .alert { display: flex; gap: 8px; align-items: center; background: var(--warn-bg); color: #fff; padding: 4px 10px; border-radius: 8px; }
   /* im Behälter des Knopfs, der beim offenen Protokoll mitrückt (R8); oben Mitte des Knopfs plus halber Knopf plus Abstand,
      der Zipfel auf seiner Mitte, von dort wächst es beim Erscheinen (R11) */
-  .menu-panel { position: absolute; top: calc(50% + var(--menu-size) / 2 + 10px); right: 0; --tip: calc(var(--menu-w-wide) - var(--menu-size) / 2); }
+  .menu-panel { position: absolute; top: calc(50% + var(--menu-size) / 2 + var(--menu-gap)); right: 0; --tip: calc(var(--menu-w-wide) - var(--menu-size) / 2); }
   .alert button { background: transparent; color: var(--ink); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 6px; padding: 4px 8px; font: inherit; cursor: pointer; }
 </style>

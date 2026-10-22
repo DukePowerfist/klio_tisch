@@ -1,13 +1,11 @@
 // Stapelmenü (Schritt 5o, ARCHITEKTUR.md 10.2): Lage am Stapel, gleicher Aufbau, Ausgrauen, Schließen.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, openMenuAndClick, ready, stackItem, zoneCenter } from './helpers';
+import { box, dragFromTo, expectCount, expectInStage, fromMenu, openMenuAndClick, ready, stackItem, zoneCenter, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
-type Box = { x: number; y: number; width: number; height: number };
 const menu = (page: Page) => page.locator('[data-stack-menu]');
-const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!;
 const overlaps = (a: Box, b: Box) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 
 const STACKS = [
@@ -25,16 +23,12 @@ async function open(page: Page, s: (typeof STACKS)[number]) {
   const z = await zoneCenter(page, s.label);
   await page.mouse.click(z.x, z.y);
   await expect(menu(page)).toBeVisible();
-  return { m: (await menu(page).boundingBox())!, stack: await box(page, `[data-zone=${s.zone}]`), target: await box(page, `[data-zone=${s.target}]`) };
+  return { m: (await menu(page).boundingBox())!, stack: await box(page.locator(`[data-zone=${s.zone}]`)), target: await box(page.locator(`[data-zone=${s.target}]`)) };
 }
 
 /** Menü liegt im sichtbaren Bereich (ohne offenes Protokoll, mit 8 px Rand) und frei von Dock und Menüknopf */
 async function expectUsable(page: Page, m: Box, label: string) {
-  const stage = await box(page, '.stage');
-  expect(m.x, label).toBeGreaterThanOrEqual(stage.x + 7.5);
-  expect(m.y, label).toBeGreaterThanOrEqual(stage.y + 7.5);
-  expect(m.x + m.width, label).toBeLessThanOrEqual(stage.x + stage.width - 7.5);
-  expect(m.y + m.height, label).toBeLessThanOrEqual(stage.y + stage.height - 7.5);
+  await expectInStage(page, m, label);
   for (const b of await page.locator('[data-menu-avoid]').all()) expect(overlaps(m, (await b.boundingBox())!), label).toBe(false);
 }
 
@@ -73,7 +67,7 @@ test('Schrift bleibt beim Hineinzoomen gleich groß, das Menü liegt über den K
   const deck = await zoneCenter(page, 'DECK');
   await page.mouse.move(deck.x, deck.y);
   await page.mouse.wheel(0, -400);
-  await expect.poll(async () => (await box(page, '[data-zone=deck]')).width).toBeGreaterThan(deck.box.width * 1.3);
+  await expect.poll(async () => (await box(page.locator('[data-zone=deck]'))).width).toBeGreaterThan(deck.box.width * 1.3);
   await page.waitForTimeout(400);
   const zoomed = await zoneCenter(page, 'DECK');
   await page.mouse.click(zoomed.x, zoomed.y);
@@ -131,7 +125,7 @@ test('Esc schließt nur das Menü, die Rollenansicht bleibt', async ({ page }) =
 });
 
 test('Klick daneben, Verschieben, Mausrad, Zoomgeste und Fenstergröße schließen; ein Klick auf den Stapel öffnet wieder', async ({ page }) => {
-  const felt = await box(page, '.panel');
+  const felt = await box(page.locator('.panel'));
   const empty = { x: felt.x + felt.width * 0.75, y: felt.y + felt.height * 0.3 };
   // Klick daneben
   await open(page, STACKS[0]);

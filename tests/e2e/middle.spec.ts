@@ -1,13 +1,11 @@
 // Gemeinsame Tischmitte (Schritt 5d, ARCHITEKTUR.md 10): Abnahme in der Oberfläche.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, zoneCenter } from './helpers';
+import { box, dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, zoneCenter, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
-type Box = { x: number; y: number; width: number; height: number };
 const free = (page: Page) => page.locator('[data-card][style*="rotate(90deg)"]');
-const box = async (page: Page, selector: string) => (await page.locator(selector).first().boundingBox())!;
 /** Lage der frei liegenden Karte relativ zum Deck, in Deckbreiten (unabhängig von Zoom und Fenster) */
 async function nearDeck(page: Page) {
   const d = (await zoneCenter(page, 'DECK')).box;
@@ -44,7 +42,7 @@ test('Frei liegende Karte zwischen den Stapeln liegt in beiden Ansichten und bei
 });
 
 test('Draufsicht: zwischen Bogen und Tischmitte abgelegt liegt die Karte ganz in der Tischmitte an ihrem Rand', async ({ page }) => {
-  const panel = await box(page, '.panel');
+  const panel = await box(page.locator('.panel'));
   const deck = await zoneCenter(page, 'DECK');
   await dragFromTo(page, deck, { x: panel.x - 20, y: deck.y });
   await expectCount(page, 'DECK', 26);
@@ -54,7 +52,7 @@ test('Draufsicht: zwischen Bogen und Tischmitte abgelegt liegt die Karte ganz in
   // in der Rollenansicht ebenso am linken Rand
   await page.keyboard.press('2');
   await settled(page);
-  const p2 = await box(page, '.panel');
+  const p2 = await box(page.locator('.panel'));
   const c2 = (await free(page).boundingBox())!;
   expect(inside(c2, p2)).toBe(true);
   expect(c2.x).toBeCloseTo(p2.x, 0);
@@ -63,8 +61,8 @@ test('Draufsicht: zwischen Bogen und Tischmitte abgelegt liegt die Karte ganz in
 test('Rollenansicht: in der Lücke neben den kleinen Bögen abgelegt liegt die Karte ganz in der Tischmitte am rechten Rand', async ({ page }) => {
   await page.keyboard.press('2');
   await settled(page);
-  const panel = await box(page, '.panel');
-  const small = await box(page, '[data-sheet=seat1]');
+  const panel = await box(page.locator('.panel'));
+  const small = await box(page.locator('[data-sheet=seat1]'));
   expect(small.x).toBeGreaterThan(panel.x + panel.width); // Spalte rechts der Tischmitte
   const deck = await zoneCenter(page, 'DECK');
   await dragFromTo(page, deck, { x: small.x - 4, y: deck.y });
@@ -75,7 +73,7 @@ test('Rollenansicht: in der Lücke neben den kleinen Bögen abgelegt liegt die K
   // in der Draufsicht ebenso, nicht über dem Bogen von Spieler 2
   await page.keyboard.press('0');
   await settled(page);
-  const p0 = await box(page, '.panel');
+  const p0 = await box(page.locator('.panel'));
   const c0 = (await free(page).boundingBox())!;
   expect(inside(c0, p0)).toBe(true);
   expect(c0.x + c0.width).toBeCloseTo(p0.x + p0.width, 0);

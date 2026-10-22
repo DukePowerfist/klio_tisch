@@ -386,10 +386,7 @@
   // eine Regel statt aufgezählter Auslöser, für beide Menüs: steht der Anker woanders, schließt das Menü
   $effect(() => {
     if ((view.stackMenu || view.plateMenu) && menuWhere !== openedWhere)
-      untrack(() => {
-        view.closeStack();
-        view.plateMenu = null;
-      });
+      untrack(() => view.closeMenus());
   });
 
   function onDblClick(e: MouseEvent) {

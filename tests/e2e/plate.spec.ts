@@ -1,7 +1,7 @@
 // Menü am Namensschild im lokalen Betrieb (Schritt 5j, ARCHITEKTUR.md 10.1). Mit Mitspielern: multiplayer.spec.ts.
 
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, makePng, nameCharacter, ready, zoneCenter } from './helpers';
+import { expect, test, type Page } from '@playwright/test';
+import { box, dragFromTo, expectCount, expectInStage, expectTipAt, makePng, nameCharacter, ready, zoneCenter } from './helpers';
 
 const plate = (page: Page, seat: string) => page.locator(`[data-plate=${seat}]`);
 const menu = (page: Page) => page.getByRole('menu');
@@ -170,22 +170,7 @@ test('Spielerzahl: Menü schließt, wenn der Platz verschwindet oder der Bogen w
 // ---------- Schritt 5p, Teil 3: Menüstil, Kopf, Zipfel, Lage (10.4) ----------
 
 const panel = (page: Page) => page.locator('[data-plate-menu]');
-const rect = async (l: Locator) => (await l.boundingBox())!;
-/** ganz im Fenster (8 px Rand) */
-async function expectInside(page: Page) {
-  const m = await rect(panel(page));
-  const v = page.viewportSize()!;
-  expect(m.x).toBeGreaterThanOrEqual(8 - 0.5);
-  expect(m.y).toBeGreaterThanOrEqual(8 - 0.5);
-  expect(m.x + m.width).toBeLessThanOrEqual(v.width - 8 + 0.5);
-  expect(m.y + m.height).toBeLessThanOrEqual(v.height - 8 + 0.5);
-}
-/** Zipfel zeigt auf die Mitte des Schilds */
-async function expectTipAtPlate(page: Page, seat: string) {
-  const p = await rect(plate(page, seat));
-  const tip = await rect(panel(page).locator('.menu-tip'));
-  expect(Math.abs(tip.x + tip.width / 2 - (p.x + p.width / 2))).toBeLessThan(1.5);
-}
+const expectInside = (page: Page) => expectInStage(page, panel(page));
 
 test('Kopf: „Platz n“ mit Charaktername, ohne Namen nur „Platz n“; langer Name gekürzt, ganz im Tooltip', async ({ page }) => {
   await plate(page, 'seat2').click();
@@ -210,9 +195,9 @@ test('am Schild: unter dem Schild mit Zipfel auf dessen Mitte, sonst darüber, i
       await plate(page, seat).click();
       await expect(panel(page)).toBeVisible();
       await expectInside(page);
-      await expectTipAtPlate(page, seat);
-      const p = await rect(plate(page, seat));
-      const m = await rect(panel(page));
+      await expectTipAt(panel(page), await box(plate(page, seat)));
+      const p = await box(plate(page, seat));
+      const m = await box(panel(page));
       const side = await panel(page).getAttribute('data-side');
       if (side === 'below') expect(m.y).toBeGreaterThan(p.y + p.height);
       else expect(m.y + m.height).toBeLessThan(p.y);
@@ -229,8 +214,8 @@ test('passt auf keiner Seite: rutscht ins Fenster über das Schild, ohne Zipfel 
   await expect(panel(page)).toBeVisible();
   await expectInside(page);
   await expect(panel(page).locator('.menu-tip')).toHaveCount(0);
-  const p = await rect(plate(page, 'seat3'));
-  const m = await rect(panel(page));
+  const p = await box(plate(page, 'seat3'));
+  const m = await box(panel(page));
   expect(m.x).toBeCloseTo(p.x, 0);
   expect(m.y).toBeLessThan(p.y);
   expect(m.y + m.height).toBeGreaterThan(p.y + p.height);
@@ -242,9 +227,9 @@ test('sehr kleines Fenster: Höchsthöhe, der Inhalt scrollt, der Kopf bleibt (R
   await expectInside(page);
   const body = panel(page).locator('.menu-body');
   expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
-  const head = await rect(panel(page).locator('.menu-head'));
+  const head = await box(panel(page).locator('.menu-head'));
   await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
-  expect(await rect(panel(page).locator('.menu-head'))).toEqual(head);
+  expect(await box(panel(page).locator('.menu-head'))).toEqual(head);
   await expect(entries(page).getByText('Charakter zurücksetzen')).toBeInViewport();
 });
 

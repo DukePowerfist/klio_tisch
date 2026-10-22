@@ -266,7 +266,7 @@ describe('Lage des Namensschild-Menüs (10.4, R1, R2)', () => {
   const area: Area = { bounds: { x: 8, y: 8, w: 1264, h: 704 }, blocked: [{ x: 12, y: 678, w: 174, h: 30 }] };
   const panel = { w: 240, h: 300 };
   const plate = (x: number, y: number): Rect => ({ x, y, w: 49, h: 15 });
-  const inside = (p: { x: number; y: number }, h = panel.h) => p.x >= 8 && p.y >= 8 && p.x + panel.w <= 1272 && p.y + h <= 712;
+  const fits = (p: { x: number; y: number }, h = panel.h) => inside({ x: p.x, y: p.y, w: panel.w, h }, area.bounds);
 
   it('unter dem Schild, links bündig, Zipfel auf die Mitte des Schilds', () => {
     const p = placePlateMenu(plate(13, 6), area, panel, null);
@@ -290,7 +290,7 @@ describe('Lage des Namensschild-Menüs (10.4, R1, R2)', () => {
     const big = { w: 240, h: 380 };
     const p = placePlateMenu(plate(13, 368), area, big, null);
     expect(p).toMatchObject({ x: 13, side: 'above', tip: null, fallback: true });
-    expect(inside(p, big.h)).toBe(true);
+    expect(fits(p, big.h)).toBe(true);
     expect(p.y).toBeLessThanOrEqual(368);
     expect(p.y + big.h).toBeGreaterThanOrEqual(383);
     const low = placePlateMenu(plate(13, 300), area, { w: 240, h: 420 }, 'below');
@@ -303,7 +303,7 @@ describe('Lage des Namensschild-Menüs (10.4, R1, R2)', () => {
     expect(open.side).toBe('below');
     const grown = placePlateMenu(plate(600, 300), area, { w: 240, h: 450 }, 'below');
     expect(grown).toMatchObject({ x: 600, side: 'below', tip: null, fallback: true });
-    expect(inside(grown, 450)).toBe(true);
+    expect(fits(grown, 450)).toBe(true);
     // ohne feste Seite wäre es darüber gegangen
     expect(placePlateMenu(plate(600, 500), area, { w: 240, h: 450 }, null).side).toBe('above');
     expect(placePlateMenu(plate(600, 500), area, { w: 240, h: 450 }, 'below').side).toBe('below');

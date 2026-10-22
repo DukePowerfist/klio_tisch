@@ -52,6 +52,7 @@
   --menu-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
   --menu-radius: 10px;
   --menu-pad: 8px;
+  --menu-gap: 10px;         /* Abstand Anker zu Menü, Platz für den Zipfel; wie MENU_GAP in stackMenu.ts */
   --menu-w: 208px;          /* fest, reicht für die längste Rückfrage („12 Karten zurückholen?“, D5) */
   --menu-w-wide: 240px;     /* Namensschild-Menü und Menü oben rechts (5p): „Charakter importieren …“, Namen beim Umsetzen */
   --menu-head: rgba(243, 239, 227, 0.8);
@@ -148,7 +149,7 @@ button { font: inherit; }
 .menu-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 4px 4px; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--menu-head); white-space: nowrap; }
 .menu-head .count { color: var(--menu-count); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
 .menu-item { display: block; width: 100%; box-sizing: border-box; min-height: 30px; padding: 5px 10px; border: 1px solid transparent; border-radius: 6px;
-  background: transparent; color: var(--ink); font-size: 14px; text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer;
+  background: transparent; color: var(--ink); font-size: 14px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
   transition: scale var(--press) ease-out, background-color 80ms; }
 .menu-item:hover { background: var(--menu-item-hover); }
 .menu-item:focus { outline: none; }
@@ -172,7 +173,6 @@ button { font: inherit; }
 .menu-head > span:first-child { flex: none; }
 .menu-head .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0.01em; color: var(--menu-count); }
 .menu-body { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow-y: auto; margin: 0 calc(-1 * var(--menu-pad)); padding: 0 var(--menu-pad); scrollbar-width: thin; }
-.menu-item { text-overflow: ellipsis; }
 .menu-note { float: right; margin-left: 10px; font-size: 12.5px; color: var(--menu-count); }
 .menu-item.expands { position: relative; padding-right: 26px; }
 .menu-item.expands::after { content: ''; position: absolute; right: 12px; top: 50%; width: 6px; height: 6px; margin-top: -5px; border: solid var(--menu-count); border-width: 0 1.5px 1.5px 0; rotate: 45deg; transition: rotate var(--pop) ease-out, margin-top var(--pop) ease-out; }

@@ -1,6 +1,28 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 
+export type Box = { x: number; y: number; width: number; height: number };
+/** Rechteck des ersten Treffers am Bildschirm */
+export const box = async (l: Locator): Promise<Box> => (await l.first().boundingBox())!;
+
+/** Menü ganz in der sichtbaren Tischfläche, mit dem Rand MENU_MARGIN (8 px) aus Board.svelte. Mit einem Locator wird
+ *  gewartet: Ändert sich die Höhe (Namensschild-Menü), rückt das Menü erst mit der nächsten Messung nach (vor dem
+ *  Zeichnen, aber ein Test kann dazwischen lesen) */
+export async function expectInStage(page: Page, m: Box | Locator, label?: string) {
+  const outside = async (r: Box) => {
+    const s = await box(page.locator('.stage'));
+    return Math.max(s.x + 7.5 - r.x, s.y + 7.5 - r.y, r.x + r.width - (s.x + s.width - 7.5), r.y + r.height - (s.y + s.height - 7.5));
+  };
+  if ('x' in m) expect(await outside(m), label).toBeLessThanOrEqual(0);
+  else await expect.poll(async () => outside(await box(m)), label).toBeLessThanOrEqual(0);
+}
+
+/** Zipfel eines Menüs zeigt waagerecht auf die Mitte des Ankers */
+export async function expectTipAt(menu: Locator, anchor: Box) {
+  const tip = await box(menu.locator('.menu-tip'));
+  expect(Math.abs(tip.x + tip.width / 2 - (anchor.x + anchor.width / 2))).toBeLessThan(1.5);
+}
+
 /** Mitte einer Zone anhand ihrer Beschriftung (Tischzonen). */
 export async function zoneCenter(page: Page, label: string) {
   const box = (await page.locator('.zone').filter({ hasText: new RegExp(`^${label}`) }).first().boundingBox())!;
@@ -91,7 +113,13 @@ export async function saveArchive(page: Page, dialog: Locator) {
 export async function menuEntries(page: Page): Promise<string[]> {
   await menuButton(page).click();
   // ohne den Zusatz rechts („offen“ am Protokoll)
-  const entries = await page.locator('[data-top-menu] .menu-item').evaluateAll((els) => els.map((el) => el.firstChild?.textContent ?? ''));
+  const entries = await page.locator('[data-top-menu] .menu-item').evaluateAll((els) =>
+    els.map((el) => {
+      const copy = el.cloneNode(true) as HTMLElement;
+      copy.querySelector('.menu-note')?.remove();
+      return copy.textContent ?? '';
+    }),
+  );
   await menuButton(page).click();
   return entries;
 }

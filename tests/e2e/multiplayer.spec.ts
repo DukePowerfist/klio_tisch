@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, zoneCenter } from './helpers';
+import { expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -406,18 +406,12 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await expect(entries(/nicht mehr verbunden/)).toHaveCount(1);
 });
 
-/** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
 test('Namensschild-Menü (5p): Höhe ändert sich bei offenem Menü; es bleibt auf seiner Seite, ganz sichtbar, Zipfel am Schild', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
   await joinAs(player, link, 'Ida', 2);
   const menu = player.locator('[data-plate-menu]');
-  const inside = async (page: Page) => {
-    const m = (await page.locator('[data-plate-menu]').boundingBox())!;
-    const v = page.viewportSize()!;
-    expect(m.y).toBeGreaterThanOrEqual(7.5);
-    expect(m.y + m.height).toBeLessThanOrEqual(v.height - 7.5);
-  };
+  const inside = (page: Page) => expectInStage(page, page.locator('[data-plate-menu]'));
 
   // R1: die SL entzieht ein Recht, eine Gruppe wird kürzer, ohne Aufklappen
   await player.locator('[data-plate=seat2]').click();
@@ -440,6 +434,7 @@ test('Namensschild-Menü (5p): Höhe ändert sich bei offenem Menü; es bleibt a
     await gm.setViewportSize(size);
     await gm.locator('[data-plate=seat2]').click();
     const gmMenu = gm.locator('[data-plate-menu]');
+    await expect(gmMenu).toBeVisible();
     const opened = await gmMenu.getAttribute('data-side');
     const move = gmMenu.getByRole('menuitem', { name: 'Umsetzen …' });
     await move.click();
@@ -499,6 +494,7 @@ test('Stapelmenü (5o): Rückfrage beim Mischen verfällt, wenn jemand anderes i
   await expectCount(gm, 'ABLAGE', 0);
 });
 
+/** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
 async function joinAs(page: Page, link: string, name: string, n: number) {
   await page.goto(link);
   const join = page.getByRole('dialog', { name: 'Platz wählen' });

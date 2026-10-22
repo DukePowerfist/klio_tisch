@@ -125,7 +125,7 @@ export type Placement = {
   fallback: boolean;
 };
 
-/** Abstand zwischen Anker und Panel (Platz für den Zipfel) */
+/** Abstand zwischen Anker und Panel (Platz für den Zipfel); wie --menu-gap in theme.css */
 export const MENU_GAP = 10;
 /** Zipfel zeigt auf die Mitte der oberen Hälfte des Ankers (bei unten/oben auf seine Mitte), nur auf dem geraden Teil
  *  der Kante: mindestens Eckenradius 10 plus halbe Zipfelbreite 6 vom Rand (N3) */
@@ -154,9 +154,17 @@ function mainAt(side: Side, a: Rect, p: { w: number; h: number }): number {
  * Lage eines Menüs am Anker (ARCHITEKTUR.md 10.2). Rangfolge: (1) vollständig im nutzbaren Bereich, Anker frei;
  * (2) nichts aus `avoid` überdeckt; (3) erste mögliche Seite aus `sides`; (4) bündig mit dem Anker (oben bzw. links),
  * sonst so wenig wie nötig verschoben. Geht das nirgends, der Ersatzfall: (i) sichtbar, (ii) Anker frei, (iii) `avoid`
- * nach Wichtigkeit möglichst wenig verdeckt, bei Gleichstand die frühere Seite.
+ * nach Wichtigkeit möglichst wenig verdeckt, bei Gleichstand die frühere Seite. `tipRequired`: eine Lage zählt nur,
+ * wenn der Zipfel noch auf den Anker zeigt (nicht weit zur Seite geschoben; Namensschild, 10.4).
  */
-export function placeMenu(anchor: Rect, avoid: Rect[], area: Area, panel: { w: number; h: number }, sides: readonly Side[]): Placement {
+export function placeMenu(
+  anchor: Rect,
+  avoid: Rect[],
+  area: Area,
+  panel: { w: number; h: number },
+  sides: readonly Side[],
+  { tipRequired = false } = {},
+): Placement {
   const { bounds, blocked } = area;
   const rect = (side: Side, main: number, cross: number): Rect =>
     horizontal(side) ? { x: main, y: cross, ...panel } : { x: cross, y: main, ...panel };
@@ -182,8 +190,9 @@ export function placeMenu(anchor: Rect, avoid: Rect[], area: Area, panel: { w: n
     const main = mainAt(side, anchor, panel);
     for (const cross of crossings(side)) {
       const r = rect(side, main, cross);
-      if (within(r) && blocked.every((b) => !overlap(r, b)) && !overlap(r, anchor) && avoid.every((v) => !overlap(r, v)))
-        return { x: r.x, y: r.y, side, tip: tipAt(side, r), fallback: false };
+      if (!within(r) || blocked.some((b) => overlap(r, b)) || overlap(r, anchor) || avoid.some((v) => overlap(r, v))) continue;
+      const tip = tipAt(side, r);
+      if (tip !== null || !tipRequired) return { x: r.x, y: r.y, side, tip, fallback: false };
     }
   }
 
@@ -213,11 +222,8 @@ export function placeMenu(anchor: Rect, avoid: Rect[], area: Area, panel: { w: n
  * verdecken; beim Öffnen auf der Seite mit mehr Platz.
  */
 export function placePlateMenu(anchor: Rect, area: Area, panel: { w: number; h: number }, side: 'below' | 'above' | null): Placement {
-  const sides = side ? [side] : (['below', 'above'] as const);
-  for (const s of sides) {
-    const p = placeMenu(anchor, [], area, panel, [s]);
-    if (!p.fallback && p.tip !== null) return p;
-  }
+  const p = placeMenu(anchor, [], area, panel, side ? [side] : ['below', 'above'], { tipRequired: true });
+  if (!p.fallback) return p;
   const { bounds, blocked } = area;
   const s = side ?? (bounds.y + bounds.h - (anchor.y + anchor.h) >= anchor.y - bounds.y ? 'below' : 'above');
   const x = clampTo(anchor.x, bounds.x, bounds.x + bounds.w - panel.w);
