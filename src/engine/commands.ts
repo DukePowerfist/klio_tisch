@@ -83,6 +83,13 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
     });
   const topOf = (zc: ZoneConfig, state: S): CardId | undefined => state.zones[zc.id]?.at(-1);
 
+  /** Höchstzahl der Zone: `k` Karten kommen dazu, `cards` davon lagen schon dort. */
+  const overCapacity = (zc: ZoneConfig, state: S, k: number, cards: readonly CardId[] = []): Rejection | undefined => {
+    if (zc.capacity === undefined) return undefined;
+    const staying = (state.zones[zc.id] ?? []).filter((c) => !cards.includes(c)).length;
+    return staying + k > zc.capacity ? reject(`reject.capacity.${zc.template ?? zc.id}`, { max: zc.capacity }) : undefined;
+  };
+
   /** Oberste Karte des Stapels ziehen (Aktion „Ziehen“). */
   const draw = (zc: ZoneConfig, state: S): EngineEvent[] | Rejection => {
     const rule = zc.actions?.draw;
@@ -91,6 +98,8 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
     if (isRejection(target)) return target;
     const card = topOf(zc, state);
     if (!card) return [];
+    const full = overCapacity(target, state, 1);
+    if (full) return full;
     return [{ type: 'cardDrawn', card, from: zc.id, to: rule.to, faceUp: rule.faceUp, announce: rule.announce }];
   };
 
@@ -129,10 +138,8 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       }
       const zc = zoneOf(cmd.to.zone, state);
       if (isRejection(zc)) return zc;
-      if (zc.capacity !== undefined) {
-        const staying = (state.zones[zc.id] ?? []).filter((c) => !cmd.cards.includes(c)).length;
-        if (staying + k > zc.capacity) return reject(`reject.capacity.${zc.template ?? zc.id}`, { max: zc.capacity });
-      }
+      const full = overCapacity(zc, state, k, cmd.cards);
+      if (full) return full;
       const down = cmd.cards.filter((c) => !state.faceUp[c]);
       return zc.onDrop === 'faceUp' && down.length > 0 ? [moved, { type: 'cardsTurned', cards: down, faceUp: true }] : [moved];
     },
@@ -152,10 +159,7 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       if ('zone' in where) {
         const zc = zoneOf(where.zone, state);
         if (isRejection(zc)) return zc;
-        const isTop = cmd.card === topOf(zc, state);
-        if (!isTop && !zc.fanned) return reject('reject.stale');
-        // Kreuz: Doppelklick auf eine verdeckte Karte wirkt wie Ziehen
-        if (zc.actions?.cardDoubleClick?.faceDown === 'draw' && !state.faceUp[cmd.card] && isTop) return draw(zc, state);
+        if (cmd.card !== topOf(zc, state) && !zc.fanned) return reject('reject.stale');
       }
       return [{ type: 'cardsTurned', cards: [cmd.card], faceUp: !state.faceUp[cmd.card] }];
     },
@@ -175,7 +179,11 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
   const zoneDraw: CommandDef<unknown, z.infer<typeof ZoneDrawCmd>> = {
     parse: (x) => ZoneDrawCmd.parse(x),
     permission: 'zone.draw',
-    owners: (cmd) => zoneOwner(cmd.zone),
+    // auch die Zielzone zählt: Ziehen auf einen fremden Platz braucht dasselbe Recht wie Ablegen dort
+    owners: (cmd) => {
+      const to = zones.get(cmd.zone)?.actions?.draw?.to;
+      return [...zoneOwner(cmd.zone), ...(to ? zoneOwner(to) : [])];
+    },
     handle(cmd, state) {
       const zc = zoneOf(cmd.zone, state);
       return isRejection(zc) ? zc : draw(zc, state);

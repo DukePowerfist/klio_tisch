@@ -313,7 +313,7 @@
     await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy });
   }
 
-  /** Einfacher Klick: Stapelmenü; Doppelklick: umdrehen (bzw. bei Kreuz ziehen). */
+  /** Einfacher Klick: Stapelmenü; Doppelklick: umdrehen, an jedem Stapel (5r, F1). */
   function click(card: CardId) {
     const now = Date.now();
     if (lastClick.card === card && now - lastClick.t < 350) {

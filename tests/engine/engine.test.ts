@@ -127,12 +127,39 @@ describe('Umdrehen, Ziehen, Mischen', () => {
     expectRejected(base, { type: 'card.flip', card: deck.at(-2) }, 'reject.stale');
   });
 
-  it('Kreuz: Doppelklick auf verdeckte Karte zieht sie offen auf die Ablage', () => {
+  it('Kreuz: Doppelklick auf verdeckte Karte dreht sie nur um, Ablage bleibt leer (5r, F1)', () => {
     const top = base.zones['clubs']!.at(-1)!;
     const { state, events } = run(base, { type: 'card.flip', card: top });
-    expect(state.zones['discard']).toEqual([top]);
+    expect(state.zones['clubs']).toEqual(base.zones['clubs']);
+    expect(state.zones['discard']).toEqual([]);
     expect(state.faceUp[top as never]).toBe(true);
-    expect(events[0]).toMatchObject({ type: 'cardDrawn', announce: true });
+    expect(events).toEqual([{ type: 'cardsTurned', cards: [top], faceUp: true }]);
+  });
+
+  describe('Ziehen auf eine Zone mit Höchstzahl und Besitzer (5r)', () => {
+    const pile: Ruleset<null> = {
+      id: 'pile', version: '1', initialGame: () => null, parseGame: () => null,
+      deck: { start: { pile: ['H2', 'H3'] } },
+      zones: [{ id: 'pile', actions: { draw: { to: 'seat1.box', faceUp: true, announce: false } } }, { id: 'box', perSeat: true, capacity: 1 }],
+      commands: {}, events: {}, migrations: [], seatColors: ['a', 'b', 'c', 'd'], reactions: [],
+      permissions: { gm: 'all', player: { 'zone.draw': 'own' }, spectator: 'none' },
+    };
+    const e = createEngine(pile);
+    const s0 = initialTable(pile, seededRng(1));
+    const go = (s: typeof s0, actor = GM) => e.dispatch(s, { type: 'zone.draw', zone: 'pile' }, actor, seededRng(1));
+
+    it('volle Zielzone lehnt ab wie beim Ablegen', () => {
+      const first = go(s0);
+      if ('rejected' in first) throw new Error();
+      expect(first.state.zones['seat1.box']).toHaveLength(1);
+      const second = go(first.state);
+      expect('rejected' in second && second.reason).toEqual({ key: 'reject.capacity.box', params: { max: 1 } });
+    });
+
+    it('Ziehen auf einen fremden Platz braucht das Recht für dessen Zone', () => {
+      expect('rejected' in go(s0, player('seat2'))).toBe(true);
+      expect('rejected' in go(s0, player('seat1'))).toBe(false);
+    });
   });
 
   it('Deck ziehen → offen auf die Ablage; Karo ziehen → offen in die Auslage', () => {

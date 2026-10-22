@@ -86,7 +86,6 @@ export const ZoneEntry = z.object({
     shuffle: z.object({ gather: z.array(GatherRule).exactOptional() }).strict().exactOptional(),
     draw: z.object({ to: z.string(), faceUp: z.boolean(), announce: z.boolean() }).strict().exactOptional(),
     flip: z.literal('top').exactOptional(),
-    cardDoubleClick: z.object({ faceDown: z.literal('draw') }).strict().exactOptional(),
   }).strict().exactOptional(),
 }).strict();
 export const ZonesFile = z.record(z.string(), ZoneEntry);

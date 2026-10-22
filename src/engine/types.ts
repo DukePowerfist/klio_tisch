@@ -41,8 +41,6 @@ export type ZoneActions = {
   draw?: DrawRule;
   /** `top`: oberste Karte umdrehen (an jedem Stapel, seit 5o auch am Kreuz, F4) */
   flip?: 'top';
-  /** Doppelklick auf eine verdeckte Karte dieses Stapels wirkt wie Ziehen */
-  cardDoubleClick?: { faceDown: 'draw' };
 };
 
 export type ZoneConfig = {
