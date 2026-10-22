@@ -2,7 +2,7 @@
 // Braucht Internet; läuft daher nur mit E2E_NETWORK=1. Gemessen wird an den laufenden Animationen bei der SL.
 
 import { expect, test, type Page } from '@playwright/test';
-import { fromMenu, ready } from '../e2e/helpers';
+import { openRoom } from '../e2e/helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(120_000);
@@ -37,11 +37,7 @@ async function watch(page: Page) {
 }
 
 test('Kommen und Gehen mit Bewegung (5l): Ankommen, Ring einmal, Zeiger blendet aus, Zähler, „nicht da“, wieder da', async ({ browser }) => {
-  const gm = await (await browser.newContext()).newPage();
-  await ready(gm);
-  await fromMenu(gm, 'Mitspieler einladen');
-  await expect(gm.locator('[data-health=ok]')).toBeVisible();
-  const link = gm.url();
+  const { gm, link } = await openRoom(browser);
   const seen = await watch(gm);
 
   // Beitritt als Zuschauer: nur der Zähler springt

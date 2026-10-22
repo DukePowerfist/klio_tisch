@@ -3,7 +3,7 @@ import { createEngine } from '../../src/engine/dispatch';
 import { cryptoRng, seededRng, shuffled } from '../../src/engine/rng';
 import { initialTable } from '../../src/engine/setup';
 import type { EngineEventOf, Ruleset } from '../../src/engine/types';
-import { GM, engine, expectRejected, fresh, place, player, run, type K } from '../helpers';
+import { GM, SPECTATOR, engine, expectRejected, fresh, place, player, run, type K } from '../helpers';
 
 const allCards = (s: K) => [...Object.values(s.zones).flat(), ...s.free];
 
@@ -256,7 +256,7 @@ describe('Ablauf', () => {
     expectRejected(s, { type: 'table.moveSeat', from: 'seat3', to: 'seat4' }, 'reject.seatFree');
     expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat1' }, 'reject.invalid');
     expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' }, 'reject.notAllowed', player('seat1'));
-    expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' }, 'reject.notAllowed', { role: 'spectator' });
+    expectRejected(s, { type: 'table.moveSeat', from: 'seat1', to: 'seat3' }, 'reject.notAllowed', SPECTATOR);
   });
 
   it('umsetzen mit ausgeblendeten Plätzen (8.7): vom ausgeblendeten auf einen freien, nie auf einen ausgeblendeten', () => {
@@ -289,7 +289,7 @@ describe('Ablauf', () => {
     expectRejected(two, { type: 'seat.edit', seat: 'seat2', color: 'violet' }, 'reject.colorTaken', player('seat2'));
     // fremder Platz, Zuschauer, freier Platz
     expectRejected(s, { type: 'seat.edit', seat: 'seat1', color: 'teal' }, 'reject.notAllowed', player('seat2'));
-    expectRejected(s, { type: 'seat.edit', seat: 'seat2', name: 'X' }, 'reject.notAllowed', { role: 'spectator' });
+    expectRejected(s, { type: 'seat.edit', seat: 'seat2', name: 'X' }, 'reject.notAllowed', SPECTATOR);
     expectRejected(s, { type: 'seat.edit', seat: 'seat3', name: 'X' }, 'reject.seatFree');
     // die Farbe gehört zum Platz: bleibt beim Freigeben und neu Belegen
     const freed = run(teal, { type: 'table.setSeat', seat: 'seat2', occupied: false }).state;

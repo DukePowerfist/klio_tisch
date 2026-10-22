@@ -1,6 +1,6 @@
 // Jeder Textschlüssel, den der Code als Grund oder Meldung nutzt, steht in texts.de.yaml.
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { steps } from '../../src/rules/klio/blocks';
@@ -10,7 +10,7 @@ import { content, resolveText, ruleset } from '../helpers';
 
 const SRC = resolve(import.meta.dirname, '../../src');
 const files = (dir: string): string[] =>
-  readdirSync(dir).flatMap((n) => (statSync(join(dir, n)).isDirectory() ? files(join(dir, n)) : n.endsWith('.ts') ? [join(dir, n)] : []));
+  readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => f.endsWith('.ts')).map((f) => join(dir, f));
 
 describe('Texte', () => {
   it('alle im Code genutzten Schlüssel existieren', () => {

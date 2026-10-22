@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
-import { planRandom } from '../../src/rules/klio/trumps';
+import { planRandom, trumpById } from '../../src/rules/klio/trumps';
 import { content, expectRejected, fresh, run, sheet, withSheet, type K } from '../helpers';
 
-const T = (id: string) => {
-  const t = content.trumps.find((x) => x.id === id);
-  if (!t) throw new Error(id);
-  return t;
-};
+const T = (id: string) => trumpById(content.trumps, id)!;
 const choose = (extra: object) => ({ type: 'trump.choose', seat: 'seat1', ...extra });
 
 /** Bogen mit Attributen K/V/P und Trümpfen vorbereiten. */

@@ -2,8 +2,7 @@
 // Gemessen wird an den laufenden Animationen (Web Animations API) direkt nach dem Auslösen, nicht an Bildern.
 
 import { expect, test, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
-import { dragFromTo, expectCount, openSettings, ready, resetTable, zoneCenter } from '../e2e/helpers';
+import { dragFromTo, expectCount, holdOver, openSettings, ready, resetTable, saveArchive, zoneCenter } from '../e2e/helpers';
 
 type Anim = { card: string | null; part: string; props: string[]; delay: number; duration: number; easing: string };
 
@@ -63,9 +62,7 @@ test('Ziehen: verdeckt im Bogen über den anderen, Innehalten, dann Aufdecken; M
 
 test('Greifen: die Karte hebt sich deutlich und federnd, beim Loslassen senkt sie sich wieder', async ({ page }) => {
   const z = await zoneCenter(page, 'DECK');
-  await page.mouse.move(z.x, z.y);
-  await page.mouse.down();
-  await page.mouse.move(z.x + 60, z.y + 40, { steps: 4 });
+  await holdOver(page, z, { x: z.x + 60, y: z.y + 40 }, 4);
   const lift = page.locator('.card.dragging .lift');
   await expect(lift).toHaveCount(1);
   expect(await lift.evaluate((e) => getComputedStyle(e).transitionTimingFunction)).toMatch(/^linear\(/);
@@ -161,17 +158,8 @@ test('Mischen: Karten der Ablage fliegen gestaffelt ein, danach heben sich die o
 /** Stand mit festgelegter Reihenfolge im Deck laden (oberste Karte zuletzt) */
 async function loadDeckTop(page: Page, top: string[]) {
   const dialog = await openSettings(page, 'Spielstand');
-  const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
-  const archive = JSON.parse(await readFile((await download.path())!, 'utf-8'));
-  // den Stand im Archiv suchen: das Objekt mit `zones.deck`
-  const find = (o: unknown): { zones: Record<string, string[]> } | null => {
-    if (!o || typeof o !== 'object') return null;
-    const z = (o as { zones?: Record<string, unknown> }).zones;
-    if (z && Array.isArray(z['deck'])) return o as { zones: Record<string, string[]> };
-    for (const v of Object.values(o)) { const f = find(v); if (f) return f; }
-    return null;
-  };
-  const state = find(archive)!;
+  const archive = await saveArchive(page, dialog);
+  const state: { zones: Record<string, string[]> } = archive.state;
   for (const id of Object.keys(state.zones)) state.zones[id] = state.zones[id]!.filter((c) => !top.includes(c));
   state.zones['deck']!.push(...top);
   await dialog.locator('input[type=file]').setInputFiles({ name: 'stand.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(archive)) });

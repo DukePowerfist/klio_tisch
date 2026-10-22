@@ -1,8 +1,7 @@
 // Gemeinsame Tischmitte (Schritt 5d, ARCHITEKTUR.md 10): Abnahme in der Oberfläche.
 
-import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, openSettings, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -83,7 +82,7 @@ test('Rollenansicht: in der Lücke neben den kleinen Bögen abgelegt liegt die K
 });
 
 test('Rollenansicht: kein Bogen unter dem Menüknopf, bei 2 bis 4 Spielern, mit und ohne Protokoll, ab 700 Höhe', async ({ page }) => {
-  const menu = page.getByRole('button', { name: 'Menü' });
+  const menu = menuButton(page);
   const apart = (a: Box, b: Box) => a.x > b.x + b.width || a.x + a.width < b.x || a.y > b.y + b.height || a.y + a.height < b.y;
   for (const height of [700, 900]) {
     await page.setViewportSize({ width: 1600, height });
@@ -113,8 +112,7 @@ test('Alter Spielstand (Format 1) aus einer Datei: frei liegende Karte liegt wie
   await dragFromTo(page, deck, { x: deck.x + 150, y: deck.y - 120 });
   await expectCount(page, 'DECK', 26);
   const dialog = await openSettings(page, 'Spielstand');
-  const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
-  const saved = JSON.parse(await readFile((await download.path())!, 'utf8'));
+  const saved = await saveArchive(page, dialog);
   const [card] = saved.state.free as string[];
 
   // so, wie es eine alte Fassung gespeichert hätte: alter Spielbereich der Draufsicht (4 Spieler: x 372, Breite 1016),

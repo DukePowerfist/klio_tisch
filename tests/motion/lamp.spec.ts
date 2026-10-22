@@ -1,7 +1,7 @@
 // Laterne anzünden und löschen (Schritt 5n, ARCHITEKTUR.md 11.9), Stufe „Ruhig“: Übergang an den Lichtebenen.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, ready, zoneCenter } from '../e2e/helpers';
+import { dragFromTo, expectCount, holdOver, ready, zoneCenter } from '../e2e/helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -77,9 +77,7 @@ test('Schatten von der Flamme weg: Deck links unten, Kreuz rechts unten, frei li
 
 test('Gegriffene Karte wirft einen langen, weichen Schatten von der Flamme weg', async ({ page }) => {
   const z = await zoneCenter(page, 'DECK');
-  await page.mouse.move(z.x, z.y);
-  await page.mouse.down();
-  await page.mouse.move(z.x + 60, z.y + 40, { steps: 4 });
+  await holdOver(page, z, { x: z.x + 60, y: z.y + 40 }, 4);
   // erste Lage: der lange Schatten (die zweite ist kürzer und weicher)
   const lifted = await screenShadow(page, '.card.dragging .lift', '::before', true);
   const lying = await screenShadow(page, '.card.dragging .face.back');

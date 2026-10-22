@@ -93,8 +93,7 @@ test('Einstellungen: Meldung bei Kommen und Gehen in eigener Gruppe auf „Autom
   await page.keyboard.press('Escape');
   await fromMenu(page, 'Einstellungen');
   await expect(notice).not.toBeChecked();
-  await page.reload();
-  await ready(page);
+  await ready(page, true);
   await openSettings(page, 'Automatik');
   await expect(notice).not.toBeChecked();
   // die Reaktion daneben bleibt unberührt
@@ -117,8 +116,7 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await fromMenu(page, 'Einstellungen');
   await expect(damage).not.toBeChecked();
 
-  await page.reload();
-  await ready(page);
+  await ready(page, true);
   await openSettings(page, 'Automatik');
   await expect(damage).not.toBeChecked();
   await dialog.getByRole('tab', { name: 'Rechte der Spieler' }).click();
@@ -283,7 +281,7 @@ test('Protokoll: Spalte rechts über das Menü, neueste oben, offen oder zu blei
 
 test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließt', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
-  const button = page.getByRole('button', { name: 'Menü' });
+  const button = menuButton(page);
   await expect(page.locator('.menu [data-health=local]')).toBeVisible();
   // verdeckt weder Namensschild noch Attribute von Spieler 2
   const b = (await button.boundingBox())!;

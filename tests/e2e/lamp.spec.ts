@@ -1,7 +1,7 @@
 // Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Lage, Anzünden und Löschen für alle, Bedienung des Tisches bleibt.
 
 import { expect, test, type Page } from '@playwright/test';
-import { fromMenu, openSettings, ready, zoneCenter } from './helpers';
+import { fromMenu, holdOver, openSettings, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -66,9 +66,7 @@ test('Karte auf die Laterne gezogen: Vorschau und Ablage daneben, nicht auf ihr 
   const deck = await zoneCenter(page, 'DECK');
   const l = (await lamp(page).boundingBox())!;
   const centre = { x: l.x + l.width / 2, y: l.y + l.height / 2 };
-  await page.mouse.move(deck.x, deck.y);
-  await page.mouse.down();
-  await page.mouse.move(centre.x, centre.y, { steps: 8 });
+  await holdOver(page, deck, centre);
   const hint = page.locator('.drop-hint');
   await expect(hint).toHaveCount(1);
   const shown = (await hint.boundingBox())!;

@@ -1,7 +1,7 @@
 // Vorschau der Ablegestelle (11.6, Schritt 5h): gestrichelter Umriss beim Ziehen, genau dort, wo die Karte landet.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, ready, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, holdOver, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -9,13 +9,6 @@ const box = async (page: Page, selector: string) => {
   const b = (await page.locator(selector).boundingBox())!;
   return [b.x, b.y, b.width, b.height].map(Math.round);
 };
-
-/** Karte greifen und über `to` halten (nicht loslassen) */
-async function holdOver(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(to.x, to.y, { steps: 8 });
-}
 
 test('Umriss über der Ablage an der Stelle, an der die Karte danach liegt; über dem eigenen Stapel keiner', async ({ page }) => {
   const deck = await zoneCenter(page, 'DECK');

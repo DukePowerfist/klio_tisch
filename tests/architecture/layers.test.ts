@@ -1,7 +1,7 @@
 // Schichtgrenzen (ARCHITEKTUR.md 5): wer darf wen importieren.
 // Statt ESLint, weil typescript-eslint TypeScript 7 noch nicht unterstützt.
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -21,10 +21,7 @@ function layerOf(path: string): string | null {
 }
 
 function files(dir: string): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const p = join(dir, name);
-    return statSync(p).isDirectory() ? files(p) : /\.(ts|svelte)$/.test(name) ? [p] : [];
-  });
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => /\.(ts|svelte)$/.test(f)).map((f) => join(dir, f));
 }
 
 function relativeImports(source: string): string[] {

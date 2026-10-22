@@ -5,7 +5,6 @@ import { expectRejected, fresh, place, run, sheet, withSheet, type K } from '../
 /** Karten aufs Schadensfeld von Platz 1 legen (aus dem Gefahr-Fächer, dort beliebig greifbar). */
 function drop(state: K, cards: string[]) {
   const s = place(state, 'danger', cards, true);
-  if (cards.length === 1) return run(s, { type: 'cards.move', cards, from: { zone: 'danger' }, to: { zone: 'seat1.damage' } });
   return run(s, { type: 'cards.move', cards, from: { zone: 'danger' }, to: { zone: 'seat1.damage' } });
 }
 

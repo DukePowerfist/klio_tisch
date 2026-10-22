@@ -1,18 +1,22 @@
-import { expect, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
+import { expect, type Browser, type Locator, type Page } from '@playwright/test';
 
-/** Mitte einer Zone anhand ihrer Beschriftung (Tischzonen) bzw. die n-te passende. */
-export async function zoneCenter(page: Page, label: string, nth = 0) {
-  const box = (await page.locator('.zone').filter({ hasText: new RegExp(`^${label}`) }).nth(nth).boundingBox())!;
+/** Mitte einer Zone anhand ihrer Beschriftung (Tischzonen). */
+export async function zoneCenter(page: Page, label: string) {
+  const box = (await page.locator('.zone').filter({ hasText: new RegExp(`^${label}`) }).first().boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2, box };
 }
 
-/** Karte von a nach b ziehen (Bildschirmkoordinaten). */
-export async function dragFromTo(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, shift = false) {
-  if (shift) await page.keyboard.down('Shift');
+/** Karte greifen und über `to` halten (nicht loslassen; Bildschirmkoordinaten) */
+export async function holdOver(page: Page, from: { x: number; y: number }, to: { x: number; y: number }, steps = 8) {
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
-  if (shift) await page.keyboard.up('Shift');
-  await page.mouse.move(to.x, to.y, { steps: 12 });
+  await page.mouse.move(to.x, to.y, { steps });
+}
+
+/** Karte von a nach b ziehen (Bildschirmkoordinaten). */
+export async function dragFromTo(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
+  await holdOver(page, from, to, 12);
   await page.mouse.up();
 }
 
@@ -65,6 +69,12 @@ export async function openSettings(page: Page, tab: string) {
   return dialog;
 }
 
+/** Spielstand über die offene Einstellungsseite „Spielstand“ als Datei speichern und gelesen zurückgeben */
+export async function saveArchive(page: Page, dialog: Locator) {
+  const [download] = await Promise.all([page.waitForEvent('download'), dialog.getByRole('button', { name: 'Als Datei speichern' }).click()]);
+  return JSON.parse(await readFile((await download.path())!, 'utf8'));
+}
+
 /** Einträge im Menü oben rechts (danach wieder zu) */
 export async function menuEntries(page: Page): Promise<string[]> {
   await menuButton(page).click();
@@ -77,6 +87,15 @@ export async function ready(page: Page, reload = false) {
   if (reload) await page.reload();
   else await page.goto('./');
   await expect(page.locator('.board')).toBeVisible();
+}
+
+/** SL in einem eigenen Browser lädt ein; liefert Seite und Link, sobald der Raum steht (braucht Netz) */
+export async function openRoom(browser: Browser) {
+  const gm = await (await browser.newContext()).newPage();
+  await ready(gm);
+  await fromMenu(gm, 'Mitspieler einladen');
+  await expect(gm.locator('[data-health=ok]')).toBeVisible();
+  return { gm, link: gm.url() };
 }
 
 /** Testbild: 400 × 300 PNG, im Browser erzeugt */

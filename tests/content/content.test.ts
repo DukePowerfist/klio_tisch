@@ -1,15 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { validateContent, type KlioContent, type RawContent } from '../../src/rules/klio/content/validate';
+import { validateContent, type RawContent } from '../../src/rules/klio/content/validate';
+import { content } from '../helpers';
 import { readContent } from './read';
 
 const RAW = readContent();
 const result = validateContent(RAW);
-const content = (): KlioContent => {
-  if (!result.ok) throw new Error(result.errors.join('\n'));
-  return result.content;
-};
 
 /** Kopie der echten Inhalte, an einer Stelle verändert. */
 function mutated(change: (raw: any) => void): RawContent {
@@ -24,7 +21,7 @@ describe('Inhalte', () => {
   });
 
   it('Umfang wie in der alten Fassung', () => {
-    const c = content();
+    const c = content;
     expect(c.trumps).toHaveLength(44);
     expect(Object.keys(c.tables).sort()).toEqual(['I', 'II', 'III', 'IV', 'V', 'VI', 'VIII']);
     expect(Object.values(c.deck.start).flat()).toHaveLength(52);
@@ -33,11 +30,8 @@ describe('Inhalte', () => {
   });
 
   it('Trümpfe je Kategorie und Stufe wie bisher', () => {
-    const count = (cat: string, lvl: number) => content().trumps.filter((t) => t.category === cat && t.level === lvl).length;
-    expect([count('K', 1), count('K', 2), count('K', 3)]).toEqual([4, 4, 3]);
-    expect([count('P', 1), count('P', 2), count('P', 3)]).toEqual([4, 4, 3]);
-    expect([count('V', 1), count('V', 2), count('V', 3)]).toEqual([4, 4, 3]);
-    expect([count('X', 1), count('X', 2), count('X', 3)]).toEqual([4, 4, 3]);
+    const count = (cat: string, lvl: number) => content.trumps.filter((t) => t.category === cat && t.level === lvl).length;
+    for (const cat of ['K', 'P', 'V', 'X']) expect([1, 2, 3].map((l) => count(cat, l)), cat).toEqual([4, 4, 3]);
   });
 });
 
@@ -77,7 +71,7 @@ describe.skipIf(!existsSync(LEGACY))('wortgetreu aus der alten Datei', () => {
   const quoted = (s: string) => legacy.includes(`'${s}'`) || legacy.includes(`'${s.replaceAll("'", "\\'")}'`);
 
   function texts(): string[] {
-    const c = content();
+    const c = content;
     const gendered = (g: string | { m: string; w: string }) => (typeof g === 'string' ? g : `${g.m}|${g.w}`);
     return [
       ...c.trumps.flatMap((t) => [t.name, t.text]),
@@ -95,7 +89,7 @@ describe.skipIf(!existsSync(LEGACY))('wortgetreu aus der alten Datei', () => {
   });
 
   it('Tabellen stehen in derselben Reihenfolge wie bisher', () => {
-    const c = content();
+    const c = content;
     for (const [key, t] of Object.entries(c.tables)) {
       const g = (x: string | { m: string; w: string }) => `'${typeof x === 'string' ? x : `${x.m}|${x.w}`}'`;
       const row = (side: typeof t.H) => `[${Object.values(side).map(g).join(',')}]`;

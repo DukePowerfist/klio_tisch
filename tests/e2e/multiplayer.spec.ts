@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, fromMenu, makePng, menuEntries, nameCharacter, openMenuAndClick, openSettings, ready, setField, zoneCenter } from './helpers';
+import { expectCount, fromMenu, holdOver, makePng, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -44,11 +44,7 @@ async function watchArrival(page: Page, seat: string) {
 const seated = (page: Page, timeout = 5_000) => expect(page.locator('[data-sheet=seat2] [data-field=name]')).toBeEditable({ timeout });
 
 test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async ({ browser }) => {
-  const gm = await (await browser.newContext()).newPage();
-  await ready(gm);
-  await fromMenu(gm, 'Mitspieler einladen');
-  await expect(gm.locator('[data-health=ok]')).toBeVisible();
-  const link = gm.url();
+  const { gm, link } = await openRoom(browser);
   expect(link).toMatch(/#[\w-]{22}\.[\w-]{22}$/);
 
   const player = await (await browser.newContext()).newPage();
@@ -131,9 +127,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.keyboard.press('0');
   const deck = await zoneCenter(player, 'DECK');
   const discard = await zoneCenter(player, 'ABLAGE');
-  await player.mouse.move(deck.x, deck.y);
-  await player.mouse.down();
-  await player.mouse.move(deck.x - 60, deck.y - 40, { steps: 6 });
+  await holdOver(player, deck, { x: deck.x - 60, y: deck.y - 40 }, 6);
   const ghost = gm.locator('.card.marked');
   await expect(ghost).toHaveCount(1);
   const x1 = (await ghost.boundingBox())!.x;
@@ -256,17 +250,9 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
 
 
 test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder, SL setzt um, gibt frei, weist zu', async ({ browser }) => {
-  const gm = await (await browser.newContext()).newPage();
-  await ready(gm);
-  await fromMenu(gm, 'Mitspieler einladen');
-  await expect(gm.locator('[data-health=ok]')).toBeVisible();
+  const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
-  await player.goto(gm.url());
-  const join = player.getByRole('dialog', { name: 'Platz wählen' });
-  await expect(join).toBeVisible({ timeout: 60_000 });
-  await join.getByRole('textbox').fill('Ida');
-  await join.getByRole('button', { name: /^Spieler 2/ }).click();
-  await seated(player);
+  await joinAs(player, link, 'Ida', 2);
   const items = (page: Page) => page.getByRole('menu').getByRole('menuitem');
 
   // Spieler in seiner Rollenansicht: Schild auf dem eigenen Bogen, alles zum eigenen Bogen, nichts zu Plätzen
@@ -334,11 +320,7 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
 });
 
 test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, wieder da; hinausgeworfener Tab verlässt den Raum', async ({ browser }) => {
-  const gm = await (await browser.newContext()).newPage();
-  await ready(gm);
-  await fromMenu(gm, 'Mitspieler einladen');
-  await expect(gm.locator('[data-health=ok]')).toBeVisible();
-  const link = gm.url();
+  const { gm, link } = await openRoom(browser);
   await fromMenu(gm, 'Protokoll');
   const entries = (text: string | RegExp) => gm.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: text });
   const arrival = await watchArrival(gm, 'seat2');
@@ -346,12 +328,7 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   // Tab A nimmt Platz 2
   const browserOfIda = await browser.newContext();
   const a = await browserOfIda.newPage();
-  await a.goto(link);
-  const join = a.getByRole('dialog', { name: 'Platz wählen' });
-  await expect(join).toBeVisible({ timeout: 60_000 });
-  await join.getByRole('textbox').fill('Ida');
-  await join.getByRole('button', { name: /^Spieler 2/ }).click();
-  await seated(a);
+  await joinAs(a, link, 'Ida', 2);
   await expect(entries('Ida sitzt an Platz 2.')).toHaveCount(1);
   // Meldung bei der SL, nicht bei Ida selbst
   await expect(gm.getByRole('status')).toHaveText('Ida sitzt an Platz 2.');
@@ -436,11 +413,7 @@ async function watchToasts(page: Page) {
 
 /** SL mit offenem Raum und Protokoll; liefert Seite, Link und Einträge im Protokoll */
 async function openTable(browser: import('@playwright/test').Browser) {
-  const gm = await (await browser.newContext()).newPage();
-  await ready(gm);
-  await fromMenu(gm, 'Mitspieler einladen');
-  await expect(gm.locator('[data-health=ok]')).toBeVisible();
-  const link = gm.url();
+  const { gm, link } = await openRoom(browser);
   await fromMenu(gm, 'Protokoll');
   const log = () => gm.getByRole('list', { name: 'Protokoll' }).locator('li').allTextContents();
   return { gm, link, log };
@@ -489,7 +462,8 @@ test('Neustart des Hosts (5l): keine Flut von „wieder da“, weder bei der SL 
   await expect(bo.locator('[data-health=ok]')).toBeVisible({ timeout: 60_000 });
   await gm.waitForTimeout(12_000);
   expect(await atGm()).toEqual([]);
-  expect((await log()).slice(0, (await log()).length - before.length)).toEqual([]);
+  const after = await log();
+  expect(after.slice(0, after.length - before.length)).toEqual([]);
   expect(await atIda()).toEqual([]);
   expect(await atBo()).toEqual([]);
   // am Ende sind alle da, auch wenn die SL sie zwischendurch still als „nicht da“ gezeigt hat
