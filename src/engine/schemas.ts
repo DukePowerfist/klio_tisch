@@ -47,8 +47,12 @@ const SeatsSchema = z.object(Object.fromEntries(SEATS.map((s) => [s, SeatInfo]))
 
 const Zones = z.record(z.string(), z.array(CardIdSchema));
 
-/** Stand prüfen; den Spielteil prüft das Regelwerk (`parseGame`). */
-export function tableStateSchema<G>(parseGame: (x: unknown) => G): z.ZodType<TableState<G>> {
+/** Was zum Tisch gehört: alle Karten des Decks und alle (erweiterten) Zonen */
+export type TableShape = { cards: readonly CardId[]; zones: ReadonlySet<string> };
+
+/** Stand prüfen; den Spielteil prüft das Regelwerk (`parseGame`). Dazu (5r): jede Karte des Decks liegt genau
+ *  einmal auf dem Tisch, nur bekannte Zonen, `freePos` genau für die freien Karten. */
+export function tableStateSchema<G>(parseGame: (x: unknown) => G, shape: TableShape): z.ZodType<TableState<G>> {
   return z.object({
     format: z.literal(FORMAT),
     ruleset: z.object({ id: z.string(), version: z.string() }).strict(),
@@ -61,7 +65,21 @@ export function tableStateSchema<G>(parseGame: (x: unknown) => G): z.ZodType<Tab
     settings: TableSettingsSchema,
     lamp: z.boolean(),
     game: z.unknown().transform((x) => parseGame(x)),
-  }).strict() as unknown as z.ZodType<TableState<G>>;
+  }).strict().superRefine((s, ctx) => {
+    const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
+    for (const id of Object.keys(s.zones)) if (!shape.zones.has(id)) issue(`unbekannte Zone ${id}`);
+    const count = new Map<string, number>();
+    for (const c of [...Object.values(s.zones).flat(), ...s.free]) count.set(c, (count.get(c) ?? 0) + 1);
+    for (const c of shape.cards) {
+      const n = count.get(c) ?? 0;
+      if (n !== 1) issue(n === 0 ? `Karte ${c} fehlt` : `Karte ${c} liegt ${n}-mal auf dem Tisch`);
+      count.delete(c);
+    }
+    for (const c of count.keys()) issue(`unbekannte Karte ${c}`);
+    const free = new Set(s.free);
+    for (const c of s.free) if (!s.freePos[c]) issue(`freie Karte ${c} ohne Lage`);
+    for (const c of Object.keys(s.freePos)) if (!free.has(c as CardId)) issue(`Lage für ${c}, die nicht frei liegt`);
+  }) as unknown as z.ZodType<TableState<G>>;
 }
 
 const engineEvents = z.discriminatedUnion('type', [

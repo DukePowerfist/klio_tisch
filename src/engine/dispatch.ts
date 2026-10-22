@@ -104,7 +104,8 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
     return next;
   }
 
-  const stateSchema = tableStateSchema(ruleset.parseGame);
+  const cards = Object.values(ruleset.deck.start).flatMap((ids) => ids ?? []);
+  const stateSchema = tableStateSchema(ruleset.parseGame, { cards, zones: new Set(zones.keys()) });
   function parseEvent(input: unknown): Event {
     const type = (input as { type?: unknown } | null)?.type;
     const schema = typeof type !== 'string' ? undefined : ENGINE_EVENTS.has(type) ? EngineEventSchema : ruleset.events[type];

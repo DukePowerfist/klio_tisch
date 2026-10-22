@@ -14,8 +14,9 @@ export function migrate(input: unknown, migrations: readonly Migration[]): unkno
     // kein Format bzw. schon aktuell: den Rest prüft das Schema
     if (typeof format !== 'number' || format === FORMAT) return stored;
     if (format > FORMAT) throw new NewerFormatError(`Der Spielstand stammt aus einer neueren Fassung (Format ${format}, diese kennt ${FORMAT}). Bitte die Seite neu laden.`);
-    const step = migrations.find((m) => m.from === format);
-    if (!step) throw new Error(`Spielstand im Format ${format} lässt sich nicht umwandeln`);
-    stored = { ...(step.migrate(stored) as object), format: format + 1 };
+    // Engine und Regelwerk können zur selben Nummer je einen Schritt haben: alle laufen, in der Reihenfolge der Liste
+    const steps = migrations.filter((m) => m.from === format);
+    if (steps.length === 0) throw new Error(`Spielstand im Format ${format} lässt sich nicht umwandeln`);
+    stored = { ...(steps.reduce((s, step) => step.migrate(s), stored) as object), format: format + 1 };
   }
 }

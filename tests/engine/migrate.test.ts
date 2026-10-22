@@ -28,6 +28,11 @@ describe('Migrationen', () => {
     expect(() => migrate({ format: FORMAT + 1 }, steps)).toThrow(/neu laden/);
   });
 
+  it('Engine und Regelwerk mit einem Schritt zur selben Nummer: beide laufen, die Nummer steigt einmal (5r)', () => {
+    const tag = (name: string): Migration => ({ from: FORMAT - 1, migrate: (s) => ({ ...(s as object), [name]: true }) });
+    expect(migrate({ format: FORMAT - 1 }, [tag('engine'), tag('regelwerk')])).toEqual({ format: FORMAT, engine: true, regelwerk: true });
+  });
+
   it('fehlender Schritt: Fehler statt Endlosschleife', () => {
     expect(() => migrate({ format: 1 }, [])).toThrow(/Format 1/);
   });
@@ -45,5 +50,32 @@ describe('Migrationen', () => {
     expect(parsed.format).toBe(4);
     expect(parsed.lamp).toBe(true);
     expect(() => engine.parseState({ ...structuredClone(fresh()), format: 5 })).toThrow(NewerFormatError);
+  });
+});
+
+describe('Stand prüfen: jede Karte genau einmal (5r)', () => {
+  const broken = (change: (s: ReturnType<typeof fresh>) => void) => {
+    const s = structuredClone(fresh());
+    change(s);
+    return () => engine.parseState(s);
+  };
+
+  it('ein heiler Stand geht durch', () => {
+    expect(() => engine.parseState(fresh())).not.toThrow();
+  });
+
+  it('doppelte, fehlende und unbekannte Karten werden abgelehnt', () => {
+    expect(broken((s) => s.zones['discard']!.push(s.zones['deck']!.at(-1)!))).toThrow(/2-mal/);
+    expect(broken((s) => s.zones['deck']!.pop())).toThrow(/fehlt/);
+    expect(broken((s) => s.zones['discard']!.push('H1' as never))).toThrow();
+  });
+
+  it('unbekannte Zone wird abgelehnt', () => {
+    expect(broken((s) => (s.zones['damage'] = []))).toThrow(/unbekannte Zone damage/);
+  });
+
+  it('freie Karten und ihre Lage müssen zusammenpassen', () => {
+    expect(broken((s) => s.free.push(s.zones['deck']!.pop()!))).toThrow(/ohne Lage/);
+    expect(broken((s) => (s.freePos[s.zones['deck']!.at(-1)!] = { anchor: 'center', x: 0.5, y: 0.5 }))).toThrow(/nicht frei liegt/);
   });
 });
