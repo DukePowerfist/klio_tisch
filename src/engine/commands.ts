@@ -81,6 +81,12 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
       const p = state.freePos[c];
       return p ? anchorOwner(p.anchor) : [];
     });
+  /** Liegt eine dieser freien Karten an einem ausgeblendeten Platz? Dann ist sie wie dessen Zonen gesperrt. */
+  const onHiddenSeat = (cards: readonly CardId[], state: S): boolean =>
+    cards.some((c) => {
+      const a = state.freePos[c]?.anchor;
+      return a !== undefined && a !== 'center' && !seatVisible(a, state);
+    });
   const topOf = (zc: ZoneConfig, state: S): CardId | undefined => state.zones[zc.id]?.at(-1);
 
   /** Höchstzahl der Zone: `k` Karten kommen dazu, `cards` davon lagen schon dort. */
@@ -128,6 +134,8 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
         if (!topSegment && !singleFanned) return reject('reject.stale');
       } else if (!cmd.cards.every((c) => state.free.includes(c))) {
         return reject('reject.stale');
+      } else if (onHiddenSeat(cmd.cards, state)) {
+        return reject('reject.hiddenSeat');
       }
 
       const moved: EngineEvent = { type: 'cardsMoved', cards: cmd.cards, from: cmd.from, to: cmd.to };
@@ -160,6 +168,8 @@ export function engineCommands(zones: ZoneTable, ruleset: Pick<Ruleset<unknown>,
         const zc = zoneOf(where.zone, state);
         if (isRejection(zc)) return zc;
         if (cmd.card !== topOf(zc, state) && !zc.fanned) return reject('reject.stale');
+      } else if (onHiddenSeat([cmd.card], state)) {
+        return reject('reject.hiddenSeat');
       }
       return [{ type: 'cardsTurned', cards: [cmd.card], faceUp: !state.faceUp[cmd.card] }];
     },

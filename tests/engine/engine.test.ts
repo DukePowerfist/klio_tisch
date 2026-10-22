@@ -115,6 +115,17 @@ describe('Karten bewegen', () => {
     expectRejected(two, { type: 'cards.move', cards: [top], from: { zone: 'deck' }, to: { zone: 'seat3.damage' } }, 'reject.hiddenSeat');
     expectRejected(two, { type: 'cards.move', cards: [top], from: { zone: 'deck' }, to: { free: { anchor: 'seat4', x: 0, y: 0 } } }, 'reject.hiddenSeat');
   });
+
+  it('freie Karten an einem ausgeblendeten Platz: weder bewegen noch umdrehen, auch nicht für die SL (5r)', () => {
+    const top = base.zones['deck']!.at(-1)!;
+    const laid = run(base, { type: 'cards.move', cards: [top], from: { zone: 'deck' }, to: { free: { anchor: 'seat3', x: 0.5, y: 0.5 } } }).state;
+    const two = run(laid, { type: 'table.setPlayers', players: 2 }).state;
+    expectRejected(two, { type: 'cards.move', cards: [top], from: { free: true }, to: { zone: 'discard' } }, 'reject.hiddenSeat');
+    expectRejected(two, { type: 'card.flip', card: top }, 'reject.hiddenSeat');
+    // wieder eingeblendet: alles wie vorher
+    const back = run(two, { type: 'table.setPlayers', players: 3 }).state;
+    expect(run(back, { type: 'card.flip', card: top }).state.faceUp[top as never]).toBe(true);
+  });
 });
 
 describe('Umdrehen, Ziehen, Mischen', () => {
