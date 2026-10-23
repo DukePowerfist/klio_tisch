@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { plateEntries, type PlateContext } from '../../src/ui/plateMenu';
 
-const base: PlateContext = { can: () => true, occupied: true, dead: false, online: true, host: true, inRoleView: false, moveTargets: 2, watchers: 1 };
+const base: PlateContext = { can: () => true, occupied: true, dead: false, photo: false, online: true, host: true, inRoleView: false, moveTargets: 2, watchers: 1 };
 
 describe('Menü am Namensschild: Einträge (10.1)', () => {
   it('SL am besetzten Platz: alles außer Zuweisen, in drei Gruppen', () => {
@@ -35,6 +35,11 @@ describe('Menü am Namensschild: Einträge (10.1)', () => {
     expect(only('table.moveSeat')).toEqual(['move']);
     expect(only('table.setSeat')).toEqual(['release']);
     expect(plateEntries({ ...base, moveTargets: 0 }).flat()).not.toContain('move');
+  });
+
+  it('Foto entfernen nur mit Foto und Recht, direkt nach Foto ändern (5z)', () => {
+    expect(plateEntries({ ...base, photo: true })[1]).toEqual(['roll', 'photo', 'photoRemove', 'export', 'import', 'reset']);
+    expect(plateEntries({ ...base, photo: true, can: (t) => t !== 'sheet.setPhoto' }).flat()).not.toContain('photoRemove');
   });
 
   it('Wiederbeleben nur am toten Charakter, vorn in der Gruppe Bogen', () => {

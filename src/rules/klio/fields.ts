@@ -7,6 +7,9 @@ import { ATTRS, ScarSchema, type KlioSheet } from './state';
 export type FieldKind = 'text' | 'number' | 'check' | 'counter';
 export type FieldValue = string | number | boolean | null;
 
+/** längster Text eines Felds; prüft der Host (`sheet.setText`, `sheet.import`), begrenzt schon das Eingabefeld (5z) */
+export const SHEET_TEXT_MAX = 200;
+
 /** `strengths.text.2` → ['strengths', 2, 'text'] usw.; null bei unbekannten Namen. */
 function pathOf(field: string): { path: (string | number)[]; kind: FieldKind } | null {
   const p = field.split('.');

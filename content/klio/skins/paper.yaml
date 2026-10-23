@@ -48,7 +48,7 @@ fields:
   experiences.0: { x: 66, y: 876, w: 160, h: 21, font: 17 }
   experiences.1: { x: 248, y: 876, w: 160, h: 21, font: 17 }
   experiences.2: { x: 412, y: 876, w: 145, h: 21, font: 17 }
-  newScars: { x: 570, y: 78, font: 13 }   # Zähler neben der Herz-Narbe
+  newScars: { x: 570, y: 78, font: 13 }   # Zähler neben der Herz-Narbe; seit 5k nicht gezeichnet, Lage nur für die Inhaltsprüfung
   # Foto: wie der gezeichnete Rahmen gedreht (Grad, um die Mitte); Innenfläche 52,8 × 77,8 bei Mitte 96,8 | 114,1,
   # etwas größer, damit es unter den Linien endet (die Linien scheinen durch, Sheet.svelte)
   photo: { x: 69.3, y: 74.1, w: 55, h: 80, rotate: -12.4 }

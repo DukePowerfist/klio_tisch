@@ -2,6 +2,7 @@
   // Text- oder Zahlenfeld auf dem Bogen. Getippt wird lokal; gesendet ~300 ms nach der letzten Eingabe
   // und beim Verlassen. Solange das Feld den Fokus hat, ersetzen eingehende Änderungen es nicht (8.2).
   import type { SeatId } from '../engine/types';
+  import { SHEET_TEXT_MAX } from '../rules/klio/fields';
   import { submitOrSay } from './commands';
   import { effects } from './effects.svelte';
   import { shouldSend } from './fieldSend';
@@ -62,6 +63,7 @@
   style:font-size="{size}px"
   value={shown}
   {readonly}
+  maxlength={kind === 'text' ? SHEET_TEXT_MAX : undefined}
   spellcheck="false"
   inputmode={kind === 'number' ? 'numeric' : undefined}
   data-field={field}
@@ -73,7 +75,10 @@
 
 <style>
   input { position: absolute; box-sizing: border-box; background: transparent; border: 0; outline: 0; font: inherit; color: inherit; padding: 0 3px; margin: 0; }
-  input:focus { background: var(--sheet-focus); }
+  /* Gelb nur, wo man schreiben darf (5z); schreibgeschützt ein feiner Rahmen innen (ragt nicht über Nachbarfelder).
+     Chrome zählt bei Textfeldern auch den Mausfokus als :focus-visible, der Rahmen erscheint also bei jedem Fokus */
+  input:focus:not([readonly]) { background: var(--sheet-focus); }
+  input[readonly]:focus-visible { outline: 1px dashed var(--sheet-label); outline-offset: -1px; }
   .overwritten { background: var(--sheet-overwritten); transition: background 0.6s; }
   .center, .number { text-align: center; font-weight: 700; padding: 0; }
   .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); color: var(--sheet-struck); font-style: italic; }

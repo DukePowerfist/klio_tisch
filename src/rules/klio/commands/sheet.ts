@@ -3,14 +3,12 @@
 import { z } from 'zod';
 import type { Change } from '../blocks';
 import type { SeatId } from '../../../engine/types';
-import { fieldKind, getField, type FieldKind, type FieldValue } from '../fields';
+import { fieldKind, getField, SHEET_TEXT_MAX as MAX_TEXT, type FieldKind, type FieldValue } from '../fields';
 import { sheetOf, type KlioTable } from '../events';
 import { rollSheet } from '../generators/rollSheet';
 import { KlioSheet, PhotoRef } from '../state';
 import { trumpById } from '../trumps';
 import { command, reject, Seat, type Deps } from './common';
-
-const MAX_TEXT = 200;
 
 /** Feld einer bestimmten Art auf einen Wert setzen; unverändert → keine Ereignisse. */
 const setValue = (kind: FieldKind) => (cmd: { seat: SeatId; field: string; value: FieldValue }, state: KlioTable) => {

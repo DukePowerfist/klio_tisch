@@ -333,6 +333,8 @@ plate:                                    # Menü am Namensschild (neu, Schritt 
   revive: Charakter wiederbeleben
   roll: Charakter auswürfeln
   photo: Foto ändern …
+  photoRemove: Foto entfernen                # neu, Schritt 5z
+  photoRemoveConfirm: Foto wirklich entfernen?
   export: Charakter exportieren
   import: Charakter importieren …
   importTitle: Den Bogen durch einen Charakter aus einer Datei ersetzen

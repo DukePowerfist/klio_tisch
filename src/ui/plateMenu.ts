@@ -1,7 +1,7 @@
 // Einträge des Menüs am Namensschild (10.1): welche es an diesem Platz gibt, in Gruppen. Rein, damit testbar;
 // was der Eintrag tut, steht in PlateMenu.svelte (mit seatActions.ts, sheetActions.ts, confirm.svelte.ts).
 
-export type PlateEntry = 'profile' | 'view' | 'revive' | 'roll' | 'photo' | 'export' | 'import' | 'reset' | 'move' | 'release' | 'assign';
+export type PlateEntry = 'profile' | 'view' | 'revive' | 'roll' | 'photo' | 'photoRemove' | 'export' | 'import' | 'reset' | 'move' | 'release' | 'assign';
 
 export type PlateContext = {
   /** darf der Nutzer diesen Befehl an diesem Platz? */
@@ -10,6 +10,8 @@ export type PlateContext = {
   occupied: boolean;
   /** der Charakter ist tot (erst nach dem Aufdecken, wie das Kreuz am Bogen) */
   dead: boolean;
+  /** am Bogen ist ein Foto gesetzt */
+  photo: boolean;
   /** Raum mit Mitspielern (nicht lokal); als Host zusätzlich `host` */
   online: boolean;
   host: boolean;
@@ -23,7 +25,7 @@ export type PlateContext = {
 /** Gruppen in fester Reihenfolge, getrennt durch feine Linien: Person und Ansicht, Bogen, Platz (SL) */
 const GROUPS: PlateEntry[][] = [
   ['profile', 'view'],
-  ['revive', 'roll', 'photo', 'export', 'import', 'reset'],
+  ['revive', 'roll', 'photo', 'photoRemove', 'export', 'import', 'reset'],
   ['move', 'release', 'assign'],
 ];
 
@@ -39,6 +41,8 @@ function shown(e: PlateEntry, c: PlateContext): boolean {
       return c.can('sheet.roll');
     case 'photo':
       return c.can('sheet.setPhoto');
+    case 'photoRemove':
+      return c.photo && c.can('sheet.setPhoto');
     case 'export':
       return true; // nur lesen, für alle
     case 'import':

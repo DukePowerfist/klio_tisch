@@ -17,6 +17,7 @@
       can: (type) => session.can({ type, seat }),
       occupied: table.seats[seat].occupied,
       dead: effects.shownDead(seat, sheetOf(table, seat)),
+      photo: sheetOf(table, seat).photo !== null,
       online: session.mode !== 'local',
       host: session.mode === 'host',
       inRoleView: view.role === seat,
@@ -51,6 +52,7 @@
   const rollConfirm = new Confirm();
   const resetConfirm = new Confirm();
   const importConfirm = new Confirm();
+  const photoConfirm = new Confirm();
   /** aufgeklappte Auswahl (Umsetzen, Zuweisen) */
   let expanded = $state<'move' | 'assign' | null>(null);
   let root = $state<HTMLElement>();
@@ -85,6 +87,10 @@
 
   function roll() {
     if (rollConfirm.click(rollOverwrites(content, sheetOf(table, seat)))) run(() => submitOrSay({ type: 'sheet.roll', seat }))();
+  }
+  // Ein Foto ginge immer verloren: immer erst scharf machen (5z)
+  function removePhoto() {
+    if (photoConfirm.click(true)) run(() => submitOrSay({ type: 'sheet.setPhoto', seat, photo: null }))();
   }
   const isEmpty = () => JSON.stringify(sheetOf(table, seat)) === JSON.stringify(emptySheet());
   function reset() {
@@ -146,6 +152,8 @@
           <button role="menuitem" class="menu-item" class:armed={rollConfirm.armed} title={t('sheet.rollTitle')} onclick={roll}>{rollConfirm.armed ? t('sheet.rollConfirm') : t('plate.roll')}</button>
         {:else if entry === 'photo'}
           <button role="menuitem" class="menu-item" onclick={run(() => pickPhoto(seat))}>{t('plate.photo')}</button>
+        {:else if entry === 'photoRemove'}
+          <button role="menuitem" class="menu-item" class:armed={photoConfirm.armed} class:danger={photoConfirm.armed} onclick={removePhoto}>{photoConfirm.armed ? t('plate.photoRemoveConfirm') : t('plate.photoRemove')}</button>
         {:else if entry === 'export'}
           <button role="menuitem" class="menu-item" onclick={run(() => exportCharacter(seat))}>{t('plate.export')}</button>
         {:else if entry === 'import'}

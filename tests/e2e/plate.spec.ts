@@ -81,6 +81,28 @@ test('Foto über das Schild, auch das Fotofeld am Bogen öffnet die Auswahl', as
   await expect(page.locator('[data-sheet=seat1] .photo')).toBeEnabled();
 });
 
+test('Foto entfernen über das Schild (5z): nur mit Foto, mit zweitem Klick, bleibt nach Neuladen weg', async ({ page }) => {
+  const photo = page.locator('[data-sheet=seat1] .photo');
+  await plate(page, 'seat1').click();
+  await expect(entries(page).getByText('Foto entfernen')).toHaveCount(0);
+  const chooser = page.waitForEvent('filechooser');
+  await entries(page).getByText('Foto ändern …').click();
+  await (await chooser).setFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(page) });
+  await expect(photo).toHaveCSS('background-image', /^url\(/);
+
+  await plate(page, 'seat1').click();
+  await entries(page).getByText('Foto entfernen').click();
+  // erst scharf: Menü bleibt offen, Foto noch da
+  await expect(entries(page).getByText('Foto wirklich entfernen?')).toBeVisible();
+  await expect(photo).toHaveCSS('background-image', /^url\(/);
+  await entries(page).getByText('Foto wirklich entfernen?').click();
+  await expect(photo).toHaveCSS('background-image', 'none');
+  await ready(page, true);
+  await expect(photo).toHaveCSS('background-image', 'none');
+  await plate(page, 'seat1').click();
+  await expect(entries(page).getByText('Foto entfernen')).toHaveCount(0);
+});
+
 test('Schild stört den Tisch nicht: Menü auf und zu, danach Karte ziehen', async ({ page }) => {
   await plate(page, 'seat1').click();
   await page.keyboard.press('Escape');

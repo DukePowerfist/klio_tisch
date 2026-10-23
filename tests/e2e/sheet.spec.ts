@@ -9,6 +9,21 @@ const setField = (page: Page, field: string, value: string) => setSeatField(page
 
 test.beforeEach(async ({ page }) => ready(page));
 
+test('Textfelder nehmen höchstens 200 Zeichen, auch beim Einfügen, ohne Ablehnung (5z)', async ({ page }) => {
+  await page.keyboard.press('1');
+  const field = sheet1(page).locator('[data-field="gear.text.0"]');
+  await expect(field).toHaveAttribute('maxlength', '200');
+  await expect(sheet1(page).locator('[data-field="attributes.K"]')).not.toHaveAttribute('maxlength');
+  // wie Einfügen: der Browser schneidet bei maxlength ab
+  await field.click();
+  await page.keyboard.insertText('z'.repeat(250));
+  await field.press('Enter');
+  await expect(field).toHaveValue('z'.repeat(200));
+  await expect(page.getByRole('status')).toHaveCount(0);
+  await ready(page, true);
+  await expect(sheet1(page).locator('[data-field="gear.text.0"]')).toHaveValue('z'.repeat(200));
+});
+
 test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'name', 'Ida Weber');

@@ -327,6 +327,15 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
   await player.locator('[data-plate=seat2]').click();
   await expect(items(player)).toHaveText(['Name und Farbe …', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter exportieren', 'Charakter importieren …', 'Charakter zurücksetzen']);
   await player.keyboard.press('Escape');
+  // Fremdes Feld ist schreibgeschützt (5z): fokussiert ohne Gelb, nur ein feiner Rahmen (Chrome zählt bei Textfeldern
+  // auch den Mausfokus als sichtbar)
+  const foreign = player.locator('[data-sheet=seat1] [data-field=name]');
+  await expect(foreign).toHaveAttribute('readonly');
+  await foreign.click();
+  await expect(foreign).toBeFocused();
+  await expect(foreign).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(foreign).toHaveCSS('outline-style', 'dashed');
+  await player.locator('.board').click({ position: { x: 5, y: 5 } });
   // Spieler speichert seinen Charakter mit Foto, setzt zurück und lädt ihn wieder; die SL sieht Bogen und Foto
   await player.locator('[data-plate=seat2]').click();
   await items(player).getByText('Charakter auswürfeln').click();
@@ -359,7 +368,8 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
 
   // SL ändert Namen der Person an Platz 2
   await gm.locator('[data-plate=seat2]').click();
-  await expect(items(gm)).toHaveText(['Name und Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Charakter exportieren', 'Charakter importieren …', 'Charakter zurücksetzen', 'Umsetzen …', 'Platz freigeben']);
+  // der Bogen hat hier ein Foto: „Foto entfernen“ (5z)
+  await expect(items(gm)).toHaveText(['Name und Farbe …', 'Zur Rollenansicht', 'Charakter auswürfeln', 'Foto ändern …', 'Foto entfernen', 'Charakter exportieren', 'Charakter importieren …', 'Charakter zurücksetzen', 'Umsetzen …', 'Platz freigeben']);
   await items(gm).getByText('Name und Farbe …').click();
   const profile = gm.getByRole('dialog', { name: 'Name und Farbe: Platz 2' });
   await profile.getByRole('textbox').fill('Ida B.');
