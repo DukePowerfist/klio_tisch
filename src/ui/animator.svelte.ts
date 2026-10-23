@@ -14,8 +14,8 @@ const CUE = 'cue';
 /** Stapelung während eines Flugs: über den liegenden Karten, unter gezogenen (400000) und dem Stapelmenü */
 const FLYING_Z = 300000;
 
-/** dazu, was nur hier gebraucht wird: Leuchten nach fremden Zügen, Stoß, Ankommen (11.7) */
-type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; arriveLift: number; arriveEase: string; ping: number; pointerOut: number };
+/** dazu, was nur hier gebraucht wird: Leuchten nach fremden Zügen, Stoß, Ankommen (11.7), Einblenden im Ergebnisfenster (5t) */
+type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; arriveLift: number; arriveEase: string; ping: number; pointerOut: number; pop: number };
 let cached: AllTiming | null = null;
 let cachedCut: AllTiming | null = null;
 /** Schnitt beim Ansichtswechsel (11.8, view.svelte.ts): `shift` ist dann 0, wie `--shift` unter `[data-cut]` */
@@ -40,7 +40,7 @@ function readTiming(): AllTiming {
     lampOn: cssMs(v('--lamp-on')), lampOff: cssMs(v('--lamp-off')),
     glow: cssMs(v('--glow')), strikeColor: v('--strike-c') || 'red',
     arrive: cssMs(v('--arrive')), arriveLift: cssMs(v('--arrive-lift')), arriveEase: v('--spring-soft') || 'ease-out',
-    ping: cssMs(v('--ping')), pointerOut: cssMs(v('--pointer-out')),
+    ping: cssMs(v('--ping')), pointerOut: cssMs(v('--pointer-out')), pop: cssMs(v('--pop')),
   };
 }
 /** Effektstufe gewechselt: Werte neu lesen */

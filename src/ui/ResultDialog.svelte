@@ -3,8 +3,10 @@
   // Neu würfeln dürfen nur, wer das Recht dazu hat (sonst fehlen die Knöpfe und die Fußzeile).
   // Seit 5t (10.6) im Stil der Einstellungen: Kopf mit ×, feine Linien, Knöpfe im Menüstil, ein Hauptknopf;
   // Kopf und Fußzeile stehen, nur der Inhalt dazwischen scrollt.
+  import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import Modal from './Modal.svelte';
+  import { timing } from './animator.svelte';
   import { submitOrSay } from './commands';
   import { session } from './session.svelte';
   import { cardName, t } from './texts';
@@ -16,17 +18,33 @@
   const title = $derived(t(kind === 'expedition' ? 'gm.expeditionShort' : 'gm.oracle'));
   const reroll = $derived(session.can({ type: kind === 'expedition' ? 'gm.expedition' : 'gm.oracle' }));
   const close = () => (view.gmDialog = null);
+
+  // Neu gewürfelte Teile blenden kurz ein (Q4: nicht beim Öffnen, dort läuft schon pop-in; nur bei weiteren Würfen)
+  const opened = untrack(() => view.gmRoll?.n ?? 0);
+  let body: HTMLDivElement;
+  $effect(() => {
+    const r = view.gmRoll;
+    if (!r || r.n <= opened || r.kind !== kind) return;
+    const values = body.querySelectorAll('.value');
+    for (const i of r.parts) values[i]?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: timing().pop, easing: 'ease-out' });
+  });
+
+  /** Fokus beim Öffnen aufs ×, nur wenn dieses Fenster das oberste ist (Q3); weitere Würfe lassen ihn, wo er ist */
+  function focusIfTop(el: HTMLElement) {
+    const open = document.querySelectorAll('[aria-modal="true"]');
+    if (open[open.length - 1] === el.closest('[aria-modal="true"]')) el.focus();
+  }
 </script>
 
 <Modal label={title} onclose={close} size="result">
   <header>
     <h2>{title}</h2>
     <!-- wie das × der Einstellungen (bewusst übernommen, 10.6) -->
-    <button class="close" aria-label={t('gm.close')} title={t('gm.close')} onclick={close}>
+    <button class="close" {@attach focusIfTop} aria-label={t('gm.close')} title={t('gm.close')} onclick={close}>
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
     </button>
   </header>
-  <div class="body">
+  <div class="body" bind:this={body}>
     {#if kind === 'expedition' && game.expedition}
       {#each content.expedition.expedition as table, i (i)}
         <div class="row">

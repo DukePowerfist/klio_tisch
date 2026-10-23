@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
+import { expect, test, type Locator } from '@playwright/test';
+import { dragFromTo, expectCount, fixRolls, fromMenu, LONGEST, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -34,25 +34,6 @@ test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) 
 });
 
 // ---------- Ergebnisfenster im Stil der Einstellungen (5t, 10.6) ----------
-
-/** Die nächsten Würfe des Hosts (`cryptoRng`: v % 13) liefern genau diese Werte, danach wieder echter Zufall */
-async function fixRolls(page: Page, values: number[]) {
-  await page.evaluate((vals) => {
-    const orig = crypto.getRandomValues.bind(crypto);
-    const queue = [...vals];
-    crypto.getRandomValues = (<T extends ArrayBufferView | null>(a: T): T => {
-      if (queue.length > 0 && a instanceof Uint32Array && a.length === 1) {
-        a[0] = queue.shift()!;
-        if (queue.length === 0) crypto.getRandomValues = orig;
-        return a;
-      }
-      return orig(a as never) as T;
-    }) as typeof crypto.getRandomValues;
-  }, values);
-}
-
-/** Indizes der längsten Einträge je Tabelle (expedition.yaml) */
-const LONGEST = [6, 10, 12, 5];
 
 test('Ergebnisfenster: Kopf mit Titel und ×, unten nur der Hauptknopf, vier verschieden benannte „Neu“', async ({ page }) => {
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
@@ -95,6 +76,29 @@ test('Ergebnisfenster: etwa 560 px breit; längste Einträge ohne Bildlauf, im k
     expect(b.y).toBeGreaterThanOrEqual(0);
     expect(b.y + b.height).toBeLessThanOrEqual(450);
   }
+});
+
+test('Ergebnisfenster: Fokus beim Öffnen auf dem ×, Enter schließt ohne zu würfeln; ein weiterer Wurf lässt den Fokus', async ({ page }) => {
+  await fromMenu(page, 'Protokoll');
+  const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog.getByRole('button', { name: 'Schließen' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(logged).toHaveCount(1);
+  // erneut öffnen, Fokus auf „Neu“ in Zeile 2, würfeln: der Fokus bleibt dort
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  await expect(logged).toHaveCount(2);
+  const second = dialog.getByRole('button', { name: 'Neu würfeln: Bekannt für …' });
+  await second.focus();
+  await page.keyboard.press('Enter');
+  await expect(logged).toHaveCount(3);
+  await expect(second).toBeFocused();
+  // Wechsel zum Orakel: neues Fenster, Fokus wieder aufs ×
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
 test('andere Fenster unverändert (5t, Q1): Knöpfe mit Grund und Rahmen, × der Einstellungen ohne', async ({ page }) => {

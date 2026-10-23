@@ -4,11 +4,12 @@
 
 import type { EngineEvent, SeatId } from '../engine/types';
 import { seatNo } from '../engine/zones';
-import type { KlioEvent } from '../rules/klio/events';
+import type { KlioEvent, KlioEventOf } from '../rules/klio/events';
 import { afterReveal, noteEvents, strikeImpacted } from './animator.svelte';
 import { NOTICE_ARRIVALS } from './arrivals';
 import { describe, noticeArrival } from './eventText';
-import { session } from './session.svelte';
+import { rolledRows } from './resultRoll';
+import { session, type KlioTableState } from './session.svelte';
 import { t } from './texts';
 import { view } from './view.svelte';
 
@@ -51,6 +52,8 @@ class Effects {
   shownDead = (seat: SeatId, sheet: { dead: boolean }): boolean => sheet.dead && !this.holds(seat, 'dead');
   /** zuletzt selbst gesendeter Wert je Feld */
   private edits = new Map<string, { value: unknown; at: number }>();
+  /** Zeilen des zuletzt gesendeten eigenen Wurfs der Expedition, bis das eigene Ereignis dazu kommt */
+  private ownRoll: number[] | null = null;
 
   constructor() {
     // Kommen und Gehen (11.7): Meldung bei allen außer der Person selbst, sofern die SL sie nicht abgeschaltet hat
@@ -67,6 +70,8 @@ class Effects {
     });
     // Eigene Eingaben merken, egal von wo gesendet
     session.onSubmit((cmd) => {
+      // eigener Wurf der Expedition: welche Zeile (ohne `table` alle); gilt nur für das eigene Ereignis dazu (5t, Q3)
+      if (cmd.type === 'gm.expedition') this.ownRoll = typeof cmd['table'] === 'number' ? [cmd['table']] : [0, 1, 2, 3];
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(key(cmd['seat'] as SeatId, String(cmd['field'])), { value: cmd['value'], at: Date.now() });
     });
     session.onEvents((events, own, prev) => {
@@ -75,6 +80,7 @@ class Effects {
       this.holdDamage(events);
       for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
+        if (e.type === 'expeditionRolled' || e.type === 'oracleDrawn') this.rolled(e, own, prev);
         if (!isDamageResult(e)) this.handle(e);
       }
     });
@@ -100,6 +106,18 @@ class Effects {
     for (const k of hit) this.edits.delete(k);
     this.overwritten.add(hit);
     view.say(t('settings.fieldChanged', { seat: seatNo(seat) }));
+  }
+
+  /** Was im Ergebnisfenster kurz einblendet (5t, 10.6, P1): am Ereignis, nicht am Text, also auch bei gleichem Ergebnis.
+   *  Orakel: beide Begriffe. Expedition: geänderte Zeilen, beim eigenen Wurf dazu die gewürfelte(n). */
+  private rolled(e: KlioEventOf<'expeditionRolled'> | KlioEventOf<'oracleDrawn'>, own: boolean, prev: KlioTableState | null): void {
+    let parts: number[];
+    if (e.type === 'oracleDrawn') parts = [0, 1];
+    else {
+      parts = rolledRows(prev?.game.expedition, e.expedition, own, this.ownRoll);
+      if (own) this.ownRoll = null;
+    }
+    view.gmRoll = { n: (view.gmRoll?.n ?? 0) + 1, kind: e.type === 'oracleDrawn' ? 'oracle' : 'expedition', parts };
   }
 
   private handle(e: EngineEvent | KlioEvent): void {

@@ -184,3 +184,22 @@ export async function resetTable(page: Page, characters = false) {
   if (characters) await dialog.getByRole('checkbox').check();
   await dialog.getByRole('button', { name: 'Zurücksetzen' }).click();
 }
+
+/** Die nächsten Würfe des Hosts (`cryptoRng`: v % 13) liefern genau diese Werte, danach wieder echter Zufall */
+export async function fixRolls(page: Page, values: number[]) {
+  await page.evaluate((vals) => {
+    const orig = crypto.getRandomValues.bind(crypto);
+    const queue = [...vals];
+    crypto.getRandomValues = (<T extends ArrayBufferView | null>(a: T): T => {
+      if (queue.length > 0 && a instanceof Uint32Array && a.length === 1) {
+        a[0] = queue.shift()!;
+        if (queue.length === 0) crypto.getRandomValues = orig;
+        return a;
+      }
+      return orig(a as never) as T;
+    }) as typeof crypto.getRandomValues;
+  }, values);
+}
+
+/** Indizes der längsten Einträge je Tabelle der Expedition (expedition.yaml) */
+export const LONGEST = [6, 10, 12, 5];

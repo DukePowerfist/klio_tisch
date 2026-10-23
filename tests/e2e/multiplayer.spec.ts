@@ -516,6 +516,25 @@ test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausg
   await expect(player.locator('[data-zone=deck]')).not.toHaveAttribute('role', 'button');
 });
 
+test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne den Fokus zu nehmen; sonst aufs ×', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  const settings = await openSettings(player, 'Darstellung');
+  const tab = settings.getByRole('tab', { name: 'Darstellung' });
+  await tab.focus();
+  await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
+  await expect(player.getByRole('dialog', { name: 'Orakel' })).toHaveCount(1);
+  await expect(tab).toBeFocused();
+  await player.keyboard.press('Escape'); // schließt beide Fenster (jedes Modal hört auf Esc, hingenommen)
+  await expect(settings).toHaveCount(0);
+  await expect(player.getByRole('dialog')).toHaveCount(0);
+  await gm.keyboard.press('Escape'); // Orakel bei der SL schließen, sonst fängt es den Klick ab
+  // ohne anderes Fenster: Fokus aufs ×
+  await gm.getByRole('button', { name: 'Expedition', exact: true }).click();
+  await expect(player.getByRole('dialog', { name: 'Expedition' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
+});
+
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
 async function joinAs(page: Page, link: string, name: string, n: number) {
   await page.goto(link);
