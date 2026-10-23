@@ -1,6 +1,8 @@
 <script lang="ts" module>
   /** ein- oder ausgefahren, nur in diesem Browser (10.5, wie das offene Protokoll) */
   const OPEN_KEY = 'klio.gmBar.open';
+  /** Mindestbreite der Lasche in Bildschirmpunkten: auf kleinen Bildschirmen ist der Spalt neben dem Filz sonst sehr schmal */
+  const MIN_TAB = 24;
 </script>
 
 <script lang="ts">
@@ -38,6 +40,9 @@
   });
   /** Maßstab der Leiste im Tisch: 1 / Tischmaßstab, höchstens so groß, dass sie in maxW (TP) passt */
   const f = $derived(size.w > 0 ? Math.min(1 / scale, maxW / size.w) : 1 / scale);
+  /** Breite der Lasche im Tisch (TP): der Spalt, mindestens MIN_TAB auf dem Bildschirm; dann ragt sie nach rechts
+   *  über den Spalt hinaus, die Naht bleibt auf dem Filzrand */
+  const tabW = $derived(Math.max(tab, MIN_TAB * f));
 
   /** Ein- und Ausfahren: die Knöpfe schieben sich in die Lasche und wieder heraus, mit --shift; ohne Effekte springt es */
   function slide(_: Element) {
@@ -48,7 +53,7 @@
 
 {#if any}
   <!-- rechte untere Ecke am Filzrand plus Lasche; die Naht zwischen Knöpfen und Lasche liegt auf dem Filzrand -->
-  <div class="ctl control" class:closed={!open} style:left="{at.x + tab}px" style:top="{at.y}px" style:--f={f}>
+  <div class="ctl control" class:closed={!open} style:left="{at.x + tabW}px" style:top="{at.y}px" style:--f={f}>
     {#if open}
       <div class="rows" id="gm-bar" role="group" aria-label={t('gm.bar')} bind:offsetWidth={w} bind:offsetHeight={h}
         transition:slide onintrostart={() => (moving = true)} onintroend={() => (moving = false)} onoutrostart={() => (moving = true)} onoutroend={() => (moving = false)}>
@@ -69,14 +74,14 @@
         {/if}
       </div>
     {/if}
-    <!-- Lasche: im Tisch genau `tab` TP breit (in der Leiste also tab / f), so hoch wie die Knöpfe samt Innenrand -->
+    <!-- Lasche: im Tisch `tabW` TP breit (in der Leiste also tabW / f), so hoch wie die Knöpfe samt Innenrand -->
     <button
       class="toggle"
       aria-expanded={open}
       aria-controls={open ? 'gm-bar' : null}
       aria-label={t(open ? 'gm.barCollapse' : 'gm.barExpand')}
       title={t(open ? 'gm.barCollapse' : 'gm.barExpand')}
-      style:width="{tab / f - 1}px"
+      style:width="{tabW / f - 1}px"
       style:height="{size.h + 6}px"
       onclick={flip}
     ></button>
