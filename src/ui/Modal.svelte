@@ -109,4 +109,12 @@
   .box :global(.note) { font-size: 13px; opacity: 0.75; }
   .box :global(.problem) { color: var(--reason); }
   .box :global(.buttons) { display: flex; gap: 10px; margin: 8px 0; }
+  /* Bausteine für den Inhalt aller Fenster (5y, 10.10), Vorsilbe dialog- wie dialog-head: Reihe am Ende (rechtsbündig,
+     `.start` rückt nach links; den Abstand darüber bringt das Element davor mit), Zwischenüberschrift wie in den
+     Einstellungen, Textfeld, kleine Knöpfe in Zeilen */
+  .box :global(.dialog-end) { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+  .box :global(.dialog-end > .start) { margin-right: auto; }
+  .box :global(.dialog-heading) { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }
+  .box :global(.dialog-field) { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
+  .box :global(.dialog-small) { padding: 5px 12px; }
 </style>

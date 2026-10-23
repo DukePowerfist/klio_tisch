@@ -19,7 +19,7 @@
 
 <Modal label={t('room.join.title')} {onclose} size="narrow">
   <DialogHead title={t('room.join.title')} {onclose} />
-  <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={t('room.join.name')} bind:value={name} /></p>
+  <p><input class="dialog-field" type="text" maxlength={PLAYER_NAME_MAX} placeholder={t('room.join.name')} bind:value={name} /></p>
   <div class="seats">
     {#each SEATS.filter((s) => seatVisible(s, table)) as seat (seat)}
       {@const names = seatNames(table, seat)}
@@ -37,7 +37,6 @@
 </Modal>
 
 <style>
-  input { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
   .seats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .seats button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; border-left: 4px solid color-mix(in srgb, var(--c) 80%, transparent); }
   .character { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

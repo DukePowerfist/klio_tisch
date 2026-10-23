@@ -125,7 +125,7 @@
         {/if}
         {#if canSettings}
           <section aria-labelledby="group-automation">
-            <h3 id="group-automation">{t('settings.automation')}</h3>
+            <h3 class="dialog-heading" id="group-automation">{t('settings.automation')}</h3>
             {#each ruleset.reactions as r (r.id)}
               {@const id = `auto-${r.id}`}
               {@const desc = tMaybe(`settings.automationHelp.${r.id}`)}
@@ -137,7 +137,7 @@
           </section>
           <!-- Schalter der Oberfläche im selben Feld des Stands (11.7) -->
           <section aria-labelledby="group-notices">
-            <h3 id="group-notices">{t('settings.notices')}</h3>
+            <h3 class="dialog-heading" id="group-notices">{t('settings.notices')}</h3>
             <SettingRow id="notice-arrivals" title={t('settings.noticeArrivals')} description={t('settings.noticeArrivalsHelp')}>
               <input class="switch" type="checkbox" role="switch" aria-labelledby="notice-arrivals-title" aria-describedby="notice-arrivals-desc"
                 checked={settings.automation[NOTICE_ARRIVALS] !== false} onchange={(e) => setAutomation(NOTICE_ARRIVALS, e.currentTarget.checked)} />
@@ -148,13 +148,13 @@
         <!-- Voreinstellungen oben, nicht unter der langen Liste (Nutzer, 5r) -->
         <section class="defaults">
           <SettingRow id="defaults" title={t('settings.defaults')} description={t('settings.defaultsHelp')}>
-            <button aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides(Object.fromEntries(Object.keys(overrides).map((k) => [k, null])))}>{t('settings.restore')}</button>
+            <button class="dialog-small" aria-labelledby="defaults-title" aria-describedby="defaults-desc" disabled={Object.keys(overrides).length === 0} onclick={() => setOverrides(Object.fromEntries(Object.keys(overrides).map((k) => [k, null])))}>{t('settings.restore')}</button>
           </SettingRow>
         </section>
         {#each groups as g (g.id)}
           {@const groupHelp = tMaybe(`settings.groupHelp.${g.id}`)}
           <section aria-labelledby="group-{g.id}">
-            <h3 id="group-{g.id}">{t(`settings.groups.${g.id}`)}</h3>
+            <h3 class="dialog-heading" id="group-{g.id}">{t(`settings.groups.${g.id}`)}</h3>
             {#if groupHelp}<p class="note">{groupHelp}</p>{/if}
             {#each g.keys as key (key)}
               {@const id = `perm-${key}`}
@@ -183,23 +183,23 @@
         {/if}
       {:else}
         <SettingRow id="export" title={t('settings.export')} description={t('settings.exportHelp')}>
-          <button aria-labelledby="export-title" aria-describedby="export-desc" onclick={() => session.exportFile()}>{t('settings.exportButton')}</button>
+          <button class="dialog-small" aria-labelledby="export-title" aria-describedby="export-desc" onclick={() => session.exportFile()}>{t('settings.exportButton')}</button>
         </SettingRow>
         <SettingRow id="import" title={t('settings.import')} description={t('settings.importHelp')} problem={problem ? text(problem) : undefined}>
-          <button aria-labelledby="import-title" aria-describedby="import-desc" onclick={() => fileInput?.click()}>{t('settings.importButton')}</button>
+          <button class="dialog-small" aria-labelledby="import-title" aria-describedby="import-desc" onclick={() => fileInput?.click()}>{t('settings.importButton')}</button>
           <input bind:this={fileInput} type="file" accept="application/json,.json" hidden onchange={importFile} />
         </SettingRow>
         <section aria-labelledby="backups">
-          <h3 id="backups" class="titleline">{t('settings.backups')} <span class="scope">{t('settings.scope.browser')}</span></h3>
+          <h3 id="backups" class="dialog-heading titleline">{t('settings.backups')} <span class="scope">{t('settings.scope.browser')}</span></h3>
           <p class="note">{t('settings.backupsHelp')}</p>
           {#each backups as b (b.id)}
             <SettingRow id="backup-{b.id}" title={when.format(b.at)} description={t(`settings.backupReasons.${b.reason}`)}>
               {#if confirm === b.id}
                 <span class="ask">{t('settings.restoreConfirm')}</span>
-                <button {@attach focus} onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
-                <button class="danger" onclick={() => restore(b.id)}>{t('settings.restore')}</button>
+                <button class="dialog-small" {@attach focus} onclick={() => (confirm = null)}>{t('reset.cancel')}</button>
+                <button class="dialog-small danger" onclick={() => restore(b.id)}>{t('settings.restore')}</button>
               {:else}
-                <button onclick={() => (confirm = b.id)}>{t('settings.restore')}</button>
+                <button class="dialog-small" onclick={() => (confirm = b.id)}>{t('settings.restore')}</button>
               {/if}
             </SettingRow>
           {:else}
@@ -223,9 +223,7 @@
   .titleline { display: flex; align-items: center; gap: 10px; }
   .scope { font-size: 12px; font-weight: normal; padding: 1px 8px; border: 1px solid var(--pane-rule); border-radius: var(--radius-pill); opacity: 0.8; }
   .body { flex: 1; overflow: auto; padding: 4px 22px 18px; }
-  .body button { padding: 5px 12px; }
-  h3 { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }
-  section:first-child h3 { margin-top: 10px; }
+  section:first-child .dialog-heading { margin-top: 10px; }
   .note { margin: 0 0 4px; }
   .defaults { margin-bottom: 4px; border-bottom: 1px solid var(--pane-rule); }
   .ask { font-size: 13px; }

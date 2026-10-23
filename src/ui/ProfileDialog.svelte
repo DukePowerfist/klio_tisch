@@ -46,7 +46,7 @@
   <DialogHead {title} {onclose} />
   {#if withName}
     {@const label = other ? t('profile.nameOther') : t('profile.name')}
-    <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={label} aria-label={label} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
+    <p><input class="dialog-field" type="text" maxlength={PLAYER_NAME_MAX} placeholder={label} aria-label={label} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
   {/if}
   {#if seat}
     <!-- an einem freien Platz sagt es schon der Titel; die Farbwahl behält ihren Namen -->
@@ -68,19 +68,17 @@
     </div>
   {/if}
   {#if refused}<p class="problem">{text(refused)}</p>{/if}
-  <div class="end">
+  <div class="dialog-end">
     <button onclick={onclose}>{t('profile.cancel')}</button>
     <button class="main" onclick={save}>{t('profile.save')}</button>
   </div>
 </Modal>
 
 <style>
-  input { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
   .label { font-size: 13px; opacity: 0.8; margin-bottom: 6px; }
   .colors { display: grid; grid-template-columns: repeat(4, 40px); gap: 10px; margin-bottom: 14px; }
   .colors .swatch { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--c); border: 3px solid transparent; }
   .colors .swatch[aria-checked='true'] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--panel-bg) inset; }
   /* vergeben: in der echten Farbe, blasser und durchgestrichen (nicht nur abgedunkelt, sonst wirkt sie wie eine andere Farbe) */
   .colors .swatch:disabled { opacity: 0.6; background: linear-gradient(135deg, transparent 44%, var(--panel-bg) 44% 56%, transparent 56%), var(--c); }
-  .end { display: flex; gap: 10px; justify-content: flex-end; }
 </style>

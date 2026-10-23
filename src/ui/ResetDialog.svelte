@@ -18,7 +18,7 @@
   <DialogHead title={t('reset.title')} onclose={close} />
   <p>{t('reset.text')}</p>
   <label><input type="checkbox" bind:checked={withCharacters} /><span>{t('reset.characters')}</span></label>
-  <div class="end">
+  <div class="dialog-end">
     <button onclick={close}>{t('reset.cancel')}</button>
     <button class="danger" onclick={reset}>{t('reset.confirm')}</button>
   </div>
@@ -27,5 +27,4 @@
 <style>
   p { margin: 0 0 12px; }
   label { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 14px; }
-  .end { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
