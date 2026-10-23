@@ -36,7 +36,8 @@ export type KlioTableState = TableState<KlioState>;
 /** `own`: ausgelöst von einem Befehl aus diesem Browser */
 /** `prev`: Stand vor den Ereignissen (null beim ersten Stand) */
 type Listener = (events: (EngineEvent | KlioEvent)[], own: boolean, prev: KlioTableState | null) => void;
-type CommandListener = (cmd: { type: string; [key: string]: unknown }) => void;
+/** `result` erfüllt sich mit der Antwort des Hosts (angenommen, abgelehnt) */
+type CommandListener = (cmd: { type: string; [key: string]: unknown }, result: Promise<CommandResult>) => void;
 type ReplacedListener = (reason: string) => void;
 /** Kommen und Gehen (11.7) mit dem Stand, zu dem es gehört */
 type ArrivalListener = (signals: ArrivalSignal[], state: KlioTableState) => void;
@@ -447,7 +448,9 @@ class Session {
   async submit(cmd: { type: string }, drop?: PendingDrop): Promise<CommandResult> {
     if (!this.host && !this.client) return INVALID;
     const id = `ui-${Date.now().toString(36)}-${++this.nextId}`;
-    for (const cb of this.commandListeners) cb(cmd);
+    let answered!: (r: CommandResult) => void;
+    const answer = new Promise<CommandResult>((r) => (answered = r));
+    for (const cb of this.commandListeners) cb(cmd, answer);
     if (drop) {
       this.pending = [...this.pending, { ...drop, id }];
       // losgelassen: die anderen halten die Karte, bis das Ereignis zu dieser ID kommt (8.3)
@@ -456,6 +459,7 @@ class Session {
     }
     const result = await (this.host ? this.host.submit(cmd, id) : this.client!.submit(cmd, id));
     if (drop) this.pending = this.pending.filter((d) => d.id !== id);
+    answered(result);
     return result;
   }
 

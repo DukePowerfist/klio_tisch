@@ -8,24 +8,14 @@ import type { KlioEvent, KlioEventOf } from '../rules/klio/events';
 import { afterReveal, noteEvents, strikeImpacted } from './animator.svelte';
 import { NOTICE_ARRIVALS } from './arrivals';
 import { describe, noticeArrival } from './eventText';
-import { rolledRows, type OwnRoll } from './resultRoll';
+import { Pulse } from './pulse.svelte';
+import { OwnRolls, rolledRows } from './resultRoll';
 import { session, type KlioTableState } from './session.svelte';
 import { t } from './texts';
 import { view } from './view.svelte';
 
-const PULSE_MS = 650;
 /** so lange gilt ein eigener Eintrag als „gerade bearbeitet“ (Hinweis bei fremder Änderung, 8.2) */
 const EDIT_MS = 5 * 60_000;
-
-/** Menge, deren Einträge nach kurzer Zeit (bzw. wenn `until` erfüllt ist) von selbst wieder verschwinden (reaktiv). */
-class Pulse<K> {
-  private items = $state.raw<ReadonlySet<K>>(new Set());
-  has = (k: K): boolean => this.items.has(k);
-  add(keys: K[], until: Promise<unknown> = new Promise((r) => setTimeout(r, PULSE_MS))): void {
-    this.items = new Set([...this.items, ...keys]);
-    void until.then(() => (this.items = new Set([...this.items].filter((k) => !keys.includes(k)))));
-  }
-}
 
 /** Schlüssel eines Feldes am Bogen: `seat1/name` */
 const key = (seat: SeatId, field: string): string => `${seat}/${field}`;
@@ -52,8 +42,8 @@ class Effects {
   shownDead = (seat: SeatId, sheet: { dead: boolean }): boolean => sheet.dead && !this.holds(seat, 'dead');
   /** zuletzt selbst gesendeter Wert je Feld */
   private edits = new Map<string, { value: unknown; at: number }>();
-  /** gesendete eigene Würfe der Expedition, der Reihe nach; jedes eigene Ereignis dazu nimmt den ältesten (Q3) */
-  private ownRolls: OwnRoll[] = [];
+  /** gesendete eigene Würfe der Expedition (Q3) */
+  private ownRolls = new OwnRolls();
 
   constructor() {
     // Kommen und Gehen (11.7): Meldung bei allen außer der Person selbst, sofern die SL sie nicht abgeschaltet hat
@@ -69,9 +59,9 @@ class Effects {
       if (texts.length > 0) view.say(texts.join(' '));
     });
     // Eigene Eingaben merken, egal von wo gesendet
-    session.onSubmit((cmd) => {
+    session.onSubmit((cmd, result) => {
       // eigener Wurf der Expedition: welche Zeile (ohne `table` alle); gilt nur für das eigene Ereignis dazu (5t, Q3)
-      if (cmd.type === 'gm.expedition') this.ownRolls.push(typeof cmd['table'] === 'number' ? cmd['table'] : 'all');
+      if (cmd.type === 'gm.expedition') this.ownRolls.sent(typeof cmd['table'] === 'number' ? cmd['table'] : 'all', result);
       if (cmd.type === 'sheet.setText' || cmd.type === 'sheet.setNumber') this.edits.set(key(cmd['seat'] as SeatId, String(cmd['field'])), { value: cmd['value'], at: Date.now() });
     });
     session.onEvents((events, own, prev) => {
@@ -112,7 +102,7 @@ class Effects {
    *  Orakel: beide Begriffe. Expedition: geänderte Zeilen, beim eigenen Wurf dazu die gewürfelte(n). */
   private rolled(e: KlioEventOf<'expeditionRolled'> | KlioEventOf<'oracleDrawn'>, own: boolean, prev: KlioTableState | null): void {
     if (e.type === 'oracleDrawn') view.gmRoll = { kind: 'oracle', parts: [0, 1] };
-    else view.gmRoll = { kind: 'expedition', parts: rolledRows(prev?.game.expedition, e.expedition, own ? (this.ownRolls.shift() ?? null) : null) };
+    else view.gmRoll = { kind: 'expedition', parts: rolledRows(prev?.game.expedition, e.expedition, own ? this.ownRolls.take() : null) };
   }
 
   private handle(e: EngineEvent | KlioEvent): void {

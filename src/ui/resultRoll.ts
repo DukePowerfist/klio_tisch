@@ -8,3 +8,22 @@ export type OwnRoll = number | 'all';
 export function rolledRows(was: readonly number[] | null | undefined, next: readonly number[], own: OwnRoll | null): number[] {
   return next.flatMap((v, i) => (was?.[i] !== v || own === 'all' || own === i ? [i] : []));
 }
+
+/** Gesendete eigene Würfe der Expedition, der Reihe nach; jedes eigene Ereignis dazu nimmt den ältesten (Q3). Ein
+ *  abgelehnter Wurf (ohne Ereignis) fällt wieder heraus, sonst nähme ihn das nächste eigene Ereignis (5x). Nach Wert:
+ *  Gleiche Werte sind austauschbar, und angenommene hat ihr Ereignis schon genommen (der Host schickt es vor der
+ *  Antwort). */
+export class OwnRolls {
+  private queue: OwnRoll[] = [];
+  sent(roll: OwnRoll, result: Promise<{ ok: boolean }>): void {
+    this.queue.push(roll);
+    void result.then((r) => {
+      if (r.ok) return;
+      const i = this.queue.indexOf(roll);
+      if (i >= 0) this.queue.splice(i, 1);
+    });
+  }
+  take(): OwnRoll | null {
+    return this.queue.shift() ?? null;
+  }
+}
