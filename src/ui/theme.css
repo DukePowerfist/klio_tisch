@@ -24,7 +24,7 @@
   --warn-ink: #fff;        /* Schrift auf --warn-bg und in der Meldung */
   --dark-ink: #111;        /* dunkle Schrift auf hellen Flächen: Papier, Gold, Platzfarben */
   /* Farben nach Bedeutung (Schritt 5v, 10.8). Teil 0: Werte wie bisher; Teil 3 stellt sie auf ihre Bedeutung um.
-     --accent und --accent-hint sind der Rest dazwischen (Rand der Meldung, Link „Freie Wahl“, Fokus an Schaltern). */
+     --accent und --accent-hint sind der Rest dazwischen (Link „Freie Wahl“, Fokus an Schaltern). */
   --pickable: #d6a828;     /* wählbar oder ablegbar (Gold) */
   --pickable-bright: #f5d76e;  /* dasselbe auf dem Filz: Zone unter einer gezogenen Karte */
   --selected: #d6a828;     /* gewählt: Übersicht-Knopf im Dock, Wahlfläche im Trumpf-Dialog */

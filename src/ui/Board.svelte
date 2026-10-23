@@ -22,6 +22,7 @@
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
+  import { previewPlace } from './overlap';
   import { t } from './texts';
   import type { Area } from './stackMenu';
   import { view, type PlateMenuAt, type StackMenuAt } from './view.svelte';
@@ -131,7 +132,8 @@
   const touches = new Map<number, [number, number]>();
   let pinch: { d: number; mx: number; my: number } | null = null;
   let lastClick = { card: null as CardId | null, t: 0 };
-  let preview = $state<CardId | null>(null);
+  /** große Vorschau einer offenen Karte, Lage in der Bühne (5v, F2) */
+  let preview = $state<{ card: CardId; x: number; y: number } | null>(null);
 
   /** Zeiger beim Ziehen (Tischpunkte): Ziel, wenn die Kartenmitte über keiner Zone liegt */
   let dragPointer = $state<[number, number] | null>(null);
@@ -291,11 +293,23 @@
   /** gilt nur, solange die Karte an ihrem Platz liegt, man sie nehmen darf und niemand sie zieht */
   const hovered = $derived(hover && !drag && places[hover.card]?.slot === hover.slot && !offsetOf.has(hover.card) && !remoteOf.has(hover.card) && takeable(hover.card) ? hover : null);
 
-  /** Vorschau großer Karte beim Überfahren offener Karten (nur wenn sich das Element ändert) */
+  /** Vorschau großer Karte beim Überfahren offener Karten (nur wenn sich das Element ändert); in der Ecke unten
+   *  gegenüber der Karte, über Dock und Menüknopf (5v, F2). Dieselbe Karte behält ihre Ecke. */
+  const PREVIEW_SCALE = 3;
+  const PREVIEW_MARGIN = 16;
   function onPointerOver(e: PointerEvent) {
     if (drag) return;
-    const card = (e.target as HTMLElement).closest<HTMLElement>('[data-card]')?.dataset.card as CardId | undefined;
-    preview = card && table.faceUp[card] ? card : null;
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-card]');
+    const card = el?.dataset.card as CardId | undefined;
+    if (!el || !card || !table.faceUp[card]) return void (preview = null);
+    if (preview?.card === card) return;
+    const stage = stageEl!.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const m = PREVIEW_MARGIN;
+    const bounds = { x: stage.left + m, y: stage.top + m, w: stage.width - 2 * m, h: stage.height - 2 * m };
+    const size = { w: layout.card.w * PREVIEW_SCALE, h: layout.card.h * PREVIEW_SCALE };
+    const at = previewPlace(bounds, menuArea(stage).blocked, size, r.left + r.width / 2, m);
+    preview = { card, x: at.x - stage.left, y: at.y - stage.top };
   }
 
   async function onPointerUp(e: PointerEvent) {
@@ -435,7 +449,7 @@
     <div class="scene" bind:this={sceneEl}>
       <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-rim-w="{FELT_RIM}px" style:--felt-shadow={feltShadow} style:background-image={felt}></div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
-      <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} tab={layout.gmTab} scale={sc} />
+      <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} maxH={layout.gmControlsMaxH} tab={layout.gmTab} scale={sc} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
       {#each Object.values(layout.sheets) as box (box.seat)}
@@ -478,8 +492,8 @@
     </div>
   </div>
   {#if preview}
-    <div class="preview" style:width="{layout.card.w * 3}px" style:height="{layout.card.h * 3}px">
-      <Card card={preview} x={0} y={0} scale={3} rotated={false} z={1} size={layout.card} faceUp={true} still />
+    <div class="preview" style:left="{preview.x}px" style:top="{preview.y}px" style:width="{layout.card.w * PREVIEW_SCALE}px" style:height="{layout.card.h * PREVIEW_SCALE}px">
+      <Card card={preview.card} x={0} y={0} scale={PREVIEW_SCALE} rotated={false} z={1} size={layout.card} faceUp={true} still />
     </div>
   {/if}
 </div>
@@ -495,5 +509,6 @@
   .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
   .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
-  .preview { position: absolute; right: 16px; bottom: 16px; pointer-events: none; z-index: 99; }
+  /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */
+  .preview { position: absolute; pointer-events: none; z-index: 99; border-radius: calc(var(--radius-card) * 3); box-shadow: 0 0 0 1px var(--menu-rim), var(--menu-shadow); }
 </style>

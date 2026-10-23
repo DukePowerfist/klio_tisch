@@ -4,7 +4,7 @@
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
-  import { stackEdges, type LampBox, type ZoneBox } from './layout';
+  import { LABEL, SMALL_LABEL, stackEdges, type LampBox, type ZoneBox } from './layout';
   import { shadowCss, shadowOver } from './light';
   import { session } from './session.svelte';
   import { STACK_ACTIONS } from './stackMenu';
@@ -41,14 +41,23 @@
   /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab.
    *  Kante k (k-ter Versatz) in Höhe 1 + k, wie in der Musterseite: so fällt der Stapel weich statt mit hartem Rand */
   const edgeShadow = (k: number) => shadowCss(shadowOver(flame, { x: zone.x, y: zone.y, w: card.w * zone.scale, h: card.h * zone.scale }, 1 + k));
-  const labelStyle = $derived(zone.label.x === null ? undefined : `left:${zone.label.x * 100}%`);
+  const fan = $derived(!onSheet && actions.length === 0 && !!(zone.fanX || zone.fanY));
+  /** Schrift aus layout.ts (dort rechnet die SL-Leiste mit); unter einem Stapel rückt die Beschriftung mit den Kanten
+   *  nach unten, damit sie nicht angeschnitten wird (5v, 10.8). Bogenzonen tragen sie innen, ihr Maß steht im CSS. */
+  const labelStyle = $derived.by(() => {
+    const parts = zone.label.x === null ? [] : [`left:${zone.label.x * 100}%`];
+    if (onSheet) return parts.join(';') || undefined;
+    const f = fan ? SMALL_LABEL : LABEL;
+    parts.push(`font-size:${f.size}px`, `line-height:${f.line}px`, `margin-top:${LABEL.gap + (edges.length ? edges.length * step : 0)}px`);
+    return parts.join(';');
+  });
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
   class="zone"
   class:sheet={onSheet}
-  class:fan={!onSheet && actions.length === 0 && (zone.fanX || zone.fanY)}
+  class:fan
   class:hot
   class:marked={!!mark}
   style:--mark={mark}
@@ -81,10 +90,10 @@
   /* Kanten eines Stapels: Kartengröße, ab der Ecke der Zone (innerhalb des Rahmens), nach rechts unten versetzt;
      wachsen beim Öffnen mit der Zone und den Karten (--shift), statt vorauszuspringen */
   .edge { position: absolute; left: -2px; top: -2px; box-sizing: border-box; border-radius: var(--radius-card); background: var(--stack-edge); border: 1px solid var(--stack-edge-line); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); pointer-events: none; transition: width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), translate var(--shift) var(--shift-ease); }
-  .label { position: absolute; left: 0; top: 100%; margin-top: 4px; font-size: 15px; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: var(--label-ink); background: var(--label-bg); padding: 2px 8px; border-radius: var(--radius-s); text-shadow: 0 1px 2px #000; pointer-events: none; }
+  .label { position: absolute; left: 0; top: 100%; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: var(--label-ink); background: var(--label-bg); padding: 2px 8px; border-radius: var(--radius-s); text-shadow: 0 1px 2px #000; pointer-events: none; transition: margin-top var(--shift) var(--shift-ease); }
   .center .label { left: 50%; transform: translateX(-50%); }
-  .fan .label { font-size: 12px; font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }
-  .n { display: inline-block; margin-left: 7px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--label-count-bg); font-size: 12px; font-weight: 600; }
+  .fan .label { font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }
+  .n { display: inline-block; line-height: normal; margin-left: 7px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--label-count-bg); font-size: 12px; font-weight: 600; }
   /* Bogenzonen: dezent, Beschriftung innen */
   .zone.sheet { border-color: var(--sheet-zone-rim); }
   .zone.sheet .label { top: 50%; left: 50%; margin: 0; transform: translate(-50%, -50%); font-size: 9px; font-weight: 500; letter-spacing: 0.05em; color: var(--sheet-label); background: none; padding: 0; text-shadow: none; opacity: 0.6; }

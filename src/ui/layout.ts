@@ -47,6 +47,9 @@ export type Layout = {
   gmControls: { x: number; y: number };
   /** Höchstbreite der SL-Leiste ohne Lasche in TP: Filz ohne den Abstand links (10.5) */
   gmControlsMaxW: number;
+  /** Höchsthöhe der SL-Leiste in TP (5v, 10.8): von der Unterkante der untersten Beschriftung im Filz (Fortschritt) bis
+   *  zur Unterkante der Leiste, abzüglich LABEL_GAP */
+  gmControlsMaxH: number;
   /** Breite der Lasche zum Einfahren in TP (10.5): der Spalt rechts neben dem Filz (Lederrand und Abstand der Bögen,
    *  dort liegen nie Karten) ohne 1 TP Rand zum Bogen */
   gmTab: number;
@@ -59,6 +62,13 @@ export type Layout = {
 /** Grundbreite eines Bogens auf dem Tisch bei Maßstab 1 (wie bisher 380 × 537). */
 export const SHEET_W = 380;
 const SHEET_H = 537;
+
+/** Beschriftung der Tischzonen (ZoneView.svelte) in TP: Schrift und Zeilenhöhe, darunter mit Abstand `gap`; die kleine an
+ *  Zonen ohne Aktionen, die auffächern (Gefahr, Fortschritt). Innenrand oben und unten je 2. Hier, damit die SL-Leiste
+ *  weiß, wo die Beschriftung endet (5v, 10.8). */
+export const LABEL = { size: 15, line: 20, gap: 4 };
+export const SMALL_LABEL = { size: 12, line: 17 };
+const LABEL_PAD = 2;
 
 /** Abstand der Lasche der SL-Leiste zum Bogen daneben in TP (10.5) */
 const TAB_RIM = 1;
@@ -154,6 +164,13 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     }
   }
 
+  const gmControls = at([middle.w, middle.h - M.gmControlsInset[1]]);
+  /** Unterkante der Beschriftungen unter den Zonen im Filz (Bogenzonen tragen sie innen) */
+  const labelBottom = Math.max(...Object.values(zones).filter((z) => z.owner === null).map((z) => {
+    const small = !c.zones[z.template]?.actions && (z.fanX || z.fanY);
+    return z.y + z.h + LABEL.gap + (small ? SMALL_LABEL.line : LABEL.line) + 2 * LABEL_PAD;
+  }));
+
   return {
     role,
     board: { w: BW, h: BH },
@@ -163,8 +180,9 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     zones,
     zoneList: Object.values(zones),
     resistTitle: at(M.resistTitle),
-    gmControls: at([middle.w, middle.h - M.gmControlsInset[1]]),
+    gmControls,
     gmControlsMaxW: middle.w - M.gmControlsInset[0],
+    gmControlsMaxH: gmControls.y - labelBottom - LABEL.gap,
     gmTab: FELT_RIM + sp - TAB_RIM,
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
@@ -176,6 +194,17 @@ function lampBox(c: { x: number; y: number }, l: KlioContent['layouts']['middle'
   const x = c.x - l.size / 2;
   const y = c.y - l.size / 2;
   return { x, y, w: l.size, h: l.size, cx: c.x, cy: c.y, r: l.size / 2, flame: { x: x + l.size * l.flame[0], y: y + l.size * l.flame[1], h: l.height } };
+}
+
+/** Innenrand (3) und Rahmen (1) der SL-Leiste oben und unten zusammen, in Punkten der Leiste (GmControls.svelte) */
+const BAR_EDGE = 8;
+
+/** Maßstab der SL-Leiste im Tisch (10.5, 5v): feste Bildschirmgröße (1 / Tischmaßstab), aber höchstens so groß, dass die
+ *  Knöpfe (`size`, ohne Innenrand) in `maxW` und samt Rand in `maxH` passen (TP); vor der ersten Messung (w = 0) nur
+ *  die Höhe. Keine Untergrenze. */
+export function gmBarScale(scale: number, size: { w: number; h: number }, maxW: number, maxH: number): number {
+  const byW = size.w > 0 ? maxW / size.w : Infinity;
+  return Math.min(1 / scale, byW, maxH / (size.h + BAR_EDGE));
 }
 
 /** Abstand eines Rechtecks zum Kreis der Laterne (0 = berührt oder überlappt). */

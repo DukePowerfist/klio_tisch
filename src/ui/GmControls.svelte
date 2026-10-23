@@ -15,11 +15,12 @@
   // neben dem Filz (dort liegen nie Karten), mit der man sie ein- und ausfährt.
   import { timing } from './animator.svelte';
   import { submitOrSay } from './commands';
+  import { gmBarScale } from './layout';
   import { session } from './session.svelte';
   import { t } from './texts';
   import { view } from './view.svelte';
 
-  let { at, maxW, tab, scale }: { at: { x: number; y: number }; maxW: number; tab: number; scale: number } = $props();
+  let { at, maxW, maxH, tab, scale }: { at: { x: number; y: number }; maxW: number; maxH: number; tab: number; scale: number } = $props();
 
   const draw = $derived(session.can({ type: 'gm.expedition' }) || session.can({ type: 'gm.oracle' }));
   const any = $derived(draw || session.can({ type: 'table.reset' }));
@@ -38,8 +39,9 @@
   $effect(() => {
     if (!moving && w > 0 && h > 0) size = { w, h };
   });
-  /** Maßstab der Leiste im Tisch: 1 / Tischmaßstab, höchstens so groß, dass sie in maxW (TP) passt */
-  const f = $derived(size.w > 0 ? Math.min(1 / scale, maxW / size.w) : 1 / scale);
+  /** Maßstab der Leiste im Tisch: 1 / Tischmaßstab, höchstens so groß, dass sie in maxW und maxH (TP) passt; in der
+   *  Höhe mit Innenrand und Rahmen (BAR_EDGE), über der Leiste steht die Beschriftung „Fortschritt“ (5v, 10.8) */
+  const f = $derived(gmBarScale(scale, size, maxW, maxH));
   /** Breite der Lasche im Tisch (TP): der Spalt, mindestens MIN_TAB auf dem Bildschirm; dann ragt sie nach rechts
    *  über den Spalt hinaus, die Naht bleibt auf dem Filzrand */
   const tabW = $derived(Math.max(tab, MIN_TAB * f));
@@ -53,7 +55,7 @@
 
 {#if any}
   <!-- rechte untere Ecke am Filzrand plus Lasche; die Naht zwischen Knöpfen und Lasche liegt auf dem Filzrand -->
-  <div class="ctl control" class:closed={!open} style:left="{at.x + tabW}px" style:top="{at.y}px" style:--f={f}>
+  <div class="ctl control" data-gm-bar class:closed={!open} style:left="{at.x + tabW}px" style:top="{at.y}px" style:--f={f}>
     {#if open}
       <div class="rows" id="gm-bar" role="group" aria-label={t('gm.bar')} bind:offsetWidth={w} bind:offsetHeight={h}
         transition:slide onintrostart={() => (moving = true)} onintroend={() => (moving = false)} onoutrostart={() => (moving = true)} onoutroend={() => (moving = false)}>

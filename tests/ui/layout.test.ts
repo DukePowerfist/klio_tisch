@@ -1,7 +1,7 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { cardSize, computeLayout, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
+import { cardSize, computeLayout, freePosAt, gmBarScale, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
 
 describe('SL-Leiste mit Lasche (5s, 10.5)', () => {
@@ -16,8 +16,26 @@ describe('SL-Leiste mit Lasche (5s, 10.5)', () => {
         for (const s of Object.values(L.sheets).filter((b) => b.visible && b.x > right)) expect(right + L.gmTab, `${label}, ${s.seat}`).toBeLessThan(s.x);
         expect(L.gmTab, label).toBe(30);
         expect(L.gmControlsMaxW, label).toBe(L.middle.w - 40);
+        // Höhe (5v): von der Beschriftung „Fortschritt“ (Unterkante der Zone + 4 + 17 Zeile + 2 × 2 Rand) mit 4 Abstand
+        const p = L.zones['progress']!;
+        expect(L.gmControlsMaxH, label).toBe(L.gmControls.y - (p.y + p.h + 4 + 17 + 4) - 4);
       }
     }
+  });
+
+  it('Maßstab (5v): feste Bildschirmgröße, bei Platzmangel in Breite oder Höhe kleiner, ohne Untergrenze', () => {
+    const size = { w: 300, h: 40 };
+    // genug Platz: 1 / Tischmaßstab
+    expect(gmBarScale(0.8, size, 660, 97)).toBeCloseTo(1.25);
+    // kleines Fenster mit Protokoll: Tischmaßstab 0,4 wäre 2,5, die Höhe begrenzt auf 95 / 48
+    expect(gmBarScale(0.4, size, 660, 95)).toBeCloseTo(95 / 48);
+    // schmal: die Breite begrenzt
+    expect(gmBarScale(0.4, size, 300, 97)).toBe(1);
+    // bei f = 1 passt die Leiste (etwa 48 TP hoch) in die etwa 95 TP, die Regel aus 5s (nie kleiner als früher) gilt
+    const L = computeLayout(content, 4, null, null);
+    expect(L.gmControlsMaxH).toBeGreaterThan(48 * 1.5);
+    // vor der ersten Messung nur die Höhe
+    expect(gmBarScale(0.4, { w: 0, h: 42 }, 660, 97)).toBeCloseTo(97 / 50);
   });
 });
 
