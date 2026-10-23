@@ -1,6 +1,7 @@
 # WAS auf dem Bogen steht (ARCHITEKTUR.md 10, Bogen-Häute). Lage und Aussehen: skins/*.yaml.
 # Feldnamen entsprechen KlioSheet (src/rules/klio/state.ts); `strengths.text` = Text der Stärken usw.
 # `strikes`: Kästchen, das ein Textfeld gleicher Nummer durchstreicht (dargestellt als kleiner Knopf).
+# `emphasizes`: Kästchen, das ein Textfeld gleicher Nummer hervorhebt (halbfett, 5z).
 # `roll`: welche Zufallstabelle das Feld beim Auswürfeln füllt; `distinct`: keine doppelten Einträge.
 # Reihenfolge = Tab-Reihenfolge am Bogen, von oben nach unten wie im Bild (Rüstzeug vor Erlebnissen, 5z).
 
@@ -8,7 +9,7 @@ fields:
   name: { kind: text }
   attributes: { kind: number, keys: [ K, V, P ] }
   strengths.text: { kind: text, count: 5, roll: [ I, II, III, IV, V ] }
-  strengths.improved: { kind: check, count: 5 }
+  strengths.improved: { kind: check, count: 5, emphasizes: strengths.text }   # verbesserte Stärke steht halbfett
   weaknesses: { kind: text, count: 2, roll: [ VI, VI ], distinct: true }
   weaknessMarks: { kind: check, count: 3 }
   scars: { kind: check, keys: [ heart, spade ] }

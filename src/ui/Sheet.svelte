@@ -70,13 +70,19 @@
   const slots = all.filter((f) => f.kind === 'trumpSlot').map((f) => ({ index: Number(f.id.split('.').pop()), pos: skin.fields[f.id] as SkinBox }));
   const photoField = all.find((f) => f.kind === 'photo');
   const photoBox = photoField && (skin.fields[photoField.id] as SkinBox);
-  /** Textfeld → Kästchen, das es durchstreicht */
+  /** Textfeld → Kästchen, das es durchstreicht bzw. hervorhebt */
   const strikerOf = new Map(checks.flatMap((c) => (c.strikes ? [[c.strikes, c.id] as const] : [])));
+  const emphasizerOf = new Map(checks.flatMap((c) => (c.emphasizes ? [[c.emphasizes, c.id] as const] : [])));
+
+  // Gezeichnete Zeichen (5z): zwei leicht gebogene Striche wie mit dem Stift, statt Zeichen aus einer Computerschrift
+  const CROSS = 'M4.5 4 Q10 9.5 15.8 16.2 M15.6 4.4 Q9.5 10.5 4.2 15.6';
+  const PLUS = 'M20.5 7 Q19.6 20 20 33.5 M7 20.4 Q20 19.4 33 20';
 
   // Narbe und Tod nach einem Treffer erst mit dem Aufprall (5k)
   const checked = (id: string) => !effects.holds(seat, id) && getField(sheet, id) === true;
   const dead = $derived(effects.shownDead(seat, sheet));
   const struck = (id: string) => strikerOf.has(id) && checked(strikerOf.get(id)!);
+  const bold = (id: string) => emphasizerOf.has(id) && checked(emphasizerOf.get(id)!);
   const hasEmptySlot = $derived(!isFull(content.trumpSources, sheet));
   const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
 
@@ -158,6 +164,7 @@
         x={f.pos.x} y={f.pos.y} w={f.pos.w} h={f.pos.h}
         font={f.pos.font ?? 17}
         struck={struck(f.id)}
+        bold={bold(f.id)}
         center={f.pos.align === 'center'}
         readonly={!canEdit}
       />
@@ -190,7 +197,7 @@
           style:--hit={c.pos.hit ? `${c.pos.hit}px` : undefined}
           style:font-size="{c.pos.font ?? 22}px"
           onclick={() => submit({ type: 'sheet.toggle', seat, field: c.id })}
-        ></button>
+        >{#if on}<svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><path d={CROSS} /></svg>{/if}</button>
       {/if}
     {/each}
 
@@ -241,7 +248,7 @@
           <TrumpCard {trump} />
           {#if canRemoveTrump}<button class="rmv" title={t('sheet.trumpRemove')} onclick={(e) => { e.stopPropagation(); void submit({ type: 'trump.remove', seat, slot: s.index }); }}>✕</button>{/if}
         {:else}
-          ＋
+          <svg class="plus" viewBox="0 0 40 40" aria-hidden="true"><path d={PLUS} /></svg>
         {/if}
       </div>
     {/each}
@@ -282,8 +289,13 @@
   .cb:disabled, .photo:disabled, .strike:disabled { cursor: default; }
   /* unsichtbare Klickfläche um die Mitte (`hit` in der Haut, 5z); ohne `hit` so groß wie das Kästchen */
   .cb::before, .strike::before { content: ''; position: absolute; left: 50%; top: 50%; width: var(--hit, 100%); height: var(--hit, 100%); transform: translate(-50%, -50%); }
-  .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: var(--dark-ink); }
-  .cb.danger.on::after { color: var(--danger); }
+  .mark { position: absolute; left: 50%; top: 50%; width: 1em; height: 1em; transform: translate(-50%, -50%); overflow: visible; color: var(--dark-ink); }
+  .cb.danger .mark { color: var(--danger); }
+  .mark path, .plus path { fill: none; stroke: currentColor; stroke-linecap: round; }
+  .mark path { stroke-width: 2.6; }
+  .plus { width: 40px; height: 40px; }
+  .plus path { stroke-width: 3; }
+  .go .plus path { stroke-width: 3.6; }
   .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: var(--sheet-label); }
   .tools .strike { display: block; opacity: 0.4; }
   .tools .strike:not(:disabled):hover { opacity: 0.95; }
@@ -292,8 +304,8 @@
   .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; mix-blend-mode: multiply; cursor: pointer; }
   .photo.dropping { outline: 3px dashed var(--pickable); outline-offset: 2px; }
   .slot { position: absolute; cursor: pointer; }
-  .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: var(--radius-s); }
-  .slot.empty.go { color: var(--pickable); font-weight: 400; }
+  .slot.empty { display: flex; align-items: center; justify-content: center; color: rgba(0, 0, 0, 0.25); border-radius: var(--radius-s); }
+  .slot.empty.go { color: var(--pickable); }
   .slot.inert { cursor: default; }
   .slot.empty:not(.inert):hover { background: color-mix(in srgb, var(--pickable) 20%, transparent); color: rgba(0, 0, 0, 0.6); }
   .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }

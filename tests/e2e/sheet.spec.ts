@@ -175,6 +175,36 @@ test('Foto auf den Rahmen ziehen oder bei fokussiertem Rahmen einfügen (5z)', a
   await expect.poll(() => photo.evaluate((el) => getComputedStyle(el).backgroundImage)).not.toBe(first);
 });
 
+test('Optik (5z): gezeichnetes Kreuz und Plus, Streichlinie statt Kursiv, verbesserte Stärke halbfett und nicht abgeschnitten', async ({ page }) => {
+  await page.keyboard.press('1');
+  const f = (id: string) => sheet1(page).locator(`[data-field="${id}"]`);
+  const c = (id: string) => sheet1(page).locator(`[data-check="${id}"]`);
+  // Kreuz nur am angekreuzten Kästchen
+  await expect(c('lamps.0').locator('svg.mark')).toHaveCount(0);
+  await c('lamps.0').click();
+  await expect(c('lamps.0').locator('svg.mark')).toHaveCount(1);
+  await expect(sheet1(page).locator('[data-slot="0"] svg.plus')).toHaveCount(1);
+
+  // Streichlinie über dem Text, ohne Kursiv; ungestrichen keine
+  await setField(page, 'gear.text.0', 'Seil');
+  await expect(sheet1(page).locator('[data-strike-line]')).toHaveCount(0);
+  await sheet1(page).getByTitle('Untauglich markieren (durchstreichen)').first().click();
+  await expect(sheet1(page).locator('[data-strike-line="gear.text.0"]')).toHaveCount(1);
+  await expect(f('gear.text.0')).toHaveCSS('font-style', 'normal');
+  await expect(f('gear.text.0')).toHaveCSS('text-decoration-line', 'none');
+
+  // halbfett mit eigener Messung: ein Text, der schon verkleinert ist, wird halbfett noch kleiner statt abgeschnitten
+  await setField(page, 'strengths.text.0', 'Kann jedes Schloss öffnen, das je gebaut wurde');
+  const size = async () => parseFloat(await f('strengths.text.0').evaluate((el) => getComputedStyle(el).fontSize));
+  const normal = await size();
+  await c('strengths.improved.0').click();
+  await expect(f('strengths.text.0')).toHaveCSS('font-weight', '600');
+  await expect.poll(size).toBeLessThan(normal);
+  await expect(sheet1(page).locator('[data-more="strengths.text.0"]')).toHaveCount(0);
+  await c('strengths.improved.0').click();
+  await expect(f('strengths.text.0')).toHaveCSS('font-weight', '400');
+});
+
 test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'name', 'Ida Weber');

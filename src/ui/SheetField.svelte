@@ -9,13 +9,14 @@
   import { submitOrSay } from './commands';
   import { effects } from './effects.svelte';
   import { shouldSend } from './fieldSend';
-  import { fitText } from './fitText';
+  import { fitText, textWidth } from './fitText';
   import { t } from './texts';
   import { view } from './view.svelte';
 
-  let { seat, field, kind, value, x, y, w, h, font, struck = false, center = false, readonly = false }: {
+  let { seat, field, kind, value, x, y, w, h, font, struck = false, bold = false, center = false, readonly = false }: {
     seat: SeatId; field: string; kind: 'text' | 'number'; value: string; x: number; y: number; w: number; h: number; font: number;
-    struck?: boolean; center?: boolean; readonly?: boolean;
+    /** durchgestrichen (Rüstzeug), halbfett (verbesserte Stärke; 5z) */
+    struck?: boolean; bold?: boolean; center?: boolean; readonly?: boolean;
   } = $props();
 
   const SEND_MS = 300;
@@ -25,12 +26,15 @@
   const shown = $derived(focused ? draft : value);
   /** Breite des Knopfs „…“ in Bildpunkten */
   const MORE = Math.round(h * 0.75);
-  const fit = $derived(kind === 'number' ? { size: font, cut: false } : fitText(shown, w - 6, font));
+  const weight = $derived(bold ? 600 : 'normal');
+  const fit = $derived(kind === 'number' ? { size: font, cut: false } : fitText(shown, w - 6, font, weight));
   /** Text, bei dem das Feld selbst überläuft: Die Messung oben kennt die tatsächlich gezeichnete Schrift nicht genau */
   let overflowFor = $state<string | null>(null);
   /** abgeschnitten und nicht in Bearbeitung: „…“ zeigen, der Text rückt dafür zusammen */
   const more = $derived(!focused && (fit.cut || overflowFor === shown));
-  const size = $derived(more ? fitText(shown, w - 6 - MORE, font).size : fit.size);
+  const size = $derived(more ? fitText(shown, w - 6 - MORE, font, weight).size : fit.size);
+  /** Streichlinie (5z): über den Text, etwas länger als er, höchstens bis an den Feldrand bzw. „…“ */
+  const lineW = $derived(struck && shown ? Math.min(w - 4 - (more ? MORE : 0), (textWidth(shown, size, weight) ?? w) * 1.08 + 6) : 0);
   let el: HTMLInputElement;
   // erst ohne „…“ messen; einmal übergelaufen, bleibt es für diesen Text dabei (sonst schaltete es hin und her)
   $effect(() => {
@@ -105,6 +109,7 @@
 <input
   bind:this={el}
   class:struck
+  class:bold
   class:center
   class:number={kind === 'number'}
   class:overwritten={effects.overwritten.has(`${seat}/${field}`)}
@@ -125,6 +130,12 @@
   oninput={onInput}
   onkeydown={onKeydown}
 />
+{#if lineW > 0}
+  <!-- leicht schräg wie von Hand, in Tintenfarbe; liegt über dem Feld, Klicks gehen durch -->
+  <svg class="strike-line" data-strike-line={field} style:left="{x + 1}px" style:top="{y}px" width={lineW} height={h} viewBox="0 0 {lineW} {h}" aria-hidden="true">
+    <path d="M1 {h * 0.62} Q{lineW * 0.5} {h * 0.5} {lineW - 1} {h * 0.44}" />
+  </svg>
+{/if}
 {#if more}
   <button
     class="more"
@@ -150,5 +161,8 @@
   .center, .number { text-align: center; font-weight: 700; padding: 0; }
   .more { position: absolute; box-sizing: border-box; padding: 0 0 0.3em; border: 0; background: transparent; font: inherit; line-height: 1; color: var(--sheet-label); opacity: 0.75; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; }
   .more:hover { opacity: 1; }
-  .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); color: var(--sheet-struck); font-style: italic; }
+  .struck { color: var(--sheet-struck); }
+  .bold { font-weight: 600; }
+  .strike-line { position: absolute; pointer-events: none; overflow: visible; }
+  .strike-line path { fill: none; stroke: var(--dark-ink); stroke-width: 1.6; stroke-linecap: round; }
 </style>

@@ -99,6 +99,11 @@ function crossCheck(c: KlioContent, errors: string[]): void {
   for (const f of instances) if (!(f in c.skinPaper.fields)) err(`skins/paper: Feld ${f} hat keine Position`);
   for (const f of Object.keys(c.skinPaper.fields)) if (!instances.has(f)) err(`skins/paper: unbekanntes Feld ${f}`);
   for (const z of c.sheet.zones) if (!(z in c.skinPaper.zones)) err(`skins/paper: Bogenzone ${z} hat keine Position`);
+  // Kästchen, die ein Textfeld durchstreichen oder hervorheben, zeigen auf ein vorhandenes Textfeld
+  const textIds = new Set(sheetFields(c.sheet).filter((f) => f.kind === 'text').map((f) => f.id));
+  for (const f of sheetFields(c.sheet)) {
+    for (const target of [f.strikes, f.emphasizes]) if (target && !textIds.has(target)) err(`sheet: ${f.id} verweist auf ${target}, das ist kein Textfeld`);
+  }
   // Klickflächen (5z): ein Kästchen mit `hit` reicht in kein anderes Kästchen und kein Feld (Rand an Rand ist erlaubt)
   type Rect = { x0: number; y0: number; x1: number; y1: number };
   const kinds = new Map(sheetFields(c.sheet).map((f) => [f.id, f.kind]));

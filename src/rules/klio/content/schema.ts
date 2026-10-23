@@ -107,6 +107,8 @@ export const SheetField = z.object({
   distinct: z.boolean().optional(),
   /** nur bei check: streicht das Textfeld gleicher Nummer durch */
   strikes: z.string().optional(),
+  /** nur bei check: hebt das Textfeld gleicher Nummer hervor (halbfett, 5z) */
+  emphasizes: z.string().optional(),
 }).strict().refine((f) => !(f.count && f.keys), 'count und keys schließen sich aus');
 export const SheetFile = z.object({
   fields: z.record(z.string(), SheetField),
@@ -115,8 +117,9 @@ export const SheetFile = z.object({
 }).strict();
 
 export type SheetFieldKind = z.infer<typeof SheetField>['kind'];
-/** Ein Einzelfeld: `id` z. B. `strengths.text.0`; `strikes` = ID des durchgestrichenen Textfelds. */
-export type SheetFieldInstance = { id: string; kind: SheetFieldKind; strikes?: string };
+/** Ein Einzelfeld: `id` z. B. `strengths.text.0`; `strikes` bzw. `emphasizes` = ID des durchgestrichenen bzw.
+ *  hervorgehobenen Textfelds. */
+export type SheetFieldInstance = { id: string; kind: SheetFieldKind; strikes?: string; emphasizes?: string };
 
 /** Alle Einzelfelder eines Bogens samt Art, z. B. `strengths.text.0`, `attributes.K`, `name`. */
 export function sheetFields(sheet: z.infer<typeof SheetFile>): SheetFieldInstance[] {
@@ -126,6 +129,7 @@ export function sheetFields(sheet: z.infer<typeof SheetFile>): SheetFieldInstanc
       id: s === null ? name : `${name}.${s}`,
       kind: f.kind,
       ...(f.strikes && s !== null ? { strikes: `${f.strikes}.${s}` } : {}),
+      ...(f.emphasizes && s !== null ? { emphasizes: `${f.emphasizes}.${s}` } : {}),
     }));
   });
 }

@@ -15,7 +15,8 @@ const golden = (page: Page) =>
       if (!el.getClientRects().length) continue;
       const c = getComputedStyle(el);
       const own = el.childNodes.length && [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim()) ? c.color : '';
-      if ([own, c.backgroundColor, c.borderTopColor, c.outlineColor, c.boxShadow].some((v) => gold.test(v))) out.push(el.className || el.tagName);
+      // alles im Trumpffeld zählt als „slot“ (das Plus ist seit 5z gezeichnet: SVG, Farbe geerbt)
+      if ([own, c.backgroundColor, c.borderTopColor, c.outlineColor, c.boxShadow].some((v) => gold.test(v))) out.push(el.closest('.slot') ? 'slot' : el.getAttribute('class') || el.tagName);
     }
     return out;
   });
