@@ -155,7 +155,13 @@ class Session {
     this.host = await Host.start(engine, localTransport(), { load: async () => saved, save: (s) => store.save(s) }, () => initialTable(ruleset, cryptoRng()), {
       build: __BUILD_ID__,
       onSaveError: (e) => (this.saveError = String(e)),
-      onChange: (state, events, cause, own) => this.changed(state, events.map((e) => e.event), cause, own, this.state),
+      onChange: (state, events, cause, own) => {
+        const prev = this.state;
+        this.state = state;
+        // Kommen und Gehen vor den Ereignissen, wie beim Client (dort im onChange, der jeden Stand abdeckt)
+        this.arrive((a, now) => a.seatsChanged(state.seats, now));
+        this.changed(state, events.map((e) => e.event), cause, own, prev);
+      },
       onOnline: (online) => (this.online = online),
       photos,
       backups: new IdbBackups(),
@@ -524,7 +530,6 @@ class Session {
    *  fremde Züge mit bewegten Karten enden (8.3). */
   private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean, prev: KlioTableState | null): void {
     this.state = state;
-    this.arrive((a, now) => a.seatsChanged(state.seats, now));
     const moved = movedCards(events, prev);
     if (cause || moved.length) {
       this.remote.confirmed(cause, moved);
