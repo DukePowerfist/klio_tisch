@@ -76,7 +76,7 @@
         {/each}
       </div>
       {#if cfg.freeChoice}
-        <p class="note"><a href="#free" onclick={(e) => { e.preventDefault(); free(); }}>{t('trumpDialog.free')}</a></p>
+        <p><button onclick={free}>{t('trumpDialog.free')}</button></p>
       {/if}
 
     {:else if step.at === 'step'}
@@ -116,7 +116,7 @@
 </Modal>
 
 <style>
-  .td :global(button.sel) { background: var(--selected); color: var(--dark-ink); border-color: var(--selected); }
+  .td :global(button.sel) { background: var(--selected); color: var(--ink); border-color: var(--selected-rim); }
   .td :global(.list) { display: grid; gap: 10px; margin: 12px 0; }
   .td :global(.source) { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 12px 16px; font-size: 16px; }
   .td :global(.source span) { font-size: 13px; opacity: 0.85; font-weight: 400; }
@@ -130,5 +130,4 @@
   .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--pickable) 80%, transparent); }
   .tc.off { opacity: 0.5; }
   .why { font-size: 12px; color: var(--reason); margin-top: 4px; }
-  .note a { color: var(--accent-hint); }
 </style>

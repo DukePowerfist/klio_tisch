@@ -46,6 +46,7 @@
   .dock:hover button { background: var(--panel-bg); }
   button.seat { border: 2px solid color-mix(in srgb, var(--c) 80%, transparent); background: color-mix(in srgb, var(--c) 22%, color-mix(in srgb, var(--panel-bg) 50%, transparent)); }
   .dock:hover button.seat { background: color-mix(in srgb, var(--c) 22%, var(--panel-bg)); }
-  .dock button.on { background: var(--selected); color: var(--dark-ink); border-color: var(--selected); }
+  /* gewählt (5v): Grün mit hellem Rand wie die gewählte Spielerzahl, nicht Gold (Gold heißt „wählbar“) */
+  .dock button.on { background: var(--selected); color: var(--ink); border-color: var(--selected-rim); }
   .dock button.seat.on { background: var(--c); border-color: var(--c); }
 </style>

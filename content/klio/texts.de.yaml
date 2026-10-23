@@ -238,6 +238,8 @@ settings:                                 # Einstellungen (neu; seit 5g für all
     browser: in diesem Browser
     mine: nur für dich
     mineHint: Gilt nur in diesem Browser; die anderen am Tisch stellen es für sich ein.
+    changed: geändert                     # Schild an Rechten, die von der Voreinstellung abweichen (5v, F3)
+    changedHint: Weicht von der Voreinstellung des Regelwerks ab.
   notices: Meldungen                      # Gruppe auf der Seite „Tisch“ (11.7, 5u)
   noticeArrivals: Meldung bei Kommen und Gehen
   noticeArrivalsHelp: Zeigt allen eine Meldung, wenn jemand einen Platz einnimmt, die Verbindung verliert oder wiederkommt. Das Protokoll trägt es immer ein.
@@ -251,7 +253,7 @@ settings:                                 # Einstellungen (neu; seit 5g für all
     other: Weitere
   groupHelp:
     gm: Diese Rechte betreffen den ganzen Tisch. „nur eigener Bogen“ wirkt hier wie „erlaubt“.
-  defaultsHelp: Setzt alle Rechte auf die Voreinstellung des Regelwerks zurück. Abweichende Rechte sind farbig markiert.
+  defaultsHelp: Setzt alle Rechte auf die Voreinstellung des Regelwerks zurück. Abweichende Rechte tragen das Schild „geändert“.
   exportHelp: Bögen, Karten, Plätze, Raum und Fotos als Datei, z. B. für einen anderen Browser.
   importHelp: Ersetzt den Stand für alle am Tisch durch den aus der Datei. Vorher wird gesichert.
   backupsHelp: Wiederherstellen ersetzt den Stand für alle am Tisch. Vorher wird gesichert.
@@ -261,7 +263,7 @@ settings:                                 # Einstellungen (neu; seit 5g für all
   # Schritt 5g: Seite „Darstellung“ (für alle, nur im eigenen Browser)
   appearance: Darstellung
   effects: Effekte
-  effectsHelp: "Aus: keine Bewegung, Karten blenden an ihrem Ziel ein. Ruhig: Karten gleiten, klappen um und heben beim Mischen ab. Voll: wie Ruhig, dazu kann die Laterne flackern (eigener Schalter); weitere Effekte folgen."
+  effectsHelp: "Aus: keine Bewegung, Karten blenden an ihrem Ziel ein. Ruhig: Karten gleiten, klappen um und heben beim Mischen ab. Voll: wie Ruhig, dazu kann die Laterne flackern (eigener Schalter)."
   flicker: Laterne flackert
   flickerHelp: Die Flamme flackert und das Licht bewegt sich leicht. Kann auf Rechnern ohne Grafikbeschleunigung ruckeln.
   levels: { off: Aus, calm: Ruhig, full: Voll }

@@ -52,7 +52,7 @@ describe('Texte', () => {
       ...[...Object.keys(PERMISSION_GROUPS), 'other'].map((g) => `settings.groups.${g}`),
       ...SETTINGS_PAGES.map((p) => `settings.${p}`),
       'settings.automation', // Überschrift auf „Tisch“, seit 5u keine eigene Seite
-      ...['all', 'allHint', 'browser', 'mine', 'mineHint'].map((s) => `settings.scope.${s}`),
+      ...['all', 'allHint', 'browser', 'mine', 'mineHint', 'changed', 'changedHint'].map((s) => `settings.scope.${s}`),
       ...EFFECT_LEVELS.map((l) => `settings.levels.${l}`),
       'settings.effects', 'settings.effectsHelp', 'settings.flicker', 'settings.flickerHelp',
       'settings.notices', 'settings.noticeArrivals', 'settings.noticeArrivalsHelp',

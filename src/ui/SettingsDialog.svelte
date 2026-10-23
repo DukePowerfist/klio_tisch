@@ -234,12 +234,12 @@
   .switch::before { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform var(--glide); }
   .switch:checked { background: var(--switch-on); }
   .switch:checked::before { transform: translateX(16px); }
-  .switch:focus-visible { outline: 2px solid var(--accent-hint); outline-offset: 2px; }
+  .switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   /* Spielerzahl (5s): Zahlenreihe aus nativen Radios; das Kästchen liegt unsichtbar über der Zahl und nimmt den Klick */
   .numbers { display: flex; gap: 4px; margin: 0; padding: 0; border: none; }
   .numbers label { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--pane-rule); border-radius: var(--radius-s); font-variant-numeric: tabular-nums; }
   .numbers label:hover { background: var(--button-hover); }
-  .numbers label:has(:checked) { background: var(--pane-current); border-color: var(--menu-confirm-rim); font-weight: 600; }
+  .numbers label:has(:checked) { background: var(--selected); border-color: var(--selected-rim); font-weight: 600; }
   .numbers input { appearance: none; position: absolute; inset: 0; margin: 0; border-radius: inherit; cursor: pointer; }
-  .numbers input:focus-visible { outline: 2px solid var(--accent-hint); outline-offset: 2px; }
+  .numbers input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 </style>

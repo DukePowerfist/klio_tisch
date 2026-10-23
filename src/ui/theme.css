@@ -15,22 +15,20 @@
   --card-black: #222;
   --panel-bg: #17332a;
   --button-hover: #2c5a47;
-  --accent: #d6a828;
-  --accent-hint: #f5d76e;
   --danger: #b3261e;       /* Narben, Tod, durchgestrichenes Rüstzeug */
   --warn-bg: #7a2a22;      /* Hintergrund für Warnungen und gefährliche Knöpfe */
   --reason: #f0a090;       /* Begründung bei ausgegrauten Trümpfen */
   --warn-rim: #e08070;     /* Rand der Warnmeldung */
   --warn-ink: #fff;        /* Schrift auf --warn-bg und in der Meldung */
   --dark-ink: #111;        /* dunkle Schrift auf hellen Flächen: Papier, Gold, Platzfarben */
-  /* Farben nach Bedeutung (Schritt 5v, 10.8). Teil 0: Werte wie bisher; Teil 3 stellt sie auf ihre Bedeutung um.
-     --accent und --accent-hint sind der Rest dazwischen (Link „Freie Wahl“, Fokus an Schaltern). */
-  --pickable: #d6a828;     /* wählbar oder ablegbar (Gold) */
+  /* Farben nach Bedeutung (Schritt 5v, 10.8): Gold heißt nur „wählbar oder ablegbar“ */
+  --pickable: #d6a828;     /* Plus in leeren Trumpffeldern, Rand beim Überfahren eines wählbaren Trumpfs */
   --pickable-bright: #f5d76e;  /* dasselbe auf dem Filz: Zone unter einer gezogenen Karte */
-  --selected: #d6a828;     /* gewählt: Übersicht-Knopf im Dock, Wahlfläche im Trumpf-Dialog */
-  --changed: #f5d76e;      /* von der Voreinstellung abweichendes Recht */
-  --online: #f5d76e;       /* „verbunden“ im Raum */
-  --focus: #f3efe3;        /* Fokusrahmen */
+  --selected: #2c5a47;     /* gewählt: Übersicht-Knopf im Dock, Wahlfläche im Trumpf-Dialog, Seite und Spielerzahl in den Einstellungen */
+  --selected-rim: rgba(243, 239, 227, 0.45);  /* heller Rand dazu */
+  --changed: rgba(243, 239, 227, 0.45);       /* Rand des Schilds „geändert“ an abweichenden Rechten */
+  --online: #5fbf6a;       /* „verbunden“ im Raum, wie der Zustandspunkt (--menu-ok) */
+  --focus: #f3efe3;        /* Fokusrahmen überall */
   /* Rundungen (10.8): klein, mittel, Fenster; Menüs --menu-radius, Karten --radius-card; Holz und Filz eigene Werte */
   --radius-s: 6px;
   --radius-m: 8px;
@@ -101,7 +99,7 @@
   --menu-danger: #eda593;   /* gedämpftes Rot für gefährliche Rückfragen (5p), 4,8 : 1 auf der Rückfragefläche */
   /* Einstellungen (Schritt 5f): Seitenleiste, gewählte Seite, feine Trennlinien */
   --pane-side: #132b23;
-  --pane-current: #2c5a47;
+  --pane-current: var(--selected);
   --pane-rule: rgba(255, 255, 255, 0.14);
   --switch-off: rgba(255, 255, 255, 0.22);
   --switch-on: #4f9a6e;
@@ -171,6 +169,8 @@ button:active:not(:disabled) { scale: var(--press-scale); }
 }
 html, body { height: 100%; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
 button { font: inherit; }
+/* Fokusrahmen überall gleich (5v); :where hält die Regel schwach, eigene Regeln der Komponenten gehen vor */
+:where(button, input, select, textarea, a, [tabindex]):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* Menüstil (10.2): Panel, Kopf, Einträge, Hauptknopf, Trennlinie, Zipfel. Ausgegraut heißt aria-disabled (bleibt
    fokussierbar, Grund im Tooltip); keine pauschale Deckkraft (D4). Der Zipfel sitzt an der Kante zum Anker,

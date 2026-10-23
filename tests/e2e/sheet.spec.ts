@@ -99,7 +99,7 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await page.getByRole('button', { name: 'Zufälliger Trumpf' }).click();
   await expect(page.getByRole('status')).toHaveText(/^Bogen 1: Trumpf „.+“ gewählt$/);
   await sheet1(page).locator('[data-slot="1"]').click();
-  await page.getByRole('link', { name: 'Freie Wahl' }).click();
+  await page.getByRole('button', { name: 'Freie Wahl' }).click();
   await page.getByRole('button', { name: /^Verschiedene/ }).click();
   await page.getByRole('button', { name: /Kraftakt/ }).click();
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Kraftakt');
