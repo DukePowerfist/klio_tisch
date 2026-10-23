@@ -185,15 +185,18 @@
 
     {#each slots as s (s.index)}
       {@const trump = trumpById(content.trumps, sheet.trumps[s.index])}
+      <!-- leerer Platz ohne Recht: nur das graue Plus, ohne Hand, Färbung und Tooltip (5z) -->
+      {@const inert = !trump && !canChooseTrump}
       <div
         class="slot control"
         class:empty={!trump}
         class:go={!trump && canChoose && canChooseTrump}
+        class:inert
         data-slot={s.index}
         style:left="{s.pos.x}px" style:top="{s.pos.y}px" style:width="{s.pos.w}px" style:height="{s.pos.h}px"
-        title={trump ? undefined : canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLocked')}
-        role="button"
-        tabindex="0"
+        title={trump || inert ? undefined : canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLocked')}
+        role={inert ? undefined : 'button'}
+        tabindex={inert ? undefined : 0}
         onpointerenter={(e) => hoverTrump(trump?.id ?? null, e.currentTarget)}
         onpointerleave={() => hoverTrump(null)}
         onclick={(e) => {
@@ -251,14 +254,15 @@
   .cb.danger.on::after { color: var(--danger); }
   .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: var(--sheet-label); }
   .tools .strike { display: block; opacity: 0.4; }
-  .tools .strike:hover { opacity: 0.95; }
+  .tools .strike:not(:disabled):hover { opacity: 0.95; }
   .tools .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
   /* multiply: weißes Papier lässt das Foto unverändert, Rahmenlinien und Klebestreifen scheinen durch (eingeklebt) */
   .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; mix-blend-mode: multiply; cursor: pointer; }
   .slot { position: absolute; cursor: pointer; }
   .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: var(--radius-s); }
   .slot.empty.go { color: var(--pickable); font-weight: 400; }
-  .slot.empty:hover { background: color-mix(in srgb, var(--pickable) 20%, transparent); color: rgba(0, 0, 0, 0.6); }
+  .slot.inert { cursor: default; }
+  .slot.empty:not(.inert):hover { background: color-mix(in srgb, var(--pickable) 20%, transparent); color: rgba(0, 0, 0, 0.6); }
   .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
   .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }

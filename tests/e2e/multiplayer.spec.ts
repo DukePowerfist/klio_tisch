@@ -335,6 +335,16 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
   await expect(foreign).toBeFocused();
   await expect(foreign).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await expect(foreign).toHaveCSS('outline-style', 'dashed');
+  // leerer fremder Trumpfplatz: kein Knopf, keine Hand, keine Färbung beim Überfahren; der eigene schon
+  const foreignSlot = player.locator('[data-sheet=seat1] [data-slot="0"]');
+  await foreignSlot.hover();
+  await expect(foreignSlot).not.toHaveAttribute('role');
+  await expect(foreignSlot).not.toHaveAttribute('title');
+  await expect(foreignSlot).toHaveCSS('cursor', 'default');
+  await expect(foreignSlot).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const ownSlot = player.locator('[data-sheet=seat2] [data-slot="0"]');
+  await expect(ownSlot).toHaveAttribute('role', 'button');
+  await expect(ownSlot).toHaveCSS('cursor', 'pointer');
   await player.locator('.board').click({ position: { x: 5, y: 5 } });
   // Spieler speichert seinen Charakter mit Foto, setzt zurück und lädt ihn wieder; die SL sieht Bogen und Foto
   await player.locator('[data-plate=seat2]').click();
