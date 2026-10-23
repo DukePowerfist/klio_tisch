@@ -100,6 +100,28 @@
     fileInput!.value = '';
     await setPhoto(seat, file);
   }
+  // Foto auch auf den Rahmen ziehen oder bei fokussiertem Rahmen einfügen (5z); nur Bilddateien
+  const imageOf = (files: FileList | undefined | null): File | undefined => [...(files ?? [])].find((f) => f.type.startsWith('image/'));
+  let dropping = $state(false);
+  function onDragOver(e: DragEvent) {
+    if (!canPhoto || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    dropping = true;
+  }
+  function onDrop(e: DragEvent) {
+    dropping = false;
+    const file = imageOf(e.dataTransfer?.files);
+    if (!canPhoto || !file) return;
+    e.preventDefault();
+    void setPhoto(seat, file);
+  }
+  function onPaste(e: ClipboardEvent) {
+    const file = imageOf(e.clipboardData?.files);
+    if (!canPhoto || !file) return;
+    e.preventDefault();
+    void setPhoto(seat, file);
+  }
 
   // Großansicht eines Trumpfs: beim Überfahren nach 650 ms, beim Klick angeheftet. Nur wenn das Feld dann noch unter
   // dem Zeiger liegt: Ein Ansichtswechsel verschiebt den Bogen, ohne dass ein pointerleave kommt (5x).
@@ -175,12 +197,18 @@
     {#if photoBox}
       <button
         class="photo control"
+        class:dropping
         aria-label="Foto"
+        title={canPhoto ? t('sheet.photoTitle') : undefined}
         style:left="{photoBox.x}px" style:top="{photoBox.y}px" style:width="{photoBox.w}px" style:height="{photoBox.h}px"
         style:rotate={photoBox.rotate ? `${photoBox.rotate}deg` : undefined}
         style:background-image={photoUrl ? `url(${photoUrl})` : undefined}
         disabled={!canPhoto}
         onclick={() => fileInput?.click()}
+        ondragover={onDragOver}
+        ondragleave={() => (dropping = false)}
+        ondrop={onDrop}
+        onpaste={onPaste}
       ></button>
       <input bind:this={fileInput} type="file" accept="image/*" hidden onchange={onPhoto} />
     {/if}
@@ -262,6 +290,7 @@
   .tools .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
   /* multiply: weißes Papier lässt das Foto unverändert, Rahmenlinien und Klebestreifen scheinen durch (eingeklebt) */
   .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; mix-blend-mode: multiply; cursor: pointer; }
+  .photo.dropping { outline: 3px dashed var(--pickable); outline-offset: 2px; }
   .slot { position: absolute; cursor: pointer; }
   .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: var(--radius-s); }
   .slot.empty.go { color: var(--pickable); font-weight: 400; }

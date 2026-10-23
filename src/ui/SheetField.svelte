@@ -2,6 +2,8 @@
   // Text- oder Zahlenfeld auf dem Bogen. Getippt wird lokal; gesendet ~300 ms nach der letzten Eingabe
   // und beim Verlassen. Solange das Feld den Fokus hat, ersetzen eingehende Änderungen es nicht (8.2).
   // Passt ein Text auch klein nicht hinein, steht rechts „…“ und öffnet das Feldfenster (5z, 10.11).
+  // Tasten (5z): Enter springt ins nächste Feld derselben Gruppe (Umschalt+Enter zurück), am Ende der Gruppe und mit
+  // Esc verlässt man das Feld; Pfeil hoch/runter zählt an Attributen 0 bis 9.
   import type { SeatId } from '../engine/types';
   import { SHEET_TEXT_MAX } from '../rules/klio/fields';
   import { submitOrSay } from './commands';
@@ -39,7 +41,8 @@
   });
 
   /** zuletzt gesendet, solange der Stand sich seitdem nicht geändert hat: Enter kurz nach dem Senden schickt es nicht
-   *  noch einmal (5x) */
+   *  noch einmal (5x). Wer zurückkommt, bevor der Stand da ist, schreibt hier weiter, nicht im alten Stand (5z: sonst
+   *  sendete das nächste Verlassen den alten Text zurück, etwa nach Enter und gleich Umschalt+Enter) */
   let lastSent: string | null = null;
   $effect(() => {
     void value;
@@ -57,15 +60,45 @@
     if (!(await submitOrSay(cmd)) && lastSent === sent) lastSent = null;
   }
 
+  /** neuer Entwurf, gesendet ~300 ms nach der letzten Änderung */
+  function change(v: string) {
+    draft = v;
+    clearTimeout(timer);
+    timer = setTimeout(send, SEND_MS);
+  }
+
   function onInput(e: Event) {
     let v = (e.target as HTMLInputElement).value;
     if (kind === 'number') {
       v = v.replace(/\D/g, '').slice(-1); // eine Ziffer 0–9 oder leer
       (e.target as HTMLInputElement).value = v;
     }
-    draft = v;
-    clearTimeout(timer);
-    timer = setTimeout(send, SEND_MS);
+    change(v);
+  }
+
+  /** Gruppe: Name ohne die letzte Stelle (`strengths.text.2` → `strengths.text`, `attributes.K` → `attributes`) */
+  const group = field.includes('.') ? field.slice(0, field.lastIndexOf('.') + 1) : null;
+  /** Nachbarfeld derselben Gruppe auf diesem Bogen, in der Reihenfolge der Seite; null am Ende oder ohne Gruppe */
+  function neighbour(step: 1 | -1): HTMLInputElement | null {
+    if (!group) return null;
+    const all = [...el.closest('.paper')!.querySelectorAll<HTMLInputElement>('input[data-field]')].filter((i) => i.dataset.field!.startsWith(group) && !i.dataset.field!.slice(group.length).includes('.'));
+    return all[all.indexOf(el) + step] ?? null;
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.isComposing) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const next = neighbour(e.shiftKey ? -1 : 1);
+      if (next) next.focus(); // der Fokuswechsel sendet (blur)
+      else el.blur();
+    } else if (e.key === 'Escape') {
+      el.blur();
+    } else if (kind === 'number' && !readonly && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      const n = draft === '' ? 0 : Number(draft);
+      change(String(Math.min(9, Math.max(0, n + (e.key === 'ArrowUp' ? 1 : -1)))));
+    }
   }
 </script>
 
@@ -87,10 +120,10 @@
   spellcheck="false"
   inputmode={kind === 'number' ? 'numeric' : undefined}
   data-field={field}
-  onfocus={() => { draft = value; focused = true; }}
+  onfocus={() => { draft = lastSent ?? value; focused = true; }}
   onblur={() => { focused = false; el.scrollLeft = 0; void send(); }}
   oninput={onInput}
-  onkeydown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+  onkeydown={onKeydown}
 />
 {#if more}
   <button

@@ -33,6 +33,13 @@
   // Menü am Namensschild (10.1); ein anderes Schild öffnet ein neues Menü
   const plateSeat = $derived(view.plateMenu?.seat ?? null);
 
+  // Eine Datei, die neben dem Fotorahmen fallen gelassen wird, öffnet der Browser sonst anstelle des Tischs (5z)
+  function noFileDrop(e: DragEvent) {
+    if (e.defaultPrevented || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'none';
+  }
+
   // Wer einen Platz bekommt, startet in seiner Rollenansicht (10)
   const mySeat = $derived(session.role?.role === 'player' ? session.role.seat : null);
   $effect(() => {
@@ -92,6 +99,7 @@
 {:else if session.status !== 'starting'}
   <p class="center">{session.statusText}</p>
 {/if}
+<svelte:window ondragover={noFileDrop} ondrop={noFileDrop} />
 <Menu onChooseSeat={() => (joinOpen = true)} onProfile={() => (profileOpen = true)} />
 
 <style>

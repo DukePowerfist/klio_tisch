@@ -69,7 +69,8 @@ export async function setField(page: Page, seat: string, field: string, value: s
   const input = page.locator(`[data-sheet=${seat}] [data-field="${field}"]`);
   await input.click();
   await input.fill(value);
-  await input.press('Enter');
+  // Esc verlässt das Feld; Enter spränge seit 5z ins nächste Feld der Gruppe
+  await input.press('Escape');
 }
 
 /** Einem Charakter einen Namen geben (über seine Rollenansicht, danach zurück zur Übersicht). */

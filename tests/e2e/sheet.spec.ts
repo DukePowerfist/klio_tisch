@@ -87,6 +87,94 @@ test('Klickflächen (5z): knapp neben dem Kästchen trifft es noch, das Feld dan
   await expect(gear).toBeFocused();
 });
 
+test('Tasten am Bogen (5z): Tab wie im Bild, Enter in der Gruppe weiter, Esc verlässt das Feld, Pfeiltasten an Attributen', async ({ page }) => {
+  await page.keyboard.press('1');
+  const f = (id: string) => sheet1(page).locator(`[data-field="${id}"]`);
+  // Tab: Rüstzeug vor den Erlebnissen
+  await f('weaknesses.1').click();
+  await page.keyboard.press('Tab');
+  await expect(f('gear.text.0')).toBeFocused();
+
+  // Enter springt weiter und sendet, Umschalt+Enter zurück, am Ende der Gruppe verlässt Enter das Feld
+  await f('strengths.text.0').click();
+  await page.keyboard.type('Seil');
+  await page.keyboard.press('Enter');
+  await expect(f('strengths.text.1')).toBeFocused();
+  await page.keyboard.press('Shift+Enter');
+  await expect(f('strengths.text.0')).toBeFocused();
+  await f('strengths.text.4').click();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('input:focus')).toHaveCount(0);
+  await f('attributes.K').click();
+  await page.keyboard.press('Enter');
+  await expect(f('attributes.V')).toBeFocused();
+
+  // Esc mitten in der Gruppe: Feld verlassen, Text gesendet, Ansicht bleibt; ein zweites Esc wechselt in die Draufsicht
+  const width = (await sheet1(page).boundingBox())!.width;
+  await f('strengths.text.2').click();
+  await page.keyboard.type('Laterne');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('input:focus')).toHaveCount(0);
+  await page.waitForTimeout(400);
+  expect((await sheet1(page).boundingBox())!.width).toBe(width);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await sheet1(page).boundingBox())!.width).toBeLessThan(width * 0.8);
+
+  // Pfeiltasten: leer zählt ab 0, Grenzen 0 und 9
+  await page.keyboard.press('1');
+  await f('attributes.P').click();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowUp');
+  await expect(f('attributes.P')).toHaveValue('3');
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowDown');
+  await expect(f('attributes.P')).toHaveValue('0');
+  await page.keyboard.type('9');
+  await page.keyboard.press('ArrowUp');
+  await expect(f('attributes.P')).toHaveValue('9');
+  await page.keyboard.press('Escape');
+  // Neuladen erst, wenn der Stand gespeichert ist (geschieht nach dem Befehl)
+  await page.waitForTimeout(500);
+
+  await ready(page, true);
+  await expect(f('strengths.text.0')).toHaveValue('Seil');
+  await expect(f('strengths.text.2')).toHaveValue('Laterne');
+  await expect(f('attributes.P')).toHaveValue('9');
+});
+
+test('Foto auf den Rahmen ziehen oder bei fokussiertem Rahmen einfügen (5z)', async ({ page }) => {
+  await page.keyboard.press('1');
+  const photo = sheet1(page).locator('.photo');
+  const png = (await makePng(page)).toString('base64');
+  const files = () => page.evaluateHandle((b64) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], 'foto.png', { type: 'image/png' }));
+    return dt;
+  }, png);
+  const dt = await files();
+  await photo.dispatchEvent('dragover', { dataTransfer: dt });
+  await expect(photo).toHaveClass(/dropping/);
+  await photo.dispatchEvent('drop', { dataTransfer: dt });
+  await expect(photo).toHaveCSS('background-image', /^url\(/);
+  await expect(photo).not.toHaveClass(/dropping/);
+  const first = await photo.evaluate((el) => getComputedStyle(el).backgroundImage);
+
+  // Einfügen: anderes Bild, Rahmen fokussiert
+  const blue = await page.evaluate(async () => {
+    const c = new OffscreenCanvas(300, 400);
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#33c';
+    g.fillRect(0, 0, 300, 400);
+    const b = await c.convertToBlob({ type: 'image/png' });
+    return btoa(String.fromCharCode(...new Uint8Array(await b.arrayBuffer())));
+  });
+  await photo.focus();
+  await photo.evaluate((el, b64) => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], 'blau.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, blue);
+  await expect.poll(() => photo.evaluate((el) => getComputedStyle(el).backgroundImage)).not.toBe(first);
+});
+
 test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'name', 'Ida Weber');
