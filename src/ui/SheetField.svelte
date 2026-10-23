@@ -4,6 +4,7 @@
   import type { SeatId } from '../engine/types';
   import { submitOrSay } from './commands';
   import { effects } from './effects.svelte';
+  import { shouldSend } from './fieldSend';
   import { fitFontSize } from './fitText';
 
   let { seat, field, kind, value, x, y, w, h, font, struck = false, center = false, readonly = false }: {
@@ -18,14 +19,23 @@
   const shown = $derived(focused ? draft : value);
   const size = $derived(kind === 'number' ? font : fitFontSize(shown, w - 6, font));
 
+  /** zuletzt gesendet, solange der Stand sich seitdem nicht geändert hat: Enter kurz nach dem Senden schickt es nicht
+   *  noch einmal (5x) */
+  let lastSent: string | null = null;
+  $effect(() => {
+    void value;
+    lastSent = null;
+  });
+
   async function send() {
     clearTimeout(timer);
     timer = undefined;
-    if (draft === value) return;
+    if (!shouldSend(draft, value, lastSent)) return;
+    const sent = (lastSent = draft);
     const cmd = kind === 'text'
-      ? { type: 'sheet.setText', seat, field, value: draft }
-      : { type: 'sheet.setNumber', seat, field, value: draft === '' ? null : Number(draft) };
-    await submitOrSay(cmd);
+      ? { type: 'sheet.setText', seat, field, value: sent }
+      : { type: 'sheet.setNumber', seat, field, value: sent === '' ? null : Number(sent) };
+    if (!(await submitOrSay(cmd)) && lastSent === sent) lastSent = null;
   }
 
   function onInput(e: Event) {
