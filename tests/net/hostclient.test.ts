@@ -8,7 +8,7 @@ import type { CommandResult } from '../../src/net/protocol';
 import { Host } from '../../src/net/host';
 import { readArchive, writeArchive } from '../../src/net/archive';
 import { MemoryBackups, MemoryNetwork, MemoryPhotoBank, MemoryStore } from '../../src/net/memory';
-import { sha256Hex } from '../../src/net/photos';
+import { sha256Hex, unpackPhoto } from '../../src/net/photos';
 import { Presence, type PresenceInfo } from '../../src/net/presence';
 import type { KlioState } from '../../src/rules/klio/state';
 import { engine, fresh, sheet } from '../helpers';
@@ -147,6 +147,19 @@ describe('Befehle', () => {
     await settle(net, host);
     expect(host.state.zones['discard']).toHaveLength(1);
     expect(host.state.zones['deck']).toHaveLength(26);
+  });
+
+  it('Befehl null wird abgelehnt, nicht verschluckt', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    const empty = a.client.submit(null);
+    await settle(net, host);
+    expect(await empty).toEqual({ ok: false, reason: { key: 'reject.unknownCommand' } });
+    // der Host arbeitet danach normal weiter
+    const again = a.client.submit({ type: 'zone.draw', zone: 'deck' });
+    await settle(net, host);
+    expect(await again).toEqual({ ok: true });
   });
 
   it('zwei greifen gleichzeitig nach derselben Karte: der erste gewinnt, der zweite wird abgelehnt', async () => {
@@ -524,6 +537,19 @@ describe('Fotos (8.4)', () => {
     expect(photos.photos.size).toBe(0);
   });
 
+  it('kein gültiges Base64 (Länge): abgelehnt mit Antwort, der Host arbeitet weiter', async () => {
+    const { net, host, join, photos } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    const results: unknown[] = [];
+    a.transport.onMessage((msg) => void (isMsg(msg, 'result') && results.push(msg)));
+    a.transport.send({ t: 'photo', id: 'foto-1-xxxxxxxx', hash: '0'.repeat(64), data: 'AAAAA' }, host.peerId);
+    await settle(net, host);
+    expect(results).toEqual([{ t: 'result', id: 'foto-1-xxxxxxxx', ok: false, reason: { key: 'reject.invalid' } }]);
+    expect(photos.photos.size).toBe(0);
+    expect(await unpackPhoto('0'.repeat(64), 'AAAAA')).toBeNull();
+  });
+
   it('Anfrage ohne Host wird nach dem Wiederverbinden nachgeholt', async () => {
     const { net, host, join, photos, startHost } = await setup();
     const hash = await sha256Hex(bytes);
@@ -591,6 +617,45 @@ describe('Sicherung (A34) und Datei (8.2)', () => {
     for (let i = 0; i < 7; i++) await host.submit({ type: 'table.reset', includeCharacters: false });
     await host.submit({ type: 'table.reset', includeCharacters: 'ja' });
     expect(await backups.list()).toHaveLength(5);
+  });
+
+  it('Sicherung schlägt fehl: Befehl verworfen mit eigenem Grund, der Client bekommt Antwort, keine Speicherwarnung', async () => {
+    const { net, host, join, backups, saveErrors } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    await host.submit({ type: 'table.setSettings', permissionOverrides: { player: { 'table.reset': 'allow' } } });
+    await host.submit({ type: 'table.reset', includeCharacters: false });
+    const [earlier] = await backups.list();
+    const before = host.state;
+    backups.add = () => Promise.reject(new Error('Kontingent erschöpft'));
+    const failed = { ok: false, reason: { key: 'reject.backupFailed' } };
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await host.submit({ type: 'table.reset', includeCharacters: true })).toEqual(failed);
+    const r = a.client.submit({ type: 'table.reset', includeCharacters: true });
+    await settle(net, host);
+    expect(await r).toEqual(failed);
+    expect(await host.restore(earlier!.id)).toEqual(failed);
+    expect(await host.importArchive(await host.exportArchive())).toEqual(failed);
+    error.mockRestore();
+    expect(host.state).toEqual(before);
+    expect(a.client.state).toEqual(before);
+    expect(saveErrors).toHaveLength(0);
+  });
+
+  it('Sicherung nicht lesbar oder Fotos beim Laden nicht ablegbar: Antwort statt Absturz', async () => {
+    const { host, backups, photos, saveErrors } = await setup();
+    const bytes = new Uint8Array([1, 2, 3]);
+    const hash = await sha256Hex(bytes);
+    await photos.put(hash, bytes);
+    await host.submit({ type: 'sheet.setPhoto', seat: 'seat2', photo: { hash, type: 'image/jpeg' } });
+    const file = await host.exportArchive();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    backups.get = () => Promise.reject(new Error('IndexedDB weg'));
+    expect(await host.restore('x')).toEqual({ ok: false, reason: { key: 'reject.invalid' } });
+    error.mockRestore();
+    photos.put = () => Promise.reject(new Error('voll'));
+    expect(await host.importArchive(file)).toEqual({ ok: false, reason: { key: 'reject.saveFailed' } });
+    expect(saveErrors).toHaveLength(1);
   });
 
   it('Datei: Stand, Plätze, Raum und Fotos hin und zurück; Laden ersetzt den Stand bei allen', async () => {

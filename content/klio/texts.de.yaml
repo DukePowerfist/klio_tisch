@@ -398,5 +398,6 @@ reject:
   unknownColor: Diese Farbe gibt es nicht.
   colorTaken: Diese Farbe hat schon jemand anderes.
   saveFailed: Speichern fehlgeschlagen, die Aktion wurde verworfen.
+  backupFailed: Die automatische Sicherung ist fehlgeschlagen, die Aktion wurde verworfen.
   importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.
   importNewer: Diese Datei stammt aus einer neueren Fassung des Kartentischs. Bitte die Seite neu laden.

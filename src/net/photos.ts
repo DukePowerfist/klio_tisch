@@ -30,8 +30,13 @@ export function fromBase64(data: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/** Empfangenes Foto entpacken; null, wenn der Inhalt nicht zum Namen passt. */
+/** Empfangenes Foto entpacken; null, wenn der Inhalt kein Base64 ist oder nicht zum Namen passt. */
 export async function unpackPhoto(hash: string, data: string): Promise<Uint8Array | null> {
-  const bytes = fromBase64(data);
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = fromBase64(data); // das Schema prüft nur die Zeichen, nicht die Länge
+  } catch {
+    return null;
+  }
   return (await sha256Hex(bytes)) === hash ? bytes : null;
 }

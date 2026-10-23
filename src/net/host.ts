@@ -94,7 +94,7 @@ export class Host<G> {
     transport.onMessage((msg, from) => {
       if (transport !== this.transport) return; // alte Verbindung
       const parsed = ToHost.safeParse(msg);
-      if (parsed.success) void this.enqueue(() => this.receive(parsed.data, from));
+      if (parsed.success) void this.enqueue(() => this.receive(parsed.data, from)).catch((e: unknown) => this.failed(parsed.data, from, e));
     });
     transport.onPeers((list) => {
       if (transport !== this.transport) return;
@@ -172,7 +172,11 @@ export class Host<G> {
     return this.enqueue(async () => {
       const read = await readArchive(this.engine, text).catch((e: unknown) => (e instanceof NewerFormatError ? 'reject.importNewer' : 'reject.importInvalid'));
       if (typeof read === 'string') return { ok: false, reason: { key: read } };
-      await Promise.all([...read.photos].map(([hash, bytes]) => this.options.photos?.put(hash, bytes)));
+      try {
+        await Promise.all([...read.photos].map(([hash, bytes]) => this.options.photos?.put(hash, bytes)));
+      } catch (error) {
+        return this.saveFailed(error);
+      }
       const { state, host } = read.saved;
       return this.swap({ state, host: host.room || !this.room ? host : { ...host, room: this.room } }, 'import');
     });
@@ -181,9 +185,15 @@ export class Host<G> {
   /** Sicherung wiederherstellen: nur der Stand, Plätze und Raum bleiben (wer keinen Platz mehr hat, wird Zuschauer). */
   restore(id: string): Promise<CommandResult> {
     return this.enqueue(async () => {
-      const backup = await this.options.backups?.get(id);
-      if (!backup) return INVALID;
-      const state = this.engine.parseState(backup.state);
+      let state: TableState<G>;
+      try {
+        const backup = await this.options.backups?.get(id);
+        if (!backup) return INVALID;
+        state = this.engine.parseState(backup.state);
+      } catch (error) {
+        console.error('Sicherung nicht lesbar', error);
+        return INVALID;
+      }
       return this.swap({ state, host: followSeats(this.saved.host, state) }, 'restore');
     });
   }
@@ -195,7 +205,8 @@ export class Host<G> {
 
   /** Ganzen Stand ersetzen; alle bekommen ihn samt Anlass (für das Protokoll). */
   private async swap(next: Saved<G>, reason: string): Promise<CommandResult> {
-    await this.backup(reason);
+    const backedUp = await this.backup(reason);
+    if (!backedUp.ok) return backedUp;
     const saved = await this.persist(next);
     if (!saved.ok) return saved;
     this.broadcast({ t: 'state', state: this.state, reason });
@@ -204,8 +215,15 @@ export class Host<G> {
     return saved;
   }
 
-  private async backup(reason: string): Promise<void> {
-    await this.options.backups?.add({ id: crypto.randomUUID(), at: Date.now(), reason, state: this.state });
+  /** Schlägt die Sicherung fehl, unterbleibt die Änderung (eigener Grund, nicht „Speichern fehlgeschlagen“). */
+  private async backup(reason: string): Promise<CommandResult> {
+    try {
+      await this.options.backups?.add({ id: crypto.randomUUID(), at: Date.now(), reason, state: this.state });
+      return { ok: true };
+    } catch (error) {
+      console.error('Sicherung fehlgeschlagen', error);
+      return { ok: false, reason: { key: 'reject.backupFailed' } };
+    }
   }
 
   /** Befehl der Spielleitung (im Browser des Hosts); `id` kommt in onChange als Auslöser zurück. */
@@ -222,6 +240,13 @@ export class Host<G> {
     const next = this.queue.then(job, job);
     this.queue = next.catch(() => undefined);
     return next;
+  }
+
+  /** Letzte Absicherung: Ein unerwarteter Fehler beim Bearbeiten darf den Absender nicht ohne Antwort lassen.
+   *  Die Antwort kann falsch sein (der Fehler kam evtl. erst nach dem Speichern), daher wird er gemeldet. */
+  private failed(msg: ToHost, from: PeerId, error: unknown): void {
+    console.error('Nachricht nicht bearbeitet', msg.t, error);
+    if (msg.t === 'cmd' || msg.t === 'claim' || msg.t === 'photo') this.send({ t: 'result', id: msg.id, ...INVALID }, from);
   }
 
   private onlineChanged(): void {
@@ -322,8 +347,12 @@ export class Host<G> {
     const result: CommandResult = isRejection(r) ? { ok: false, reason: r.reason } : { ok: true };
     // Bei Ablehnung ohne etwas zu merken ändert sich nichts, also auch nichts zu speichern
     if (isRejection(r) && !updateHost) return result;
-    const type = (cmd as { type: string }).type;
-    if (!isRejection(r) && this.engine.commands[type]?.backup) await this.backup(type);
+    // nur bei angenommenen Befehlen gelesen: abgelehnte können beliebig aussehen (auch null)
+    const type = isRejection(r) ? undefined : (cmd as { type: string }).type;
+    if (type !== undefined && this.engine.commands[type]?.backup) {
+      const backedUp = await this.backup(type);
+      if (!backedUp.ok) return backedUp;
+    }
 
     const state = isRejection(r) ? this.state : r.state;
     // Umsetzen (8.7): die Schlüssel folgen den Personen, egal wer den Befehl schickt; vor followSeats,
@@ -352,9 +381,13 @@ export class Host<G> {
       if (changed.length > 0) this.onlineChanged();
       return { ok: true };
     } catch (error) {
-      this.options.onSaveError?.(error);
-      return { ok: false, reason: { key: 'reject.saveFailed' } };
+      return this.saveFailed(error);
     }
+  }
+
+  private saveFailed(error: unknown): CommandResult {
+    this.options.onSaveError?.(error);
+    return { ok: false, reason: { key: 'reject.saveFailed' } };
   }
 }
 
