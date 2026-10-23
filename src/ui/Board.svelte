@@ -312,19 +312,37 @@
     preview = { card, x: at.x - stage.left, y: at.y - stage.top };
   }
 
-  async function onPointerUp(e: PointerEvent) {
+  /** Zeiger los (oder abgebrochen): Verschieben, Zoom und Zug enden; liefert den beendeten Zug */
+  function release(e: PointerEvent): Drag | null {
     touches.delete(e.pointerId);
     if (touches.size < 2) pinch = null;
     pan = null;
     const d = drag;
     drag = null;
     dragPointer = null;
+    return d;
+  }
+  /** Zug ohne Ablegen beendet: Die anderen lassen die Karte sofort zurückgleiten, nicht erst nach der Haltefrist
+   *  oder der nächsten Mausbewegung (bei Touch kommt keine, 5x) */
+  function endDrag(e: PointerEvent) {
+    if (!session.sharesPointer) return;
+    if (e.pointerType === 'mouse' && mouse) showPointer(...mouse);
+    else session.pointer(null, []);
+  }
+
+  async function onPointerUp(e: PointerEvent) {
+    const d = release(e);
     if (!d) return;
     if (!d.moved) return click(d.cards[0]!);
 
     const to = dropTarget(layout, places, d, toBoard(e.clientX, e.clientY));
-    if (!to) return;
+    if (!to) return endDrag(e);
     await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy });
+  }
+
+  /** Vom Browser abgebrochen (Systemgeste, Handballen): kein Ablegen, kein Klick; die Karte gleitet zurück (5x, F2) */
+  function onPointerCancel(e: PointerEvent) {
+    if (release(e)?.moved) endDrag(e);
   }
 
   /** Einfacher Klick: Stapelmenü; Doppelklick: umdrehen, an jedem Stapel (5r, F1). */
@@ -431,7 +449,7 @@
   });
 </script>
 
-<svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerUp} />
+<svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerCancel} />
 
 <div
   class="stage"
@@ -442,7 +460,12 @@
   onpointerdown={onPointerDown}
   onpointerover={onPointerOver}
   ondblclick={onDblClick}
-  onpointerleave={(e) => { if (e.pointerType === 'mouse') { mouse = null; under = null; hover = null; session.pointer(null, []); } }}
+  onpointerleave={(e) => {
+    if (e.pointerType !== 'mouse') return;
+    mouse = null; under = null; hover = null;
+    // beim Ziehen (auch über Protokoll oder Rand) senden die Bewegungen am Fenster den Zug weiter (5x)
+    if (!drag) session.pointer(null, []);
+  }}
   role="application"
 >
   <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>

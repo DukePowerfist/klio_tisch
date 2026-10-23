@@ -543,6 +543,36 @@ test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne 
   await expect(player.getByRole('dialog', { name: 'Expedition' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
+test('Zug bleibt bei der SL bestehen, wenn der Zeiger den Tisch verlässt; abgebrochen gleitet die Karte sofort zurück (5x)', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('0');
+  const deck = await zoneCenter(player, 'DECK');
+  const ghost = gm.locator('.card.marked');
+  await holdOver(player, deck, { x: deck.x - 60, y: deck.y - 40 }, 6);
+  await expect(ghost).toHaveCount(1);
+  // ab jetzt bei der SL in jedem Frame zählen, ob die Karte noch als gezogen gilt
+  await gm.evaluate(() => {
+    const w = window as unknown as { marked: number[] };
+    w.marked = [];
+    const tick = () => { w.marked.push(document.querySelectorAll('.card.marked').length); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+  // Zeiger verlässt den Tisch, danach keine Bewegung (Maus bleibt am Fensterrand stehen). Beim Überqueren folgt
+  // sonst im selben Task ein pointermove, das den Zug vor dem nächsten Senden wieder meldet.
+  await player.locator('.stage').dispatchEvent('pointerleave', { pointerType: 'mouse' });
+  await player.waitForTimeout(400);
+  const marked = await gm.evaluate(() => (window as unknown as { marked: number[] }).marked);
+  expect(marked.length).toBeGreaterThan(5);
+  expect(Math.min(...marked)).toBe(1);
+  // Abbruch durch den Browser: kein Ablegen, und ohne weitere Bewegung endet der Zug bei der SL (vor der Haltefrist)
+  await player.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' })));
+  await expect(ghost).toHaveCount(0, { timeout: 900 });
+  await player.mouse.up();
+  await expectCount(gm, 'DECK', 27);
+});
+
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */
 async function joinAs(page: Page, link: string, name: string, n: number) {
   await page.goto(link);
