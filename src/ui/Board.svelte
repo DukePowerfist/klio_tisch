@@ -293,8 +293,8 @@
   /** gilt nur, solange die Karte an ihrem Platz liegt, man sie nehmen darf und niemand sie zieht */
   const hovered = $derived(hover && !drag && places[hover.card]?.slot === hover.slot && !offsetOf.has(hover.card) && !remoteOf.has(hover.card) && takeable(hover.card) ? hover : null);
 
-  /** Vorschau großer Karte beim Überfahren offener Karten (nur wenn sich das Element ändert); in der Ecke unten
-   *  gegenüber der Karte, über Dock und Menüknopf (5v, F2). Dieselbe Karte behält ihre Ecke. */
+  /** Vorschau großer Karte beim Überfahren offener Karten (nur wenn sich das Element ändert); unten rechts, sonst dort,
+   *  wo sie die Karte nicht verdeckt (5v, F2). Dieselbe Karte behält ihren Platz. */
   const PREVIEW_SCALE = 3;
   const PREVIEW_MARGIN = 16;
   function onPointerOver(e: PointerEvent) {
@@ -308,7 +308,7 @@
     const m = PREVIEW_MARGIN;
     const bounds = { x: stage.left + m, y: stage.top + m, w: stage.width - 2 * m, h: stage.height - 2 * m };
     const size = { w: layout.card.w * PREVIEW_SCALE, h: layout.card.h * PREVIEW_SCALE };
-    const at = previewPlace(bounds, menuArea(stage).blocked, size, r.left + r.width / 2, m);
+    const at = previewPlace(bounds, size, { x: r.left, y: r.top, w: r.width, h: r.height });
     preview = { card, x: at.x - stage.left, y: at.y - stage.top };
   }
 

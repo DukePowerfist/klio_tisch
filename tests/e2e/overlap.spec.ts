@@ -52,23 +52,36 @@ test('Meldung nach dem Ziehen verdeckt die SL-Leiste nicht und steht sonst unten
   }
 });
 
-test('Kartenvorschau in der Ecke gegenüber der Karte, über Dock und Menüknopf, mit Schatten', async ({ page }) => {
+test('Kartenvorschau unten rechts, über einer Karte in dieser Ecke oben rechts, mit Schatten', async ({ page }) => {
   await openMenuAndClick(page, 'DECK', 'Ziehen');
   await page.keyboard.press('Escape');
   const card = page.locator('[data-card]:has(.inner:not(.down))').first();
-  const c = await box(card);
-  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
   const preview = page.locator('.preview');
-  await expect(preview).toBeVisible();
-  const p = await box(preview);
   const stage = await box(page.locator('.stage'));
-  // Karte rechts der Mitte: Vorschau unten links, sonst unten rechts
-  if (c.x + c.width / 2 > stage.x + stage.width / 2) expect(p.x).toBeCloseTo(stage.x + 16, 0);
-  else expect(p.x + p.width).toBeCloseTo(stage.x + stage.width - 16, 0);
-  expect(p.y + p.height).toBeLessThanOrEqual(stage.y + stage.height - 16 + 0.5);
-  for (const sel of ['.dock', '.menu']) expect(apart(p, await box(page.locator(sel))), sel).toBe(true);
+  const hover = async () => {
+    const c = await box(card);
+    await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
+    await expect(preview).toBeVisible();
+    return { c, p: await box(preview) };
+  };
+  const { c, p } = await hover();
+  expect(p.x + p.width).toBeCloseTo(stage.x + stage.width - 16, 0);
+  expect(p.y + p.height).toBeCloseTo(stage.y + stage.height - 16, 0);
+  expect(apart(p, c)).toBe(true);
   expect(await preview.evaluate((e) => getComputedStyle(e).boxShadow)).toContain('rgba(0, 0, 0, 0.55)');
   // dieselbe Karte: die Lage springt nicht
   await page.mouse.move(c.x + c.width / 2 + 3, c.y + c.height / 2 + 3);
   expect(await box(preview)).toEqual(p);
+  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
+
+  // die Karte frei auf Bogen 4 unten rechts, unter die Vorschau: dann oben rechts
+  await page.mouse.down();
+  await page.mouse.move(stage.x + stage.width - 120, stage.y + stage.height - 120, { steps: 8 });
+  await page.mouse.up();
+  await page.mouse.move(stage.x + stage.width / 2, stage.y + 5);
+  await expect(preview).toHaveCount(0);
+  const moved = await hover();
+  expect(apart(moved.p, moved.c)).toBe(true);
+  expect(moved.p.x + moved.p.width).toBeCloseTo(stage.x + stage.width - 16, 0);
+  expect(moved.p.y).toBeCloseTo(stage.y + 16, 0);
 });

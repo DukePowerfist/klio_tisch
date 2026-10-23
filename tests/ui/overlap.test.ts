@@ -20,13 +20,16 @@ describe('Meldung über der SL-Leiste (F1)', () => {
 describe('Kartenvorschau (F2)', () => {
   const bounds = { x: 16, y: 16, w: 1568, h: 868 };
   const size = { w: 240, h: 336 };
-  it('Ecke unten gegenüber der Karte', () => {
-    expect(previewPlace(bounds, [], size, 1200, 16)).toEqual({ x: 16, y: 884 - 336 });
-    expect(previewPlace(bounds, [], size, 400, 16)).toEqual({ x: 1584 - 240, y: 884 - 336 });
+  const bottomRight = { x: 1584 - 240, y: 884 - 336 };
+  it('unten rechts, wo auch immer die Karte liegt, solange sie nicht darunter liegt', () => {
+    expect(previewPlace(bounds, size, { x: 100, y: 700, w: 80, h: 112 })).toEqual(bottomRight);
+    expect(previewPlace(bounds, size, { x: 1400, y: 100, w: 80, h: 112 })).toEqual(bottomRight);
   });
-  it('rückt über das Dock, nicht aber wegen eines Knopfs in der anderen Ecke', () => {
-    const dock = { x: 12, y: 858, w: 200, h: 30 };
-    expect(previewPlace(bounds, [dock], size, 1200, 16)).toEqual({ x: 16, y: 858 - 16 - 336 });
-    expect(previewPlace(bounds, [dock], size, 400, 16)).toEqual({ x: 1584 - 240, y: 884 - 336 });
+  it('Karte unten rechts: oben rechts', () => {
+    expect(previewPlace(bounds, size, { x: 1400, y: 700, w: 80, h: 112 })).toEqual({ x: 1584 - 240, y: 16 });
+  });
+  it('Karte unter beiden rechten Ecken (kleines Fenster): unten links', () => {
+    const small = { x: 16, y: 16, w: 992, h: 608 };
+    expect(previewPlace(small, size, { x: 850, y: 260, w: 80, h: 112 })).toEqual({ x: 16, y: 624 - 336 });
   });
 });

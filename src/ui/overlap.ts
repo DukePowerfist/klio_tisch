@@ -13,19 +13,12 @@ export function toastBottom(toast: Rect, bar: Rect | null, viewH: number, base: 
   return Math.max(base, viewH - bar.y + gap);
 }
 
-/** Kartenvorschau (F2): Ecke unten gegenüber der Karte (Mitte der Karte rechts der Mitte von `bounds`: links, sonst
- *  rechts). Liegt dort etwas aus `blocked` (Dock, Menüknopf), rückt sie darüber, mit `gap` Abstand. */
-export function previewPlace(bounds: Rect, blocked: Rect[], size: { w: number; h: number }, cardX: number, gap: number): { x: number; y: number } {
-  const x = cardX > bounds.x + bounds.w / 2 ? bounds.x : bounds.x + bounds.w - size.w;
-  let y = bounds.y + bounds.h - size.h;
-  for (let moved = true; moved; ) {
-    moved = false;
-    for (const b of blocked) {
-      if (overlaps({ x, y, ...size }, b)) {
-        y = b.y - gap - size.h;
-        moved = true;
-      }
-    }
-  }
-  return { x, y };
+/** Kartenvorschau (F2, geändert 2026-10-23): unten rechts; liegt dort die überfahrene Karte `card`, oben rechts; liegt
+ *  sie unter beiden (nur in kleinen Fenstern), unten links. Dock und Menüknopf darf sie verdecken: Wer dorthin will,
+ *  verlässt die Karte, und die Vorschau verschwindet. */
+export function previewPlace(bounds: Rect, size: { w: number; h: number }, card: Rect): { x: number; y: number } {
+  const right = bounds.x + bounds.w - size.w;
+  const bottom = bounds.y + bounds.h - size.h;
+  const spots = [{ x: right, y: bottom }, { x: right, y: bounds.y }, { x: bounds.x, y: bottom }];
+  return spots.find((p) => !overlaps({ ...p, ...size }, card)) ?? spots[0]!;
 }
