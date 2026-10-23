@@ -2,7 +2,7 @@
   // Ergebnis von Expedition bzw. Orakel; öffnet sich bei allen mit dem Ereignis (13.1).
   // Neu würfeln dürfen nur, wer das Recht dazu hat (sonst fehlen die Knöpfe, im Kopf bleibt nur das ×).
   // Seit 5t (10.6) im Stil der Einstellungen: Kopf mit Hauptknopf und ×, feine Linien, Knöpfe im Menüstil. Das Fenster
-  // ist oben verankert, der Kopf steht also immer still; nur der Inhalt darunter scrollt, seine Höhe gleitet.
+  // steht mittig; nur der Inhalt unter dem Kopf scrollt, seine Höhe gleitet.
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import Modal from './Modal.svelte';
@@ -29,13 +29,22 @@
     for (const i of r.parts) values[i]?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: timing().pop, easing: 'ease-out' });
   });
 
-  /** Ändert sich die Höhe des Inhalts, gleitet sie mit --shift statt zu springen (Fenster oben verankert, 10.6) */
+  /** Ändert sich die Höhe des Inhalts, gleitet sie mit --shift statt zu springen (10.6); währenddessen ohne Bildlauf,
+   *  sonst blitzte beim Wachsen kurz die Scrollbar auf (der Inhalt ist schon groß, die Fläche noch klein) */
   function glide(inner: HTMLElement) {
     let last = 0;
     const ro = new ResizeObserver(() => {
       // Höhe des Inhalts selbst, nicht der (vielleicht gerade gleitenden) Fläche darum
       const now = inner.getBoundingClientRect().height;
-      if (last > 0 && Math.abs(now - last) > 0.5) body.animate([{ height: `${last}px` }, { height: `${now}px` }], { duration: timing().shift, easing: timing().shiftEase });
+      const ms = timing().shift;
+      if (last > 0 && Math.abs(now - last) > 0.5 && ms > 0) {
+        body.style.overflow = 'hidden';
+        const a = body.animate([{ height: `${last}px` }, { height: `${now}px` }], { duration: ms, easing: timing().shiftEase });
+        const done = () => {
+          if (!body.getAnimations().length) body.style.overflow = '';
+        };
+        a.onfinish = a.oncancel = done;
+      }
       last = now;
     });
     ro.observe(inner);
@@ -52,7 +61,7 @@
 <Modal label={title} onclose={close} size="result">
   <header>
     <h2>{title}</h2>
-    <!-- Hauptknopf im Kopf: der einzige Teil, der sich nie bewegt, auch wenn man mehrmals drückt (10.6) -->
+    <!-- Hauptknopf im Kopf statt in einer Fußzeile, die beim Neuwürfeln mitwanderte (10.6) -->
     {#if reroll}
       {#if kind === 'expedition'}
         <button class="menu-item menu-main" onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.rerollAll')}</button>

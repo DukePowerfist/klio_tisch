@@ -79,23 +79,24 @@ test('Ergebnisfenster: etwa 560 px breit; längste Einträge ohne Bildlauf, im k
   }
 });
 
-test('Ergebnisfenster: oben verankert; beim Neuwürfeln bleiben Kopf, Hauptknopf, × und das gedrückte „Neu“ stehen', async ({ page }) => {
+test('Ergebnisfenster: mittig; wächst ein Ergebnis, bleibt es mittig und ohne Bildlauf', async ({ page }) => {
   await fixRolls(page, [8, 7, 1, 4]);
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition' });
   await expect(dialog.locator('.row .value').first()).toHaveText('auf das offene Meer.');
-  const third = dialog.getByRole('button', { name: 'Neu würfeln: Ihr seid hier, weil …' });
-  const fixed = [dialog.locator('header'), dialog.getByRole('button', { name: 'Alles neu' }), dialog.getByRole('button', { name: 'Schließen' }), third, dialog.locator('.row').first()];
-  const where = () => Promise.all(fixed.map(async (l) => (await l.boundingBox())!));
-  const before = await where();
-  const short = (await dialog.boundingBox())!;
-  // Zeile 3 vom kürzesten zum längsten Eintrag: das Fenster wächst nur nach unten
+  const height = page.viewportSize()!.height;
+  const centred = async () => {
+    const b = (await dialog.boundingBox())!;
+    expect(Math.abs(b.y - (height - b.y - b.height))).toBeLessThan(2);
+    return b.height;
+  };
+  const short = await centred();
   await fixRolls(page, [LONGEST[2]!]);
-  await third.click();
+  await dialog.getByRole('button', { name: 'Neu würfeln: Ihr seid hier, weil …' }).click();
   await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
-  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(short.height + 20);
-  expect(await where()).toEqual(before);
-  expect((await dialog.boundingBox())!.y).toBe(short.y);
+  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(short + 20);
+  await centred();
+  expect(await dialog.locator('.body').evaluate((b) => b.scrollHeight > b.clientHeight)).toBe(false);
 });
 
 test('Ergebnisfenster: Fokus beim Öffnen auf dem ×, Enter schließt ohne zu würfeln; ein weiterer Wurf lässt den Fokus', async ({ page }) => {
