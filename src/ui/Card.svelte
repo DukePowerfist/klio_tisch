@@ -134,7 +134,7 @@
      Zug (::after) darüber. Anheben über `translate`, die Neigung liegt auf `rotate` (11.6). Beim Loslassen ohne
      Überschwingen zurück. */
   .lift { position: relative; width: 100%; height: 100%; perspective: 600px; transition: scale var(--grab) var(--spring-soft), translate var(--grab) var(--spring-soft), transform var(--hover) ease-out; }
-  .lift::before, .lift::after { content: ''; position: absolute; inset: 0; border-radius: 7px; opacity: 0; pointer-events: none; transition: opacity var(--grab); }
+  .lift::before, .lift::after { content: ''; position: absolute; inset: 0; border-radius: var(--radius-card); opacity: 0; pointer-events: none; transition: opacity var(--grab); }
   .lift::before { box-shadow: var(--lift-shadow, var(--lift)); }
   .lift::after { box-shadow: 0 0 0 3px var(--glow-c, transparent), 0 0 14px 2px var(--glow-c, transparent); }
   .dragging .lift, .marked .lift { scale: 1.1; translate: 0 -6px; transition-timing-function: var(--spring); }
@@ -149,7 +149,7 @@
   .dragging .lift::before, .marked .lift::before { opacity: 1; }
   .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
   .inner.down { rotate: y 180deg; }
-  .face { position: absolute; inset: 0; border-radius: 7px; backface-visibility: hidden; box-shadow: var(--face-shadow, 0 1px 3px rgba(0, 0, 0, 0.55)); box-sizing: border-box; }
+  .face { position: absolute; inset: 0; border-radius: var(--radius-card); backface-visibility: hidden; box-shadow: var(--face-shadow, 0 1px 3px rgba(0, 0, 0, 0.55)); box-sizing: border-box; }
   .marked .face { box-shadow: 0 0 0 3px var(--mark); }
   .front { background: var(--card); color: var(--card-black); }
   .red .front { color: var(--card-red); }

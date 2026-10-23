@@ -118,19 +118,19 @@
 </Modal>
 
 <style>
-  .td :global(button.sel) { background: var(--accent); color: #111; border-color: var(--accent); }
+  .td :global(button.sel) { background: var(--selected); color: var(--dark-ink); border-color: var(--selected); }
   .head { display: flex; justify-content: space-between; align-items: center; font-size: 18px; margin-bottom: 10px; }
   .td :global(.list) { display: grid; gap: 10px; margin: 12px 0; }
   .td :global(.source) { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 12px 16px; font-size: 16px; }
   .td :global(.source span) { font-size: 13px; opacity: 0.85; font-weight: 400; }
   .td :global(.attrs) { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
   .td :global(.attrs button) { padding: 14px; font-size: 16px; }
-  .td :global(input[type='text']) { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: #111; }
+  .td :global(input[type='text']) { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 18px; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
   .cats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 12px 0; }
   .cats button { padding: 14px; font-size: 16px; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin: 10px 0; }
-  .td .tc { padding: 0; background: none; border: 0; border-radius: 10px; text-align: left; }
-  .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px rgba(214, 168, 40, 0.8); }
+  .td .tc { padding: 0; background: none; border: 0; border-radius: var(--menu-radius); text-align: left; }
+  .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--pickable) 80%, transparent); }
   .tc.off { opacity: 0.5; }
   .why { font-size: 12px; color: var(--reason); margin-top: 4px; }
   .note a { color: var(--accent-hint); }

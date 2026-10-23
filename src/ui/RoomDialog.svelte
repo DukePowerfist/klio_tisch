@@ -111,7 +111,7 @@
   .who i { opacity: 0.65; margin-right: 6px; }
   .character { font-weight: 600; }
   small { font-size: 12px; opacity: 0.6; }
-  small.on { color: var(--accent-hint); opacity: 1; }
+  small.on { color: var(--online); opacity: 1; }
   .seats button { padding: 4px 10px; }
   .note { margin: 4px 0 14px; }
   .end { justify-content: flex-end; margin-top: 16px; }

@@ -238,27 +238,27 @@
 </div>
 
 <style>
-  .sheet { position: absolute; border-radius: 6px; overflow: hidden; box-shadow: var(--sheet-shadow, 0 2px 10px rgba(0, 0, 0, 0.5)); background: #fff; color: #1b1b1b; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), opacity var(--shift) var(--shift-ease); }
-  .sheet.hit { outline: 3px solid rgba(190, 40, 30, 0.75); outline-offset: -3px; }
+  .sheet { position: absolute; border-radius: var(--radius-s); overflow: hidden; box-shadow: var(--sheet-shadow, 0 2px 10px rgba(0, 0, 0, 0.5)); background: var(--sheet-bg); color: var(--sheet-ink); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), opacity var(--shift) var(--shift-ease); }
+  .sheet.hit { outline: 3px solid var(--sheet-hit); outline-offset: -3px; }
   .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift) var(--shift-ease); }
   .cb { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; color: inherit; }
   .cb:disabled, .photo:disabled, .strike:disabled { cursor: default; }
-  .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: #111; }
+  .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: var(--dark-ink); }
   .cb.danger.on::after { color: var(--danger); }
-  .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: #333; }
+  .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: var(--sheet-label); }
   .tools .strike { display: block; opacity: 0.4; }
   .tools .strike:hover { opacity: 0.95; }
   .tools .strike.on { opacity: 0.6; background: rgba(0, 0, 0, 0.45); color: #fff; border-color: transparent; }
   /* multiply: weißes Papier lässt das Foto unverändert, Rahmenlinien und Klebestreifen scheinen durch (eingeklebt) */
   .photo { position: absolute; padding: 0; border: 0; background: transparent center / cover no-repeat; mix-blend-mode: multiply; cursor: pointer; }
   .slot { position: absolute; cursor: pointer; }
-  .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: 6px; }
-  .slot.empty.go { color: var(--accent); font-weight: 400; }
-  .slot.empty:hover { background: rgba(214, 168, 40, 0.2); color: rgba(0, 0, 0, 0.6); }
+  .slot.empty { display: flex; align-items: center; justify-content: center; font: 300 54px/1 sans-serif; color: rgba(0, 0, 0, 0.25); border-radius: var(--radius-s); }
+  .slot.empty.go { color: var(--pickable); font-weight: 400; }
+  .slot.empty:hover { background: color-mix(in srgb, var(--pickable) 20%, transparent); color: rgba(0, 0, 0, 0.6); }
   .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
   .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
-  .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: #111; line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
+  .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: var(--dark-ink); line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }
   .plate.menu { pointer-events: auto; border: 0; cursor: pointer; transition: background 0.15s, scale var(--press) ease-out, opacity var(--away-t, var(--back)) ease; }
   .plate.menu:hover, .plate.menu[aria-expanded='true'] { background: color-mix(in srgb, var(--c) 80%, transparent); }
   .plate b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }

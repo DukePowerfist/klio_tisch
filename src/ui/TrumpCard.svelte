@@ -28,7 +28,7 @@
 </div>
 
 <style>
-  .tcard { position: relative; width: 100%; height: 100%; box-sizing: border-box; border: var(--bw) solid transparent; border-radius: 8px; background: linear-gradient(var(--paper), var(--paper)) padding-box, var(--tc) border-box; overflow: hidden; font-family: system-ui, sans-serif; color: #1b1b1b; display: flex; flex-direction: column; }
+  .tcard { position: relative; width: 100%; height: 100%; box-sizing: border-box; border: var(--bw) solid transparent; border-radius: var(--radius-m); background: linear-gradient(var(--paper), var(--paper)) padding-box, var(--tc) border-box; overflow: hidden; font-family: system-ui, sans-serif; color: var(--sheet-ink); display: flex; flex-direction: column; }
   .tg { background: var(--tc); color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); }
   .tg b { font-size: 12px; letter-spacing: 0.02em; }
   .tn { font-weight: 700; font-size: 13.5px; line-height: 1.15; padding: 4px 22px 0 6px; }
@@ -37,7 +37,7 @@
   .list .tg { font-size: 11px; } .list .tg b { font-size: 14px; }
   .list .tn { font-size: 16px; padding: 6px 9px 0; }
   .list .tr { font-size: 13px; padding: 4px 9px 8px; }
-  .large { width: min(420px, 90vw); height: auto; min-height: 300px; border-radius: 14px; }
+  .large { width: min(420px, 90vw); height: auto; min-height: 300px; border-radius: var(--radius-win); }
   .large .tg { font-size: 14px; padding: 6px 12px; } .large .tg b { font-size: 20px; }
   .large .tn { font-size: 26px; padding: 12px 16px 0; }
   .large .tr { font-size: 19px; line-height: 1.35; padding: 8px 16px 18px; }

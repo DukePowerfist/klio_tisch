@@ -27,7 +27,7 @@
   .log { position: fixed; top: 0; right: 0; bottom: 0; width: var(--log-w); z-index: 96; display: flex; flex-direction: column; background: var(--panel-bg); border-left: 1px solid var(--line); box-sizing: border-box; }
   header { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--line); }
   h2 { flex: 1; margin: 0; font-size: 14px; font-weight: 600; }
-  button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 3px 9px; font: inherit; font-size: 12px; cursor: pointer; }
   button:hover { background: var(--button-hover); }
   ol { flex: 1; list-style: none; margin: 0; padding: 8px 12px; overflow: auto; font-size: 13px; line-height: 1.4; }
   li + li { margin-top: 3px; }

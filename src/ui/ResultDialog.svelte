@@ -107,7 +107,7 @@
   /* feine Linie zwischen Hauptknopf und ×, damit man nicht schließt statt würfelt */
   .sep { align-self: stretch; margin: 4px 2px; border-left: 1px solid var(--pane-rule); }
   /* × wie in den Einstellungen */
-  header .close { background: none; border: none; border-radius: 8px; padding: 5px; line-height: 0; color: var(--ink); opacity: 0.75; cursor: pointer; }
+  header .close { background: none; border: none; border-radius: var(--radius-m); padding: 5px; line-height: 0; color: var(--ink); opacity: 0.75; cursor: pointer; }
   header .close:hover { background: var(--button-hover); opacity: 1; }
   .close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
   .body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 22px; }

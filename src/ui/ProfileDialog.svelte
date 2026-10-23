@@ -73,7 +73,7 @@
 </Modal>
 
 <style>
-  input { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: #111; }
+  input { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
   .label { font-size: 13px; opacity: 0.8; margin-bottom: 6px; }
   .colors { display: grid; grid-template-columns: repeat(4, 40px); gap: 10px; margin-bottom: 14px; }
   .colors .swatch { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: var(--c); border: 3px solid transparent; }

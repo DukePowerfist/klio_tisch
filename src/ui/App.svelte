@@ -91,6 +91,6 @@
 <Menu onChooseSeat={() => (joinOpen = true)} onProfile={() => (profileOpen = true)} />
 
 <style>
-  .error, .save-error { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); background: var(--warn-bg); color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 3000000; }
+  .error, .save-error { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); background: var(--warn-bg); color: var(--warn-ink); padding: 10px 18px; border-radius: var(--radius-m); z-index: 3000000; }
   .center { position: fixed; inset: 0; display: grid; place-items: center; margin: 0; font-size: 18px; opacity: 0.8; }
 </style>

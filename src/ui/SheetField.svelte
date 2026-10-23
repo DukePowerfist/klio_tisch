@@ -63,8 +63,8 @@
 
 <style>
   input { position: absolute; box-sizing: border-box; background: transparent; border: 0; outline: 0; font: inherit; color: inherit; padding: 0 3px; margin: 0; }
-  input:focus { background: rgba(255, 235, 150, 0.5); }
-  .overwritten { background: rgba(240, 160, 144, 0.55); transition: background 0.6s; }
+  input:focus { background: var(--sheet-focus); }
+  .overwritten { background: var(--sheet-overwritten); transition: background 0.6s; }
   .center, .number { text-align: center; font-weight: 700; padding: 0; }
-  .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); color: #666; font-style: italic; }
+  .struck { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--danger); color: var(--sheet-struck); font-style: italic; }
 </style>

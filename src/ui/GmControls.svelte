@@ -105,7 +105,7 @@
   .closed .toggle { margin-left: -3px; border-left: none; border-radius: calc(var(--menu-radius) - 1px); }
   .toggle:hover { background: var(--menu-item-hover); }
   .toggle:focus { outline: none; }
-  .toggle:focus-visible { outline: 2px solid var(--menu-focus); outline-offset: -2px; }
+  .toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
   .toggle::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -4px 0 0 -5px; border: solid var(--menu-count); border-width: 0 1.5px 1.5px 0;
     rotate: -45deg; transition: rotate var(--pop) ease-out, margin-left var(--pop) ease-out; }
   .closed .toggle::after { margin-left: -2px; rotate: 135deg; }

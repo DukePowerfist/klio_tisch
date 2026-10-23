@@ -52,5 +52,5 @@
   .cursor { position: absolute; left: 0; top: 0; z-index: 600000; pointer-events: none; transform-origin: 0 0; transition: transform 0.08s linear; }
   .ring { position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; box-sizing: border-box; border: 2px solid var(--c); border-radius: 50%; opacity: 0; }
   svg { display: block; fill: var(--c); stroke: #000; stroke-width: 1; }
-  span { position: absolute; left: 14px; top: 16px; font-size: 12px; white-space: nowrap; background: var(--c); color: #111; padding: 1px 6px; border-radius: 6px; }
+  span { position: absolute; left: 14px; top: 16px; font-size: 12px; white-space: nowrap; background: var(--c); color: var(--dark-ink); padding: 1px 6px; border-radius: var(--radius-s); }
 </style>

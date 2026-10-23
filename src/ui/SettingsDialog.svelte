@@ -219,14 +219,14 @@
   .side { width: 190px; flex: none; background: var(--pane-side); border-right: 1px solid var(--pane-rule); padding: 16px 10px; box-sizing: border-box; }
   .heading { margin: 0 10px 12px; font-size: 13px; opacity: 0.75; }
   [role='tablist'] { display: flex; flex-direction: column; gap: 2px; }
-  .side button { background: none; border: none; border-radius: 6px; padding: 7px 10px; text-align: left; }
+  .side button { background: none; border: none; border-radius: var(--radius-s); padding: 7px 10px; text-align: left; }
   .side button:hover { background: var(--pane-current); }
   .side button.current { background: var(--pane-current); font-weight: 600; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 12px 22px; border-bottom: 1px solid var(--pane-rule); }
   .titleline { display: flex; align-items: center; gap: 10px; }
   h2 { margin: 0; font-size: 17px; font-weight: 600; }
-  .scope { font-size: 12px; font-weight: normal; padding: 1px 8px; border: 1px solid var(--pane-rule); border-radius: 999px; opacity: 0.8; }
+  .scope { font-size: 12px; font-weight: normal; padding: 1px 8px; border: 1px solid var(--pane-rule); border-radius: var(--radius-pill); opacity: 0.8; }
   header .close { background: none; border: none; padding: 5px; line-height: 0; opacity: 0.75; }
   header .close:hover { background: var(--button-hover); opacity: 1; }
   .close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
@@ -238,14 +238,14 @@
   .defaults { margin-bottom: 4px; border-bottom: 1px solid var(--pane-rule); }
   .ask { font-size: 13px; }
   /* Schalter: Kästchen mit role="switch", nur anders gezeichnet */
-  .switch { appearance: none; position: relative; width: 36px; height: 20px; margin: 0; border-radius: 10px; background: var(--switch-off); cursor: pointer; transition: background var(--glide); }
+  .switch { appearance: none; position: relative; width: 36px; height: 20px; margin: 0; border-radius: var(--radius-pill); background: var(--switch-off); cursor: pointer; transition: background var(--glide); }
   .switch::before { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); transition: transform var(--glide); }
   .switch:checked { background: var(--switch-on); }
   .switch:checked::before { transform: translateX(16px); }
   .switch:focus-visible { outline: 2px solid var(--accent-hint); outline-offset: 2px; }
   /* Spielerzahl (5s): Zahlenreihe aus nativen Radios; das Kästchen liegt unsichtbar über der Zahl und nimmt den Klick */
   .numbers { display: flex; gap: 4px; margin: 0; padding: 0; border: none; }
-  .numbers label { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--pane-rule); border-radius: 6px; font-variant-numeric: tabular-nums; }
+  .numbers label { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--pane-rule); border-radius: var(--radius-s); font-variant-numeric: tabular-nums; }
   .numbers label:hover { background: var(--button-hover); }
   .numbers label:has(:checked) { background: var(--pane-current); border-color: var(--menu-confirm-rim); font-weight: 600; }
   .numbers input { appearance: none; position: absolute; inset: 0; margin: 0; border-radius: inherit; cursor: pointer; }

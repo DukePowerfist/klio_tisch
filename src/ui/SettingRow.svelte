@@ -30,6 +30,6 @@
   .text { flex: 1 1 12em; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .desc { font-size: 13px; opacity: 0.7; line-height: 1.35; }
   .problem { font-size: 13px; color: var(--reason); }
-  .changed { color: var(--accent-hint); }
+  .changed { color: var(--changed); }
   .control { flex: none; max-width: 100%; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; display: flex; align-items: center; gap: 8px; }
 </style>
