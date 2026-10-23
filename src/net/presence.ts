@@ -67,6 +67,7 @@ export class Presence {
 
   close(): void {
     clearTimeout(this.timer);
+    this.timer = undefined; // sonst plant `set` nie wieder
   }
 
   private flush(): void {

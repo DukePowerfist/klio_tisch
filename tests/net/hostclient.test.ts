@@ -646,6 +646,22 @@ describe('Mauszeiger (8.3)', () => {
     await net.deliver();
     expect(seen.has(ta.self)).toBe(false);
   });
+
+  it('nach close mit ausstehender Meldung: set sendet wieder', async () => {
+    const net = new MemoryNetwork();
+    const ta = net.connect();
+    const tb = net.connect();
+    let seen: ReadonlyMap<string, PresenceInfo> = new Map();
+    const a = new Presence(ta, () => {});
+    new Presence(tb, (others) => (seen = new Map(others)));
+    const info = (x: number): PresenceInfo => ({ who: 'seat1', name: 'Ida', at: { anchor: 'center', x, y: 0.5 }, drag: [], grab: null, dropped: null, open: null });
+    a.set(info(0.1));
+    a.close();
+    a.set(info(0.4));
+    await new Promise((r) => setTimeout(r, 80));
+    await net.deliver();
+    expect(seen.get(ta.self)).toEqual(info(0.4));
+  });
 });
 
 describe('Sicherung (A34) und Datei (8.2)', () => {
