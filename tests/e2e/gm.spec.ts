@@ -1,22 +1,22 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
-import { expect, test, type Locator } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
-test('Expedition: vier Tabellen; „neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
+test('Expedition: vier Tabellen; „Neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
   // Protokoll vorher öffnen: Daran sieht der Test, wann ein Ereignis angekommen ist
   await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Expedition starten' });
-  const rows = dialog.locator('.row b');
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  const rows = dialog.locator('.row .value');
   await expect(rows).toHaveCount(4);
   await expect(dialog).toContainText('Diese Expedition führt euch …');
   const before = await rows.allTextContents();
   await expect(logged).toHaveCount(1);
-  await dialog.getByRole('button', { name: 'neu', exact: true }).last().click();
+  await dialog.getByRole('button', { name: 'Neu würfeln: Doch ihr müsst schnell handeln, denn …' }).click();
   // erst weiter, wenn das Ereignis da ist (es öffnet das Fenster bei allen, also auch nach Esc wieder)
   await expect(logged).toHaveCount(2);
   await expect.poll(async () => (await rows.allTextContents()).slice(0, 3)).toEqual(before.slice(0, 3));
@@ -28,9 +28,84 @@ test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) 
   await page.getByRole('button', { name: 'Orakel', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Orakel' });
   await expect(dialog.locator('.word')).toHaveCount(2);
-  await expect(dialog.locator('.word small').first()).toHaveText(/^(Herz|Pik|Kreuz) (\d+|B|D|K|A)$/);
+  await expect(dialog.locator('.word .card').first()).toHaveText(/^(Herz|Pik|Kreuz) (\d+|B|D|K|A)$/);
   await dialog.getByRole('button', { name: 'Neu ziehen' }).click();
   await expect(dialog.locator('.word')).toHaveCount(2);
+});
+
+// ---------- Ergebnisfenster im Stil der Einstellungen (5t, 10.6) ----------
+
+/** Die nächsten Würfe des Hosts (`cryptoRng`: v % 13) liefern genau diese Werte, danach wieder echter Zufall */
+async function fixRolls(page: Page, values: number[]) {
+  await page.evaluate((vals) => {
+    const orig = crypto.getRandomValues.bind(crypto);
+    const queue = [...vals];
+    crypto.getRandomValues = (<T extends ArrayBufferView | null>(a: T): T => {
+      if (queue.length > 0 && a instanceof Uint32Array && a.length === 1) {
+        a[0] = queue.shift()!;
+        if (queue.length === 0) crypto.getRandomValues = orig;
+        return a;
+      }
+      return orig(a as never) as T;
+    }) as typeof crypto.getRandomValues;
+  }, values);
+}
+
+/** Indizes der längsten Einträge je Tabelle (expedition.yaml) */
+const LONGEST = [6, 10, 12, 5];
+
+test('Ergebnisfenster: Kopf mit Titel und ×, unten nur der Hauptknopf, vier verschieden benannte „Neu“', async ({ page }) => {
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog.locator('h2')).toHaveText('Expedition');
+  await expect(dialog.locator('.row button')).toHaveText(['Neu', 'Neu', 'Neu', 'Neu']);
+  const names = await dialog.locator('.row button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label')));
+  expect(new Set(names).size).toBe(4);
+  expect(names[1]).toBe('Neu würfeln: Bekannt für …');
+  await expect(dialog.locator('footer').getByRole('button')).toHaveText(['Alles neu']);
+  await expect(dialog.getByRole('button', { name: 'Schließen' })).toHaveCount(1);
+  // × schließt, Klick daneben auch
+  await dialog.getByRole('button', { name: 'Schließen' }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
+  const oracle = page.getByRole('dialog', { name: 'Orakel' });
+  await expect(oracle.locator('h2')).toHaveText('Orakel');
+  await expect(oracle.locator('footer').getByRole('button')).toHaveText(['Neu ziehen']);
+  await page.mouse.click(5, 5);
+  await expect(oracle).toHaveCount(0);
+});
+
+test('Ergebnisfenster: etwa 560 px breit; längste Einträge ohne Bildlauf, im kleinen Fenster scrollt nur der Inhalt', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await fixRolls(page, LONGEST);
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
+  const body = dialog.locator('.body');
+  const scrolls = () => body.evaluate((b) => b.scrollHeight > b.clientHeight);
+  expect((await dialog.boundingBox())!.width).toBeCloseTo(560, -1);
+  expect(await scrolls()).toBe(false);
+  await page.setViewportSize({ width: 1600, height: 900 });
+  expect(await scrolls()).toBe(false);
+  // kleines Fenster: nur der Inhalt scrollt, Kopf und Hauptknopf bleiben im Bild
+  await page.setViewportSize({ width: 800, height: 450 });
+  await expect.poll(scrolls).toBe(true);
+  for (const part of [dialog.getByRole('button', { name: 'Schließen' }), dialog.getByRole('button', { name: 'Alles neu' })]) {
+    const b = (await part.boundingBox())!;
+    expect(b.y).toBeGreaterThanOrEqual(0);
+    expect(b.y + b.height).toBeLessThanOrEqual(450);
+  }
+});
+
+test('andere Fenster unverändert (5t, Q1): Knöpfe mit Grund und Rahmen, × der Einstellungen ohne', async ({ page }) => {
+  const look = (l: Locator) => l.evaluate((b) => { const c = getComputedStyle(b); return { bg: c.backgroundColor, border: c.borderTopStyle }; });
+  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
+  expect(await look(reset.getByRole('button').first())).toEqual({ bg: 'rgb(44, 90, 71)', border: 'solid' });
+  await page.keyboard.press('Escape');
+  await openSettings(page, 'Darstellung');
+  const settings = page.getByRole('dialog', { name: 'Einstellungen' });
+  expect(await look(settings.locator('header .close'))).toEqual({ bg: 'rgba(0, 0, 0, 0)', border: 'none' });
 });
 
 test('Spielerzahl blendet Bögen und Dock-Knöpfe aus, nichts geht verloren', async ({ page }) => {

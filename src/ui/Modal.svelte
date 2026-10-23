@@ -1,6 +1,7 @@
 <script lang="ts">
   // Gemeinsames Fenster: abgedunkelter Hintergrund, Klick daneben oder Esc schließt.
-  // Größe: narrow (Rückfragen, schmal), wide (Trumpf, Ergebnisse), pane (Einstellungen: feste Größe, Inhalt ordnet sich selbst).
+  // Größe: narrow (Rückfragen, schmal), wide (Trumpf), pane (Einstellungen: feste Größe, Inhalt ordnet sich selbst),
+  // result (Expedition und Orakel, 5t: Spalte ohne Innenrand, Knöpfe zeichnet das Fenster selbst).
   // Tab bleibt im obersten Fenster (Schritt 5f), statt in den Tisch dahinter zu laufen.
   import type { Snippet } from 'svelte';
 
@@ -9,7 +10,7 @@
     onclose: () => void;
     /** Esc zuerst hier (z. B. offene Rückfrage abbrechen); true = erledigt, Fenster bleibt offen */
     onescape?: () => boolean;
-    size?: 'narrow' | 'wide' | 'pane';
+    size?: 'narrow' | 'wide' | 'pane' | 'result';
     children: Snippet;
   } = $props();
 
@@ -55,9 +56,11 @@
   .box { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; width: min(860px, 94vw); max-height: 90vh; overflow: auto; font-size: 15px; animation: pop-in var(--pop) var(--spring-soft); }
   .box.narrow { width: auto; max-width: 420px; border-radius: 12px; }
   .box.pane { width: min(780px, 94vw); height: min(620px, 85vh); max-height: none; padding: 0; overflow: hidden; display: flex; }
-  .box :global(button) { background: var(--button-hover); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; font: inherit; cursor: pointer; }
-  .box :global(button:disabled) { opacity: 0.45; cursor: not-allowed; }
-  .box :global(button.danger) { background: var(--warn-bg); }
+  .box.result { width: min(560px, 94vw); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+  /* Knöpfe nur in den übrigen Größen; :where hält die Stärke der Regeln wie bisher (0,2,1, 5t Q1) */
+  .box:where(:not(.result)) :global(button) { background: var(--button-hover); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; font: inherit; cursor: pointer; }
+  .box:where(:not(.result)) :global(button:disabled) { opacity: 0.45; cursor: not-allowed; }
+  .box:where(:not(.result)) :global(button.danger) { background: var(--warn-bg); }
   .box :global(select) { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; font: inherit; }
   /* gemeinsame Bausteine der Fenster: Hinweiszeile und Knopfreihe */
   .box :global(.note) { font-size: 13px; opacity: 0.75; }
