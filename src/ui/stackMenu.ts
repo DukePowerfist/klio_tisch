@@ -24,9 +24,8 @@ export type StackEntry = {
   title: string;
   /** Kürzel bei offenem Menü, klein geschrieben */
   key: string;
-  /** nur Mischen: was es einsammelt; `confirm` ist der Text der Rückfrage, null = ohne Rückfrage */
+  /** nur Mischen: was es einsammelt */
   effect?: ShuffleEffect;
-  confirm?: string | null;
 };
 
 export type StackContext = {
@@ -62,8 +61,8 @@ export function stackEntries(c: StackContext): StackEntry[] {
     const after = c.predict({ type: 'zone.shuffle', zone: c.zone });
     if (!after) return off('reject.noAction');
     const effect = shuffleEffect(c.table, after);
-    if (empty && effect.total === 0) return { ...off('stack.empty'), effect, confirm: null };
-    return { ...base, allowed, enabled: true, title: shuffleTitle(effect, c.zone, key), effect, confirm: effect.total ? t('stack.confirm', { cards: cards(effect.total) }) : null };
+    if (empty && effect.total === 0) return { ...off('stack.empty'), effect };
+    return { ...base, allowed, enabled: true, title: shuffleTitle(effect, c.zone, key), effect };
   });
 }
 
@@ -84,8 +83,6 @@ export type ShuffleEffect = {
   from: ZoneId[];
   /** wohin, mit Anzahl; in der Reihenfolge der Zonen im Stand */
   into: Record<ZoneId, number>;
-  /** sortierte Karten-IDs: Kennung für die Rückfrage (N6) */
-  key: string;
 };
 
 /** Vergleicht die Zonen vor und nach einem Probelauf von `zone.shuffle` (N1): Mischen selbst rechnet die Engine. */
@@ -94,17 +91,17 @@ export function shuffleEffect(before: TableState<unknown>, after: TableState<unk
   for (const [z, ids] of Object.entries(before.zones)) for (const id of ids ?? []) was.set(id, z);
   const from = new Set<ZoneId>();
   const into: Record<ZoneId, number> = {};
-  const moved: CardId[] = [];
+  let total = 0;
   for (const [z, ids] of Object.entries(after.zones)) {
     for (const id of ids ?? []) {
       const old = was.get(id);
       if (old === undefined || old === z) continue;
       from.add(old);
       into[z] = (into[z] ?? 0) + 1;
-      moved.push(id);
+      total++;
     }
   }
-  return { total: moved.length, from: [...from], into, key: moved.sort().join(',') };
+  return { total, from: [...from], into };
 }
 
 // ---------- Lage ----------

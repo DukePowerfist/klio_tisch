@@ -19,7 +19,7 @@ const byAction = (table: K, zone: ZoneId, can?: (type: string) => boolean) => Ob
 
 const s0 = fresh();
 const deckCards = s0.zones['deck']!;
-const [easy1, easy2] = s0.zones['diamonds_easy']!;
+const [easy1] = s0.zones['diamonds_easy']!;
 const medium1 = s0.zones['diamonds_medium']![0]!;
 const hard1 = s0.zones['diamonds_hard']![0]!;
 /** Deck mit 5 eigenen Karten und 2 Karo in der Ablage */
@@ -29,12 +29,12 @@ const displayAllTiers = place(s0, 'display', [easy1!, medium1, hard1], true);
 const emptied = (state: K, zone: ZoneId) => ({ ...structuredClone(state), zones: { ...state.zones, [zone]: [] } }) as K;
 
 describe('Stapelmenü: Einträge (10.2)', () => {
-  it('feste Reihenfolge Ziehen, Umdrehen, Mischen; Kürzel Z, U, M; ohne Einsammeln keine Rückfrage', () => {
+  it('feste Reihenfolge Ziehen, Umdrehen, Mischen; Kürzel Z, U, M', () => {
     const list = entries(s0, 'deck');
     expect(list.map((e) => [e.action, e.label, e.key])).toEqual([['draw', 'Ziehen', 'z'], ['flip', 'Umdrehen', 'u'], ['shuffle', 'Mischen', 'm']]);
     expect(list.every((e) => e.allowed && e.enabled)).toBe(true);
     expect(list.map((e) => e.title)).toEqual(['Oberste Karte auf die Ablage ziehen (Z)', 'Oberste Karte umdrehen (U)', 'Stapel mischen (M)']);
-    expect(list[2]).toMatchObject({ confirm: null, effect: { total: 0 } });
+    expect(list[2]).toMatchObject({ effect: { total: 0 } });
   });
 
   it('Karo-Stapel zieht in die Auslage', () => {
@@ -46,17 +46,16 @@ describe('Stapelmenü: Einträge (10.2)', () => {
     for (const a of ['draw', 'flip', 'shuffle']) expect(e[a]).toMatchObject({ allowed: true, enabled: false, title: 'Stapel leer' });
   });
 
-  it('leeres Deck mit Karten in der Ablage: nur Mischen, mit Rückfrage und Anzahl', () => {
+  it('leeres Deck mit Karten in der Ablage: nur Mischen, mit Anzahl', () => {
     const e = byAction(emptied(deckWithDiamonds, 'deck'), 'deck');
     expect(e.draw).toMatchObject({ enabled: false, title: 'Stapel leer' });
     expect(e.flip).toMatchObject({ enabled: false, title: 'Stapel leer' });
-    expect(e.shuffle).toMatchObject({ enabled: true, confirm: '7 Karten zurückholen?' });
+    expect(e.shuffle).toMatchObject({ enabled: true, effect: { total: 7 } });
   });
 
   it('Mischen am Deck nennt, was zurückkommt und wohin die Karo gehen', () => {
     const e = byAction(deckWithDiamonds, 'deck').shuffle!;
     expect(e.title).toBe('Stapel mischen; holt 7 Karten aus der Ablage zurück (2 davon nach Leicht und Schwierig) (M)');
-    expect(e.confirm).toBe('7 Karten zurückholen?');
   });
 
   it('Mischen an einem Karo-Stapel holt die Karo aller Stufen aus der Auslage; eine einzelne Karte in der Einzahl', () => {
@@ -64,7 +63,7 @@ describe('Stapelmenü: Einträge (10.2)', () => {
       'Stapel mischen; holt 3 Karten aus der Auslage zurück (2 davon nach Mittel und Schwierig) (M)',
     );
     const one = place(s0, 'display', [easy1!], true);
-    expect(byAction(one, 'diamonds_hard').shuffle).toMatchObject({ confirm: '1 Karte zurückholen?', title: 'Stapel mischen; holt 1 Karte aus der Auslage zurück (1 davon nach Leicht) (M)' });
+    expect(byAction(one, 'diamonds_hard').shuffle).toMatchObject({ title: 'Stapel mischen; holt 1 Karte aus der Auslage zurück (1 davon nach Leicht) (M)' });
   });
 
   it('ohne Recht ausgegraut mit dem Text der Ablehnung; ohne ein einziges Recht nichts erlaubt', () => {
@@ -96,15 +95,7 @@ describe('Stapelmenü: Wirkung des Mischens aus dem Probelauf (N1)', () => {
   });
 
   it('nichts einzusammeln: leer', () => {
-    expect(effectOf(s0, 'deck')).toEqual({ total: 0, from: [], into: {}, key: '' });
-  });
-
-  it('Kennung unabhängig von der Reihenfolge, ändert sich mit den Karten', () => {
-    const a = effectOf(place(s0, 'display', [easy1!, hard1], true), 'diamonds_easy').key;
-    const b = effectOf(place(s0, 'display', [hard1, easy1!], true), 'diamonds_easy').key;
-    const c = effectOf(place(s0, 'display', [hard1, easy1!, easy2!], true), 'diamonds_easy').key;
-    expect(a).toBe(b);
-    expect(c).not.toBe(a);
+    expect(effectOf(s0, 'deck')).toEqual({ total: 0, from: [], into: {} });
   });
 });
 

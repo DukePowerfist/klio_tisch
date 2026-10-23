@@ -36,7 +36,6 @@ stack:                                    # Stapelmenü (neu, Schritt 5o, ARCHIT
   and: und
   cardsOne: 1 Karte
   cardsMany: "{n} Karten"
-  confirm: "{cards} zurückholen?"
   empty: Stapel leer
 
 toast:

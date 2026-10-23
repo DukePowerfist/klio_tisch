@@ -2,12 +2,10 @@
   // Stapelmenü (ARCHITEKTUR.md 10.2, Schritt 5o): an jedem Stapel gleich, direkt am Stapel, außerhalb des skalierten
   // Tisches (gleich große Schrift bei jedem Zoom). Einträge und Lage rechnet stackMenu.ts, die Geometrie liefert
   // Board.svelte beim Öffnen (view.stackMenu); verschiebt sich der Stapel, schließt Board.svelte das Menü (N4).
-  import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import type { CardId } from '../engine/types';
   import { locate } from '../engine/zones';
   import { submitOrSay } from './commands';
-  import { Confirm } from './confirm.svelte';
   import { session } from './session.svelte';
   import { placeMenu, stackEntries, type StackEntry } from './stackMenu';
   import { t } from './texts';
@@ -39,23 +37,8 @@
     if (!entries.some((e) => e.allowed)) close();
   });
 
-  // Mischen fragt nach, wenn es Karten von woanders zurückholt (F1): erster Klick nennt die Folge, zweiter mischt.
-  // Die Rückfrage verfällt nach 3,5 s, beim Schließen (neues Menü, neues Confirm) und wenn sich die einzusammelnden
-  // Karten inzwischen geändert haben (N6, Kennung aus shuffleEffect)
-  const shuffleConfirm = new Confirm();
-  let armedFor: string | null = null;
-  const gathered = $derived(entries.find((e) => e.action === 'shuffle')?.effect?.key ?? null);
-  $effect(() => {
-    if (shuffleConfirm.armed && gathered !== armedFor) untrack(() => shuffleConfirm.cancel());
-  });
-  $effect(() => () => shuffleConfirm.cancel());
-
   function run(e: StackEntry) {
     if (!e.enabled) return;
-    if (e.action === 'shuffle' && !shuffleConfirm.click(!!e.confirm)) {
-      armedFor = e.effect?.key ?? null;
-      return;
-    }
     void submitOrSay({ type: `zone.${e.action}`, zone });
   }
 
@@ -70,7 +53,7 @@
   }
   // Esc schließt nur das Menü, nicht auch die Rollenansicht (Dock). Kürzel Z, U, M (F2, N5): groß wie klein, nicht in
   // Textfeldern, nicht mit Strg, Alt oder Meta, nicht bei offenem Fenster; nur behandelte Tasten werden abgefangen.
-  // Eine gehaltene Taste wiederholt nichts, so bestätigt ein gehaltenes M die Rückfrage nicht.
+  // Eine gehaltene Taste wiederholt nichts.
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       e.stopImmediatePropagation();
@@ -105,7 +88,6 @@
   <div class="menu-head"><span>{label}</span><span class="count">{count}</span></div>
   {#each entries as e, i (e.action)}
     {#if i === 1}<hr class="menu-rule" />{/if}
-    {@const armed = e.action === 'shuffle' && shuffleConfirm.armed}
-    <button role="menuitem" class="menu-item" class:menu-main={e.action === 'draw'} class:armed aria-disabled={e.enabled ? null : 'true'} title={e.title} onclick={() => run(e)}>{armed ? e.confirm : e.label}</button>
+    <button role="menuitem" class="menu-item" class:menu-main={e.action === 'draw'} aria-disabled={e.enabled ? null : 'true'} title={e.title} onclick={() => run(e)}>{e.label}</button>
   {/each}
 </div>

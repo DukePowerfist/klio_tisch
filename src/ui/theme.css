@@ -55,7 +55,7 @@
   --menu-radius: 10px;
   --menu-pad: 8px;
   --menu-gap: 10px;         /* Abstand Anker zu Menü, Platz für den Zipfel; wie MENU_GAP in stackMenu.ts */
-  --menu-w: 208px;          /* fest, reicht für die längste Rückfrage („12 Karten zurückholen?“, D5) */
+  --menu-w: 208px;          /* fest, Höhe und Lage bleiben (D5) */
   --menu-w-wide: 240px;     /* Namensschild-Menü und Menü oben rechts (5p): „Charakter importieren …“, Namen beim Umsetzen */
   --menu-head: rgba(243, 239, 227, 0.8);
   --menu-count: rgba(243, 239, 227, 0.62);  /* Zahl, Name im Kopf, „offen“, Pfeil; 4,7 : 1 auch beim Überfahren (5p) */
