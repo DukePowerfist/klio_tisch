@@ -6,7 +6,7 @@ import { RANKS, SUITS } from '../../../engine/types';
 import { resolveText } from './texts';
 import {
   DeckFile, ExpeditionFile, LayoutsFile, NamesFile, PermissionsFile, SheetFile, SkinFile,
-  TablesFile, TextsFile, TrumpSourcesFile, TrumpsFile, ZonesFile, sheetFieldInstances, type TextTree,
+  TablesFile, TextsFile, TrumpSourcesFile, TrumpsFile, ZonesFile, sheetFieldInstances, sheetFields, type TextTree,
 } from './schema';
 
 export const CONTENT_FILES = {
@@ -99,6 +99,20 @@ function crossCheck(c: KlioContent, errors: string[]): void {
   for (const f of instances) if (!(f in c.skinPaper.fields)) err(`skins/paper: Feld ${f} hat keine Position`);
   for (const f of Object.keys(c.skinPaper.fields)) if (!instances.has(f)) err(`skins/paper: unbekanntes Feld ${f}`);
   for (const z of c.sheet.zones) if (!(z in c.skinPaper.zones)) err(`skins/paper: Bogenzone ${z} hat keine Position`);
+  // Klickflächen (5z): ein Kästchen mit `hit` reicht in kein anderes Kästchen und kein Feld (Rand an Rand ist erlaubt)
+  type Rect = { x0: number; y0: number; x1: number; y1: number };
+  const kinds = new Map(sheetFields(c.sheet).map((f) => [f.id, f.kind]));
+  const square = (x: number, y: number, s: number): Rect => ({ x0: x - s / 2, y0: y - s / 2, x1: x + s / 2, y1: y + s / 2 });
+  const rects: [string, Rect, boolean][] = Object.entries(c.skinPaper.fields).flatMap(([id, p]): [string, Rect, boolean][] => {
+    if ('size' in p) return [[id, square(p.x, p.y, Math.max(p.size, p.hit ?? 0)), p.hit !== undefined]];
+    if ('w' in p && kinds.get(id) !== 'overlay') return [[id, { x0: p.x, y0: p.y, x1: p.x + p.w, y1: p.y + p.h }, false]];
+    return [];
+  });
+  const overlap = (a: Rect, b: Rect) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  for (const [id, r, hit] of rects) {
+    if (!hit) continue;
+    for (const [other, o] of rects) if (other !== id && overlap(r, o)) err(`skins/paper: Klickfläche von ${id} reicht in ${other}`);
+  }
 
   // Ansichten: jede Tischzone hat Form und Lage in der Tischmitte
   for (const z of tableZones) {

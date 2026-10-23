@@ -1,7 +1,9 @@
 # Haut „Papier“: Bogenbild je Variante, Lage jedes Felds und jeder Bogenzone in Bildkoordinaten.
 # Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs), danach ergänzt:
 # font/tone an Kästchen, align am Namen, Lage des Zählers „neue Narben“.
-# Felder: x, y, w, h (linke obere Ecke + Größe), font, align. Kästchen: x, y = Mitte, size, font, tone.
+# Felder: x, y, w, h (linke obere Ecke + Größe), font, align. Kästchen: x, y = Mitte, size, font, tone;
+# hit = unsichtbare Klickfläche um die Mitte (5z), höchstens bis an Nachbarkästchen und Felder (prüft validate.ts).
+# Die Laternen haben keine: Sie liegen enger, als sie groß sind.
 # Beschriftungen ohne Rahmen (Zähler): x, y, font.
 
 size: [ 662, 936 ]
@@ -17,31 +19,31 @@ fields:
   strengths.text.4: { x: 192, y: 304, w: 212, h: 27, font: 17 }
   weaknesses.0: { x: 190, y: 339, w: 205, h: 26, font: 17 }
   weaknesses.1: { x: 88, y: 371, w: 232, h: 24, font: 17 }
-  strengths.improved.0: { x: 388, y: 190, size: 20, font: 22 }
-  strengths.improved.1: { x: 426, y: 220, size: 20, font: 22 }
-  strengths.improved.2: { x: 317, y: 256, size: 20, font: 22 }
-  strengths.improved.3: { x: 331, y: 281, size: 20, font: 22 }
-  strengths.improved.4: { x: 419, y: 317, size: 20, font: 22 }
-  weaknessMarks.0: { x: 340.5, y: 376, size: 13, font: 13 }
-  weaknessMarks.1: { x: 356, y: 377, size: 13, font: 13 }
-  weaknessMarks.2: { x: 370.5, y: 377, size: 13, font: 13 }
+  strengths.improved.0: { x: 388, y: 190, size: 20, hit: 32, font: 22 }
+  strengths.improved.1: { x: 426, y: 220, size: 20, hit: 32, font: 22 }
+  strengths.improved.2: { x: 317, y: 256, size: 20, hit: 25, font: 22 }
+  strengths.improved.3: { x: 331, y: 281, size: 20, hit: 25, font: 22 }
+  strengths.improved.4: { x: 419, y: 317, size: 20, hit: 28, font: 22 }
+  weaknessMarks.0: { x: 340.5, y: 376, size: 13, hit: 14, font: 13 }
+  weaknessMarks.1: { x: 356, y: 377, size: 13, hit: 14, font: 13 }
+  weaknessMarks.2: { x: 370.5, y: 377, size: 13, hit: 14, font: 13 }
   name: { x: 146, y: 122, w: 112, h: 25, font: 21, align: center }
   gear.text.0: { x: 452, y: 445, w: 128, h: 19, font: 14 }
-  gear.struck.0: { x: 589.5, y: 454.5, size: 13 }
+  gear.struck.0: { x: 589.5, y: 454.5, size: 13, hit: 18 }
   gear.text.1: { x: 452, y: 465, w: 128, h: 19, font: 14 }
-  gear.struck.1: { x: 589.5, y: 474.5, size: 13 }
+  gear.struck.1: { x: 589.5, y: 474.5, size: 13, hit: 18 }
   gear.text.2: { x: 452, y: 487, w: 128, h: 19, font: 14 }
-  gear.struck.2: { x: 589.5, y: 496.5, size: 13 }
+  gear.struck.2: { x: 589.5, y: 496.5, size: 13, hit: 18 }
   gear.text.3: { x: 452, y: 508, w: 128, h: 19, font: 14 }
-  gear.struck.3: { x: 589.5, y: 517.5, size: 13 }
+  gear.struck.3: { x: 589.5, y: 517.5, size: 13, hit: 18 }
   gear.text.4: { x: 452, y: 527, w: 128, h: 19, font: 14 }
-  gear.struck.4: { x: 589.5, y: 536.5, size: 13 }
+  gear.struck.4: { x: 589.5, y: 536.5, size: 13, hit: 18 }
   gear.text.5: { x: 452, y: 546, w: 128, h: 19, font: 14 }
-  gear.struck.5: { x: 589.5, y: 555.5, size: 13 }
+  gear.struck.5: { x: 589.5, y: 555.5, size: 13, hit: 18 }
   gear.text.6: { x: 452, y: 565, w: 128, h: 19, font: 14 }
-  gear.struck.6: { x: 589.5, y: 574.5, size: 13 }
-  scars.heart: { x: 551, y: 93, size: 30, font: 30, tone: danger }
-  scars.spade: { x: 547, y: 351, size: 30, font: 30, tone: danger }
+  gear.struck.6: { x: 589.5, y: 574.5, size: 13, hit: 18 }
+  scars.heart: { x: 551, y: 93, size: 30, hit: 44, font: 30, tone: danger }
+  scars.spade: { x: 547, y: 351, size: 30, hit: 44, font: 30, tone: danger }
   lamps.0: { x: 586, y: 864, size: 14, font: 13 }
   lamps.1: { x: 586, y: 879, size: 14, font: 13 }
   lamps.2: { x: 588, y: 891, size: 14, font: 13 }

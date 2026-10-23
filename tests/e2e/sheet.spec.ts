@@ -66,6 +66,27 @@ test('Feldfenster (5z): „…“ nur am abgeschnittenen Feld, ganzer Text im Fe
   await expect(strength).toHaveCount(0);
 });
 
+test('Klickflächen (5z): knapp neben dem Kästchen trifft es noch, das Feld daneben bleibt ein Feld', async ({ page }) => {
+  await page.keyboard.press('1');
+  /** Klick `dx` Bildpunkte rechts neben der Mitte eines Kästchens (Bildpunkte nach der Haut, `size` dort) */
+  const besides = async (id: string, size: number, dx: number) => {
+    const b = (await sheet1(page).locator(`[data-check="${id}"]`).boundingBox())!;
+    const k = b.width / size;
+    await page.mouse.click(b.x + b.width / 2 + dx * k, b.y + b.height / 2);
+  };
+  const improved = sheet1(page).locator('[data-check="strengths.improved.0"]');
+  await besides('strengths.improved.0', 20, 14); // sichtbar bis 10, Klickfläche bis 16
+  await expect(improved).toHaveAttribute('aria-pressed', 'true');
+  const scar = sheet1(page).locator('[data-check="scars.heart"]');
+  await besides('scars.heart', 30, -20); // sichtbar bis 15, Klickfläche bis 22
+  await expect(scar).toHaveAttribute('aria-pressed', 'true');
+  // Rüstzeugzeile: ganz rechts im Feld trifft weiter das Feld, nicht den Streichknopf
+  const gear = sheet1(page).locator('[data-field="gear.text.0"]');
+  const g = (await gear.boundingBox())!;
+  await page.mouse.click(g.x + g.width - 2, g.y + g.height / 2);
+  await expect(gear).toBeFocused();
+});
+
 test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'name', 'Ida Weber');

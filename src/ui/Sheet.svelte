@@ -150,6 +150,7 @@
           class:on
           style:left="{c.pos.x - c.pos.size / 2}px"
           style:top="{c.pos.y - c.pos.size / 2}px"
+          style:--hit={c.pos.hit ? `${c.pos.hit}px` : undefined}
           title={t('sheet.strike')}
           onclick={() => submit({ type: 'sheet.toggle', seat, field: c.id })}>–</button>
       {:else}
@@ -164,6 +165,7 @@
           style:top="{c.pos.y - c.pos.size / 2}px"
           style:width="{c.pos.size}px"
           style:height="{c.pos.size}px"
+          style:--hit={c.pos.hit ? `${c.pos.hit}px` : undefined}
           style:font-size="{c.pos.font ?? 22}px"
           onclick={() => submit({ type: 'sheet.toggle', seat, field: c.id })}
         ></button>
@@ -250,6 +252,8 @@
   .paper { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: center / 100% 100% no-repeat; transition: transform var(--shift) var(--shift-ease); }
   .cb { position: absolute; padding: 0; border: 0; background: transparent; cursor: pointer; color: inherit; }
   .cb:disabled, .photo:disabled, .strike:disabled { cursor: default; }
+  /* unsichtbare Klickfläche um die Mitte (`hit` in der Haut, 5z); ohne `hit` so groß wie das Kästchen */
+  .cb::before, .strike::before { content: ''; position: absolute; left: 50%; top: 50%; width: var(--hit, 100%); height: var(--hit, 100%); transform: translate(-50%, -50%); }
   .cb.on::after { content: '\2715'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 700 1em/1 sans-serif; color: var(--dark-ink); }
   .cb.danger.on::after { color: var(--danger); }
   .strike { position: absolute; display: none; width: 13px; height: 13px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; font-size: 10px; line-height: 11px; color: var(--sheet-label); }

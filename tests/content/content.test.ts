@@ -50,6 +50,7 @@ describe('Prüfungen schlagen an', () => {
     ['Kategorie passt nicht', (r) => (r.trumps[0].attributes = ['V']), /passt nicht zu Attributen/],
     ['Haut ohne Feld', (r) => delete r.skinPaper.fields['lamps.2'], /lamps\.2 hat keine Position/],
     ['Haut mit fremdem Feld', (r) => (r.skinPaper.fields['lamps.3'] = { x: 0, y: 0, size: 10 }), /unbekanntes Feld lamps\.3/],
+    ['Klickfläche zu groß', (r) => (r.skinPaper.fields['weaknessMarks.1'].hit = 20), /Klickfläche von weaknessMarks\.1 reicht in weaknessMarks\.(0|2)/],
     ['maxTrumps passt nicht', (r) => (r.trumpSources.maxTrumps = 5), /maxTrumps 5/],
     ['Tabelle mit 12 Einträgen', (r) => delete r.tables.VI.H.A, /tables/],
     ['Zonenbeschriftung fehlt', (r) => delete r.texts.zones.clubs, /zones\.clubs fehlt/],

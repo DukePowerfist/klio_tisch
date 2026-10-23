@@ -138,12 +138,12 @@ export const sheetFieldInstances = (sheet: z.infer<typeof SheetFile>): string[] 
 // fields:
 //   name: { x: 146, y: 122, w: 112, h: 25, font: 21 }    # Feld: linke obere Ecke + Größe
 //   photo: { x: 69.3, y: 74.1, w: 55, h: 80, rotate: -12.4 }  # rotate: gedreht um die Mitte, in Grad
-//   scars.heart: { x: 551, y: 93, size: 30 }             # Kästchen: Mittelpunkt + Größe
+//   scars.heart: { x: 551, y: 93, size: 30, hit: 44 }    # Kästchen: Mittelpunkt + Größe; hit: unsichtbare Klickfläche (5z)
 // zones:
 //   damage: { x: 519.2, y: 125.4, w: 139.4, h: 195.1 }   # bisher 380er-Koordinaten, umgerechnet
 // nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }  # Namensschild in der Draufsicht (5b)
 const Box = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number(), font: z.number().optional(), align: z.literal('center').optional(), rotate: z.number().optional() }).strict();
-const Check = z.object({ x: z.number(), y: z.number(), size: z.number(), font: z.number().optional(), tone: z.literal('danger').optional() }).strict();
+const Check = z.object({ x: z.number(), y: z.number(), size: z.number(), hit: z.number().positive().optional(), font: z.number().optional(), tone: z.literal('danger').optional() }).strict();
 const Label = z.object({ x: z.number(), y: z.number(), font: z.number() }).strict();
 export type SkinBox = z.infer<typeof Box>;
 export type SkinCheck = z.infer<typeof Check>;
