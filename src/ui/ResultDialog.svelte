@@ -50,7 +50,13 @@
         <div class="row">
           <div class="text">
             <span class="prompt">{table.prompt}</span>
-            <span class="value">{table.entries[game.expedition[i]!]}</span>
+            <!-- alle Einträge der Tabelle übereinander, sichtbar nur der gewürfelte: die Zeile ist immer so hoch wie ihr
+                 längster Eintrag, das Fenster ändert beim Neuwürfeln nie die Größe (10.6) -->
+            <span class="slot">
+              {#each table.entries as entry, j (j)}
+                {#if j === game.expedition[i]}<span class="value">{entry}</span>{:else}<span class="ghost" aria-hidden="true">{entry}</span>{/if}
+              {/each}
+            </span>
           </div>
           {#if reroll}
             {@const name = t('gm.rerollRow', { prompt: table.prompt })}
@@ -86,12 +92,17 @@
   .close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
   .body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 22px; }
   /* Expedition: Zeilen wie in den Einstellungen, Frage gedämpft über dem Ergebnis */
-  .row { display: flex; align-items: center; gap: 18px; padding: 10px 0; border-bottom: 1px solid var(--pane-rule); }
+  .row { display: flex; align-items: flex-start; gap: 18px; padding: 10px 0; border-bottom: 1px solid var(--pane-rule); }
   .row:last-child { border-bottom: none; }
   .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .prompt { font-size: 13px; opacity: 0.7; }
-  .row .value { font-size: 18px; line-height: 1.35; }
-  .row .menu-item { flex: none; width: auto; }
+  .slot { display: grid; }
+  .slot > span { grid-area: 1 / 1; font-size: 18px; line-height: 1.35; }
+  .ghost { visibility: hidden; }
+  /* „Neu“ hebt sich leicht ab, damit man den Knopf erkennt: feiner Rand und leichte Tönung, beim Überfahren etwas mehr */
+  /* oben bündig auf Höhe der ersten Zeile des Ergebnisses (Frage 13 px und Abstand darüber) */
+  .row .menu-item { flex: none; width: auto; margin-top: 14px; padding: 4px 12px; border-color: var(--menu-rule); background: var(--menu-item-hover); }
+  .row .menu-item:hover { background: var(--menu-confirm); }
   /* Orakel: zwei Spalten mit feiner Linie dazwischen */
   .words { display: flex; padding: 18px 0; }
   .word { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 12px; text-align: center; }

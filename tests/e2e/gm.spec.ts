@@ -78,6 +78,21 @@ test('Ergebnisfenster: etwa 560 px breit; längste Einträge ohne Bildlauf, im k
   }
 });
 
+test('Ergebnisfenster: Neuwürfeln ändert die Größe nie, auch von den kürzesten zu den längsten Einträgen', async ({ page }) => {
+  await fixRolls(page, [8, 7, 1, 4]);
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog.locator('.row .value').first()).toHaveText('auf das offene Meer.');
+  const short = (await dialog.boundingBox())!;
+  await fixRolls(page, LONGEST);
+  await dialog.getByRole('button', { name: 'Alles neu' }).click();
+  await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
+  expect((await dialog.boundingBox())!).toEqual(short);
+  // die unsichtbaren Einträge liest kein Bildschirmleser, sichtbar ist je Zeile genau einer
+  await expect(dialog.locator('.row .value')).toHaveCount(4);
+  await expect(dialog.getByText('in eine eisige Bergwelt.')).toBeHidden();
+});
+
 test('Ergebnisfenster: Fokus beim Öffnen auf dem ×, Enter schließt ohne zu würfeln; ein weiterer Wurf lässt den Fokus', async ({ page }) => {
   await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
