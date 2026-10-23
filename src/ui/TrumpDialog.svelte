@@ -146,5 +146,5 @@
   .cards .tc { padding: 0; background: none; border: 0; border-radius: var(--menu-radius); text-align: left; }
   .cards .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--pickable) 80%, transparent); }
   .cards .tc.off { opacity: 0.5; }
-  .why { font-size: 13px; margin-top: 4px; }
+  .why { margin-top: 4px; }
 </style>

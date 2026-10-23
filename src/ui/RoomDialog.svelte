@@ -37,7 +37,7 @@
 
 <Modal label={t('room.manageTitle')} onclose={close} size="narrow" anchor>
   <DialogHead title={t('room.manageTitle')} onclose={close} />
-  <b>{t('room.seats')}</b>
+  <h3 class="dialog-heading">{t('room.seats')}</h3>
   <div class="seats">
     {#each SEATS as seat (seat)}
       {@const names = seatNames(table, seat)}
@@ -48,9 +48,9 @@
         {#if !seatVisible(seat, table)}<i>{t('room.hidden')}</i>{/if}
         {#if names.named}<span class="character">{names.character}</span>{' · '}{/if}
         {#if !names.free}
-          {names.person} <small class:on>{t(on ? 'room.online' : 'room.offline')}</small>
+          {names.person} <span class="dialog-aside" class:on>{t(on ? 'room.online' : 'room.offline')}</span>
         {:else}
-          <i>{t('room.free')}</i>{#if names.last}{' '}<small>{t('room.last', { name: names.last })}</small>{/if}
+          <i>{t('room.free')}</i>{#if names.last}{' '}<span class="dialog-aside">{t('room.last', { name: names.last })}</span>{/if}
         {/if}
       </span>
       <span class="actions">
@@ -62,13 +62,13 @@
               {#each to as o (o.seat)}<option value={o.seat}>{o.label}</option>{/each}
             </select>
           {/if}
-          <button title={t('room.releaseTitle')} onclick={() => submitOrSay({ type: 'table.setSeat', seat, occupied: false })}>{t('room.release')}</button>
+          <button class="dialog-small" title={t('room.releaseTitle')} onclick={() => submitOrSay({ type: 'table.setSeat', seat, occupied: false })}>{t('room.release')}</button>
         {/if}
       </span>
     {/each}
   </div>
 
-  <b>{t('room.spectators')}</b>
+  <h3 class="dialog-heading">{t('room.spectators')}</h3>
   {#if spectators.length === 0}
     <p class="note">{t('room.noSpectators')}</p>
   {:else}
@@ -87,7 +87,7 @@
     </div>
   {/if}
 
-  <b>{t('room.link')}</b>
+  <h3 class="dialog-heading">{t('room.link')}</h3>
   {#if confirmRenew}
     <p>{t('room.renewText')}</p>
     <div class="buttons">
@@ -111,8 +111,6 @@
   .seats > span:nth-child(3n + 1) { white-space: nowrap; }
   .who i { opacity: 0.65; margin-right: 6px; }
   .character { font-weight: 600; }
-  small { font-size: 12px; opacity: 0.6; }
-  small.on { color: var(--online); opacity: 1; }
-  .seats button { padding: 4px 10px; }
+  .dialog-aside.on { color: var(--online); opacity: 1; }
   .note { margin: 4px 0 14px; }
 </style>

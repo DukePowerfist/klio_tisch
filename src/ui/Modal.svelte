@@ -107,7 +107,7 @@
   .box :global(select) { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 3px 9px; font: inherit; }
   /* gemeinsame Bausteine der Fenster: Hinweiszeile und Knopfreihe */
   .box :global(.note) { font-size: 13px; opacity: 0.75; }
-  .box :global(.problem) { color: var(--reason); }
+  .box :global(.problem) { font-size: 13px; color: var(--reason); }
   .box :global(.buttons) { display: flex; gap: 10px; margin: 8px 0; }
   /* Bausteine für den Inhalt aller Fenster (5y, 10.10), Vorsilbe dialog- wie dialog-head: Reihe am Ende (rechtsbündig,
      `.start` rückt nach links; den Abstand darüber bringt das Element davor mit), Zwischenüberschrift wie in den
