@@ -23,6 +23,9 @@ async function record(page: Page) {
 }
 const faded = (page: Page) => page.evaluate(() => (window as unknown as { faded: { part: number; duration: number }[] }).faded.splice(0));
 
+/** Warten, bis alle Animationen im Fenster (Erscheinen, Einblenden) durch sind */
+const settled = (page: Page) => page.getByRole('dialog').evaluate((d) => Promise.all(d.getAnimations({ subtree: true }).map((a) => a.finished)));
+
 /** Klick auf einen Knopf im Fenster und warten, bis das Ereignis im Protokoll steht */
 async function rollAndWait(page: Page, button: string, logged: number) {
   await page.getByRole('dialog').getByRole('button', { name: button, exact: true }).click();
@@ -35,7 +38,7 @@ test('Expedition: beim Öffnen nichts; eigener Wurf mit gleichem Ergebnis blende
   await fixRolls(page, LONGEST);
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Expedition' }).locator('.value')).toHaveCount(4);
-  await page.waitForTimeout(300);
+  await settled(page);
   expect(await faded(page)).toEqual([]);
   // Zeile 3 bringt denselben Eintrag: sie blendet trotzdem ein, nur sie, mit --pop
   await fixRolls(page, [LONGEST[2]!]);
@@ -54,7 +57,7 @@ test('Orakel: neu ziehen blendet beide Begriffe ein, auch bei denselben Karten',
   await fixRolls(page, [0, 0, 1, 1]);
   await page.getByRole('button', { name: 'Orakel', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Orakel' }).locator('.value')).toHaveCount(2);
-  await page.waitForTimeout(300);
+  await settled(page);
   expect(await faded(page)).toEqual([]);
   await fixRolls(page, [0, 0, 1, 1]);
   await rollAndWait(page, 'Neu ziehen', 2);
@@ -78,7 +81,7 @@ test('Höhe gleitet mit --shift, wenn ein Ergebnis länger wird; währenddessen 
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition' });
   await expect(dialog.locator('.row .value').nth(2)).toHaveCount(1);
-  await page.waitForTimeout(300);
+  await settled(page);
   const body = dialog.locator('.body');
   await fixRolls(page, [LONGEST[2]!]);
   await rollAndWait(page, 'Neu würfeln: Ihr seid hier, weil …', 2);

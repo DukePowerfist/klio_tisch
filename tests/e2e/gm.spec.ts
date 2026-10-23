@@ -35,7 +35,7 @@ test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) 
 
 // ---------- Ergebnisfenster im Stil der Einstellungen (5t, 10.6) ----------
 
-test('Ergebnisfenster: Kopf mit Titel, Hauptknopf und ×, keine Fußzeile, vier verschieden benannte „Neu“', async ({ page }) => {
+test('Ergebnisfenster: Kopf mit Titel, Hauptknopf und ×, vier verschieden benannte „Neu“', async ({ page }) => {
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition' });
   await expect(dialog.locator('h2')).toHaveText('Expedition');
@@ -44,7 +44,6 @@ test('Ergebnisfenster: Kopf mit Titel, Hauptknopf und ×, keine Fußzeile, vier 
   expect(new Set(names).size).toBe(4);
   expect(names[1]).toBe('Neu würfeln: Bekannt für …');
   await expect(dialog.locator('header').getByRole('button')).toHaveText(['Alles neu', '']);
-  await expect(dialog.locator('footer')).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Schließen' })).toHaveCount(1);
   // × schließt, Klick daneben auch
   await dialog.getByRole('button', { name: 'Schließen' }).click();

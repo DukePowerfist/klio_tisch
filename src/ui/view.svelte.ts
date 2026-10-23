@@ -50,8 +50,8 @@ class ViewState {
   trumpDialog = $state<SeatId | null>(null);
   /** offenes Ergebnisfenster (Expedition bzw. Orakel), geöffnet durch das Ereignis */
   gmDialog = $state<'expedition' | 'oracle' | null>(null);
-  /** letzter Wurf dazu (5t, 10.6): laufende Nummer und welche Teile kurz einblenden (Zeilen bzw. Begriffe) */
-  gmRoll = $state.raw<{ n: number; kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
+  /** letzter Wurf dazu (5t, 10.6): welche Teile kurz einblenden (Zeilen bzw. Begriffe); jeder Wurf ein neues Objekt */
+  gmRoll = $state.raw<{ kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
   /** Rückfrage vor dem Zurücksetzen (Fenster liegen außerhalb des skalierten Tisches, daher hier) */
   confirmReset = $state(false);
   /** offenes Fenster der SL: Raum (Plätze, Link) bzw. Einstellungen (Automatik, Rechte) */

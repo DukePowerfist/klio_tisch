@@ -123,7 +123,6 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(oracle.locator('.word')).toHaveCount(2);
   await expect(oracle.getByRole('button')).toHaveCount(1);
   await expect(oracle.getByRole('button', { name: 'Schließen' })).toBeVisible();
-  await expect(oracle.locator('header .menu-main')).toHaveCount(0);
   // Spieler hat keine SL-Leiste
   await expect(player.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
 

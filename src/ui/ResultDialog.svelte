@@ -6,8 +6,8 @@
   // der Inhalt unter dem Kopf scrollt, falls es gar nicht passt.
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
-  import Modal from './Modal.svelte';
-  import { timing } from './animator.svelte';
+  import Modal, { isTopmost } from './Modal.svelte';
+  import { fade, timing } from './animator.svelte';
   import { submitOrSay } from './commands';
   import { session } from './session.svelte';
   import { cardName, t } from './texts';
@@ -16,18 +16,21 @@
   let { kind }: { kind: 'expedition' | 'oracle' } = $props();
 
   const game = $derived(session.state!.game);
-  const title = $derived(t(kind === 'expedition' ? 'gm.expeditionShort' : 'gm.oracle'));
-  const reroll = $derived(session.can({ type: kind === 'expedition' ? 'gm.expedition' : 'gm.oracle' }));
+  const expedition = $derived(kind === 'expedition');
+  const title = $derived(t(expedition ? 'gm.expeditionShort' : 'gm.oracle'));
+  /** Befehl für alles neu; einzelne Zeilen würfelt `gm.expedition` mit `table` */
+  const cmd = $derived(expedition ? 'gm.expedition' : 'gm.oracle');
+  const reroll = $derived(session.can({ type: cmd }));
   const close = () => (view.gmDialog = null);
 
   // Neu gewürfelte Teile blenden kurz ein (Q4: nicht beim Öffnen, dort läuft schon pop-in; nur bei weiteren Würfen)
-  const opened = untrack(() => view.gmRoll?.n ?? 0);
+  const opened = untrack(() => view.gmRoll);
   let body: HTMLDivElement;
   $effect(() => {
     const r = view.gmRoll;
-    if (!r || r.n <= opened || r.kind !== kind) return;
-    const values = body.querySelectorAll('.value');
-    for (const i of r.parts) values[i]?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: timing().pop, easing: 'ease-out' });
+    if (!r || r === opened || r.kind !== kind) return;
+    const values = body.querySelectorAll<HTMLElement>('.value');
+    for (const i of r.parts) if (values[i]) fade(values[i], timing().pop);
   });
 
   /** Ändert sich die Höhe des Inhalts, gleitet sie mit --shift statt zu springen (10.6); währenddessen ohne Bildlauf,
@@ -54,21 +57,16 @@
 
   /** Fokus beim Öffnen aufs ×, nur wenn dieses Fenster das oberste ist (Q3); weitere Würfe lassen ihn, wo er ist */
   function focusIfTop(el: HTMLElement) {
-    const open = document.querySelectorAll('[aria-modal="true"]');
-    if (open[open.length - 1] === el.closest('[aria-modal="true"]')) el.focus();
+    const box = el.closest('[aria-modal="true"]');
+    if (box && isTopmost(box)) el.focus();
   }
 </script>
 
-<Modal label={title} onclose={close} size="result">
+<Modal label={title} onclose={close} size="result" anchor>
   <header>
     <h2>{title}</h2>
-    <!-- Hauptknopf im Kopf statt in einer Fußzeile, die beim Neuwürfeln mitwanderte (10.6) -->
     {#if reroll}
-      {#if kind === 'expedition'}
-        <button class="menu-item menu-main" onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.rerollAll')}</button>
-      {:else}
-        <button class="menu-item menu-main" onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.redraw')}</button>
-      {/if}
+      <button class="menu-item menu-main" onclick={() => submitOrSay({ type: cmd })}>{t(expedition ? 'gm.rerollAll' : 'gm.redraw')}</button>
       <span class="sep" aria-hidden="true"></span>
     {/if}
     <!-- wie das × der Einstellungen (bewusst übernommen, 10.6) -->
@@ -78,7 +76,7 @@
   </header>
   <div class="body" bind:this={body}>
     <div {@attach glide}>
-      {#if kind === 'expedition' && game.expedition}
+      {#if expedition && game.expedition}
         {#each content.expedition.expedition as table, i (i)}
           <div class="row">
             <div class="text">
@@ -91,7 +89,7 @@
             {/if}
           </div>
         {/each}
-      {:else if kind === 'oracle' && game.oracle}
+      {:else if !expedition && game.oracle}
         <div class="words">
           {#each game.oracle as d, i (i)}
             <div class="word"><span class="card">{cardName(`${d.suit}${d.rank}`)}</span><span class="value">{content.expedition.oracle[d.suit][d.rank]}</span></div>
