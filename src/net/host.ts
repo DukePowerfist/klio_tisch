@@ -127,7 +127,10 @@ export class Host<G> {
 
   /** Verbundene Clients mit Rolle und Namen (Raumfenster der SL) */
   get online(): Online[] {
-    return [...this.peers].map(([peer, key]) => ({ ...this.saved.host.keys[key]!, peer, name: this.names.get(peer) ?? '' }));
+    return [...this.peers].flatMap(([peer, key]) => {
+      const role = roleOf(this.saved.host, key);
+      return role ? [{ ...role, peer, name: this.names.get(peer) ?? '' }] : [];
+    });
   }
 
   /** Verbundenen Zuschauer auf einen freien Platz setzen (8.7). Erst beim Ausführen geprüft: Wer sich inzwischen
@@ -135,7 +138,7 @@ export class Host<G> {
   assign(peer: PeerId, seat: SeatId): Promise<CommandResult> {
     return this.enqueue(async () => {
       const key = this.peers.get(peer);
-      if (!key || this.saved.host.keys[key]?.role !== 'spectator') return { ok: false, reason: { key: 'reject.notConnected' } };
+      if (!key || roleOf(this.saved.host, key)?.role !== 'spectator') return { ok: false, reason: { key: 'reject.notConnected' } };
       const name = this.names.get(peer);
       const cmd = { type: 'table.setSeat', seat, occupied: true, ...(name ? { name } : {}) };
       const role: Role = { role: 'player', seat };
@@ -194,7 +197,7 @@ export class Host<G> {
         console.error('Sicherung nicht lesbar', error);
         return INVALID;
       }
-      return this.swap({ state, host: followSeats(this.saved.host, state) }, 'restore');
+      return this.swap({ state, host: this.saved.host }, 'restore');
     });
   }
 
@@ -203,11 +206,14 @@ export class Host<G> {
     return this.options.backups?.list() ?? Promise.resolve([]);
   }
 
-  /** Ganzen Stand ersetzen; alle bekommen ihn samt Anlass (für das Protokoll). */
+  /** Ganzen Stand ersetzen; alle bekommen ihn samt Anlass (für das Protokoll). Die Rollen folgen dem neuen Stand,
+   *  und wer verbunden ist, aber in den neuen Host-Daten fehlt (Datei von einem anderen Gerät), wird Zuschauer. */
   private async swap(next: Saved<G>, reason: string): Promise<CommandResult> {
     const backedUp = await this.backup(reason);
     if (!backedUp.ok) return backedUp;
-    const saved = await this.persist(next);
+    const connected = [...this.peers.values()].filter((key) => !roleOf(next.host, key));
+    const host = connected.reduce((h, key) => withRole(h, key, { role: 'spectator' }), followSeats(next.host, next.state));
+    const saved = await this.persist({ state: next.state, host });
     if (!saved.ok) return saved;
     this.broadcast({ t: 'state', state: this.state, reason });
     this.options.onChange?.(this.state, [], undefined, true);
@@ -273,10 +279,11 @@ export class Host<G> {
     if (msg.t === 'photo') return this.send({ t: 'result', id: msg.id, ...(await this.putPhoto(key, msg.hash, msg.data)) }, from);
 
     // Doppelt gesendet (z. B. nach Verbindungsabbruch): nur die Antwort wiederholen (8.2)
-    const earlier = this.saved.host.answered[key]?.find(([id]) => id === msg.id);
+    const earlier = answeredOf(this.saved.host, key).find(([id]) => id === msg.id);
     if (earlier) return this.send({ t: 'result', id: msg.id, ...earlier[1] }, from);
 
-    const role = this.saved.host.keys[key]!;
+    const role = roleOf(this.saved.host, key);
+    if (!role) return this.send({ t: 'result', id: msg.id, ...INVALID }, from);
     const result = await this.execute(msg.cmd, role, (host, r) => remember(host, key, msg.id, r), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
   }
@@ -293,7 +300,7 @@ export class Host<G> {
     }
 
     // Bekannte Schlüssel bekommen ihre Rolle zurück; neue treten als Zuschauer bei und wählen dann (claim)
-    let role = this.saved.host.keys[msg.key];
+    let role = roleOf(this.saved.host, msg.key);
     if (!role) {
       role = { role: 'spectator' };
       const result = await this.persist({ state: this.state, host: withRole(this.saved.host, msg.key, role) });
@@ -318,7 +325,7 @@ export class Host<G> {
   /** Zuschauer nimmt einen freien Platz (über den Engine-Befehl, als SL); die neue Rolle kommt per Willkommen. */
   private async claim(key: string, msg: Extract<ToHost, { t: 'claim' }>, from: PeerId): Promise<void> {
     const role: Role = { role: 'player', seat: msg.seat };
-    const result: CommandResult = this.saved.host.keys[key]?.role !== 'spectator'
+    const result: CommandResult = roleOf(this.saved.host, key)?.role !== 'spectator'
       ? INVALID
       : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h, r) => (r.ok ? withRole(h, key, role) : h), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
@@ -328,7 +335,7 @@ export class Host<G> {
   private async putPhoto(key: string, hash: string, data: string): Promise<CommandResult> {
     const photos = this.options.photos;
     const bytes = await unpackPhoto(hash, data);
-    if (!photos || !bytes || this.saved.host.keys[key]?.role !== 'player') return INVALID;
+    if (!photos || !bytes || roleOf(this.saved.host, key)?.role !== 'player') return INVALID;
     await photos.put(hash, bytes);
     return { ok: true };
   }
@@ -374,10 +381,14 @@ export class Host<G> {
   private async persist(next: Saved<G>, by?: 'gm'): Promise<CommandResult> {
     try {
       await this.store.save(next);
-      const before = this.saved.host.keys;
+      const before = this.saved.host;
       this.saved = next;
-      const changed = [...this.peers].filter(([, key]) => next.host.keys[key] !== before[key]);
-      for (const [peer, key] of changed) this.send({ t: 'welcome', role: next.host.keys[key]!, state: next.state, ...(by ? { by } : {}) }, peer);
+      // ohne Rolle (sollte nach swap nicht vorkommen): kein Willkommen mit fehlender Rolle
+      const changed = [...this.peers].flatMap(([peer, key]) => {
+        const role = roleOf(next.host, key);
+        return role && role !== roleOf(before, key) ? [[peer, role] as const] : [];
+      });
+      for (const [peer, role] of changed) this.send({ t: 'welcome', role, state: next.state, ...(by ? { by } : {}) }, peer);
       if (changed.length > 0) this.onlineChanged();
       return { ok: true };
     } catch (error) {
@@ -390,6 +401,10 @@ export class Host<G> {
     return { ok: false, reason: { key: 'reject.saveFailed' } };
   }
 }
+
+// Schlüssel kommen vom Client: nur eigene Einträge zählen, nicht geerbte wie `constructor` oder `__proto__`
+const roleOf = (host: HostData, key: string): Role | undefined => (Object.hasOwn(host.keys, key) ? host.keys[key] : undefined);
+const answeredOf = (host: HostData, key: string): [string, CommandResult][] => (Object.hasOwn(host.answered, key) ? host.answered[key]! : []);
 
 const withRole = (host: HostData, key: string, role: Role): HostData => ({ ...host, keys: { ...host.keys, [key]: role } });
 
@@ -407,6 +422,6 @@ function followSeats<G>(host: HostData, state: TableState<G>): HostData {
 
 /** Antwort merken; ändert nur die Liste dieses Schlüssels (die übrigen Teile werden geteilt). */
 function remember(host: HostData, key: string, id: string, result: CommandResult): HostData {
-  const list: [string, CommandResult][] = [...(host.answered[key] ?? []), [id, result]];
+  const list: [string, CommandResult][] = [...answeredOf(host, key), [id, result]];
   return { ...host, answered: { ...host.answered, [key]: list.slice(-REMEMBERED_COMMANDS) } };
 }

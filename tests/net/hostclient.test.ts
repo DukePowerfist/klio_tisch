@@ -279,6 +279,22 @@ describe('Verbindung', () => {
     expect(a.client.role).toEqual({ role: 'player', seat: 'seat1' });
     expect(a.warnings).toContain('secondHost');
   });
+
+  it('Schlüssel, die wie geerbte Eigenschaften heißen, sind normale Schlüssel', async () => {
+    const { net, host, join, store } = await setup();
+    const a = join('seat1', { key: 'propertyIsEnumerable' });
+    const b = join('seat2', { key: '__defineGetter__' });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat1' });
+    expect(b.client.role).toEqual({ role: 'player', seat: 'seat2' });
+    expect(Object.hasOwn(store.saved!.host.keys, 'propertyIsEnumerable')).toBe(true);
+    expect(host.online.map((o) => o.role).sort()).toEqual(['player', 'player']);
+    // der erste Befehl merkt sich die Antwort unter diesem Schlüssel
+    const r = a.client.submit({ type: 'sheet.setText', seat: 'seat1', field: 'name', value: 'Ida' });
+    await settle(net, host);
+    expect(await r).toEqual({ ok: true });
+    expect(sheet(host.state, 'seat1').name).toBe('Ida');
+  });
 });
 
 describe('Speichern', () => {
@@ -687,6 +703,37 @@ describe('Sicherung (A34) und Datei (8.2)', () => {
     const newer = JSON.parse(file);
     newer.state.format = 99;
     expect(await host.importArchive(JSON.stringify(newer))).toEqual({ ok: false, reason: { key: 'reject.importNewer' } });
+  });
+
+  it('Datei von einem anderen Gerät: wer verbunden ist und darin fehlt, wird Zuschauer (gespeichert)', async () => {
+    const { net, host, join, store } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    const file = JSON.parse(await host.exportArchive());
+    file.host.keys = {};
+    file.state.seats.seat1.occupied = false;
+    expect(await host.importArchive(JSON.stringify(file))).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'spectator' });
+    expect(a.warnings).toEqual([]);
+    expect(host.online).toEqual([expect.objectContaining({ role: 'spectator', peer: a.transport.self })]);
+    expect(store.saved!.host.keys[a.key]).toEqual({ role: 'spectator' });
+  });
+
+  it('Datei mit Spieler auf freiem Platz: er wird Zuschauer, der Platz ist für andere frei', async () => {
+    const { net, host, join, store } = await setup();
+    const a = join('seat1');
+    await settle(net, host);
+    const file = JSON.parse(await host.exportArchive());
+    file.state.seats.seat1.occupied = false;
+    file.host.keys['offline-key-xxxxxxx'] = { role: 'player', seat: 'seat2' };
+    expect(await host.importArchive(JSON.stringify(file))).toEqual({ ok: true });
+    await settle(net, host);
+    expect(a.client.role).toEqual({ role: 'spectator' });
+    expect(store.saved!.host.keys['offline-key-xxxxxxx']).toEqual({ role: 'spectator' });
+    const b = join('seat1', { key: 'browser-b-xxxxxxxxxxxx' });
+    await settle(net, host);
+    expect(b.client.role).toEqual({ role: 'player', seat: 'seat1' });
   });
 
   it('Datei: fremde, beschädigte oder unpassende Inhalte werden abgelehnt', async () => {
