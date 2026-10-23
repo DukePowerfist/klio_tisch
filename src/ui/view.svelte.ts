@@ -54,10 +54,10 @@ class ViewState {
   gmRoll = $state.raw<{ kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
   /** Rückfrage vor dem Zurücksetzen (Fenster liegen außerhalb des skalierten Tisches, daher hier) */
   confirmReset = $state(false);
-  /** offenes Fenster der SL: Raum (Plätze, Link) bzw. Einstellungen (Automatik, Rechte) */
+  /** offenes Fenster der SL: Raum (Plätze, Link) bzw. Einstellungen (Tisch, Rechte, …) */
   gmPanel = $state<'room' | 'settings' | null>(null);
   /** zuletzt gewählte Seite der Einstellungen (nur für die Sitzung, nicht im Stand) */
-  settingsPage = $state<SettingsPage>('automation');
+  settingsPage = $state<SettingsPage>('table');
   /** Großansicht eines Trumpfs; angeheftet (per Klick) bleibt sie bis zum nächsten Klick */
   bigTrump = $state<{ id: string; pinned: boolean } | null>(null);
   /** offenes Menü am Namensschild (10.1, 10.4): Platz und Geometrie beim Öffnen */

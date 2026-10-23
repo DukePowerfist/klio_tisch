@@ -209,12 +209,12 @@ log:                                      # Spielprotokoll (neu)
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
 
-settings:                                 # Einstellungen (neu; seit 5g für alle, Automatik und Rechte nur mit Recht)
+settings:                                 # Einstellungen (neu; seit 5g für alle, Tisch und Rechte nur mit Recht)
   title: Einstellungen
-  table: Tisch                            # Seite mit der Spielerzahl (5s), vorher in der SL-Leiste
+  table: Tisch                            # Seite mit Spielerzahl (5s, vorher in der SL-Leiste), Automatik und Meldungen (5u)
   players: Spielerzahl
   playersHelp: Wie viele Plätze am Tisch sind. Weniger Plätze blenden Bögen aus; Karten und Einträge bleiben erhalten.
-  automation: Automatik
+  automation: Automatik                   # Gruppe auf der Seite „Tisch“ (seit 5u, vorher eigene Seite)
   automationIds:
     damage: Schaden automatisch auswerten (Narbe, Tod)
   permissions: Rechte der Spieler
@@ -233,14 +233,14 @@ settings:                                 # Einstellungen (neu; seit 5g für all
   restore: Wiederherstellen
   restored: Sicherung wiederhergestellt
   fieldChanged: "Bogen {seat}: Ein Feld, das du bearbeitet hast, wurde gerade von jemand anderem geändert."
-  # Schritt 5f: Seiten im Stil des Zed-Editors (Seitentitel: automation, permissions, game)
+  # Schritt 5f: Seiten im Stil des Zed-Editors (Seitentitel: table, permissions, game, appearance)
   scope:                                  # Schild am Seitentitel und Hinweis über den Sicherungen
     all: gilt für alle
     allHint: Steht im Spielstand und gilt für alle am Tisch.
     browser: in diesem Browser
     mine: nur für dich
     mineHint: Gilt nur in diesem Browser; die anderen am Tisch stellen es für sich ein.
-  notices: Meldungen                      # Gruppe auf der Seite „Automatik“ (11.7)
+  notices: Meldungen                      # Gruppe auf der Seite „Tisch“ (11.7, 5u)
   noticeArrivals: Meldung bei Kommen und Gehen
   noticeArrivalsHelp: Zeigt allen eine Meldung, wenn jemand einen Platz einnimmt, die Verbindung verliert oder wiederkommt. Das Protokoll trägt es immer ein.
   automationHelp:

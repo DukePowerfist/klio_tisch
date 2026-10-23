@@ -3,7 +3,8 @@
   // Gespeichert im Stand (settings), also für alle gleich; die Voreinstellung bleibt in permissions.yaml.
   // Dazu für die SL im eigenen Browser: Spielstand als Datei und automatische Sicherungen (8.2, A34).
   // Seit 5g für alle: Seite „Darstellung“ mit der Effektstufe (nur im eigenen Browser, 11.5).
-  // Seit 5s: Seite „Tisch“ mit der Spielerzahl (vorher in der SL-Leiste, 10.5).
+  // Seit 5s: Seite „Tisch“ mit der Spielerzahl (vorher in der SL-Leiste, 10.5); seit 5u auch Automatik und Meldungen
+  // (vorher eigene Seite „Automatik“, 10.7), jeder Abschnitt nach seinem Recht.
   import { permissionFor } from '../engine/permissions';
   import type { PermissionValue, TableState, TextRef } from '../engine/types';
   import type { BackupInfo } from '../net/host';
@@ -39,7 +40,9 @@
   // ---------- Spielstand (nur beim Host, nicht bei Mitspielern) ----------
   const isHost = $derived(session.mode !== 'client');
   // ---------- Seiten (Schritt 5f): Seitenleiste links, Seite rechts ----------
-  const pages = $derived(visiblePages(isHost, session.can({ type: 'table.setSettings' }), session.can({ type: 'table.setPlayers' })));
+  const canSettings = $derived(session.can({ type: 'table.setSettings' }));
+  const canPlayers = $derived(session.can({ type: 'table.setPlayers' }));
+  const pages = $derived(visiblePages(isHost, canSettings, canPlayers));
   const page = $derived(openPage(view.settingsPage, pages));
   const groups = permissionGroups(Object.keys(defaults));
   let backups = $state<BackupInfo[]>([]);
@@ -99,7 +102,7 @@
     <header>
       <div class="titleline">
         <h2>{t(`settings.${page}`)}</h2>
-        <!-- Reichweite: Automatik und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle);
+        <!-- Reichweite: Tisch und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle);
              die Darstellung gilt nur im eigenen Browser -->
         {#if page === 'appearance'}<span class="scope" title={t('settings.scope.mineHint')}>{t('settings.scope.mine')}</span>
         {:else if page !== 'game'}<span class="scope" title={t('settings.scope.allHint')}>{t('settings.scope.all')}</span>{/if}
@@ -110,31 +113,40 @@
     </header>
     <div class="body" role="tabpanel" id="settings-panel" aria-labelledby="settings-tab-{page}">
       {#if page === 'table'}
-        <SettingRow id="players" title={t('settings.players')} description={t('settings.playersHelp')}>
-          <!-- Name aus dem Titel der Zeile; ein Tabstopp, Pfeiltasten vom Browser -->
-          <fieldset class="numbers" aria-labelledby="players-title" aria-describedby="players-desc">
-            {#each PLAYERS as n (n)}
-              <label><input type="radio" name="players" value={n} bind:group={chosen} onchange={setPlayers} /><span>{n}</span></label>
+        <!-- Spielerzahl oben ohne Überschrift, die Linie darunter nur, wenn noch etwas folgt (5u) -->
+        {#if canPlayers}
+          <section class:defaults={canSettings}>
+            <SettingRow id="players" title={t('settings.players')} description={t('settings.playersHelp')}>
+              <!-- Name aus dem Titel der Zeile; ein Tabstopp, Pfeiltasten vom Browser -->
+              <fieldset class="numbers" aria-labelledby="players-title" aria-describedby="players-desc">
+                {#each PLAYERS as n (n)}
+                  <label><input type="radio" name="players" value={n} bind:group={chosen} onchange={setPlayers} /><span>{n}</span></label>
+                {/each}
+              </fieldset>
+            </SettingRow>
+          </section>
+        {/if}
+        {#if canSettings}
+          <section aria-labelledby="group-automation">
+            <h3 id="group-automation">{t('settings.automation')}</h3>
+            {#each ruleset.reactions as r (r.id)}
+              {@const id = `auto-${r.id}`}
+              {@const desc = tMaybe(`settings.automationHelp.${r.id}`)}
+              <SettingRow {id} title={t(`settings.automationIds.${r.id}`)} description={desc}>
+                <input class="switch" type="checkbox" role="switch" aria-labelledby="{id}-title" aria-describedby={desc ? `${id}-desc` : undefined}
+                  checked={settings.automation[r.id] !== false} onchange={(e) => setAutomation(r.id, e.currentTarget.checked)} />
+              </SettingRow>
             {/each}
-          </fieldset>
-        </SettingRow>
-      {:else if page === 'automation'}
-        {#each ruleset.reactions as r (r.id)}
-          {@const id = `auto-${r.id}`}
-          {@const desc = tMaybe(`settings.automationHelp.${r.id}`)}
-          <SettingRow {id} title={t(`settings.automationIds.${r.id}`)} description={desc}>
-            <input class="switch" type="checkbox" role="switch" aria-labelledby="{id}-title" aria-describedby={desc ? `${id}-desc` : undefined}
-              checked={settings.automation[r.id] !== false} onchange={(e) => setAutomation(r.id, e.currentTarget.checked)} />
-          </SettingRow>
-        {/each}
-        <!-- Schalter der Oberfläche im selben Feld des Stands (11.7) -->
-        <section aria-labelledby="group-notices">
-          <h3 id="group-notices">{t('settings.notices')}</h3>
-          <SettingRow id="notice-arrivals" title={t('settings.noticeArrivals')} description={t('settings.noticeArrivalsHelp')}>
-            <input class="switch" type="checkbox" role="switch" aria-labelledby="notice-arrivals-title" aria-describedby="notice-arrivals-desc"
-              checked={settings.automation[NOTICE_ARRIVALS] !== false} onchange={(e) => setAutomation(NOTICE_ARRIVALS, e.currentTarget.checked)} />
-          </SettingRow>
-        </section>
+          </section>
+          <!-- Schalter der Oberfläche im selben Feld des Stands (11.7) -->
+          <section aria-labelledby="group-notices">
+            <h3 id="group-notices">{t('settings.notices')}</h3>
+            <SettingRow id="notice-arrivals" title={t('settings.noticeArrivals')} description={t('settings.noticeArrivalsHelp')}>
+              <input class="switch" type="checkbox" role="switch" aria-labelledby="notice-arrivals-title" aria-describedby="notice-arrivals-desc"
+                checked={settings.automation[NOTICE_ARRIVALS] !== false} onchange={(e) => setAutomation(NOTICE_ARRIVALS, e.currentTarget.checked)} />
+            </SettingRow>
+          </section>
+        {/if}
       {:else if page === 'permissions'}
         <!-- Voreinstellungen oben, nicht unter der langen Liste (Nutzer, 5r) -->
         <section class="defaults">

@@ -86,12 +86,16 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   // Schild: Name der Person, freie Plätze mit Hinweis „frei“
   await expect(gm.locator('[data-plate=seat2]')).toHaveText('Ida M.');
   await expect(gm.locator('[data-plate=seat3]')).toHaveText('Spieler 3frei');
-  // Gibt die SL die Einstellungen frei, sieht der Spieler Automatik und Rechte, aber keinen Spielstand (5f)
+  // Gibt die SL die Einstellungen frei, sieht der Spieler Tisch und Rechte, aber keinen Spielstand (5f); auf „Tisch“
+  // nur Automatik und Meldungen, ohne Spielerzahl (5u)
   const settings = await openSettings(gm, 'Rechte der Spieler');
   await settings.getByRole('combobox', { name: 'Einstellungen ändern' }).selectOption('allow');
   await gm.keyboard.press('Escape');
-  await openSettings(player, 'Automatik');
-  await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Automatik', 'Rechte der Spieler', 'Darstellung']);
+  const table = await openSettings(player, 'Tisch');
+  await expect(table.getByRole('tab')).toHaveText(['Tisch', 'Rechte der Spieler', 'Darstellung']);
+  await expect(table.getByRole('heading', { level: 3 })).toHaveText(['Automatik', 'Meldungen']);
+  await expect(table.getByRole('switch', { name: /Schaden automatisch/ })).toBeVisible();
+  await expect(table.getByRole('radio')).toHaveCount(0);
   await player.keyboard.press('Escape');
   // Spieler startet in seiner Rollenansicht
   await expect.poll(async () => (await player.locator('[data-sheet=seat2]').boundingBox())!.x).toBeLessThan(50);
@@ -302,6 +306,8 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await gm.keyboard.press('Escape');
   const own = await openSettings(player, 'Tisch');
   await expect(own.getByRole('tab')).toHaveText(['Tisch', 'Darstellung']);
+  await expect(own.getByRole('switch')).toHaveCount(0);
+  await expect(own.getByRole('heading', { name: 'Automatik' })).toHaveCount(0);
   // die SL hat dieselbe Seite offen; ändert der Spieler die Zahl, folgt ihre Auswahl
   const theirs = await openSettings(gm, 'Tisch');
   await own.getByRole('radio', { name: '3', exact: true }).check();
@@ -420,7 +426,7 @@ test('Kommen und Gehen im Protokoll der SL (5l): belegt, nicht mehr verbunden, w
   await expect(gm.locator('[data-plate=seat1]')).not.toHaveClass(AWAY);
 
   // Meldung abgeschaltet: das Protokoll trägt weiter ein
-  const settings = await openSettings(gm, 'Automatik');
+  const settings = await openSettings(gm, 'Tisch');
   await settings.getByRole('switch', { name: 'Meldung bei Kommen und Gehen' }).uncheck();
   await gm.keyboard.press('Escape');
   await expect(gm.getByRole('status')).toHaveCount(0);

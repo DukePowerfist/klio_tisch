@@ -198,8 +198,8 @@ test('Frei liegende Karte am Bogen folgt dem Bogen in die Rollenansicht (A32)', 
   await expect.poll(inside).toBe(true);
 });
 
-test('Einstellungen: Meldung bei Kommen und Gehen in eigener Gruppe auf „Automatik“, an, bleibt aus nach dem Neuladen (5l)', async ({ page }) => {
-  const dialog = await openSettings(page, 'Automatik');
+test('Einstellungen: Meldung bei Kommen und Gehen in eigener Gruppe auf „Tisch“, an, bleibt aus nach dem Neuladen (5l, 5u)', async ({ page }) => {
+  const dialog = await openSettings(page, 'Tisch');
   const group = dialog.getByRole('region', { name: 'Meldungen' });
   const notice = group.getByRole('switch', { name: 'Meldung bei Kommen und Gehen' });
   await expect(notice).toBeChecked();
@@ -211,7 +211,7 @@ test('Einstellungen: Meldung bei Kommen und Gehen in eigener Gruppe auf „Autom
   await fromMenu(page, 'Einstellungen');
   await expect(notice).not.toBeChecked();
   await ready(page, true);
-  await openSettings(page, 'Automatik');
+  await openSettings(page, 'Tisch');
   await expect(notice).not.toBeChecked();
   // die Reaktion daneben bleibt unberührt
   await expect(dialog.getByRole('switch', { name: /Schaden automatisch/ })).toBeChecked();
@@ -223,7 +223,7 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await expect(free).toHaveValue('deny');
   await free.selectOption('allow');
   await expect(free).toHaveValue('allow');
-  await dialog.getByRole('tab', { name: 'Automatik' }).click();
+  await dialog.getByRole('tab', { name: 'Tisch' }).click();
   const damage = dialog.getByRole('switch', { name: /Schaden automatisch/ });
   await expect(damage).toBeChecked();
   await damage.uncheck();
@@ -234,7 +234,7 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await expect(damage).not.toBeChecked();
 
   await ready(page, true);
-  await openSettings(page, 'Automatik');
+  await openSettings(page, 'Tisch');
   await expect(damage).not.toBeChecked();
   await dialog.getByRole('tab', { name: 'Rechte der Spieler' }).click();
   await expect(free).toHaveValue('allow');
@@ -243,9 +243,20 @@ test('Einstellungen: Rechte der Spieler und Automatik zur Laufzeit, bleiben nach
   await expect(dialog.getByRole('button', { name: 'Voreinstellung wiederherstellen' })).toBeDisabled();
 });
 
-test('Einstellungen: Seitenleiste mit fünf Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
+test('Einstellungen: Seite „Tisch“ mit Spielerzahl oben, darunter Automatik und Meldungen (5u)', async ({ page }) => {
+  const dialog = await openSettings(page, 'Tisch');
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('Tisch');
+  await expect(dialog.getByRole('heading', { level: 3 })).toHaveText(['Automatik', 'Meldungen']);
+  await expect(dialog.getByRole('region', { name: 'Automatik' }).getByRole('switch', { name: /Schaden automatisch/ })).toBeVisible();
+  // Spielerzahl oben, vor der ersten Überschrift
+  const numbers = (await dialog.getByRole('group', { name: 'Spielerzahl' }).boundingBox())!;
+  const first = (await dialog.getByRole('heading', { name: 'Automatik' }).boundingBox())!;
+  expect(numbers.y).toBeLessThan(first.y);
+});
+
+test('Einstellungen: Seitenleiste mit vier Seiten, Kopf mit Seitentitel, × schließt', async ({ page }) => {
   const dialog = await openSettings(page, 'Spielstand');
-  await expect(dialog.getByRole('tab')).toHaveText(['Tisch', 'Automatik', 'Rechte der Spieler', 'Spielstand', 'Darstellung']);
+  await expect(dialog.getByRole('tab')).toHaveText(['Tisch', 'Rechte der Spieler', 'Spielstand', 'Darstellung']);
   await expect(dialog.getByRole('tab', { name: 'Spielstand' })).toHaveAttribute('aria-selected', 'true');
   await expect(dialog.getByRole('heading', { name: 'Spielstand' })).toBeVisible();
   await expect(dialog.getByRole('tabpanel', { name: 'Spielstand' })).toBeVisible();
@@ -270,13 +281,13 @@ test('Einstellungen: Rechte in Gruppen mit Beschreibung, Schilder zur Reichweite
 const focusInside = (dialog: Locator) => dialog.evaluate((d) => d.contains(document.activeElement));
 
 test('Einstellungen: Größe bleibt beim Seitenwechsel, öffnet auf der zuletzt gewählten Seite', async ({ page }) => {
-  const dialog = await openSettings(page, 'Automatik');
+  const dialog = await openSettings(page, 'Tisch');
   const size = async () => {
     const b = (await dialog.boundingBox())!;
     return [Math.round(b.width), Math.round(b.height)];
   };
   const first = await size();
-  for (const tab of ['Rechte der Spieler', 'Spielstand', 'Automatik']) {
+  for (const tab of ['Rechte der Spieler', 'Spielstand', 'Tisch']) {
     await dialog.getByRole('tab', { name: tab }).click();
     expect(await size()).toEqual(first);
   }
@@ -301,12 +312,12 @@ test('Einstellungen per Tastatur: Fokus auf der Seite, Tab bleibt im Fenster, Es
     await page.keyboard.press('Shift+Tab');
     expect(await focusInside(dialog)).toBe(true);
   }
-  // Seite per Tastatur wählen: Tab bis „Automatik“, Leertaste
-  await dialog.getByRole('tab', { name: 'Automatik' }).focus();
+  // Seite per Tastatur wählen: Tab bis „Tisch“, Leertaste
+  await dialog.getByRole('tab', { name: 'Tisch' }).focus();
   await page.keyboard.press('Space');
-  await expect(dialog.getByRole('heading', { name: 'Automatik' })).toBeVisible();
-  // Reihenfolge: Seitenleiste, × im Kopf, dann die Zeilen
-  for (const _ of ['Rechte der Spieler', 'Spielstand', 'Darstellung', 'Schließen', 'Schalter']) await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('heading', { level: 2 })).toHaveText('Tisch');
+  // Reihenfolge: Seitenleiste, × im Kopf, dann die Zeilen (Spielerzahl ein Tabstopp)
+  for (const _ of ['Rechte der Spieler', 'Spielstand', 'Darstellung', 'Schließen', 'Spielerzahl', 'Schalter']) await page.keyboard.press('Tab');
   await expect(dialog.getByRole('switch', { name: /Schaden automatisch/ })).toBeFocused();
 
   // Rückfrage beim Wiederherstellen: Esc bricht sie ab, das nächste Esc schließt
