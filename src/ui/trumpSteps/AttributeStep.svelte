@@ -23,4 +23,4 @@
     <button class:sel={raised === o.attr} disabled={!o.canRaise} onclick={() => (raised = o.attr)}>{t(`attributes.${o.attr}`)} ({o.value})</button>
   {/each}
 </div>
-<p><button disabled={!lowered || !raised} onclick={() => done({ moveAttribute: { lowered: lowered!, raised: raised! } })}>{t('trumpDialog.next')}</button></p>
+<p><button class="main" disabled={!lowered || !raised} onclick={() => done({ moveAttribute: { lowered: lowered!, raised: raised! } })}>{t('trumpDialog.next')}</button></p>

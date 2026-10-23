@@ -9,6 +9,7 @@
   import type { PermissionValue, TableState, TextRef } from '../engine/types';
   import type { BackupInfo } from '../net/host';
   import type { CommandResult } from '../net/protocol';
+  import DialogHead from './DialogHead.svelte';
   import Modal from './Modal.svelte';
   import SettingRow from './SettingRow.svelte';
   import { submitOrSay } from './commands';
@@ -99,18 +100,14 @@
     </div>
   </div>
   <div class="main">
-    <header>
-      <div class="titleline">
-        <h2>{t(`settings.${page}`)}</h2>
+    <DialogHead title={t(`settings.${page}`)} onclose={close}>
+      {#snippet badge()}
         <!-- Reichweite: Tisch und Rechte stehen im Stand; der Spielstand trägt kein Schild (Laden ersetzt für alle);
              die Darstellung gilt nur im eigenen Browser -->
         {#if page === 'appearance'}<span class="scope" title={t('settings.scope.mineHint')}>{t('settings.scope.mine')}</span>
         {:else if page !== 'game'}<span class="scope" title={t('settings.scope.allHint')}>{t('settings.scope.all')}</span>{/if}
-      </div>
-      <button class="close" aria-label={t('gm.close')} title={t('gm.close')} onclick={close}>
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
-      </button>
-    </header>
+      {/snippet}
+    </DialogHead>
     <div class="body" role="tabpanel" id="settings-panel" aria-labelledby="settings-tab-{page}">
       {#if page === 'table'}
         <!-- Spielerzahl oben ohne Überschrift, die Linie darunter nur, wenn noch etwas folgt (5u) -->
@@ -223,13 +220,8 @@
   .side button:hover { background: var(--pane-current); }
   .side button.current { background: var(--pane-current); font-weight: 600; }
   .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 12px 22px; border-bottom: 1px solid var(--pane-rule); }
   .titleline { display: flex; align-items: center; gap: 10px; }
-  h2 { margin: 0; font-size: 17px; font-weight: 600; }
   .scope { font-size: 12px; font-weight: normal; padding: 1px 8px; border: 1px solid var(--pane-rule); border-radius: var(--radius-pill); opacity: 0.8; }
-  header .close { background: none; border: none; padding: 5px; line-height: 0; opacity: 0.75; }
-  header .close:hover { background: var(--button-hover); opacity: 1; }
-  .close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
   .body { flex: 1; overflow: auto; padding: 4px 22px 18px; }
   .body button { padding: 5px 12px; }
   h3 { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }

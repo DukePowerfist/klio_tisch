@@ -5,6 +5,7 @@
   import { SEATS, type TextRef } from '../engine/types';
   import { seatVisible } from '../engine/zones';
   import { whoColor } from './colors';
+  import DialogHead from './DialogHead.svelte';
   import Modal from './Modal.svelte';
   import { seatNames } from './seatNames';
   import { session } from './session.svelte';
@@ -17,7 +18,7 @@
 </script>
 
 <Modal label={t('room.join.title')} {onclose} size="narrow">
-  <b>{t('room.join.title')}</b>
+  <DialogHead title={t('room.join.title')} {onclose} />
   <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={t('room.join.name')} bind:value={name} /></p>
   <div class="seats">
     {#each SEATS.filter((s) => seatVisible(s, table)) as seat (seat)}

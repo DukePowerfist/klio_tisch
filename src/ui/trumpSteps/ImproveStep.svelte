@@ -25,6 +25,6 @@
   <form onsubmit={(e) => { e.preventDefault(); finish(); }}>
     <!-- svelte-ignore a11y_autofocus -->
     <p><input type="text" maxlength="70" bind:value={wording} autofocus /></p>
-    <p><button type="submit">{t('trumpDialog.next')}</button></p>
+    <p><button class="main" type="submit">{t('trumpDialog.next')}</button></p>
   </form>
 {/if}

@@ -82,7 +82,6 @@ trumpDialog:
   free: Freie Wahl
   back: "← Zurück"
   next: Weiter
-  close: "✕"
   chooseAttribute: Für welches Attribut?
   selectable: "({n} wählbar)"
   chooseFromCategory: "{category} · Trumpf wählen"
@@ -178,7 +177,6 @@ room:                                     # Mehrspielerbetrieb (neu)
 
 log:                                      # Spielprotokoll (neu)
   title: Protokoll
-  close: Schließen
   empty: Noch nichts passiert.
   shuffled: "Gemischt: {zones}"
   reset: Tisch zurückgesetzt

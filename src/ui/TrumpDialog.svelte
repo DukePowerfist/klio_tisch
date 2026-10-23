@@ -8,6 +8,7 @@
   import { trumpCount, type Choices } from '../rules/klio/blocks';
   import { sheetOf } from '../rules/klio/events';
   import { contextFor, fullReason, isFull } from '../rules/klio/trumps';
+  import DialogHead from './DialogHead.svelte';
   import Modal from './Modal.svelte';
   import TrumpCard from './TrumpCard.svelte';
   import { submitOrSay } from './commands';
@@ -59,12 +60,9 @@
   );
 </script>
 
-<Modal label={t('trumpDialog.title', { seat: seatNo(seat) })} onclose={close}>
+<Modal label={t('trumpDialog.title', { seat: seatNo(seat) })} onclose={close} anchor>
   <div class="td">
-    <div class="head">
-      <b>{title}</b>
-      <button onclick={close} aria-label="Schließen">{t('trumpDialog.close')}</button>
-    </div>
+    <DialogHead {title} onclose={close} />
 
     {#if step.at === 'sources'}
       <p>{t('trumpDialog.count', { n: trumpCount(sheet), max: cfg.maxTrumps })}</p>
@@ -119,7 +117,6 @@
 
 <style>
   .td :global(button.sel) { background: var(--selected); color: var(--dark-ink); border-color: var(--selected); }
-  .head { display: flex; justify-content: space-between; align-items: center; font-size: 18px; margin-bottom: 10px; }
   .td :global(.list) { display: grid; gap: 10px; margin: 12px 0; }
   .td :global(.source) { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; padding: 12px 16px; font-size: 16px; }
   .td :global(.source span) { font-size: 13px; opacity: 0.85; font-weight: 400; }

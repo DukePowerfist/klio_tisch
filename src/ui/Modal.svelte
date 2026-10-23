@@ -85,15 +85,23 @@
 
 <style>
   .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); display: flex; align-items: center; justify-content: center; z-index: 3000000; animation: fade-in var(--pop) ease-out; }
-  .box { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-win); padding: 18px 22px; width: min(860px, 94vw); max-height: 90vh; overflow: auto; font-size: 15px; animation: pop-in var(--pop) var(--spring-soft); }
+  /* Innenrand als Variable: der Kopf (DialogHead) gleicht ihn aus, damit seine Linie bis an den Rand reicht (5v) */
+  .box { --box-pad-y: 18px; --box-pad-x: 22px; background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-win); padding: var(--box-pad-y) var(--box-pad-x); width: min(860px, 94vw); max-height: 90vh; overflow: auto; font-size: 15px; animation: pop-in var(--pop) var(--spring-soft); }
   .box.narrow { width: auto; max-width: 420px; }
-  .box.pane { width: min(780px, 94vw); height: min(620px, 85vh); max-height: none; padding: 0; overflow: hidden; display: flex; }
-  .box.anchored { align-self: flex-start; max-height: calc(100vh - 24px); }
-  .box.result { width: min(560px, 94vw); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
-  /* Knöpfe nur in den übrigen Größen; :where hält die Stärke der Regeln wie bisher (0,2,1, 5t Q1) */
-  .box:where(:not(.result)) :global(button) { background: var(--button-hover); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 8px 16px; font: inherit; cursor: pointer; }
+  .box.pane { --box-pad-y: 0px; --box-pad-x: 0px; width: min(780px, 94vw); height: min(620px, 85vh); max-height: none; padding: 0; overflow: hidden; display: flex; }
+  /* max-height gilt für den Inhalt: Innenrand und Rahmen abziehen, sonst ragt ein hohes Fenster unten hinaus (5v) */
+  .box.anchored { align-self: flex-start; max-height: calc(100vh - 24px - 2 * var(--box-pad-y) - 2px); }
+  .box.result { --box-pad-y: 0px; --box-pad-x: 0px; width: min(560px, 94vw); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+  /* Drei Arten von Knöpfen (5v, 10.8) in narrow, wide und pane: normal (Tönung und feiner Rand wie „Neu“ im
+     Ergebnisfenster), Hauptknopf `.main`, gefährlich `.danger`. Das Ergebnisfenster zeichnet seine selbst, das ×
+     (CloseX) ist ausgenommen. :where hält die Stärke wie bisher (0,2,1, 5t Q1), auch beim Überfahren: örtliche Regeln
+     der Fenster (Seitenleiste, Wahlflächen) gehen weiter vor */
+  .box:where(:not(.result)) :global(button:where(:not(.dialog-close))) { background: var(--menu-item-hover); color: var(--ink); border: 1px solid var(--menu-rule); border-radius: var(--radius-m); padding: 8px 16px; font: inherit; cursor: pointer; transition: scale var(--press) ease-out, background-color 80ms; }
+  .box:where(:not(.result)) :global(button:where(:not(.dialog-close):hover:not(:disabled))) { background: var(--menu-confirm); }
   .box:where(:not(.result)) :global(button:disabled) { opacity: 0.45; cursor: not-allowed; }
-  .box:where(:not(.result)) :global(button.danger) { background: var(--warn-bg); }
+  .box:where(:not(.result)) :global(button.main) { background: var(--menu-main); border-color: transparent; font-weight: 600; }
+  .box:where(:not(.result)) :global(button.main:where(:hover:not(:disabled))) { background: var(--menu-main-hover); }
+  .box:where(:not(.result)) :global(button.danger) { background: var(--warn-bg); border-color: transparent; }
   .box :global(select) { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 3px 9px; font: inherit; }
   /* gemeinsame Bausteine der Fenster: Hinweiszeile und Knopfreihe */
   .box :global(.note) { font-size: 13px; opacity: 0.75; }

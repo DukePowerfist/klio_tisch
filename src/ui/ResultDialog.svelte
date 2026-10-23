@@ -6,6 +6,7 @@
   // der Inhalt unter dem Kopf scrollt, falls es gar nicht passt.
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
+  import DialogHead from './DialogHead.svelte';
   import Modal, { isTopmost } from './Modal.svelte';
   import { fade, timing } from './animator.svelte';
   import { submitOrSay } from './commands';
@@ -63,17 +64,14 @@
 </script>
 
 <Modal label={title} onclose={close} size="result" anchor>
-  <header>
-    <h2>{title}</h2>
-    {#if reroll}
-      <button class="menu-item menu-main" onclick={() => submitOrSay({ type: cmd })}>{t(expedition ? 'gm.rerollAll' : 'gm.redraw')}</button>
-      <span class="sep" aria-hidden="true"></span>
-    {/if}
-    <!-- wie das × der Einstellungen (bewusst übernommen, 10.6) -->
-    <button class="close" {@attach focusIfTop} aria-label={t('gm.close')} title={t('gm.close')} onclick={close}>
-      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" /></svg>
-    </button>
-  </header>
+  <DialogHead {title} onclose={close} closeAttach={focusIfTop}>
+    {#snippet actions()}
+      {#if reroll}
+        <button class="menu-item menu-main" onclick={() => submitOrSay({ type: cmd })}>{t(expedition ? 'gm.rerollAll' : 'gm.redraw')}</button>
+        <span class="sep" aria-hidden="true"></span>
+      {/if}
+    {/snippet}
+  </DialogHead>
   <div class="body" bind:this={body}>
     <div {@attach glide}>
       {#if expedition && game.expedition}
@@ -101,15 +99,9 @@
 </Modal>
 
 <style>
-  header { flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 16px 12px 22px; border-bottom: 1px solid var(--pane-rule); }
-  h2 { flex: 1; margin: 0; font-size: 17px; font-weight: 600; }
-  header .menu-item { width: auto; padding: 5px 16px; }
+  .menu-main { width: auto; padding: 5px 16px; }
   /* feine Linie zwischen Hauptknopf und ×, damit man nicht schließt statt würfelt */
   .sep { align-self: stretch; margin: 4px 2px; border-left: 1px solid var(--pane-rule); }
-  /* × wie in den Einstellungen */
-  header .close { background: none; border: none; border-radius: var(--radius-m); padding: 5px; line-height: 0; color: var(--ink); opacity: 0.75; cursor: pointer; }
-  header .close:hover { background: var(--button-hover); opacity: 1; }
-  .close svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
   .body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 22px; }
   /* Expedition: Zeilen wie in den Einstellungen, Frage gedämpft über dem Ergebnis */
   .row { display: flex; align-items: flex-start; gap: 18px; padding: 10px 0; border-bottom: 1px solid var(--pane-rule); }

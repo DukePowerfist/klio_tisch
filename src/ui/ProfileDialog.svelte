@@ -7,6 +7,7 @@
   import type { SeatId, TextRef } from '../engine/types';
   import { colorHolder, seatColor, seatNo } from '../engine/zones';
   import { colorVar } from './colors';
+  import DialogHead from './DialogHead.svelte';
   import Modal from './Modal.svelte';
   import { seatNames } from './seatNames';
   import { ruleset, session } from './session.svelte';
@@ -42,13 +43,14 @@
 </script>
 
 <Modal label={title} {onclose} size="narrow">
-  <b>{title}</b>
+  <DialogHead {title} {onclose} />
   {#if withName}
     {@const label = other ? t('profile.nameOther') : t('profile.name')}
     <p><input type="text" maxlength={PLAYER_NAME_MAX} placeholder={label} aria-label={label} bind:value={name} onkeydown={(e) => { if (e.key === 'Enter') void save(); }} /></p>
   {/if}
   {#if seat}
-    <div class="label">{t('profile.color')}</div>
+    <!-- an einem freien Platz sagt es schon der Titel; die Farbwahl behält ihren Namen -->
+    {#if withName}<div class="label">{t('profile.color')}</div>{/if}
     <div class="colors" role="radiogroup" aria-label={t('profile.color')}>
       {#each ruleset.seatColors as id (id)}
         {@const taken = holder(id)}
@@ -68,7 +70,7 @@
   {#if refused}<p class="problem">{text(refused)}</p>{/if}
   <div class="end">
     <button onclick={onclose}>{t('profile.cancel')}</button>
-    <button onclick={save}>{t('profile.save')}</button>
+    <button class="main" onclick={save}>{t('profile.save')}</button>
   </div>
 </Modal>
 

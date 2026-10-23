@@ -3,6 +3,7 @@
   // Seit 5i (8.7): Personen umsetzen oder tauschen, verbundene Zuschauer auf einen freien Platz setzen.
   import { SEATS, type SeatId } from '../engine/types';
   import { seatNo, seatVisible } from '../engine/zones';
+  import DialogHead from './DialogHead.svelte';
   import Modal from './Modal.svelte';
   import { assignOrSay as assign, submitOrSay } from './commands';
   import { freeSeats, moveTargets, watchers } from './seatActions';
@@ -34,7 +35,8 @@
   }
 </script>
 
-<Modal label={t('room.manageTitle')} onclose={close} size="narrow">
+<Modal label={t('room.manageTitle')} onclose={close} size="narrow" anchor>
+  <DialogHead title={t('room.manageTitle')} onclose={close} />
   <b>{t('room.seats')}</b>
   <div class="seats">
     {#each SEATS as seat (seat)}
@@ -98,7 +100,6 @@
       <button onclick={() => (confirmRenew = true)}>{t('room.renew')}</button>
     </div>
   {/if}
-  <div class="buttons end"><button onclick={close}>{t('gm.close')}</button></div>
 </Modal>
 
 <style>
@@ -114,5 +115,4 @@
   small.on { color: var(--online); opacity: 1; }
   .seats button { padding: 4px 10px; }
   .note { margin: 4px 0 14px; }
-  .end { justify-content: flex-end; margin-top: 16px; }
 </style>

@@ -139,15 +139,28 @@ test('Ergebnisfenster: Fokus beim Öffnen auf dem ×, Enter schließt ohne zu w�
   await expect(page.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
-test('andere Fenster unverändert (5t, Q1): Knöpfe mit Grund und Rahmen, × der Einstellungen ohne', async ({ page }) => {
+test('Knöpfe der Fenster (5v, 10.8; ersetzt 5t Q1): normal, Hauptknopf, gefährlich klar verschieden, × ohne Fläche und Rahmen', async ({ page }) => {
   const look = (l: Locator) => l.evaluate((b) => { const c = getComputedStyle(b); return { bg: c.backgroundColor, border: c.borderTopStyle }; });
   await page.getByRole('button', { name: 'Zurücksetzen' }).click();
   const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
-  expect(await look(reset.getByRole('button').first())).toEqual({ bg: 'rgb(44, 90, 71)', border: 'solid' });
+  const none = { bg: 'rgba(0, 0, 0, 0)', border: 'none' };
+  expect(await look(reset.getByRole('button', { name: 'Schließen' }))).toEqual(none);
+  expect(await look(reset.getByRole('button', { name: 'Abbrechen' }))).toEqual({ bg: 'rgba(243, 239, 227, 0.08)', border: 'solid' });
+  expect((await look(reset.locator('button.danger'))).bg).toBe('rgb(122, 42, 34)');
   await page.keyboard.press('Escape');
-  await openSettings(page, 'Darstellung');
+  // Hauptknopf: „Speichern“ bei Name und Farbe (lokal am freien Platz nur die Farbe, ohne Zeile „Farbe“ unter dem Titel)
+  await page.locator('[data-plate=seat1]').click();
+  await page.locator('[data-plate-menu]').getByText('Farbe …').click();
+  const profile = page.getByRole('dialog', { name: 'Farbe: Platz 1' });
+  await expect(profile.locator('.label')).toHaveCount(0);
+  await expect(profile.getByRole('radiogroup', { name: 'Farbe' })).toBeVisible();
+  expect((await look(profile.getByRole('button', { name: 'Speichern' }))).bg).toBe('rgb(44, 90, 71)');
+  await page.keyboard.press('Escape');
+  // auch in den Einstellungen dieselben Knöpfe
+  await openSettings(page, 'Spielstand');
   const settings = page.getByRole('dialog', { name: 'Einstellungen' });
-  expect(await look(settings.locator('header .close'))).toEqual({ bg: 'rgba(0, 0, 0, 0)', border: 'none' });
+  expect(await look(settings.getByRole('button', { name: 'Schließen' }))).toEqual(none);
+  expect(await look(settings.getByRole('button', { name: 'Als Datei speichern' }))).toEqual({ bg: 'rgba(243, 239, 227, 0.08)', border: 'solid' });
 });
 
 test('Spielerzahl blendet Bögen und Dock-Knöpfe aus, nichts geht verloren', async ({ page }) => {
