@@ -166,7 +166,8 @@ export class Host<G> {
     const saved = this.saved;
     const hashes = [...new Set(this.engine.ruleset.photosOf?.(saved.state.game))];
     const found = await Promise.all(hashes.map(async (hash) => [hash, await this.options.photos?.get(hash)] as const));
-    const photos: Photos = new Map(found.filter((e): e is [string, Uint8Array] => e[1] !== undefined));
+    // fehlt eins in der Ablage (Hochladen nicht fertig, Browserdaten gelöscht), fehlt es auch in der Datei
+    const photos: Photos = new Map(found.filter((e): e is [string, Uint8Array] => e[1] != null));
     return writeArchive(saved, photos);
   }
 
@@ -273,14 +274,15 @@ export class Host<G> {
     const key = this.peers.get(from);
     if (!key) return; // erst hello
     if (msg.t === 'resync') return this.send({ t: 'state', state: this.state }, from);
-    if (msg.t === 'claim') return this.claim(key, msg, from);
     if (msg.t === 'name') return this.rename(from, msg.name);
     if (msg.t === 'photoGet') return this.sendPhoto(msg.hash, from);
     if (msg.t === 'photo') return this.send({ t: 'result', id: msg.id, ...(await this.putPhoto(key, msg.hash, msg.data)) }, from);
 
-    // Doppelt gesendet (z. B. nach Verbindungsabbruch): nur die Antwort wiederholen (8.2)
+    // Doppelt gesendet (z. B. nach Verbindungsabbruch): nur die Antwort wiederholen (8.2). Auch bei der Platzwahl,
+    // sonst bekäme die Wiederholung nach erfolgreicher Wahl eine Absage (dann schon Spieler).
     const earlier = answeredOf(this.saved.host, key).find(([id]) => id === msg.id);
     if (earlier) return this.send({ t: 'result', id: msg.id, ...earlier[1] }, from);
+    if (msg.t === 'claim') return this.claim(key, msg, from);
 
     const role = roleOf(this.saved.host, key);
     if (!role) return this.send({ t: 'result', id: msg.id, ...INVALID }, from);
@@ -327,7 +329,7 @@ export class Host<G> {
     const role: Role = { role: 'player', seat: msg.seat };
     const result: CommandResult = roleOf(this.saved.host, key)?.role !== 'spectator'
       ? INVALID
-      : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h, r) => (r.ok ? withRole(h, key, role) : h), msg.id);
+      : await this.execute({ type: 'table.setSeat', seat: msg.seat, occupied: true, ...(msg.name ? { name: msg.name } : {}) }, { role: 'gm' }, (h, r) => remember(r.ok ? withRole(h, key, role) : h, key, msg.id, r), msg.id);
     this.send({ t: 'result', id: msg.id, ...result }, from);
   }
 

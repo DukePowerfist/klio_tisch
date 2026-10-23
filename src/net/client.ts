@@ -33,8 +33,8 @@ export type ClientOptions = {
   photos?: PhotoBank;
 };
 
-/** Unbeantwortete Nachricht mit ID (Befehl oder Foto); wird nach dem Wiederverbinden erneut geschickt. */
-type Pending = { msg: Extract<ToHost, { t: 'cmd' | 'photo' }>; resolve: (r: CommandResult) => void };
+/** Unbeantwortete Nachricht mit ID (Befehl, Foto, Platzwahl); wird nach dem Wiederverbinden erneut geschickt. */
+type Pending = { msg: Extract<ToHost, { t: 'cmd' | 'photo' | 'claim' }>; resolve: (r: CommandResult) => void };
 
 export class Client<G> {
   status: ClientStatus = 'connecting';
@@ -45,7 +45,6 @@ export class Client<G> {
   private host: PeerId | null = null;
   private peers: PeerId[] = [];
   private pending = new Map<string, Pending>();
-  private claims = new Map<string, (r: CommandResult) => void>();
   /** angefragte, noch nicht erhaltene Fotos */
   private wanted = new Set<string>();
   private newId: () => string;
@@ -59,12 +58,7 @@ export class Client<G> {
   /** Als Zuschauer einen freien Platz nehmen; bei Erfolg folgt ein neues Willkommen mit der neuen Rolle. */
   claim(seat: SeatId, name: string): Promise<CommandResult> {
     if (this.status !== 'ready' || !this.host) return Promise.resolve(INVALID);
-    const id = this.newId();
-    const host = this.host;
-    return new Promise((resolve) => {
-      this.claims.set(id, resolve);
-      this.transport.send({ t: 'claim', id, seat, name }, host);
-    });
+    return this.request({ t: 'claim', id: this.newId(), seat, name });
   }
 
   /** Eigenen Namen dem Host melden (Zuschauer, für das Raumfenster der SL; 8.7). */
@@ -122,7 +116,7 @@ export class Client<G> {
     // Antworten auf hello kommen, bevor ein Host feststeht; alles andere nur vom Host-Peer (8.2)
     switch (msg.t) {
       case 'reload':
-        return this.setStatus('reload');
+        return this.end('reload');
       case 'welcome':
         return this.welcome(msg.role, msg.state, from, msg.by ?? null);
       case 'denied':
@@ -135,17 +129,12 @@ export class Client<G> {
     switch (msg.t) {
       case 'replaced':
         this.host = null;
-        return this.setStatus('replaced');
+        return this.end('replaced');
       case 'state':
         if (this.adopt(msg.state) && msg.reason) this.options.onReplaced?.(msg.reason);
         return;
       case 'result': {
         const result: CommandResult = msg.ok ? { ok: true } : msg.reason ? { ok: false, reason: msg.reason } : INVALID;
-        const claim = this.claims.get(msg.id);
-        if (claim) {
-          this.claims.delete(msg.id);
-          return claim(result);
-        }
         const p = this.pending.get(msg.id);
         if (!p) return;
         this.pending.delete(msg.id);
@@ -210,6 +199,15 @@ export class Client<G> {
     }
     this.options.onChange?.();
     this.options.onEvents?.(events.map((e) => e.event), cause, !!cause && this.pending.has(cause));
+  }
+
+  /** Endgültig (anderer Tab, andere Version): Offenes bekommt eine Absage, auch wenn der Host es vielleicht schon
+   *  ausgeführt hat; dieser Tab arbeitet ohnehin nicht weiter. */
+  private end(s: 'reload' | 'replaced'): void {
+    const open = [...this.pending.values()];
+    this.pending.clear();
+    this.setStatus(s);
+    for (const p of open) p.resolve(INVALID);
   }
 
   private setStatus(s: ClientStatus): void {

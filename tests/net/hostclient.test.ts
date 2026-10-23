@@ -95,6 +95,14 @@ describe('Beitreten', () => {
     expect(a.client.status).toBe('reload');
     expect(a.client.state).toBeNull();
   });
+
+  it('andere Version: offene Anfragen enden mit einer Absage', async () => {
+    const { net, host, join } = await setup();
+    const a = join('seat1', { build: 'alt0000' });
+    const r = a.client.submit({ type: 'zone.draw', zone: 'deck' }); // vor dem Willkommen: wartet
+    await settle(net, host);
+    expect(await r).toEqual({ ok: false, reason: { key: 'reject.invalid' } });
+  });
 });
 
 describe('Befehle', () => {
@@ -266,6 +274,22 @@ describe('Verbindung', () => {
     expect(a.client.status).toBe('replaced');
   });
 
+  it('vom zweiten Tab abgelöst: offene Platzwahl und Befehle enden mit einer Absage', async () => {
+    const { net, host, join } = await setup();
+    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
+    await settle(net, host);
+    net.drop = (msg, from) => from === a.transport.self; // kommt nicht mehr an
+    const claim = a.client.claim('seat2', 'Ida');
+    const cmd = a.client.submit({ type: 'zone.draw', zone: 'deck' });
+    await settle(net, host);
+    net.drop = () => false;
+    join('spectator', { key: a.key });
+    await settle(net, host);
+    expect(a.client.status).toBe('replaced');
+    expect(await claim).toEqual({ ok: false, reason: { key: 'reject.invalid' } });
+    expect(await cmd).toEqual({ ok: false, reason: { key: 'reject.invalid' } });
+  });
+
   it('Nachrichten von anderen Peers als dem Host werden ignoriert', async () => {
     const { net, host, join } = await setup();
     const a = join('seat1');
@@ -338,6 +362,24 @@ describe('Platz wählen nach dem Beitritt', () => {
     expect(host.state.seats.seat2).toEqual({ occupied: true, name: 'Ida' });
     expect(b.client.state!.seats.seat2.occupied).toBe(true);
     expect(events).toContain('seatsChanged');
+  });
+
+  it('Antwort auf die Platzwahl geht verloren, Host startet neu: Wiederholung bekommt die Zusage', async () => {
+    const { net, host, join, startHost, store } = await setup();
+    const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
+    await settle(net, host);
+    // nach dem Speichern bricht die Verbindung ab: weder Willkommen noch Antwort kommen an
+    net.drop = (msg, from) => from === host.peerId;
+    const r = a.client.claim('seat2', 'Ida');
+    await settle(net, host);
+    net.drop = () => false;
+    expect(store.saved!.host.keys[a.key]).toEqual({ role: 'player', seat: 'seat2' });
+    net.disconnect(host.peerId);
+    await settle(net, host);
+    const host2 = await startHost();
+    await settle(net, host2);
+    expect(await r).toEqual({ ok: true });
+    expect(a.client.role).toEqual({ role: 'player', seat: 'seat2' });
   });
 
   it('vergebener Platz: Absage, bleibt Zuschauer und verbunden', async () => {
@@ -703,6 +745,14 @@ describe('Sicherung (A34) und Datei (8.2)', () => {
     const newer = JSON.parse(file);
     newer.state.format = 99;
     expect(await host.importArchive(JSON.stringify(newer))).toEqual({ ok: false, reason: { key: 'reject.importNewer' } });
+  });
+
+  it('Datei: ein Foto fehlt in der Ablage, die Datei entsteht trotzdem (ohne dieses Foto)', async () => {
+    const { host } = await setup();
+    await host.submit({ type: 'sheet.setPhoto', seat: 'seat2', photo: { hash: 'a'.repeat(64), type: 'image/jpeg' } });
+    const file = JSON.parse(await host.exportArchive());
+    expect(file.photos).toEqual({});
+    expect(await host.importArchive(JSON.stringify(file))).toEqual({ ok: true });
   });
 
   it('Datei von einem anderen Gerät: wer verbunden ist und darin fehlt, wird Zuschauer (gespeichert)', async () => {
