@@ -543,6 +543,27 @@ test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne 
   await expect(player.getByRole('dialog', { name: 'Expedition' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
+test('Trumpf wählen mit Mitspieler (5y, F2 und F3): „Freie Wahl“ nur mit Recht; entzogen mitten in der Wahl steht der Grund im Fenster', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('2');
+  await player.locator('[data-sheet=seat2] [data-slot="0"]').click();
+  const dialog = player.getByRole('dialog', { name: /^Trumpf wählen/ });
+  await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Freie Wahl' })).toHaveCount(0);
+
+  const rights = await openSettings(gm, 'Rechte der Spieler');
+  const free = rights.getByRole('combobox', { name: 'Trumpf frei wählen (ohne Regelprüfung)' });
+  await free.selectOption('allow');
+  await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
+  await dialog.getByRole('button', { name: /^Verschiedene/ }).click();
+  await free.selectOption('deny');
+  await dialog.getByRole('button', { name: /Kraftakt/ }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Dafür fehlt dir die Berechtigung.');
+  await expect(player.locator('[data-sheet=seat2] [data-slot="0"] .tcard')).toHaveCount(0);
+});
+
 test('Zug bleibt bei der SL bestehen, wenn der Zeiger den Tisch verlässt; abgebrochen gleitet die Karte sofort zurück (5x)', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();

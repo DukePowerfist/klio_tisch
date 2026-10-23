@@ -121,6 +121,55 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await expect(sheet1(page).locator('[data-check="lamps.0"]')).toHaveAttribute('aria-pressed', 'false');
 });
 
+test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „Ohne Verbesserung weiter“ schicken die Formulierung nicht ab', async ({ page }) => {
+  await page.keyboard.press('1');
+  await setField(page, 'attributes.K', '2');
+  await setField(page, 'strengths.text.1', 'Peitsche');
+  await sheet1(page).locator('[data-slot="0"]').click();
+  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
+  await page.getByRole('button', { name: /^Körper/ }).click();
+  await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
+  for (const i of [0, 1, 2]) await sheet1(page).locator(`[data-check="lamps.${i}"]`).click();
+  await sheet1(page).locator('[data-slot="1"]').click();
+  const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
+  const top = async (name: string) => (await dialog.getByRole('button', { name, exact: true }).boundingBox())!.y;
+  // Startseite: „Freie Wahl“ und „Zufälliger Trumpf“ auf einer Höhe (1600 × 900: die Reihe bricht nicht um)
+  expect(await top('Freie Wahl')).toBe(await top('Zufälliger Trumpf'));
+  await dialog.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
+  await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
+  await dialog.getByRole('textbox').fill('gute Peitsche');
+  const back = await top('← Zurück');
+  expect(await top('Ohne Verbesserung weiter')).toBe(back);
+  expect(await top('Weiter')).toBe(back);
+  // Zurück: zur Startseite, nichts abgeschickt
+  await dialog.getByRole('button', { name: '← Zurück' }).click();
+  await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toBeVisible();
+  // Überspringen aus dem Formular: weiter ohne Verbesserung
+  await dialog.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
+  await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
+  await dialog.getByRole('textbox').fill('gute Peitsche');
+  await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
+  await expect(dialog.locator('h2')).toHaveText('Für welches Attribut?');
+  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  await dialog.getByRole('button', { name: /Stoiker/ }).click();
+  await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Stoiker');
+  await expect(sheet1(page).locator('[data-field="strengths.text.1"]')).toHaveValue('Peitsche');
+  await expect(sheet1(page).locator('[data-check="strengths.improved.1"]')).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('Trumpf wählen (5y, F3): Ablehnung steht im Fenster, das Fenster bleibt offen', async ({ page }) => {
+  await chooseAnatomie(page);
+  // kein Weg offen: Start schon gewählt, keine Kästchen, keine Lampen, keine neue Narbe
+  await sheet1(page).locator('[data-slot="1"]').click();
+  const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
+  await dialog.getByRole('button', { name: 'Zufälliger Trumpf' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Keine Voraussetzung erfüllt: Es ist gerade kein Trumpf wählbar.');
+  await expect(dialog.getByRole('alert')).toBeInViewport();
+  // beim nächsten Schritt verschwindet der Grund
+  await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+});
+
 test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'attributes.P', '4');

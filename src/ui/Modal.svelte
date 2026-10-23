@@ -111,10 +111,18 @@
   .box :global(.buttons) { display: flex; gap: 10px; margin: 8px 0; }
   /* Bausteine für den Inhalt aller Fenster (5y, 10.10), Vorsilbe dialog- wie dialog-head: Reihe am Ende (rechtsbündig,
      `.start` rückt nach links; den Abstand darüber bringt das Element davor mit), Zwischenüberschrift wie in den
-     Einstellungen, Textfeld, kleine Knöpfe in Zeilen */
-  .box :global(.dialog-end) { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
-  .box :global(.dialog-end > .start) { margin-right: auto; }
-  .box :global(.dialog-heading) { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }
-  .box :global(.dialog-field) { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
+     Einstellungen, Textfeld, kleine Knöpfe in Zeilen. Ohne Knöpfe schwach (:where), damit örtliche Regeln der Fenster
+     vorgehen; Knöpfe müssen die Knopfregel oben schlagen */
+  :where(.box) :global(.dialog-end) { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+  :where(.box) :global(.dialog-end > .start) { margin-right: auto; }
+  :where(.box) :global(.dialog-heading) { margin: 18px 0 2px; font-size: 14px; font-weight: 600; opacity: 0.85; }
+  :where(.box) :global(.dialog-field) { width: 100%; box-sizing: border-box; padding: 8px 10px; font: inherit; border-radius: var(--radius-m); border: 1px solid var(--line); background: var(--paper); color: var(--dark-ink); }
   .box :global(.dialog-small) { padding: 5px 12px; }
+  /* Wahlflächen (Trumpf wählen, Platz wählen): großer Knopf mit Titel, darunter `.note`; `center` für kurze Wahl
+     (Kategorie, Attribut); `.sel` gewählt. Liste darum mit `--cols` Spalten. Nebentext `.dialog-aside` (Anzahl, Zustand) */
+  :where(.box) :global(.dialog-choices) { display: grid; grid-template-columns: repeat(var(--cols, 1), 1fr); gap: 10px; margin: 0 0 12px; }
+  .box :global(.dialog-choice) { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; padding: 12px 16px; text-align: left; }
+  .box :global(.dialog-choice.center) { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0 6px; text-align: center; }
+  .box :global(.dialog-choice.sel) { background: var(--selected); color: var(--ink); border-color: var(--selected-rim); }
+  :where(.box) :global(.dialog-aside) { font-size: 12px; opacity: 0.7; }
 </style>
