@@ -345,6 +345,26 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
   const ownSlot = player.locator('[data-sheet=seat2] [data-slot="0"]');
   await expect(ownSlot).toHaveAttribute('role', 'button');
   await expect(ownSlot).toHaveCSS('cursor', 'pointer');
+  // Feldfenster (5z): fremdes Feld nur lesen und folgt Änderungen; eigener Entwurf bleibt mit Hinweis (F2 a)
+  const long = 'Ein sehr langes Seil aus Hanf, zwanzig Meter, an einem Ende ausgefranst und am anderen Ende mit einem Haken';
+  await setField(gm, 'seat1', 'gear.text.0', long);
+  await player.locator('[data-sheet=seat1] [data-more="gear.text.0"]').click();
+  const read = player.getByRole('dialog', { name: 'Rüstzeug 1 · Bogen 1' });
+  await expect(read.getByText(long, { exact: true })).toBeVisible();
+  await expect(read.getByRole('textbox')).toHaveCount(0);
+  await setField(gm, 'seat1', 'gear.text.0', `${long} zwei`);
+  await expect(read.getByText(`${long} zwei`, { exact: true })).toBeVisible();
+  await read.getByText('Schließen', { exact: true }).click();
+  await setField(player, 'seat2', 'gear.text.0', long);
+  await player.locator('[data-sheet=seat2] [data-more="gear.text.0"]').click();
+  const draft = player.getByRole('dialog', { name: 'Rüstzeug 1 · Bogen 2' });
+  await draft.getByRole('textbox').fill('Entwurf');
+  await setField(gm, 'seat2', 'gear.text.0', 'von der SL');
+  await expect(draft.getByText(/^Inzwischen anderswo geändert/)).toBeVisible();
+  await expect(draft.getByRole('textbox')).toHaveValue('Entwurf');
+  await draft.getByRole('button', { name: 'Übernehmen' }).click();
+  await expect(draft).toHaveCount(0);
+  await expect(gm.locator('[data-sheet=seat2] [data-field="gear.text.0"]')).toHaveValue('Entwurf');
   await player.locator('.board').click({ position: { x: 5, y: 5 } });
   // Spieler speichert seinen Charakter mit Foto, setzt zurück und lädt ihn wieder; die SL sieht Bogen und Foto
   await player.locator('[data-plate=seat2]').click();

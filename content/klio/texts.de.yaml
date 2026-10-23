@@ -60,6 +60,20 @@ sheet:
   trumpChoose: Trumpf wählen
   trumpLocked: Trumpf (noch nicht freigeschaltet)
   trumpRemove: Trumpf entfernen
+  more: Ganzen Text zeigen                 # „…“ an abgeschnittenen Feldern (neu, 5z)
+  field:                                  # Feldfenster (neu, 5z, 10.11)
+    title: "{field} · Bogen {seat}"
+    name: Name
+    strengths: "Stärke {n}"
+    weaknesses: "Schwäche {n}"
+    gear: "Rüstzeug {n}"
+    experiences: "Erlebnis {n}"
+    struck: gestrichen
+    changed: Inzwischen anderswo geändert. „Übernehmen“ ersetzt den neuen Stand.
+    count: "{n} / {max}"
+    cancel: Abbrechen
+    save: Übernehmen
+    close: Schließen
 
 attributes: { K: Körper, V: Verstehen, P: Präsenz }
 

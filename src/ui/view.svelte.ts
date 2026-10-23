@@ -48,6 +48,8 @@ class ViewState {
   stackMenu = $state.raw<StackMenuAt | null>(null);
   /** offener Trumpf-Dialog für diesen Bogen */
   trumpDialog = $state<SeatId | null>(null);
+  /** Feldfenster (5z, 10.11): ganzer Text eines Bogenfelds, lesen oder bearbeiten */
+  fieldDialog = $state<{ seat: SeatId; field: string } | null>(null);
   /** offenes Ergebnisfenster (Expedition bzw. Orakel), geöffnet durch das Ereignis */
   gmDialog = $state<'expedition' | 'oracle' | null>(null);
   /** letzter Wurf dazu (5t, 10.6): welche Teile kurz einblenden (Zeilen bzw. Begriffe); jeder Wurf ein neues Objekt */

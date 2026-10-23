@@ -24,6 +24,48 @@ test('Textfelder nehmen höchstens 200 Zeichen, auch beim Einfügen, ohne Ablehn
   await expect(sheet1(page).locator('[data-field="gear.text.0"]')).toHaveValue('z'.repeat(200));
 });
 
+test('Feldfenster (5z): „…“ nur am abgeschnittenen Feld, ganzer Text im Fenster, Enter übernimmt, Esc nicht', async ({ page }) => {
+  await page.keyboard.press('1');
+  const long = 'Ein sehr langes Seil aus Hanf, zwanzig Meter, an einem Ende ausgefranst und am anderen Ende mit einem Haken';
+  await setField(page, 'gear.text.0', long);
+  await setField(page, 'gear.text.1', 'Seil');
+  const more = sheet1(page).locator('[data-more="gear.text.0"]');
+  await expect(more).toBeVisible();
+  await expect(sheet1(page).locator('[data-more="gear.text.1"]')).toHaveCount(0);
+  // nach dem Tippen steht wieder der Anfang im Feld
+  expect(await sheet1(page).locator('[data-field="gear.text.0"]').evaluate((el) => el.scrollLeft)).toBe(0);
+  // beim Tippen kein „…“
+  await sheet1(page).locator('[data-field="gear.text.0"]').click();
+  await expect(more).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await sheet1(page).locator('[data-field="gear.text.0"]').blur();
+
+  await more.click();
+  const dialog = page.getByRole('dialog', { name: 'Rüstzeug 1 · Bogen 1' });
+  const box = dialog.getByRole('textbox');
+  await expect(box).toHaveValue(long);
+  await expect(box).toBeFocused();
+  await box.fill('Kurzes Seil');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(sheet1(page).locator('[data-field="gear.text.0"]')).toHaveValue(long);
+
+  await more.click();
+  await box.fill(`${long}, neu`);
+  await box.press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(sheet1(page).locator('[data-field="gear.text.0"]')).toHaveValue(`${long}, neu`);
+
+  // Stärken mit römischer Nummer; Zähler ab 150 Zeichen
+  await setField(page, 'strengths.text.2', long);
+  await sheet1(page).locator('[data-more="strengths.text.2"]').click();
+  const strength = page.getByRole('dialog', { name: 'Stärke III · Bogen 1' });
+  await strength.getByRole('textbox').fill('x'.repeat(160));
+  await expect(strength.getByText('160 / 200')).toBeVisible();
+  await strength.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(strength).toHaveCount(0);
+});
+
 test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'name', 'Ida Weber');

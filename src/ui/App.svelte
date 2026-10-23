@@ -3,6 +3,7 @@
   import Board from './Board.svelte';
   import BigTrump from './BigTrump.svelte';
   import Dock from './Dock.svelte';
+  import FieldDialog from './FieldDialog.svelte';
   import { gameLog } from './log.svelte';
   import JoinDialog from './JoinDialog.svelte';
   import LogPanel from './LogPanel.svelte';
@@ -65,6 +66,9 @@
   {/if}
   {#if view.trumpDialog}
     {#key view.trumpDialog}<TrumpDialog seat={view.trumpDialog} />{/key}
+  {/if}
+  {#if view.fieldDialog}
+    {#key view.fieldDialog}<FieldDialog seat={view.fieldDialog.seat} field={view.fieldDialog.field} />{/key}
   {/if}
   {#if chooseSeat}
     <JoinDialog onclose={() => (joinOpen = false)} />
