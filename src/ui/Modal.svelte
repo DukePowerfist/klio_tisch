@@ -1,7 +1,8 @@
 <script lang="ts">
   // Gemeinsames Fenster: abgedunkelter Hintergrund, Klick daneben oder Esc schließt.
   // Größe: narrow (Rückfragen, schmal), wide (Trumpf), pane (Einstellungen: feste Größe, Inhalt ordnet sich selbst),
-  // result (Expedition und Orakel, 5t: Spalte ohne Innenrand, Knöpfe zeichnet das Fenster selbst).
+  // result (Expedition und Orakel, 5t: Spalte ohne Innenrand, Knöpfe zeichnet das Fenster selbst; öffnet mittig, danach
+  // bleibt die Oberkante fest und es ändert seine Höhe nur nach unten).
   // Tab bleibt im obersten Fenster (Schritt 5f), statt in den Tisch dahinter zu laufen.
   import type { Snippet } from 'svelte';
 
@@ -15,6 +16,30 @@
   } = $props();
 
   let box: HTMLDivElement;
+
+  /** result: Oberkante beim Öffnen mittig, danach fest (10.6); nur wenn es unten nicht mehr passt, rückt es so weit wie
+   *  nötig nach oben. Neu mittig erst, wenn sich das Browserfenster ändert. */
+  const EDGE = 12;
+  let top = $state<number | null>(null);
+  $effect(() => {
+    if (size !== 'result') return;
+    let anchor = 0;
+    const centre = () => (anchor = Math.max(EDGE, (innerHeight - box.offsetHeight) / 2));
+    const place = () => (top = Math.max(EDGE, Math.min(anchor, innerHeight - EDGE - box.offsetHeight)));
+    centre();
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(box);
+    const resized = () => {
+      centre();
+      place();
+    };
+    addEventListener('resize', resized);
+    return () => {
+      ro.disconnect();
+      removeEventListener('resize', resized);
+    };
+  });
 
   const FOCUSABLE = 'button:not(:disabled), input:not(:disabled):not([type=hidden]):not([hidden]), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])';
 
@@ -45,8 +70,8 @@
 <svelte:window {onkeydown} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="overlay" onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}>
-  <div class="box {size}" role="dialog" aria-modal="true" aria-label={label} bind:this={box}>
+<div class="overlay" class:anchored={size === 'result'} onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}>
+  <div class="box {size}" style:margin-top={top === null ? null : `${top}px`} role="dialog" aria-modal="true" aria-label={label} bind:this={box}>
     {@render children()}
   </div>
 </div>
@@ -56,7 +81,8 @@
   .box { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; width: min(860px, 94vw); max-height: 90vh; overflow: auto; font-size: 15px; animation: pop-in var(--pop) var(--spring-soft); }
   .box.narrow { width: auto; max-width: 420px; border-radius: 12px; }
   .box.pane { width: min(780px, 94vw); height: min(620px, 85vh); max-height: none; padding: 0; overflow: hidden; display: flex; }
-  .box.result { width: min(560px, 94vw); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .overlay.anchored { align-items: flex-start; }
+  .box.result { width: min(560px, 94vw); max-height: calc(100vh - 24px); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
   /* Knöpfe nur in den übrigen Größen; :where hält die Stärke der Regeln wie bisher (0,2,1, 5t Q1) */
   .box:where(:not(.result)) :global(button) { background: var(--button-hover); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; font: inherit; cursor: pointer; }
   .box:where(:not(.result)) :global(button:disabled) { opacity: 0.45; cursor: not-allowed; }

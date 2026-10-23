@@ -2,7 +2,8 @@
   // Ergebnis von Expedition bzw. Orakel; öffnet sich bei allen mit dem Ereignis (13.1).
   // Neu würfeln dürfen nur, wer das Recht dazu hat (sonst fehlen die Knöpfe, im Kopf bleibt nur das ×).
   // Seit 5t (10.6) im Stil der Einstellungen: Kopf mit Hauptknopf und ×, feine Linien, Knöpfe im Menüstil. Das Fenster
-  // steht mittig; nur der Inhalt unter dem Kopf scrollt, seine Höhe gleitet.
+  // öffnet mittig, danach bleibt die Oberkante fest (Modal, Größe result); die Höhe gleitet nur nach unten, und nur
+  // der Inhalt unter dem Kopf scrollt, falls es gar nicht passt.
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import Modal from './Modal.svelte';

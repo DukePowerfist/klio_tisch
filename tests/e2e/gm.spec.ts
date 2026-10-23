@@ -70,32 +70,50 @@ test('Ergebnisfenster: etwa 560 px breit; längste Einträge ohne Bildlauf, im k
   await page.setViewportSize({ width: 1600, height: 900 });
   expect(await scrolls()).toBe(false);
   // kleines Fenster: nur der Inhalt scrollt, Kopf und Hauptknopf bleiben im Bild
-  await page.setViewportSize({ width: 800, height: 450 });
+  await page.setViewportSize({ width: 800, height: 360 });
   await expect.poll(scrolls).toBe(true);
   for (const part of [dialog.getByRole('button', { name: 'Schließen' }), dialog.getByRole('button', { name: 'Alles neu' })]) {
     const b = (await part.boundingBox())!;
     expect(b.y).toBeGreaterThanOrEqual(0);
-    expect(b.y + b.height).toBeLessThanOrEqual(450);
+    expect(b.y + b.height).toBeLessThanOrEqual(360);
   }
+  const box = (await dialog.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(360);
 });
 
-test('Ergebnisfenster: mittig; wächst ein Ergebnis, bleibt es mittig und ohne Bildlauf', async ({ page }) => {
+test('Ergebnisfenster: öffnet mittig, danach bleibt die Oberkante fest und es wächst nur nach unten', async ({ page }) => {
   await fixRolls(page, [8, 7, 1, 4]);
   await page.getByRole('button', { name: 'Expedition', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Expedition' });
   await expect(dialog.locator('.row .value').first()).toHaveText('auf das offene Meer.');
   const height = page.viewportSize()!.height;
-  const centred = async () => {
-    const b = (await dialog.boundingBox())!;
-    expect(Math.abs(b.y - (height - b.y - b.height))).toBeLessThan(2);
-    return b.height;
-  };
-  const short = await centred();
+  const open = (await dialog.boundingBox())!;
+  expect(Math.abs(open.y - (height - open.y - open.height))).toBeLessThan(2);
+  const header = (await dialog.locator('header').boundingBox())!;
   await fixRolls(page, [LONGEST[2]!]);
   await dialog.getByRole('button', { name: 'Neu würfeln: Ihr seid hier, weil …' }).click();
   await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
-  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(short + 20);
-  await centred();
+  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(open.height + 20);
+  expect((await dialog.boundingBox())!.y).toBe(open.y);
+  expect((await dialog.locator('header').boundingBox())!).toEqual(header);
+  expect(await dialog.locator('.body').evaluate((b) => b.scrollHeight > b.clientHeight)).toBe(false);
+});
+
+test('Ergebnisfenster im kleinen Fenster: passt es unten nicht mehr, rückt es nur so weit wie nötig nach oben, ohne Bildlauf', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await fixRolls(page, [8, 7, 1, 4]);
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog.locator('.row .value').first()).toHaveText('auf das offene Meer.');
+  const open = (await dialog.boundingBox())!;
+  await fixRolls(page, LONGEST);
+  await dialog.getByRole('button', { name: 'Alles neu' }).click();
+  await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
+  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(open.height + 20);
+  const grown = (await dialog.boundingBox())!;
+  expect(grown.y).toBeLessThanOrEqual(open.y);
+  expect(grown.y).toBeGreaterThanOrEqual(12);
+  expect(grown.y + grown.height).toBeLessThanOrEqual(600 - 12 + 0.5);
   expect(await dialog.locator('.body').evaluate((b) => b.scrollHeight > b.clientHeight)).toBe(false);
 });
 
