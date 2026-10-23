@@ -101,13 +101,16 @@
     await setPhoto(seat, file);
   }
 
-  // Großansicht eines Trumpfs: beim Überfahren nach 650 ms, beim Klick angeheftet
+  // Großansicht eines Trumpfs: beim Überfahren nach 650 ms, beim Klick angeheftet. Nur wenn das Feld dann noch unter
+  // dem Zeiger liegt: Ein Ansichtswechsel verschiebt den Bogen, ohne dass ein pointerleave kommt (5x).
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
-  function hoverTrump(id: string | null) {
+  function hoverTrump(id: string | null, el?: Element) {
     clearTimeout(hoverTimer);
-    if (id) hoverTimer = setTimeout(() => (view.bigTrump = { id, pinned: false }), 650);
+    if (id) hoverTimer = setTimeout(() => { if (el?.matches(':hover')) view.bigTrump = { id, pinned: false }; }, 650);
     else if (view.bigTrump && !view.bigTrump.pinned) view.bigTrump = null;
   }
+  // abgebaut (weniger Spieler): kein Überfahren mehr offen
+  $effect(() => () => clearTimeout(hoverTimer));
 </script>
 
 <div
@@ -191,10 +194,11 @@
         title={trump ? undefined : canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLocked')}
         role="button"
         tabindex="0"
-        onpointerenter={() => hoverTrump(trump?.id ?? null)}
+        onpointerenter={(e) => hoverTrump(trump?.id ?? null, e.currentTarget)}
         onpointerleave={() => hoverTrump(null)}
         onclick={(e) => {
           e.stopPropagation();
+          clearTimeout(hoverTimer);
           if (trump) view.bigTrump = { id: trump.id, pinned: true };
           else if (canChooseTrump) view.trumpDialog = seat;
         }}

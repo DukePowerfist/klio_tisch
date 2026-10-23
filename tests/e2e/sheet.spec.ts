@@ -53,6 +53,35 @@ test('Schaden: niedrigere Karo-Karte tötet; Wiederbeleben über das Schild', as
   await expect(sheet1(page).locator('.dead-cross')).toHaveCount(0);
 });
 
+/** Starttrumpf „Anatomie“ an Bogen 1, Platz 0 (Rollenansicht Bogen 1) */
+async function chooseAnatomie(page: Page) {
+  await page.keyboard.press('1');
+  await setField(page, 'attributes.V', '3');
+  await sheet1(page).locator('[data-slot="0"]').click();
+  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
+  await page.getByRole('button', { name: /^Verstehen/ }).click();
+  await page.getByRole('button', { name: /Anatomie/ }).click();
+  await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
+  await page.mouse.move(5, 5);
+}
+
+test('Trumpf: schneller Klick heftet die Großansicht an, das Überfahren überschreibt es nicht (5x)', async ({ page }) => {
+  await chooseAnatomie(page);
+  await sheet1(page).locator('[data-slot="0"]').click(); // Klick gleich beim Überfahren, vor Ablauf der 650 ms
+  await page.waitForTimeout(900);
+  await page.mouse.move(5, 5); // Zeiger verlässt das Feld: eine angeheftete Ansicht bleibt
+  await expect(page.locator('.big .tcard')).toContainText('Anatomie');
+});
+
+test('Trumpf: Großansicht nur, wenn das Feld nach 650 ms noch unter dem Zeiger liegt (5x)', async ({ page }) => {
+  // Ein Ansichtswechsel oder Abbau kann den Bogen unter dem ruhenden Zeiger wegziehen, ohne dass jeder Browser ein
+  // pointerleave schickt (Chromium tut es); nachgestellt mit einem pointerenter ohne Zeiger über dem Feld
+  await chooseAnatomie(page);
+  await sheet1(page).locator('[data-slot="0"]').dispatchEvent('pointerenter');
+  await page.waitForTimeout(900);
+  await expect(page.locator('.big')).toHaveCount(0);
+});
+
 test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'attributes.V', '3');
