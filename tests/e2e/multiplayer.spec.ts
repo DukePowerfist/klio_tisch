@@ -521,7 +521,7 @@ test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausg
   await expect(player.locator('[data-zone=deck]')).not.toHaveAttribute('role', 'button');
 });
 
-test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne den Fokus zu nehmen; sonst aufs ×', async ({ browser }) => {
+test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne den Fokus zu nehmen, Esc schließt eins nach dem anderen (5x); sonst aufs ×', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
   await joinAs(player, link, 'Ida', 2);
@@ -531,8 +531,11 @@ test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne 
   await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
   await expect(player.getByRole('dialog', { name: 'Orakel' })).toHaveCount(1);
   await expect(tab).toBeFocused();
-  await player.keyboard.press('Escape'); // schließt beide Fenster (jedes Modal hört auf Esc, hingenommen)
+  // Esc schließt nur das oberste Fenster (5x): erst die Einstellungen, dann das Ergebnis dahinter
+  await player.keyboard.press('Escape');
   await expect(settings).toHaveCount(0);
+  await expect(player.getByRole('dialog', { name: 'Orakel' })).toHaveCount(1);
+  await player.keyboard.press('Escape');
   await expect(player.getByRole('dialog')).toHaveCount(0);
   await gm.keyboard.press('Escape'); // Orakel bei der SL schließen, sonst fängt es den Klick ab
   // ohne anderes Fenster: Fokus aufs ×

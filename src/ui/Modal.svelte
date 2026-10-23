@@ -7,7 +7,7 @@
 </script>
 
 <script lang="ts">
-  // Gemeinsames Fenster: abgedunkelter Hintergrund, Klick daneben oder Esc schließt.
+  // Gemeinsames Fenster: abgedunkelter Hintergrund, Klick daneben oder Esc (nur das oberste) schließt.
   // Größe: narrow (Rückfragen, schmal), wide (Trumpf), pane (Einstellungen: feste Größe, Inhalt ordnet sich selbst),
   // result (Expedition und Orakel, 5t: Spalte ohne Innenrand, Knöpfe zeichnet das Fenster selbst).
   // anchor: öffnet mittig, danach bleibt die Oberkante fest und die Höhe ändert sich nur nach unten (5t, 10.6).
@@ -52,13 +52,15 @@
   const FOCUSABLE = 'button:not(:disabled), input:not(:disabled):not([type=hidden]):not([hidden]), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])';
 
   function onkeydown(e: KeyboardEvent) {
+    // Nur das oberste Fenster schließt mit Esc und hält den Fokus; darunter liegende bleiben offen (5x). Abgefangen:
+    // Svelte baut das Fenster schon vor dem nächsten Listener ab, sonst wäre das darunter nun oberstes und schlösse mit.
+    if (!isTopmost(box)) return;
     if (e.key === 'Escape') {
+      e.stopImmediatePropagation();
       if (!onescape?.()) onclose();
       return;
     }
     if (e.key !== 'Tab') return;
-    // Nur das oberste Fenster hält den Fokus
-    if (!isTopmost(box)) return;
     const items = [...box.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.getClientRects().length > 0);
     if (items.length === 0) return e.preventDefault();
     const first = items[0]!;
