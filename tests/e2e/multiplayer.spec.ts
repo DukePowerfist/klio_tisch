@@ -116,14 +116,14 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.keyboard.press('0');
   await openMenuAndClick(player, 'DECK', 'Ziehen');
   await expectCount(gm, 'ABLAGE', 1);
-  // SL würfelt Orakel, Spieler sieht das Ergebnis, aber keinen Knopf zum Neuziehen: nur das ×, keine Fußzeile (5t)
+  // SL würfelt Orakel, Spieler sieht das Ergebnis, aber keinen Knopf zum Neuziehen: nur das ×, kein Hauptknopf (5t)
   await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
   const oracle = player.getByRole('dialog', { name: 'Orakel' });
   await expect(oracle).toBeVisible();
   await expect(oracle.locator('.word')).toHaveCount(2);
   await expect(oracle.getByRole('button')).toHaveCount(1);
   await expect(oracle.getByRole('button', { name: 'Schließen' })).toBeVisible();
-  await expect(oracle.locator('footer')).toHaveCount(0);
+  await expect(oracle.locator('header .menu-main')).toHaveCount(0);
   // Spieler hat keine SL-Leiste
   await expect(player.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
 

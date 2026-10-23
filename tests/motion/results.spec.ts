@@ -71,3 +71,18 @@ test('Stufe „Aus“ (Bewegung reduzieren): das Einblenden bleibt', async ({ pa
   await rollAndWait(page, 'Neu würfeln: Bekannt für …', 2);
   await expect.poll(() => faded(page)).toContainEqual({ part: 1, duration: 150 });
 });
+
+test('Höhe gleitet mit --shift, wenn ein Ergebnis länger wird; die Oberkante bleibt', async ({ page }) => {
+  await fromMenu(page, 'Protokoll');
+  await fixRolls(page, [8, 7, 1, 4]);
+  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog.locator('.row .value').nth(2)).toHaveCount(1);
+  await page.waitForTimeout(300);
+  const top = (await dialog.boundingBox())!.y;
+  await fixRolls(page, [LONGEST[2]!]);
+  await rollAndWait(page, 'Neu würfeln: Ihr seid hier, weil …', 2);
+  const glide = await dialog.locator('.body').evaluate((b) => b.getAnimations().map((a) => Number((a.effect as KeyframeEffect).getTiming().duration)));
+  expect(glide).toEqual([350]);
+  expect((await dialog.boundingBox())!.y).toBe(top);
+});
