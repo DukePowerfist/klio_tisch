@@ -2,7 +2,7 @@
 // Gemessen wird an den laufenden Animationen (Web Animations API) direkt nach dem Auslösen, nicht an Bildern.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, holdOver, openSettings, ready, resetTable, saveArchive, stackItem, zoneCenter } from '../e2e/helpers';
+import { dragFromTo, expectCount, fromMenu, holdOver, openSettings, ready, resetTable, saveArchive, stackItem, zoneCenter } from '../e2e/helpers';
 
 type Anim = { card: string | null; part: string; props: string[]; delay: number; duration: number; easing: string };
 
@@ -404,7 +404,7 @@ test('Fenster, Stapelmenü und Meldungen erscheinen weich; Knöpfe geben beim Dr
   await expect.poll(() => draw.evaluate((e) => getComputedStyle(e).scale)).toBe('0.97');
   await page.mouse.up();
   await expect(page.getByRole('status')).toHaveText(/^Aufgedeckt: /);
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await fromMenu(page, 'Zurücksetzen');
   expect(await cssAnimations(page)).toEqual(expect.arrayContaining(['fade-in', 'pop-in']));
 });
 

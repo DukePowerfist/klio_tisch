@@ -180,7 +180,7 @@ export async function makePng(page: Page): Promise<Buffer> {
 
 /** Tisch zurücksetzen über die Rückfrage; mit `characters` auch die Charaktere. */
 export async function resetTable(page: Page, characters = false) {
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await fromMenu(page, 'Zurücksetzen');
   const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   if (characters) await dialog.getByRole('checkbox').check();
   await dialog.getByRole('button', { name: 'Zurücksetzen' }).click();

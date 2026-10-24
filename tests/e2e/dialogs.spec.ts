@@ -30,7 +30,7 @@ async function expectHead(dialog: Locator, title: string | RegExp) {
 }
 
 test('Jedes Fenster hat denselben Kopf mit × und Linie bis an den Rand; × und Esc schließen', async ({ page }) => {
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await fromMenu(page, 'Zurücksetzen');
   const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   await expectHead(reset, 'Tisch zurücksetzen?');
   await reset.getByRole('button', { name: 'Schließen' }).click();

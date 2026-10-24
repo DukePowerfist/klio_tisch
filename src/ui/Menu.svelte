@@ -73,6 +73,10 @@
       {/if}
       <!-- für alle: wenigstens die eigene Darstellung (5g) -->
       <button class="menu-item" onclick={pick(() => (view.gmPanel = 'settings'))}>{t('gm.settings')}</button>
+      <!-- seit 5zb hier statt in der SL-Leiste (10.12): braucht man während des Spiels kaum -->
+      {#if session.can({ type: 'table.reset' })}
+        <button class="menu-item" onclick={pick(() => (view.confirmReset = true))}>{t('gm.reset')}</button>
+      {/if}
       {#if session.seatless}
         <button class="menu-item" onclick={pick(onChooseSeat)}>{t('room.chooseSeat')}</button>
       {/if}

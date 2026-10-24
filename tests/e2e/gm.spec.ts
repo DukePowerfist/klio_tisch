@@ -141,7 +141,7 @@ test('Ergebnisfenster: Fokus beim Öffnen auf dem ×, Enter schließt ohne zu w�
 
 test('Knöpfe der Fenster (5v, 10.8; ersetzt 5t Q1): normal, Hauptknopf, gefährlich klar verschieden, × ohne Fläche und Rahmen', async ({ page }) => {
   const look = (l: Locator) => l.evaluate((b) => { const c = getComputedStyle(b); return { bg: c.backgroundColor, border: c.borderTopStyle }; });
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await fromMenu(page, 'Zurücksetzen');
   const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   const none = { bg: 'rgba(0, 0, 0, 0)', border: 'none' };
   expect(await look(reset.getByRole('button', { name: 'Schließen' }))).toEqual(none);
@@ -178,7 +178,7 @@ test('Zurücksetzen: Karten auf Startplätze; Charaktere nur mit Häkchen', asyn
   await nameCharacter(page, 'seat1', 'Ida');
   const name = page.locator('[data-sheet=seat1] [data-field=name]');
 
-  await page.getByRole('button', { name: 'Zurücksetzen' }).click();
+  await fromMenu(page, 'Zurücksetzen');
   const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   await dialog.getByRole('button', { name: 'Abbrechen' }).click();
   await expectCount(page, 'ABLAGE', 1);
@@ -346,7 +346,7 @@ test('Einstellungen per Tastatur: Fokus auf der Seite, Tab bleibt im Fenster, Es
 });
 
 test('Tab bleibt auch in den übrigen Fenstern (Zurücksetzen)', async ({ page }) => {
-  await page.getByRole('button', { name: 'Zurücksetzen', exact: true }).click();
+  await fromMenu(page, 'Zurücksetzen');
   const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   await expect(dialog).toBeVisible();
   for (let i = 0; i < 6; i++) {
@@ -432,10 +432,11 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
       expect(b.x > o.x + o.width || b.x + b.width < o.x || b.y > o.y + o.height || b.y + b.height < o.y, target).toBe(true);
     }
   }
-  // Einstellungen nur noch im Menü, nicht in der SL-Leiste
+  // Einstellungen und seit 5zb Zurücksetzen nur noch im Menü, nicht in der SL-Leiste (10.12)
   await expect(page.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
+  await expect(page.locator('[data-gm-bar]').getByRole('button', { name: 'Zurücksetzen' })).toHaveCount(0);
   await button.click();
-  await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Protokoll']);
+  await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
   await page.locator('.panel').click({ position: { x: 20, y: 20 } });
   await expect(page.locator('[data-top-menu]')).toHaveCount(0);
 });
@@ -494,7 +495,7 @@ test('SL-Leiste im kleinen Fenster mit Protokoll: eine Zeile, im Filz, über kei
 
 test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp und Pfeiltasten, nicht mehr in der Leiste', async ({ page }) => {
   const bar = page.getByRole('group', { name: 'Spielleitung' });
-  await expect(bar.getByRole('button')).toHaveText(['Expedition', 'Orakel', 'Zurücksetzen']);
+  await expect(bar.getByRole('button')).toHaveText(['Expedition', 'Orakel']);
   await expect(page.getByRole('combobox')).toHaveCount(0);
   const dialog = await openSettings(page, 'Tisch');
   const radios = dialog.getByRole('radio');
@@ -550,7 +551,7 @@ test('SL-Leiste einfahren (5s): nur die Lasche bleibt, außerhalb des Filzes und
   await fromMenu(page, 'Protokoll');
   await outside('kleines Fenster mit Protokoll');
   await expand.click();
-  await expect(page.getByRole('group', { name: 'Spielleitung' }).getByRole('button')).toHaveText(['Expedition', 'Orakel', 'Zurücksetzen']);
+  await expect(page.getByRole('group', { name: 'Spielleitung' }).getByRole('button')).toHaveText(['Expedition', 'Orakel']);
   await ready(page, true);
   await expect(page.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
 });

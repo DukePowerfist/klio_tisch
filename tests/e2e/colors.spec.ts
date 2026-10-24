@@ -2,7 +2,7 @@
 // mit hellem Rand, geänderte Rechte mit Schild, ein Fokusrahmen überall.
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { fromMenu, holdOver, openMenuAndClick, openSettings, ready, zoneCenter } from './helpers';
+import { fromMenu, holdOver, menuButton, openMenuAndClick, openSettings, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -70,7 +70,9 @@ test('Fokusrahmen überall gleich: Knöpfe der Fenster, ×, Schalter, Spielerzah
   await expect(dialog.getByRole('button', { name: 'Schließen' })).toBeFocused();
   expect(await ring(dialog.getByRole('button', { name: 'Schließen' }))).toBe(want);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Zurücksetzen' }).focus();
+  // Zurücksetzen steht seit 5zb im Menü oben rechts (10.12)
+  await menuButton(page).click();
+  await page.getByRole('button', { name: 'Zurücksetzen', exact: true }).focus();
   await page.keyboard.press('Enter');
   const reset = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   await reset.getByRole('button', { name: 'Abbrechen' }).focus();

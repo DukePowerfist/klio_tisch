@@ -6,7 +6,7 @@
 </script>
 
 <script lang="ts">
-  // SL-Leiste im Spielbereich (wie bisher unten rechts): Expedition, Orakel, Zurücksetzen
+  // SL-Leiste im Spielbereich (wie bisher unten rechts): Expedition, Orakel (Zurücksetzen seit 5zb im Menü oben rechts)
   // (Einstellungen seit Schritt 5b im Menü oben rechts). Seit 5s im Menüstil (10.5): eine Fläche, Gruppen mit feinen
   // Linien, feste Bildschirmgröße durch Gegenskalierung wie bei den Zeigern. Immer eine Zeile: passt sie nicht in den
   // Filz, wird sie als Ganzes gerade so klein, dass sie passt (nie kleiner als früher, als sie voll mitskalierte).
@@ -18,12 +18,11 @@
   import { gmBarScale } from './layout';
   import { session } from './session.svelte';
   import { t } from './texts';
-  import { view } from './view.svelte';
 
   let { at, maxW, maxH, tab, scale }: { at: { x: number; y: number }; maxW: number; maxH: number; tab: number; scale: number } = $props();
 
+  /** Zurücksetzen steht seit 5zb im Menü oben rechts (10.12), die Leiste hat nur noch Expedition und Orakel */
   const draw = $derived(session.can({ type: 'gm.expedition' }) || session.can({ type: 'gm.oracle' }));
-  const any = $derived(draw || session.can({ type: 'table.reset' }));
   let open = $state(localStorage.getItem(OPEN_KEY) !== '0');
   function flip() {
     open = !open;
@@ -53,27 +52,20 @@
   }
 </script>
 
-{#if any}
+{#if draw}
   <!-- rechte untere Ecke am Filzrand plus Lasche; die Naht zwischen Knöpfen und Lasche liegt auf dem Filzrand -->
   <div class="ctl control" data-gm-bar class:closed={!open} style:left="{at.x + tabW}px" style:top="{at.y}px" style:--f={f}>
     {#if open}
       <div class="rows" id="gm-bar" role="group" aria-label={t('gm.bar')} bind:offsetWidth={w} bind:offsetHeight={h}
         transition:slide onintrostart={() => (moving = true)} onintroend={() => (moving = false)} onoutrostart={() => (moving = true)} onoutroend={() => (moving = false)}>
-        {#if draw}
-          <div class="group">
-            {#if session.can({ type: 'gm.expedition' })}
-              <button class="menu-item" title={t('gm.expeditionTitle')} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.expeditionShort')}</button>
-            {/if}
-            {#if session.can({ type: 'gm.oracle' })}
-              <button class="menu-item" title={t('gm.oracleTitle')} onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.oracle')}</button>
-            {/if}
-          </div>
-        {/if}
-        {#if session.can({ type: 'table.reset' })}
-          <div class="group">
-            <button class="menu-item" onclick={() => (view.confirmReset = true)}>{t('gm.reset')}</button>
-          </div>
-        {/if}
+        <div class="group">
+          {#if session.can({ type: 'gm.expedition' })}
+            <button class="menu-item" title={t('gm.expeditionTitle')} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.expeditionShort')}</button>
+          {/if}
+          {#if session.can({ type: 'gm.oracle' })}
+            <button class="menu-item" title={t('gm.oracleTitle')} onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.oracle')}</button>
+          {/if}
+        </div>
       </div>
     {/if}
     <!-- Lasche: im Tisch `tabW` TP breit (in der Leiste also tabW / f), so hoch wie die Knöpfe samt Innenrand -->

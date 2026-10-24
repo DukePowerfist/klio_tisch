@@ -63,7 +63,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await openSettings(player, 'Darstellung');
   await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Darstellung']);
   await player.keyboard.press('Escape');
-  expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Protokoll']);
+  expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
   // Kopf mit dem Verbindungszustand (5p): SL „Raum offen“ mit Zahl, Spieler „Verbunden“
   await menuButton(gm).click();
   await expect(gm.locator('[data-top-menu] .menu-head')).toHaveText('Raum offen1');
@@ -315,6 +315,14 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await expect(gm.locator('[data-sheet=seat4]')).toHaveCount(0);
   await theirs.getByRole('radio', { name: '2', exact: true }).check();
   await expect(own.getByRole('radio', { name: '2', exact: true })).toBeChecked();
+  // Zurücksetzen steht seit 5zb im Menü oben rechts (10.12): beim Spieler erst mit Recht
+  await player.keyboard.press('Escape');
+  await gm.keyboard.press('Escape');
+  expect(await menuEntries(player)).not.toContain('Zurücksetzen');
+  rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Tisch zurücksetzen' }).selectOption('allow');
+  await gm.keyboard.press('Escape');
+  await expect.poll(() => menuEntries(player)).toContain('Zurücksetzen');
 });
 
 test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder, SL setzt um, gibt frei, weist zu', async ({ browser }) => {

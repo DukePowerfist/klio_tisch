@@ -2,7 +2,7 @@
 // Die Tests laufen mit reduzierter Bewegung (playwright.config.ts).
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, holdOver, openMenuAndClick, openSettings, ready, zoneCenter } from './helpers';
+import { expectCount, holdOver, menuButton, openMenuAndClick, openSettings, ready, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -71,7 +71,8 @@ test('Aus: die Zahl am Stapel springt nicht', async ({ page }) => {
 });
 
 test('Aus: Knöpfe geben beim Drücken nicht nach, Fenster wachsen nicht', async ({ page }) => {
-  const reset = page.getByRole('button', { name: 'Zurücksetzen' });
+  await menuButton(page).click();
+  const reset = page.getByRole('button', { name: 'Zurücksetzen', exact: true });
   const box = (await reset.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
