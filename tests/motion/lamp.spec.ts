@@ -155,3 +155,27 @@ test.describe('Flackern (Voll)', () => {
     });
   }
 });
+
+test('Gegenstände geben beim Drücken nicht nach wie Knöpfe; die Laterne wackelt beim Klick nur ganz leicht', async ({ page }) => {
+  // Klick auf die Laterne: genau eine kurze Drehung um höchstens gut 1°
+  const wiggles = await page.locator('[data-lamp]').evaluate((e) => {
+    (e as HTMLElement).click();
+    return e.getAnimations().map((a) => {
+      const frames = (a.effect as KeyframeEffect).getKeyframes().map((k) => Math.abs(parseFloat(String(k['rotate']))));
+      return { duration: Number((a.effect as KeyframeEffect).getTiming().duration), max: Math.max(...frames) };
+    });
+  });
+  expect(wiggles).toEqual([{ duration: 250, max: 1.2 }]);
+  await page.waitForTimeout(1600); // Übergang der Laterne abwarten
+  for (const sel of ['[data-lamp]', '[data-expedition-sheet]', '[data-oracle-box]']) {
+    const el = page.locator(sel);
+    const b = (await el.boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + Math.min(20, b.height / 2));
+    await page.mouse.down();
+    await page.waitForTimeout(120);
+    expect(await el.evaluate((e) => getComputedStyle(e).scale), sel).toBe('none');
+    await page.mouse.up();
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1600);
+  }
+});

@@ -114,9 +114,17 @@
     if (last !== null) untrack(() => turn(last!));
   }));
 
+  let lampEl = $state<HTMLElement>();
+  /** Gegenstand, kein Knopf: beim Klick nicht eindrücken, nur ganz leicht wackeln (in „Aus“ nicht) */
+  function wiggle(): void {
+    const ms = timing().wiggle;
+    if (ms && lampEl) lampEl.animate([{ rotate: '0deg' }, { rotate: '-1.2deg' }, { rotate: '0.8deg' }, { rotate: '0deg' }], { duration: ms, easing: 'ease-in-out' });
+  }
+
   async function toggle(e: MouseEvent): Promise<void> {
     // zweiter Klick eines Doppelklicks, Befehl unterwegs oder Übergang läuft: nicht noch einmal schalten
     if (e.detail > 1 || sending || running) return;
+    wiggle();
     sending = true;
     await submitOrSay({ type: 'table.setLamp', lit: !lit });
     sending = false;
@@ -124,7 +132,7 @@
 </script>
 
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein schlichtes Element -->
-<svelte:element this={may ? 'button' : 'div'} class="lamp" class:control={may} style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px"
+<svelte:element this={may ? 'button' : 'div'} bind:this={lampEl} class="lamp" class:control={may} style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px"
   title={may ? t(lit ? 'gm.lampOff' : 'gm.lampOn') : undefined} aria-pressed={may ? lit : undefined} onclick={may ? toggle : undefined} role={may ? undefined : 'presentation'} data-lamp data-lit={lit}>
   <img src={image} alt="" draggable="false" />
   <div class="ember" bind:this={ember} style:mask-image={mask} style:opacity={flickered}></div>
@@ -141,6 +149,8 @@
 <style>
   .lamp { position: absolute; z-index: 5; padding: 0; border: 0; background: none; border-radius: 50%; }
   button.lamp { cursor: pointer; }
+  /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach (die Regel für alle Knöpfe in theme.css gilt hier nicht) */
+  button.lamp:active { scale: none; }
   /* kein Fokusrahmen nach einem Mausklick (weißer Ring um die Laterne); mit der Tastatur bleibt er */
   button.lamp:focus:not(:focus-visible) { outline: none; }
   .lamp img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none;

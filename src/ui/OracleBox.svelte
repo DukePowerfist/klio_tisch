@@ -150,6 +150,8 @@
   div.oracle { pointer-events: none; }
   button.oracle { cursor: pointer; }
   button.oracle:focus:not(:focus-visible) { outline: none; }
+  /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach, sie wackelt ja ohnehin (wie die Laterne) */
+  button.oracle:active { scale: none; }
   .inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; transition: translate var(--hover) ease-out; }
   .shake { position: absolute; inset: 0; }
   .reach { position: absolute; left: 0; right: 0; pointer-events: none; }

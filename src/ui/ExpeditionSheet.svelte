@@ -122,6 +122,8 @@
   /* über den Zonen und ihren Karten, knapp unter frei liegenden Karten (FREE_Z 20000, U3) und dem Licht */
   .expedition { position: absolute; z-index: 19990; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 0; touch-action: none; }
   .expedition:focus:not(:focus-visible) { outline: none; }
+  /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach (wie die Laterne) */
+  .expedition:active { scale: none; }
   .pull, .lift, .nudge { position: absolute; left: 0; top: 0; width: 100%; }
   .pull { transition: translate var(--sheet-glide) ease-out; }
   .pull.pulling { transition: none; }
