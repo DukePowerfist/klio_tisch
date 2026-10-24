@@ -86,7 +86,7 @@
   .zone { position: absolute; border: 2px dashed var(--line); border-radius: var(--radius-m); box-sizing: border-box; background: var(--zone-bg); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   /* Stapel auf dem Filz: feiner Rahmen in der Druckfarbe; aufgefächerte Zonen gestrichelt und blasser */
   .zone:not(.sheet) { border: 1px solid color-mix(in srgb, var(--felt-print) 38%, transparent); background: rgba(0, 0, 0, 0.06); }
-  .zone.fan { border-style: dashed; border-color: color-mix(in srgb, var(--felt-print) 28%, transparent); background: rgba(0, 0, 0, 0.025); }
+  .zone.fan { border-style: dashed; border-width: 1.5px; border-color: color-mix(in srgb, var(--felt-print) 28%, transparent); background: rgba(0, 0, 0, 0.025); }
   .zone.hot { border-color: var(--pickable-bright); background: color-mix(in srgb, var(--pickable-bright) 10%, transparent); }
   /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
   .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }
