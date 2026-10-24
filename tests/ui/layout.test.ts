@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { cardRect, cardSize, computeLayout, freeHeaps, freePile, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
-import type { CardId } from '../../src/engine/types';
+import type { CardId, FreePos } from '../../src/engine/types';
 
 describe('Ansichten', () => {
   // Lage und Maßstab der Bögen prüft der Regeltest in sheetLayout.test.ts (5q)
@@ -392,7 +392,7 @@ describe('Haufen sichtbar als Stapel (11.12)', () => {
   const L = computeLayout(content, 4, null, null);
   const at = (x: number, y = 0.3) => ({ anchor: 'center' as const, x, y });
   const heaps = (s: ReturnType<typeof fresh>, skip: string[] = [], layout = L) => freeHeaps(s, placeCards(s, layout), skip as CardId[]);
-  const pile = (cards: string[], pos = at(0.3), s = fresh()) => cards.reduce((t, c) => lay(t, c, pos), s);
+  const pile = (cards: string[], pos: FreePos = at(0.3), s = fresh()) => cards.reduce((t, c) => lay(t, c, pos), s);
 
   it('zwei und drei gleiche Lagen: ein Haufen mit einer Kante, oberste die letzte in free', () => {
     expect(heaps(pile(['H2', 'H3']))).toEqual([{ key: 'free#center:0.3:0.3', cards: ['H2', 'H3'], top: 'H3', count: 2, edges: 1 }]);

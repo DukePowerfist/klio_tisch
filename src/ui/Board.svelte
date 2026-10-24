@@ -145,7 +145,7 @@
 
   /** Vorschau der Ablegestelle (11.6): Probelauf des Befehls, den das Loslassen senden würde */
   const hints = $derived.by(() => {
-    const to = drag?.moved ? dropTarget(layout, places, drag, [drag.ax, drag.ay]) : null;
+    const to = drag?.moved ? dropTarget(layout, places, drag, [drag.ax, drag.ay], { state: table, skip: inHandCards() }) : null;
     if (!drag || !to) return [];
     return dropHints(layout, places, session.predict({ type: 'cards.move', cards: drag.cards, from: drag.from, to }), drag.cards);
   });
@@ -341,7 +341,7 @@
     if (!d.moved) return click(d.card);
 
     // derselbe Zeiger wie für Lage und Umriss beim letzten Bewegen, sonst lägen gezeigte Ecke und Ablage auseinander
-    const to = dropTarget(layout, places, d, [d.ax, d.ay]);
+    const to = dropTarget(layout, places, d, [d.ax, d.ay], { state: table, skip: [...d.cards, ...inHandCards()] });
     if (!to) return endDrag(e);
     await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy, ax: d.ax, ay: d.ay });
   }
@@ -454,11 +454,13 @@
     }
     return m;
   });
+  /** Karten in der Hand: eigener Zug, noch nicht bestätigte Züge, Züge der anderen */
+  const inHandCards = () => [...offsetOf.keys(), ...remoteOf.keys()];
   /** Haufen auf dem freien Tisch (11.12): Karten in der Hand zählen nicht mit (F2 a), sonst blieben am alten Platz
    *  Kanten ohne Karte; je Karte ihr Haufen */
   const heapOf = $derived.by(() => {
     const m = new Map<CardId, FreeHeap>();
-    for (const h of freeHeaps(table, places, [...offsetOf.keys(), ...remoteOf.keys()])) for (const c of h.cards) m.set(c, h);
+    for (const h of freeHeaps(table, places, inHandCards())) for (const c of h.cards) m.set(c, h);
     return m;
   });
 </script>

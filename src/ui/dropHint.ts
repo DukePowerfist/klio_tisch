@@ -3,7 +3,7 @@
 // Engine (`session.predict`), so laufen Vorschau und Ergebnis nicht auseinander.
 
 import type { CardId, CardTarget, TableState } from '../engine/types';
-import { cardSize, freePosAt, placeCards, zoneAt, type CardPlace, type Layout, type Places } from './layout';
+import { cardSize, freePosAt, heapAt, placeCards, zoneAt, type CardPlace, type Layout, type Places } from './layout';
 
 /** `card`: die angefasste Karte (11.11), ohne Angabe die erste */
 type Drag = { card?: CardId; cards: readonly CardId[]; dx: number; dy: number };
@@ -20,12 +20,15 @@ export function inHand(layout: Layout, place: CardPlace, delta: { dx: number; dy
 
 /** Ziel beim Loslassen (F1): die Zone unter dem Zeiger, sonst der freie Tisch an der linken oberen Ecke der Karte, wie
  *  sie in der Hand gezeigt wird; ob auf einem Bogen oder in der Tischmitte, entscheidet auch dort der Zeiger (F5).
- *  Die Ecke ist die der angefassten Karte (11.11). `pointer` in Tischpunkten; null, wenn die Karte keine Lage hat. */
-export function dropTarget(layout: Layout, places: Places, drag: Drag, pointer: readonly [number, number]): CardTarget | null {
+ *  Die Ecke ist die der angefassten Karte (11.11). Mit `heaps` (Stand und Karten in der Hand): über einem Haufen genau
+ *  dessen Lage (Einrasten, 11.12). `pointer` in Tischpunkten; null, wenn die Karte keine Lage hat. */
+export function dropTarget(layout: Layout, places: Places, drag: Drag, pointer: readonly [number, number], heaps?: { state: Pick<TableState<unknown>, 'free' | 'freePos'>; skip: readonly CardId[] }): CardTarget | null {
   const p = places[drag.card ?? drag.cards[0]!];
   if (!p) return null;
   const zone = zoneAt(layout, pointer[0], pointer[1]);
   if (zone) return { zone: zone.id };
+  const heap = heaps && heapAt(layout, places, heaps.state, pointer[0], pointer[1], heaps.skip);
+  if (heap) return { free: heap };
   const at = inHand(layout, p, drag, pointer);
   return { free: freePosAt(layout, at.x, at.y, pointer) };
 }

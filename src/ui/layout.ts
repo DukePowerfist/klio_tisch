@@ -429,3 +429,17 @@ export function freeHeaps(state: Pick<TableState<unknown>, 'free' | 'freePos'>, 
   }
   return [...groups].filter(([, cards]) => cards.length >= 2).map(([key, cards]) => ({ key, cards, top: cards.at(-1)!, count: cards.length, edges: stackEdges(cards.length) }));
 }
+
+/** Einrasten auf einen Haufen (11.12, F1 c, F5 a): Lage des Haufens, zu dem die oberste frei liegende Karte unter dem
+ *  Punkt gehört, ohne `skip` (Karten in der Hand). Ob dort ein Haufen ist, entscheidet der Stand (gezogene Karten
+ *  zählen mit): So rastet auch die oberste Karte eines Haufens aus zwei wieder auf ihm ein. Über einer einzelnen Karte
+ *  oder freiem Filz null. */
+export function heapAt(layout: Layout, places: Places, state: Pick<TableState<unknown>, 'free' | 'freePos'>, x: number, y: number, skip: readonly CardId[] = []): FreePos | null {
+  for (let i = state.free.length - 1; i >= 0; i--) {
+    const card = state.free[i]!;
+    const p = places[card];
+    if (!p || skip.includes(card) || !inside(cardRect(layout, p), x, y)) continue;
+    return freeHeaps(state, places).some((h) => h.key === p.slot) ? state.freePos[card]! : null;
+  }
+  return null;
+}

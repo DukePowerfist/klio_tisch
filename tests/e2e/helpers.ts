@@ -66,9 +66,11 @@ export async function buildFreePile(page: Page) {
   await page.mouse.up();
   await expectCount(page, 'GEFAHR', 0);
   for (const c of cards) await expect(el(c)).not.toHaveClass(/pending|dragging/);
-  const b = await box(el(cards[0]!));
+  // mit Bewegung gleiten sie noch: warten, bis keine Animation an ihnen mehr läuft und alle gleich liegen
+  await expect.poll(() => page.evaluate((ids) => ids.every((c) => !document.querySelector(`.scene > [data-card="${c}"]`)!.getAnimations({ subtree: true }).length), cards)).toBe(true);
   const round = (r: Box) => [r.x, r.y, r.width, r.height].map(Math.round);
-  for (const c of cards.slice(1)) expect(round(await box(el(c)))).toEqual(round(b));
+  await expect.poll(async () => new Set(await Promise.all(cards.map(async (c) => round(await box(el(c))).join()))).size).toBe(1);
+  const b = await box(el(cards[0]!));
   return { cards, at: { x: b.x + b.width / 2, y: b.y + b.height / 2 } };
 }
 

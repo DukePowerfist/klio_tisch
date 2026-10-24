@@ -4,7 +4,7 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, cause, cue, cut, events, fade, move, resize, revealed, shownScale, strike, Tilt, timing, turn, wobble } from './animator.svelte';
+  import { appear, cause, cue, cut, events, fade, heapGrew, move, popCount, resize, revealed, shownScale, strike, Tilt, timing, turn, wobble } from './animator.svelte';
   import { cardSize, type LampBox } from './layout';
   import { HEIGHT, onCard, shadowCss, shadowOver } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
@@ -112,6 +112,14 @@
       if (c?.strike !== undefined) strike(el, lift, c.strike);
     });
   });
+  // Zahl eines freien Haufens springt, wenn er durch einen Zug gewachsen ist (11.12, F3 a); an der neuen obersten Karte
+  let countEl = $state<HTMLSpanElement>();
+  $effect(() => {
+    void events.seen;
+    untrack(() => {
+      if (countEl && count >= 2 && heapGrew(slot)) popCount(countEl);
+    });
+  });
   $effect(() => () => tilt.stop());
   $effect(() => {
     if (wiggle) untrack(() => wobble(el, lift));
@@ -152,7 +160,7 @@
   </div>
   {#if count >= 2}
     <!-- aufrecht und in Tischgröße an der oberen rechten Ecke, wie sie auf dem Tisch liegt: gegen Drehung und Maßstab der Karte -->
-    <div class="heap" style:left={rotated ? '0' : '100%'} style:transform="rotate({rotated ? -90 : 0}deg) scale({1 / scale})"><span class="count">{count}</span></div>
+    <div class="heap" style:left={rotated ? '0' : '100%'} style:transform="rotate({rotated ? -90 : 0}deg) scale({1 / scale})"><span class="count" bind:this={countEl}>{count}</span></div>
   {/if}
 </div>
 

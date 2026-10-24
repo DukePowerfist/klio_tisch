@@ -164,6 +164,23 @@ export function countChanges(events: readonly { type: string }[], prev: TableSta
   return Object.keys(next.zones).filter((z) => (prev.zones[z]?.length ?? 0) !== (next.zones[z]?.length ?? 0));
 }
 
+/** Freie Haufen, deren Zahl springt (11.12, F3 a): vorher und nachher ein Haufen an derselben Lage, nachher mit mehr
+ *  Karten. Schlüssel wie `CardPlace.slot` (`free#Anker:x:y`). Nicht beim Schrumpfen (die Zahl hat sich schon beim
+ *  Greifen geändert), nicht bei einem neuen Haufen, nicht beim Zurücksetzen und ohne vorigen Stand. */
+export function heapGrowth(events: readonly { type: string }[], prev: TableState<unknown> | null, next: TableState<unknown>): string[] {
+  if (!prev || events.some((e) => e.type === 'cardsReset')) return [];
+  const sizes = (s: TableState<unknown>) => {
+    const m = new Map<string, number>();
+    for (const c of s.free) {
+      const p = s.freePos[c];
+      if (p) m.set(`free#${p.anchor}:${p.x}:${p.y}`, (m.get(`free#${p.anchor}:${p.x}:${p.y}`) ?? 0) + 1);
+    }
+    return m;
+  };
+  const before = sizes(prev);
+  return [...sizes(next)].filter(([key, n]) => (before.get(key) ?? 0) >= 2 && n > before.get(key)!).map(([key]) => key);
+}
+
 const samePose = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.scale === b.scale && a.rotated === b.rotated;
 const JUMP: Motion = { kind: 'jump' };
 

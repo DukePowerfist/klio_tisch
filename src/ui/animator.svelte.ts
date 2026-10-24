@@ -4,7 +4,7 @@
 
 import type { CardId, TableState, ZoneId } from '../engine/types';
 import { clamp } from './layout';
-import { arcPoints, countChanges, cssMs, cues, hitsTurningUp, STRIKE_IMPACT, strikeImpact, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
+import { arcPoints, countChanges, heapGrowth, cssMs, cues, hitsTurningUp, STRIKE_IMPACT, strikeImpact, type Cause, type Cue, type Cut, type Motion, type Timing, type Turn } from './motion';
 
 /** Kennungen der eigenen Animationen (die CSS-Animation beim Rucken bleibt unberührt) */
 const MOVE = 'move';
@@ -71,17 +71,22 @@ export const events = $state({ seen: 0 });
 /** Zonen, deren Zahl beim letzten Stand mit Ereignissen springt (11.6) */
 let counted: ZoneId[] = [];
 export const countChanged = (zone: ZoneId): boolean => counted.includes(zone);
+/** Freie Haufen (Schlüssel `slot`), deren Zahl beim letzten Stand mit Ereignissen springt (11.12) */
+let grown: string[] = [];
+export const heapGrew = (slot: string): boolean => grown.includes(slot);
 export function noteEvents(list: readonly { type: string }[], own: boolean, prev: TableState<unknown> | null, next: TableState<unknown>): void {
   current = own ? 'own' : 'foreign';
   currentCues = cues(list, prev, next, timing(), current);
   currentStrike = whenRevealed(hitsTurningUp(list));
   counted = countChanges(list, prev, next);
+  grown = heapGrowth(list, prev, next);
   events.seen++;
   clearTimeout(clear);
   clear = setTimeout(() => {
     current = null;
     currentCues = new Map();
     counted = [];
+    grown = [];
   }, 0);
 }
 export const cause = (): Cause => current;

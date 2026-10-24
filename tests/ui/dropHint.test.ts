@@ -2,9 +2,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
-import type { Actor, CardId, CardSource, CardTarget } from '../../src/engine/types';
+import type { Actor, CardId, CardSource, CardTarget, FreePos } from '../../src/engine/types';
 import { dropHints, dropTarget, inHand } from '../../src/ui/dropHint';
-import { cardSize, computeLayout, lampGap, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
+import { cardSize, computeLayout, freeHeaps, lampGap, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
 import { content, engine, fresh, GM, lay, place, player, run, type K } from '../helpers';
 
 const L = computeLayout(content, 4, null, null);
@@ -237,5 +237,78 @@ describe('Haufen vom freien Tisch (11.11)', () => {
     s = run(s, { type: 'table.setSettings', permissionOverrides: { player: { 'cards.move': 'own' } } }).state;
     expect(hints(s, ['H2', 'H3'], { free: true }, { zone: 'discard' }, player('seat1'))).toEqual([]);
     expect(hints(s, ['H4', 'H5'], { free: true }, { zone: 'discard' }, player('seat1'))).toHaveLength(2);
+  });
+});
+
+describe('Einrasten auf einen Haufen (11.12, F1 c, F5 a)', () => {
+  const P = { anchor: 'center' as const, x: 0.3, y: 0.3 };
+  const heap = (cards: string[], pos: FreePos = P, s = fresh()) => cards.reduce((t, c) => lay(t, c, pos), s);
+  /** Mitte einer Karte (Tischpunkte) */
+  const mid = (s: K, card: string): [number, number] => {
+    const p = placeCards(s, L)[card as CardId]!;
+    const size = cardSize(L, p);
+    return [p.x + size.w / 2, p.y + size.h / 2];
+  };
+  /** Ziel wie das Brett: eine Deckkarte, Zeiger bei `ptr` */
+  const target = (s: K, ptr: [number, number], cards = [s.zones['deck']!.at(-1)!] as string[], skip: string[] = []) => {
+    const d = { cards: cards as CardId[], ...over(s, cards[0]!, ...ptr) };
+    return dropTarget(L, placeCards(s, L), d, ptr, { state: s, skip: [...cards, ...skip] as CardId[] });
+  };
+
+  it('Zeiger über einem Haufen: genau seine Lage', () => {
+    const s = heap(['H2', 'H3']);
+    expect(target(s, mid(s, 'H3'))).toEqual({ free: P });
+  });
+
+  it('über einer einzelnen freien Karte: frei wie ohne Einrasten', () => {
+    const s = heap(['H2']);
+    const ptr = mid(s, 'H2');
+    const top = s.zones['deck']!.at(-1)!;
+    const d = { cards: [top], ...over(s, top, ...ptr) };
+    const free = dropTarget(L, placeCards(s, L), d, ptr);
+    expect(free).not.toEqual({ free: P });
+    expect(target(s, ptr)).toEqual(free);
+  });
+
+  it('über einer Zone: die Zone, auch wenn ein Haufen darunter läge', () => {
+    const s = heap(['H2', 'H3']);
+    expect(target(s, [...center('discard')])).toEqual({ zone: 'discard' });
+  });
+
+  it('eine Karte in der Hand (etwa von anderen gezogen) verdeckt den Haufen darunter nicht', () => {
+    let s = heap(['H2', 'H3']);
+    s = lay(s, 'H9', { anchor: 'center', x: 0.31, y: 0.305 });
+    const ptr = mid(s, 'H9');
+    expect(target(s, ptr)).not.toEqual({ free: P });
+    expect(target(s, ptr, undefined, ['H9'])).toEqual({ free: P });
+  });
+
+  it('oberste Karte eines Haufens aus zwei über dem Rest losgelassen: seine Lage, kein Umriss (gleitet zurück)', () => {
+    const s = heap(['H2', 'H3']);
+    const ptr = mid(s, 'H2');
+    const to = target(s, ptr, ['H3']);
+    expect(to).toEqual({ free: P });
+    expect(hints(s, ['H3'], { free: true }, to)).toEqual([]);
+  });
+
+  it('Haufen mit Umschalt auf einen Haufen: ein Haufen aus allen', () => {
+    let s = heap(['H2', 'H3']);
+    s = heap(['H4', 'H5'], { anchor: 'center', x: 0.6, y: 0.6 }, s);
+    const to = target(s, mid(s, 'H3'), ['H4', 'H5']);
+    expect(to).toEqual({ free: P });
+    const after = run(s, { type: 'cards.move', cards: ['H4', 'H5'], from: { free: true }, to }).state;
+    expect(freeHeaps(after, placeCards(after, L))).toMatchObject([{ cards: ['H2', 'H3', 'H4', 'H5'], count: 4 }]);
+    expect(hints(s, ['H4', 'H5'], { free: true }, to)).toHaveLength(2);
+  });
+
+  it('Haufen an einem Bogen: die Lage am Bogen; fremder Bogen bei „nur eigener Bogen“: kein Umriss', () => {
+    const S2 = { anchor: 'seat2' as const, x: 0.4, y: 0.4 };
+    let s = heap(['H2', 'H3'], S2);
+    const to = target(s, mid(s, 'H3'));
+    expect(to).toEqual({ free: S2 });
+    s = run(s, { type: 'table.setSettings', permissionOverrides: { player: { 'cards.move': 'own' } } }).state;
+    const top = s.zones['deck']!.at(-1)!;
+    expect(hints(s, [top], { zone: 'deck' }, to, player('seat1'))).toEqual([]);
+    expect(hints(s, [top], { zone: 'deck' }, to, player('seat2'))).toHaveLength(1);
   });
 });

@@ -268,3 +268,38 @@ test('einzelne Karte und zwei von Hand leicht versetzt übereinander gelegte: ke
   await expect(anyCount(page)).toHaveCount(0);
   await expect(anyEdge(page)).toHaveCount(0);
 });
+
+test('Einrasten: eine Karte vom Deck auf den Haufen liegt genau darauf, daneben bleibt sie einzeln', async ({ page }) => {
+  const { cards, at } = await freePile(page);
+  const pile = await box(page, `.scene > [data-card="${cards[2]}"]`);
+  const deck = await zoneCenter(page, 'DECK');
+  await holdOver(page, deck, at);
+  const card = (await dragged(page).getAttribute('data-card'))!;
+  await expect(page.locator('.drop-hint')).toHaveCount(1);
+  expect(await box(page, '.drop-hint')).toEqual(pile);
+  await page.mouse.up();
+  await expect(cardEl(page, card)).not.toHaveClass(/pending|dragging/);
+  await expect(countOf(page, card)).toHaveText('4');
+  expect(await box(page, `.scene > [data-card="${card}"]`)).toEqual(pile);
+  await expect(anyCount(page)).toHaveCount(1);
+
+  // Zeiger neben dem Haufen: frei, die Karte bleibt einzeln
+  const b = (await cardEl(page, card).boundingBox())!;
+  await dragFromTo(page, deck, { x: b.x + b.width + 40, y: b.y + b.height / 2 });
+  await expectCount(page, 'DECK', 22);
+  await expect(page.locator('.scene > .card.pending')).toHaveCount(0);
+  await expect(countOf(page, card)).toHaveText('4');
+  await expect(anyCount(page)).toHaveCount(1);
+});
+
+test('Einrasten (F5 a): die oberste Karte leicht versetzt über dem Haufen losgelassen kehrt auf ihn zurück', async ({ page }) => {
+  const { cards, at } = await freePile(page);
+  const pile = await box(page, `.scene > [data-card="${cards[2]}"]`);
+  await holdOver(page, at, { x: at.x + 15, y: at.y + 10 });
+  await expect(dragged(page)).toHaveAttribute('data-card', cards[2]!);
+  await expect(page.locator('.drop-hint')).toHaveCount(0);
+  await page.mouse.up();
+  await expect(cardEl(page, cards[2]!)).not.toHaveClass(/pending|dragging/);
+  await expect.poll(() => box(page, `.scene > [data-card="${cards[2]}"]`)).toEqual(pile);
+  await expect(countOf(page, cards[2]!)).toHaveText('3');
+});

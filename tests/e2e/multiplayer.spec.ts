@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { buildFreePile, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, shiftHold, zoneCenter } from './helpers';
+import { buildFreePile, dragFromTo, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, shiftHold, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -671,6 +671,21 @@ test('Haufen vom freien Tisch mit Umschalt (5zc, 11.11): die SL sieht alle Karte
   await player.mouse.up();
   await expectCount(gm, 'ABLAGE', 3);
   await expect(gm.locator('.card.marked')).toHaveCount(0);
+});
+
+test('Freier Haufen mit Mitspieler (5zd, 11.12): beide sehen dieselbe Zahl, auch nach dem Einrasten', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('0');
+  const { cards, at } = await buildFreePile(player);
+  await expect(gm.locator(`.scene > [data-card="${cards[2]}"] .count`)).toHaveText('3');
+  await dragFromTo(player, await zoneCenter(player, 'DECK'), at);
+  await expect(player.locator('.scene > .card .count')).toHaveText('4');
+  await expect(gm.locator('.scene > .card .count')).toHaveText('4');
+  // auch in der Rollenansicht
+  await gm.keyboard.press('2');
+  await expect(gm.locator('.scene > .card .count')).toHaveText('4');
 });
 
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */

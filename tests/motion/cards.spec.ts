@@ -2,7 +2,7 @@
 // Gemessen wird an den laufenden Animationen (Web Animations API) direkt nach dem Auslösen, nicht an Bildern.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, fromMenu, holdOver, openSettings, ready, resetTable, saveArchive, stackItem, zoneCenter } from '../e2e/helpers';
+import { buildFreePile, dragFromTo, expectCount, fromMenu, holdOver, openSettings, ready, resetTable, saveArchive, stackItem, zoneCenter } from '../e2e/helpers';
 
 type Anim = { card: string | null; part: string; props: string[]; delay: number; duration: number; easing: string };
 
@@ -456,6 +456,33 @@ test('Zahl am Stapel: springt beim Ziehen an Deck und Ablage, nicht beim Zurück
   await expectCount(page, 'ABLAGE', 0);
   await page.waitForTimeout(600);
   expect(await pops(page)).toEqual([]);
+});
+
+test('Zahl am freien Haufen (11.12): springt, wenn eine Karte einrastet; nicht, wenn eine Karte heruntergenommen wird', async ({ page }) => {
+  const { at } = await buildFreePile(page);
+  const watchHeap = () => page.evaluate(() => {
+    const w = window as unknown as { heapPops: string[] };
+    w.heapPops = [];
+    const watch = setInterval(() => {
+      for (const a of document.getAnimations()) {
+        const el = (a.effect as KeyframeEffect).target as HTMLElement;
+        if (el.classList.contains('count') && !w.heapPops.includes(el.textContent!)) w.heapPops.push(el.textContent!);
+      }
+    }, 10);
+    setTimeout(() => clearInterval(watch), 2000);
+  });
+  const heapPops = () => page.evaluate(() => (window as unknown as { heapPops: string[] }).heapPops);
+  await page.waitForTimeout(800);
+  await watchHeap();
+  await dragFromTo(page, await zoneCenter(page, 'DECK'), at);
+  await expect.poll(heapPops).toEqual(['4']);
+  await page.waitForTimeout(1500);
+  await watchHeap();
+  const discard = await zoneCenter(page, 'ABLAGE');
+  await dragFromTo(page, at, discard);
+  await expectCount(page, 'ABLAGE', 1);
+  await page.waitForTimeout(800);
+  expect(await heapPops()).toEqual([]);
 });
 
 /** Namen der CSS-Animationen, die gerade laufen */
