@@ -1,7 +1,7 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { cardRect, cardSize, computeLayout, freePile, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
+import { cardRect, cardSize, computeLayout, freeHeaps, freePile, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
 import type { CardId } from '../../src/engine/types';
 
@@ -385,5 +385,56 @@ describe('Haufen auf dem freien Tisch (11.11, F1 b)', () => {
     expect(p.H3).toBeUndefined();
     expect(freePile(two, p, s, 'H2' as CardId)).toEqual(['H2']);
     expect(freePile(two, p, s, 'H3' as CardId)).toEqual(['H3']);
+  });
+});
+
+describe('Haufen sichtbar als Stapel (11.12)', () => {
+  const L = computeLayout(content, 4, null, null);
+  const at = (x: number, y = 0.3) => ({ anchor: 'center' as const, x, y });
+  const heaps = (s: ReturnType<typeof fresh>, skip: string[] = [], layout = L) => freeHeaps(s, placeCards(s, layout), skip as CardId[]);
+  const pile = (cards: string[], pos = at(0.3), s = fresh()) => cards.reduce((t, c) => lay(t, c, pos), s);
+
+  it('zwei und drei gleiche Lagen: ein Haufen mit einer Kante, oberste die letzte in free', () => {
+    expect(heaps(pile(['H2', 'H3']))).toEqual([{ key: 'free#center:0.3:0.3', cards: ['H2', 'H3'], top: 'H3', count: 2, edges: 1 }]);
+    expect(heaps(pile(['H4', 'H2', 'H3']))).toMatchObject([{ cards: ['H4', 'H2', 'H3'], top: 'H3', count: 3, edges: 1 }]);
+  });
+
+  it('8 und 20 Karten: 2 und 3 Kanten; eine einzelne Karte ist kein Haufen', () => {
+    const deck = fresh().zones['deck']!;
+    expect(heaps(pile(deck.slice(0, 8)))[0]).toMatchObject({ count: 8, edges: 2 });
+    expect(heaps(pile(deck.slice(0, 20)))[0]).toMatchObject({ count: 20, edges: 3 });
+    expect(heaps(pile(['H2']))).toEqual([]);
+  });
+
+  it('gleiche Anteile an anderem Anker oder leicht versetzt: kein Haufen; mehrere Haufen getrennt', () => {
+    expect(heaps(pile(['H3'], { anchor: 'seat1', x: 0.3, y: 0.3 }, pile(['H2'])))).toEqual([]);
+    expect(heaps(pile(['H3'], at(0.3001), pile(['H2'])))).toEqual([]);
+    const two = pile(['H4', 'H5'], at(0.6), pile(['H2', 'H3']));
+    expect(heaps(two).map((h) => h.cards)).toEqual([['H2', 'H3'], ['H4', 'H5']]);
+  });
+
+  it('Reihenfolge nach free, auch wenn eine fremde Karte dazwischen liegt', () => {
+    let s = pile(['H2']);
+    s = lay(s, 'H9', at(0.6));
+    s = lay(s, 'H3', at(0.3));
+    expect(heaps(s)).toMatchObject([{ cards: ['H2', 'H3'], top: 'H3' }]);
+  });
+
+  it('Karten in der Hand zählen nicht (F2 a); bleibt eine übrig, kein Haufen', () => {
+    expect(heaps(pile(['H2', 'H3', 'H4']), ['H4'])).toMatchObject([{ cards: ['H2', 'H3'], top: 'H3', count: 2 }]);
+    expect(heaps(pile(['H2', 'H3']), ['H3'])).toEqual([]);
+  });
+
+  it('Karten am ausgeblendeten Bogen fehlen', () => {
+    const two = computeLayout(content, 2, null, null);
+    expect(heaps(pile(['H2', 'H3'], { anchor: 'seat4', x: 0.5, y: 0.5 }), [], two)).toEqual([]);
+  });
+
+  it('ungewollt (F4 a): zwei einzeln über die Ecke der Tischmitte hinaus abgelegte Karten liegen genau gleich', () => {
+    const m = L.middle;
+    const a = freePosAt(L, m.x - 50, m.y - 50);
+    const b = freePosAt(L, m.x - 80, m.y - 20);
+    expect(a).toEqual(b);
+    expect(heaps(lay(lay(fresh(), 'H2', a), 'H3', b))).toHaveLength(1);
   });
 });

@@ -20,7 +20,7 @@
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropHints, dropTarget, inHand } from './dropHint';
-  import { clamp, computeLayout, FELT_RIM, freePile, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
+  import { clamp, computeLayout, FELT_RIM, freeHeaps, freePile, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type FreeHeap, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -109,7 +109,11 @@
   /** Höhe einer liegenden Karte über dem Tisch (11.9): oberste Karte eines Stapels mit Kanten 2 + Zahl seiner Kanten,
    *  eine einzelne Karte 0 (flach, ohne Schatten). Null für die Karten darunter: Sie liegen genau unter der obersten, und
    *  jeder eigene Schatten machte den Rand des Stapels mit jeder Karte dunkler; die Dicke zeigen die Kanten. */
-  const heightOf = (p: CardPlace): number | null => (p.under ? null : p.edges ? stackHeight(p.edges) : 0);
+  const heightOf = (card: CardId, p: CardPlace): number | null => {
+    const heap = heapOf.get(card);
+    if (heap) return heap.top === card ? stackHeight(heap.edges) : null;
+    return p.under ? null : p.edges ? stackHeight(p.edges) : 0;
+  };
   const feltShadow = $derived(shadowCss(shadowOver(flame, layout.middle, HEIGHT.felt)));
   // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
   // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
@@ -450,6 +454,13 @@
     }
     return m;
   });
+  /** Haufen auf dem freien Tisch (11.12): Karten in der Hand zählen nicht mit (F2 a), sonst blieben am alten Platz
+   *  Kanten ohne Karte; je Karte ihr Haufen */
+  const heapOf = $derived.by(() => {
+    const m = new Map<CardId, FreeHeap>();
+    for (const h of freeHeaps(table, places, [...offsetOf.keys(), ...remoteOf.keys()])) for (const c of h.cards) m.set(c, h);
+    return m;
+  });
 </script>
 
 <svelte:window onpointermove={onPointerMove} onpointerup={onPointerUp} onpointercancel={onPointerCancel} />
@@ -510,7 +521,9 @@
           size={layout.card}
           {flame}
           shaded
-          height={heightOf(p)}
+          height={heightOf(card, p)}
+          edges={heapOf.get(card)?.top === card ? heapOf.get(card)!.edges : 0}
+          count={heapOf.get(card)?.top === card ? heapOf.get(card)!.count : 0}
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}
           pending={offsetOf.has(card) && off !== drag}

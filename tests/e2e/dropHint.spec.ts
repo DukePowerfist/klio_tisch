@@ -194,3 +194,77 @@ test('Doppelklick mit Umschalt auf einen freien Haufen dreht nur die oberste Kar
   await page.keyboard.up('Shift');
   await expect.poll(down).toEqual([before[0], before[1], !before[2]]);
 });
+
+// ---------- Freie Haufen sichtbar als Stapel (11.12, Schritt 5zd) ----------
+
+const countOf = (page: Page, card: string) => cardEl(page, card).locator('.count');
+const edgesOf = (page: Page, card: string) => cardEl(page, card).locator('.edge');
+const anyCount = (page: Page) => page.locator('.scene > .card .count');
+const anyEdge = (page: Page) => page.locator('.scene > .card .edge');
+
+test('Haufen: Zahl und Kante an der obersten Karte; Karten in der Hand zählen nicht mit', async ({ page }) => {
+  const { cards, at } = await freePile(page);
+  await expect(countOf(page, cards[2]!)).toHaveText('3');
+  await expect(edgesOf(page, cards[2]!)).toHaveCount(1);
+  await expect(anyCount(page)).toHaveCount(1);
+  await expect(anyEdge(page)).toHaveCount(1);
+
+  // die oberste in der Hand: der Rest zeigt 2, die gezogene nichts
+  await holdOver(page, at, { x: at.x, y: at.y + 90 });
+  await expect(dragged(page)).toHaveAttribute('data-card', cards[2]!);
+  await expect(countOf(page, cards[1]!)).toHaveText('2');
+  await expect(countOf(page, cards[2]!)).toHaveCount(0);
+  await expect(edgesOf(page, cards[2]!)).toHaveCount(0);
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true })));
+  await page.mouse.up();
+  await expect(countOf(page, cards[2]!)).toHaveText('3');
+
+  // der ganze Haufen in der Hand: am alten Platz nichts; abgelegt wieder Zahl und Kante
+  await shiftHold(page, at, { x: at.x, y: at.y + 90 });
+  await expect(dragged(page)).toHaveCount(3);
+  await expect(anyCount(page)).toHaveCount(0);
+  await expect(anyEdge(page)).toHaveCount(0);
+  await page.mouse.up();
+  await expect(countOf(page, cards[2]!)).toHaveText('3');
+  await expect(edgesOf(page, cards[2]!)).toHaveCount(1);
+});
+
+test('Haufen: Kanten und Zahl fangen keinen Klick ab; die Kanten bleiben beim Ansichtswechsel an der Karte', async ({ page }) => {
+  const { cards } = await freePile(page);
+  const top = cardEl(page, cards[2]!);
+  const rel = async () => {
+    const [c, e, n] = await Promise.all([top.boundingBox(), edgesOf(page, cards[2]!).boundingBox(), countOf(page, cards[2]!).boundingBox()]);
+    return { c: c!, e: e!, n: n!, d: [e!.x - c!.x, e!.y - c!.y, n!.x - c!.x, n!.y - c!.y].map((v) => v / c!.width) };
+  };
+  const before = await rel();
+  // Kante rechts unten unter der Karte, Zahl an der oberen rechten Ecke
+  expect(before.e.x).toBeGreaterThan(before.c.x);
+  expect(before.e.y).toBeGreaterThan(before.c.y);
+  expect(before.n.x + before.n.width).toBeGreaterThan(before.c.x + before.c.width);
+  expect(before.n.y).toBeLessThan(before.c.y);
+  const hit = (x: number, y: number) => page.evaluate(([x, y]) => {
+    const el = document.elementFromPoint(x!, y!);
+    return el?.closest('.count, .edge') ? 'deko' : el?.closest('[data-card]') ? 'karte' : 'filz';
+  }, [x, y]);
+  expect(await hit(before.n.x + before.n.width - 3, before.n.y + 3)).toBe('filz');
+  expect(await hit(before.e.x + before.e.width - 1, before.e.y + before.e.height - 1)).toBe('filz');
+  expect(await hit(before.n.x + 3, before.n.y + before.n.height - 3)).toBe('karte');
+
+  await page.keyboard.press('1');
+  await expect.poll(async () => (await rel()).c.x).not.toBeCloseTo(before.c.x, 0);
+  const after = await rel();
+  for (const [i, v] of after.d.entries()) expect(v).toBeCloseTo(before.d[i]!, 2);
+});
+
+test('einzelne Karte und zwei von Hand leicht versetzt übereinander gelegte: keine Kante, keine Zahl', async ({ page }) => {
+  const discard = await zoneCenter(page, 'ABLAGE');
+  const deck = await zoneCenter(page, 'DECK');
+  await dropAt(page, { x: discard.x + 120, y: discard.y });
+  await expect(anyCount(page)).toHaveCount(0);
+  await expect(anyEdge(page)).toHaveCount(0);
+  await dragFromTo(page, deck, { x: discard.x + 126, y: discard.y + 4 });
+  await expectCount(page, 'DECK', 25);
+  await expect(page.locator('.scene > .card.pending')).toHaveCount(0);
+  await expect(anyCount(page)).toHaveCount(0);
+  await expect(anyEdge(page)).toHaveCount(0);
+});

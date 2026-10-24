@@ -104,6 +104,8 @@
   --switch-on: #4f9a6e;
   --stack-edge: #e6dcc3;   /* Kanten unter der obersten Karte eines Stapels (11.6) */
   --stack-edge-line: rgba(0, 0, 0, 0.3);
+  --heap-count-bg: rgba(28, 22, 18, 0.82); /* Zahl an einem freien Haufen (11.12), liegt über Karte und Filz */
+  --heap-count-ink: #f3ecd8;
   --drop-hint: rgba(255, 255, 255, 0.8);     /* Umriss der Ablegestelle beim Ziehen (11.6); heller, weil unter dem Licht (5n) */
   --drop-hint-bg: rgba(255, 255, 255, 0.12);
   --log-w: 300px;  /* Protokollspalte rechts; der Tisch rückt so weit zur Seite */

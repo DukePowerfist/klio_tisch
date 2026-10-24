@@ -412,3 +412,20 @@ export function freePile(layout: Layout, places: Places, state: Pick<TableState<
     return !!q && state.freePos[c]?.anchor === anchor && hits(r, cardRect(layout, q), 0);
   });
 }
+
+/** Haufen auf dem freien Tisch (11.12): mindestens zwei frei liegende Karten mit genau derselben Lage im Stand. `key` ist
+ *  der Platz der Lage (`slot`), `cards` von unten nach oben (Reihenfolge in `free`), `top` die oberste, `edges` die Zahl
+ *  der Kanten wie bei Stapeln (`stackEdges`) */
+export type FreeHeap = { key: string; cards: CardId[]; top: CardId; count: number; edges: number };
+
+/** Haufen im Stand, ohne `skip` (Karten in der Hand, 11.12 F2) und ohne Karten ohne Lage (ausgeblendeter Bogen); so in
+ *  jeder Ansicht dieselben */
+export function freeHeaps(state: Pick<TableState<unknown>, 'free' | 'freePos'>, places: Places, skip: readonly CardId[] = []): FreeHeap[] {
+  const groups = new Map<string, CardId[]>();
+  for (const card of state.free) {
+    const p = places[card];
+    if (!p || !state.freePos[card] || skip.includes(card)) continue;
+    groups.set(p.slot, [...(groups.get(p.slot) ?? []), card]);
+  }
+  return [...groups].filter(([, cards]) => cards.length >= 2).map(([key, cards]) => ({ key, cards, top: cards.at(-1)!, count: cards.length, edges: stackEdges(cards.length) }));
+}

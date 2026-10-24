@@ -10,7 +10,7 @@
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = 0, slot = '', dragging = false, pending = false, grip, mark, still = false, hover = false, wiggle = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = 0, slot = '', dragging = false, pending = false, grip, mark, still = false, hover = false, wiggle = false, edges = 0, count = 0 }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number };
     /** Flamme der Laterne für den Schatten (11.9); null: Laterne aus, Schatten weich nach unten */
@@ -31,6 +31,9 @@
     still?: boolean;
     /** unter der Maus und greifbar: hebt sich leicht; `wiggle`: dabei einmal kurz wackeln (11.6) */
     hover?: boolean; wiggle?: boolean;
+    /** oberste Karte eines freien Haufens (11.12): Zahl der Kanten darunter und Zahl der Karten (Schild ab 2). Die Kanten
+     *  gehören zur Karte, damit sie mit ihr gleiten, sich drehen und skalieren */
+    edges?: number; count?: number;
   } = $props();
 
   /** angehoben: selbst oder von jemand anderem gezogen */
@@ -48,6 +51,20 @@
       face: height === null ? 'none' : height === 0 ? OUTLINE : `${OUTLINE}, ${shadowCss(at(height))}`,
       lift: lifted || hover ? `${shadowCss(at(HEIGHT.lifted), 0.42)}, ${shadowCss(at(HEIGHT.lifted / 3), 0.3)}` : undefined,
     };
+  });
+  /** Kanten eines freien Haufens (11.12): 2,5 Tischpunkte je Kante nach rechts unten wie in verkleinerten Zonen (11.6),
+   *  umgerechnet in die gedrehte und verkleinerte Karte (wie `onCard`); Schatten wie die Kanten der Zonen, die unterste
+   *  liegt auf dem Filz und wirft keinen */
+  const EDGE_STEP = 2.5;
+  const edgeList = $derived.by(() => {
+    if (!edges) return [];
+    const rect = { x, y, ...cardSize({ card: size }, { scale, rotated }) };
+    return Array.from({ length: edges }, (_, i) => edges - i).map((k) => {
+      const s = (k * EDGE_STEP) / scale;
+      const [dx, dy] = rotated ? [s, -s] : [s, s];
+      const shadow = !shaded || k === edges ? 'none' : shadowCss(onCard(shadowOver(flame, rect, 1 + k), rotated, scale));
+      return { k, translate: `${dx}px ${dy}px`, shadow };
+    });
   });
   const suit = $derived(SUIT_SYMBOL[suitOf(card)]);
   const rank = $derived(rankLabel(card));
@@ -119,6 +136,9 @@
 </script>
 
 <div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} class:hover style:--mark={mark} style:--glow-c={lastMark} style:--face-shadow={shadows?.face} style:--lift-shadow={shadows?.lift} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
+  {#each edgeList as e (e.k)}
+    <div class="edge" style:translate={e.translate} style:filter="brightness({1 - e.k * 0.07})" style:box-shadow={e.shadow}></div>
+  {/each}
   <div bind:this={lift} class="lift">
   <div bind:this={inner} class="inner" class:down={!faceUp}>
     <div class="face front">
@@ -130,6 +150,10 @@
     <div class="face back" style:background-image={back}><div class="glint"></div></div>
   </div>
   </div>
+  {#if count >= 2}
+    <!-- aufrecht und in Tischgröße an der oberen rechten Ecke, wie sie auf dem Tisch liegt: gegen Drehung und Maßstab der Karte -->
+    <div class="heap" style:left={rotated ? '0' : '100%'} style:transform="rotate({rotated ? -90 : 0}deg) scale({1 / scale})"><span class="count">{count}</span></div>
+  {/if}
 </div>
 
 <style>
@@ -164,5 +188,9 @@
   .corner.bottom { left: auto; top: auto; right: 6px; bottom: 4px; transform: rotate(180deg); }
   .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; }
   /* Glanz beim Umklappen: schräger heller Streifen, läuft über die Fläche (animator.svelte.ts) */
+  /* freier Haufen (11.12): Kanten wie an den Stapeln (ZoneView.svelte), unter der Vorderseite; Zahl über ihr */
+  .edge { position: absolute; inset: 0; box-sizing: border-box; border-radius: var(--radius-card); background: var(--stack-edge); border: 1px solid var(--stack-edge-line); pointer-events: none; }
+  .heap { position: absolute; top: 0; width: 0; height: 0; transform-origin: 0 0; pointer-events: none; }
+  .count { position: absolute; right: -7px; top: -7px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--heap-count-bg); color: var(--heap-count-ink); font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap; }
   .glint { position: absolute; inset: 0; border-radius: inherit; opacity: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%) 100% 0 / 300% 100% no-repeat; }
 </style>
