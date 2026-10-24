@@ -24,8 +24,7 @@ shapes:
   seat.notes: { scale: 1, fanX: 40 }
   seat.collect: { scale: 0.4, fanY: 12, label: { rotated: true } }
 # Tischmitte: Größe; darin alles relativ zu ihrer linken oberen Ecke. Sie ist zugleich der Spielbereich (Filz,
-# Anker frei liegender Karten). gmControlsInset = Abstand der SL-Leiste zum Filzrand: links mindestens (x), unten (y);
-# rechts reicht sie seit 5s bis an den Filzrand, ihre Lasche liegt im Spalt daneben (ARCHITEKTUR.md 10.5).
+# Anker frei liegender Karten). Die SL-Leiste unten rechts ist seit 5zb durch Blatt und Schachtel ersetzt (10.12).
 middle:
   size: [ 700, 970 ]
   zones:
@@ -39,7 +38,6 @@ middle:
     progress: [ 72, 766 ]
     clubs: [ 552, 654 ]
   resistTitle: [ 72, 626 ]
-  gmControlsInset: [ 40, 26 ]
   # Expeditionsblatt (Schritt 5zb, ARCHITEKTUR.md 10.12): Bild public/assets/sheet/expedition.webp in TP (Pixel / 4).
   # x = linke Bildkante relativ zur Tischmitte; rest = so viel vom Bild liegt über der unteren Brettkante (der gemalte
   # Kopf), der Rest hängt darüber und schneidet der Bildschirmrand ab; lift = Hochrücken beim Überfahren und bei einem

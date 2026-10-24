@@ -50,11 +50,10 @@ class ViewState {
   trumpDialog = $state<SeatId | null>(null);
   /** Feldfenster (5z, 10.11): ganzer Text eines Bogenfelds, lesen oder bearbeiten */
   fieldDialog = $state<{ seat: SeatId; field: string } | null>(null);
-  /** offenes Ergebnisfenster des Orakels, geöffnet durch das Ereignis (bis Teil 3 von 5zb) */
-  gmDialog = $state<'oracle' | null>(null);
   /** Leselage des Expeditionsblatts (5zb, 10.12): nur in dieser Ansicht, jeder öffnet sie selbst (F3) */
   expeditionOpen = $state(false);
-  /** letzter Wurf dazu (5t, 10.6): welche Teile kurz einblenden (Zeilen bzw. Begriffe); jeder Wurf ein neues Objekt */
+  /** letzter Wurf von Expedition bzw. Orakel (5t, seit 5zb am Blatt, 10.12): welche Zeilen der Leselage kurz einblenden,
+   *  wann das Blatt hochrückt; jeder Wurf ein neues Objekt */
   gmRoll = $state.raw<{ kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
   /** Rückfrage vor dem Zurücksetzen (Fenster liegen außerhalb des skalierten Tisches, daher hier) */
   confirmReset = $state(false);

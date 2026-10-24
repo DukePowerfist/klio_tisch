@@ -120,15 +120,14 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.keyboard.press('0');
   await openMenuAndClick(player, 'DECK', 'Ziehen');
   await expectCount(gm, 'ABLAGE', 1);
-  // SL würfelt Orakel, Spieler sieht das Ergebnis, aber keinen Knopf zum Neuziehen: nur das ×, kein Hauptknopf (5t)
-  await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
-  const oracle = player.getByRole('dialog', { name: 'Orakel' });
-  await expect(oracle).toBeVisible();
-  await expect(oracle.locator('.word')).toHaveCount(2);
-  await expect(oracle.getByRole('button')).toHaveCount(1);
-  await expect(oracle.getByRole('button', { name: 'Schließen' })).toBeVisible();
-  // Spieler hat keine SL-Leiste
-  await expect(player.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
+  // SL zieht das Orakel an der Schachtel (5zb): der Spieler sieht dieselben Wörter, ohne Fenster und ohne Knopf
+  await gm.locator('[data-oracle-box]').click();
+  const box = player.locator('[data-oracle-box]');
+  await expect(box.locator('.word')).toHaveCount(2);
+  await expect(box.locator('.word')).toHaveText(await gm.locator('[data-oracle-box] .word').allTextContents());
+  await expect(player.getByRole('dialog')).toHaveCount(0);
+  await expect(box).toHaveAttribute('role', 'img');
+  await expect(player.getByRole('button', { name: /^Orakel ziehen/ })).toHaveCount(0);
 
   // Neu laden: derselbe Platz kommt von selbst zurück
   await player.reload();
@@ -276,7 +275,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
 });
 
 
-test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne überzählige Linie, Einfahren nur im eigenen Browser; Spielerzahl folgt fremder Änderung', async ({ browser }) => {
+test('Kartenschachtel und Seite „Tisch“ mit Mitspieler (5s, 5zb): Schachtel nur mit Recht ein Knopf; Spielerzahl folgt fremder Änderung', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
   await player.goto(link);
@@ -284,22 +283,17 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await expect(join).toBeVisible({ timeout: 60_000 });
   await join.getByRole('button', { name: /^Spieler 2/ }).click();
   await seated(player);
-  const bar = player.getByRole('group', { name: 'Spielleitung' });
-  // ohne Recht keine Leiste und keine Lasche
-  await expect(player.locator('.ctl')).toHaveCount(0);
-  await expect(player.locator('.toggle')).toHaveCount(0);
-  // nur das Orakel (Expedition seit 5zb am Blatt): eine Gruppe, also keine Linie
+  // ohne Recht ist die Schachtel ein Bild mit Beschriftung, kein Knopf; keine SL-Leiste mehr
+  const box = player.locator('[data-oracle-box]');
+  await expect(box).toHaveAttribute('role', 'img');
+  await expect(box).toHaveAccessibleName('Orakel: noch keins');
+  await expect(player.locator('[data-gm-bar]')).toHaveCount(0);
   let rights = await openSettings(gm, 'Rechte der Spieler');
   await rights.getByRole('combobox', { name: 'Orakel ziehen' }).selectOption('allow');
   await gm.keyboard.press('Escape');
-  await expect(bar.getByRole('button')).toHaveText(['Orakel']);
-  await expect(player.locator('.ctl .group')).toHaveCount(1);
-  // Einfahren gilt nur im eigenen Browser: die SL fährt ein, beim Spieler bleibt die Leiste
-  await gm.getByRole('button', { name: 'Leiste einfahren' }).click();
-  await expect(gm.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
-  await expect(bar.getByRole('button')).toHaveText(['Orakel']);
-  await expect(player.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
-  await gm.getByRole('button', { name: 'Leiste ausfahren' }).click();
+  await expect(player.getByRole('button', { name: 'Orakel ziehen: noch keins' })).toBeVisible();
+  await player.getByRole('button', { name: 'Orakel ziehen: noch keins' }).click();
+  await expect(gm.locator('[data-oracle-box] .word')).toHaveCount(2);
   // Spielerzahl ohne die übrigen Einstellungen: Seiten „Tisch“ und „Darstellung“
   rights = await openSettings(gm, 'Rechte der Spieler');
   await rights.getByRole('combobox', { name: 'Spielerzahl ändern' }).selectOption('allow');
@@ -606,28 +600,6 @@ test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausg
   await expect(player.locator('[data-stack-menu]')).toHaveCount(0);
   // ohne jedes Recht ist der Stapel kein Knopf mehr
   await expect(player.locator('[data-zone=deck]')).not.toHaveAttribute('role', 'button');
-});
-
-test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne den Fokus zu nehmen, Esc schließt eins nach dem anderen (5x); sonst aufs ×', async ({ browser }) => {
-  const { gm, link } = await openRoom(browser);
-  const player = await (await browser.newContext()).newPage();
-  await joinAs(player, link, 'Ida', 2);
-  const settings = await openSettings(player, 'Darstellung');
-  const tab = settings.getByRole('tab', { name: 'Darstellung' });
-  await tab.focus();
-  await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
-  await expect(player.getByRole('dialog', { name: 'Orakel' })).toHaveCount(1);
-  await expect(tab).toBeFocused();
-  // Esc schließt nur das oberste Fenster (5x): erst die Einstellungen, dann das Ergebnis dahinter
-  await player.keyboard.press('Escape');
-  await expect(settings).toHaveCount(0);
-  await expect(player.getByRole('dialog', { name: 'Orakel' })).toHaveCount(1);
-  await player.keyboard.press('Escape');
-  await expect(player.getByRole('dialog')).toHaveCount(0);
-  await gm.keyboard.press('Escape'); // Orakel bei der SL schließen, sonst fängt es den Klick ab
-  // ohne anderes Fenster: Fokus aufs × (die Expedition öffnet seit 5zb bei niemandem etwas, 10.12)
-  await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
-  await expect(player.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
 test('Trumpf wählen mit Mitspieler (5y, F2 und F3): „Freie Wahl“ nur mit Recht; entzogen mitten in der Wahl steht der Grund im Fenster', async ({ browser }) => {

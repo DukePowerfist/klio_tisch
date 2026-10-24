@@ -98,8 +98,9 @@ class Effects {
     view.say(t('settings.fieldChanged', { seat: seatNo(seat) }));
   }
 
-  /** Was im Ergebnisfenster kurz einblendet (5t, 10.6, P1): am Ereignis, nicht am Text, also auch bei gleichem Ergebnis.
-   *  Orakel: beide Begriffe. Expedition: geänderte Zeilen, beim eigenen Wurf dazu die gewürfelte(n). */
+  /** Was nach einem Wurf kurz einblendet (5t P1, seit 5zb in der Leselage des Blatts): am Ereignis, nicht am Text, also
+   *  auch bei gleichem Ergebnis. Expedition: geänderte Zeilen, beim eigenen Wurf dazu die gewürfelte(n); Orakel: beide
+   *  Begriffe (die Schachtel spielt ihren Ablauf am Ereignis selbst). */
   private rolled(e: KlioEventOf<'expeditionRolled'> | KlioEventOf<'oracleDrawn'>, own: boolean, prev: KlioTableState | null): void {
     if (e.type === 'oracleDrawn') view.gmRoll = { kind: 'oracle', parts: [0, 1] };
     else view.gmRoll = { kind: 'expedition', parts: rolledRows(prev?.game.expedition, e.expedition, own ? this.ownRolls.take() : null) };
@@ -113,16 +114,9 @@ class Effects {
       if (e.type === 'cardDrawn' && e.faceUp) afterReveal(e.card, say);
       else say();
     }
-    switch (e.type) {
-      case 'damageTaken':
-        this.hit.add([e.seat]);
-        return;
-      // Expedition (5zb, F3): öffnet bei niemandem etwas; das Blatt rückt über `view.gmRoll` kurz hoch (rolled)
-      // Orakel: das Fenster öffnet sich bei allen mit dem Ereignis (13.1), bis Teil 3 die Schachtel es übernimmt
-      case 'oracleDrawn':
-        view.gmDialog = 'oracle';
-        return;
-    }
+    // Expedition und Orakel öffnen seit 5zb kein Fenster mehr (10.12): das Blatt rückt über `view.gmRoll` hoch
+    // (rolled), die Schachtel spielt ihren Ablauf selbst (OracleBox.svelte)
+    if (e.type === 'damageTaken') this.hit.add([e.seat]);
   }
 }
 

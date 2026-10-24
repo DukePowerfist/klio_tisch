@@ -6,14 +6,14 @@
   import { toastBottom } from './overlap';
   import { view } from './view.svelte';
 
-  /** Abstand zum unteren Rand, und zu SL-Leiste, Blatt und Schachtel, wenn sie darunter liegen (5v F1, 5zb) */
+  /** Abstand zum unteren Rand, und zu Blatt und Schachtel, wenn sie darunter liegen (5v F1, seit 5zb statt der SL-Leiste) */
   const BASE = 28;
   const GAP = 8;
-  /** misst beim Erscheinen: SL-Leiste (`data-gm-bar`) und Gegenstände am Rand (`data-toast-avoid`, 5zb), nicht
-   *  `data-menu-avoid` (sonst wichen die Menüs aus) */
+  /** misst beim Erscheinen: Gegenstände am Rand (`data-toast-avoid`, 5zb), nicht `data-menu-avoid` (sonst wichen die
+   *  Menüs aus) */
   function place(el: HTMLElement) {
     const r = el.getBoundingClientRect();
-    const avoid = [...document.querySelectorAll('[data-gm-bar], [data-toast-avoid]')].map((e) => {
+    const avoid = [...document.querySelectorAll('[data-toast-avoid]')].map((e) => {
       const b = e.getBoundingClientRect();
       return { x: b.left, y: b.top, w: b.width, h: b.height };
     });

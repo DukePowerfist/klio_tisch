@@ -24,27 +24,22 @@ test('Expedition am Blatt (5zb): vier Tabellen; „Neu“ würfelt nur die eigen
   await expect(dialog).toHaveCount(0);
 });
 
-test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) => {
-  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Orakel' });
-  await expect(dialog.locator('.word')).toHaveCount(2);
-  await expect(dialog.locator('.word .card').first()).toHaveText(/^(Herz|Pik|Kreuz) (\d+|B|D|K|A)$/);
-  await dialog.getByRole('button', { name: 'Neu ziehen' }).click();
-  await expect(dialog.locator('.word')).toHaveCount(2);
+test('Orakel an der Kartenschachtel (5zb): Klick zieht zwei Begriffe, je auf einer Karte, ohne Farbe und Wert', async ({ page }) => {
+  const box = page.locator('[data-oracle-box]');
+  await expect(box).toHaveAccessibleName('Orakel ziehen: noch keins');
+  await expect(box.locator('[data-oracle-card]')).toHaveCount(0);
+  await box.click();
+  await expect(box.locator('[data-oracle-card]')).toHaveCount(2);
+  const words = await box.locator('.word').allTextContents();
+  await expect(box).toHaveAccessibleName(`Orakel ziehen: ${words.join(', ')}`);
+  for (const w of words) expect(w).not.toMatch(/Herz|Pik|Kreuz|\d/);
+  // kein Fenster mehr
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await box.click({ position: { x: 20, y: 5 } });
+  await expect(box.locator('[data-oracle-card]')).toHaveCount(2);
 });
 
-// ---------- Ergebnisfenster im Stil der Einstellungen (5t, 10.6) ----------
-
-test('Ergebnisfenster des Orakels: Kopf mit Titel, Hauptknopf und ×; Klick daneben schließt', async ({ page }) => {
-  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
-  const oracle = page.getByRole('dialog', { name: 'Orakel' });
-  await expect(oracle.locator('h2')).toHaveText('Orakel');
-  await expect(oracle.locator('header').getByRole('button')).toHaveText(['Neu ziehen', '']);
-  await page.mouse.click(5, 5);
-  await expect(oracle).toHaveCount(0);
-});
-
-test('Leselage (5zb): Fokus beim Öffnen aufs Fenster, Enter würfelt nicht; ein weiterer Wurf lässt den Fokus; Orakel: Fokus aufs ×', async ({ page }) => {
+test('Leselage (5zb): Fokus beim Öffnen aufs Fenster, Enter würfelt nicht; ein weiterer Wurf lässt den Fokus', async ({ page }) => {
   await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
   await page.locator('[data-expedition-sheet]').click();
@@ -60,9 +55,6 @@ test('Leselage (5zb): Fokus beim Öffnen aufs Fenster, Enter würfelt nicht; ein
   await page.keyboard.press('Enter');
   await expect(logged).toHaveCount(2);
   await expect(second).toBeFocused();
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
 test('Knöpfe der Fenster (5v, 10.8; ersetzt 5t Q1): normal, Hauptknopf, gefährlich klar verschieden, × ohne Fläche und Rahmen', async ({ page }) => {
@@ -358,70 +350,16 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
       expect(b.x > o.x + o.width || b.x + b.width < o.x || b.y > o.y + o.height || b.y + b.height < o.y, target).toBe(true);
     }
   }
-  // Einstellungen und seit 5zb Zurücksetzen nur noch im Menü, nicht in der SL-Leiste (10.12)
+  // Einstellungen und seit 5zb Zurücksetzen nur noch im Menü; die SL-Leiste gibt es nicht mehr (10.12)
   await expect(page.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
-  await expect(page.locator('[data-gm-bar]').getByRole('button', { name: 'Zurücksetzen' })).toHaveCount(0);
+  await expect(page.locator('[data-gm-bar]')).toHaveCount(0);
   await button.click();
   await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
   await page.locator('.panel').click({ position: { x: 20, y: 20 } });
   await expect(page.locator('[data-top-menu]')).toHaveCount(0);
 });
 
-test('SL-Leiste: gleich groß bei jedem Zoom und in großen Fenstern, Knöpfe bis an den Filzrand, Lasche daneben (5s)', async ({ page }) => {
-  const bar = page.getByRole('group', { name: 'Spielleitung' });
-  /** Größe der Leiste, Abstand der Naht (Ende der Knöpfe) zum rechten Filzrand, Breite der Lasche und Abstand unten, in TP */
-  const measure = () =>
-    page.evaluate(() => {
-      const b = document.querySelector('.ctl')!.getBoundingClientRect();
-      const knobs = document.querySelector('#gm-bar')!.getBoundingClientRect();
-      const f = document.querySelector('.panel')!.getBoundingClientRect();
-      const sc = f.width / 700;
-      // Breite nur der Knöpfe: die Lasche ist im Tisch fest breit (der Spalt) und wächst beim Zoomen mit
-      return { w: knobs.width, h: b.height, dx: (f.right - knobs.right) / sc, tab: (b.right - f.right) / sc, dy: (f.bottom - b.bottom) / sc };
-    });
-  await expect(bar).toBeVisible();
-  const start = await measure();
-  expect(start.h).toBeGreaterThanOrEqual(42);
-  expect(Math.abs(start.dx)).toBeLessThan(1);
-  expect(start.tab).toBeCloseTo(30, 0);
-  expect(start.dy).toBeCloseTo(26, 0);
-
-  const panel = (await page.locator('.panel').boundingBox())!;
-  await page.mouse.move(panel.x + panel.width / 2, panel.y + panel.height / 2);
-  await page.mouse.wheel(0, -600);
-  await expect.poll(async () => Math.abs((await measure()).dx)).toBeLessThan(1);
-  const zoomed = await measure();
-  expect(zoomed.w).toBeCloseTo(start.w, 0);
-  expect(zoomed.h).toBeCloseTo(start.h, 0);
-  expect(zoomed.dy).toBeCloseTo(26, 0);
-
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  await expect.poll(async () => (await measure()).h).toBeCloseTo(start.h, 0);
-});
-
-test('SL-Leiste im kleinen Fenster mit Protokoll: eine Zeile, im Filz, über keinem Stapel (5s)', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 600 });
-  await fromMenu(page, 'Protokoll');
-  await expect(page.locator('aside.log')).toBeVisible();
-  const rect = (sel: string) => page.locator(sel).first().evaluate((e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; });
-  const bar = await rect('.ctl');
-  const knobs = await rect('#gm-bar');
-  const felt = await rect('.panel');
-  // eine Zeile: Höhe zu Breite wie bei voller Größe (etwa 36 px Knöpfe plus Rand), nicht zwei- oder dreizeilig
-  const full = await page.locator('.ctl .menu-item').first().evaluate((e) => (e as HTMLElement).offsetHeight);
-  const scaleOf = await page.locator('.ctl').evaluate((e) => e.getBoundingClientRect().width / (e as HTMLElement).offsetWidth);
-  expect(bar.b - bar.t).toBeLessThan((full + 20) * scaleOf);
-  expect(bar.l).toBeGreaterThanOrEqual(felt.l);
-  expect(knobs.r).toBeLessThanOrEqual(felt.r + 1);
-  for (const zone of ['progress', 'clubs', 'danger']) {
-    const z = await rect(`[data-zone=${zone}]`);
-    expect(bar.t >= z.b || bar.r <= z.l || bar.l >= z.r, zone).toBe(true);
-  }
-});
-
-test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp und Pfeiltasten, nicht mehr in der Leiste', async ({ page }) => {
-  const bar = page.getByRole('group', { name: 'Spielleitung' });
-  await expect(bar.getByRole('button')).toHaveText(['Orakel']);
+test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp und Pfeiltasten', async ({ page }) => {
   await expect(page.getByRole('combobox')).toHaveCount(0);
   const dialog = await openSettings(page, 'Tisch');
   const radios = dialog.getByRole('radio');
@@ -443,41 +381,3 @@ test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp
   await expect(page.locator('[data-dock^=seat]')).toHaveCount(3);
 });
 
-test('SL-Leiste einfahren (5s): nur die Lasche bleibt, außerhalb des Filzes und neben keinem Bogen; bleibt nach dem Neuladen', async ({ page }) => {
-  const toggle = page.getByRole('button', { name: 'Leiste einfahren' });
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-  await toggle.focus();
-  // ohne Bewegung (reduzierte Bewegung) springt sie: sofort weg, keine Animation
-  expect(await page.evaluate(() => { (document.activeElement as HTMLElement).click(); return document.querySelector('#gm-bar')?.getAnimations().length ?? 0; })).toBe(0);
-  const expand = page.getByRole('button', { name: 'Leiste ausfahren' });
-  await expect(expand).toHaveAttribute('aria-expanded', 'false');
-  await expect(expand).toBeFocused();
-  await expect(page.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Expedition', exact: true })).toHaveCount(0);
-  await ready(page, true);
-  await expect(page.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
-  /** Lasche rechts außerhalb des Filzes und neben keinem Bogen */
-  const outside = async (label: string) => {
-    const r = await page.evaluate(() => {
-      const box = (el: Element) => el.getBoundingClientRect();
-      const b = box(document.querySelector('.toggle')!);
-      const f = box(document.querySelector('.panel')!);
-      const sheets = [...document.querySelectorAll('[data-sheet]')].map(box);
-      return { left: b.left, right: b.right, felt: f.right, hits: sheets.filter((s) => b.right > s.left && b.left < s.right && b.bottom > s.top && b.top < s.bottom).length };
-    });
-    expect(r.left, label).toBeGreaterThanOrEqual(r.felt - 1);
-    expect(r.hits, label).toBe(0);
-  };
-  await outside('Draufsicht');
-  await page.keyboard.press('1');
-  await expect.poll(async () => (await page.locator('[data-sheet=seat1]').boundingBox())!.x).toBeLessThan(50);
-  await outside('Rollenansicht');
-  await page.keyboard.press('0');
-  await page.setViewportSize({ width: 1024, height: 600 });
-  await fromMenu(page, 'Protokoll');
-  await outside('kleines Fenster mit Protokoll');
-  await expand.click();
-  await expect(page.getByRole('group', { name: 'Spielleitung' }).getByRole('button')).toHaveText(['Orakel']);
-  await ready(page, true);
-  await expect(page.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
-});

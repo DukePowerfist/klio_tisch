@@ -12,7 +12,6 @@
   import PlateMenu from './PlateMenu.svelte';
   import ProfileDialog from './ProfileDialog.svelte';
   import ResetDialog from './ResetDialog.svelte';
-  import ResultDialog from './ResultDialog.svelte';
   import RoomDialog from './RoomDialog.svelte';
   import SettingsDialog from './SettingsDialog.svelte';
   import StackMenu from './StackMenu.svelte';
@@ -61,9 +60,6 @@
   <LogPanel />
   <Toast />
   <BigTrump />
-  {#if view.gmDialog}
-    {#key view.gmDialog}<ResultDialog kind={view.gmDialog} />{/key}
-  {/if}
   {#if view.expeditionOpen}
     <ExpeditionReader />
   {/if}

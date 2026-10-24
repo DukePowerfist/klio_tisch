@@ -52,13 +52,15 @@ test('Doppelklick auf die Laterne schaltet genau einmal und zoomt nicht', async 
   await page.getByRole('button', { name: 'Laterne anzünden' }).click();
 });
 
-test('Licht liegt über dem Tisch, nimmt aber keine Zeigereingaben an; Stapelmenü und SL-Leiste liegen darüber', async ({ page }) => {
+test('Licht liegt über dem Tisch, nimmt aber keine Zeigereingaben an; Blatt und Schachtel liegen darunter (5zb)', async ({ page }) => {
   const deck = await zoneCenter(page, 'DECK');
   const hit = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('.light') !== null, deck);
   expect(hit, 'das Licht fängt keine Klicks').toBe(false);
   const z = (sel: string) => page.locator(sel).first().evaluate((e) => Number(getComputedStyle(e).zIndex));
   expect(await z('.light > .on')).toBe(450001);
-  expect(await z('.ctl')).toBeGreaterThan(450002);
+  // Gegenstände auf dem Tisch werden mit abgedunkelt (10.12): über den Zonen, unter frei liegenden Karten und dem Licht
+  expect(await z('[data-expedition-sheet]')).toBeLessThan(450000);
+  expect(await z('[data-oracle-box]')).toBeLessThan(450000);
 });
 
 test('Karte auf die Laterne gezogen: Vorschau und Ablage daneben, nicht auf ihr (F3)', async ({ page }) => {

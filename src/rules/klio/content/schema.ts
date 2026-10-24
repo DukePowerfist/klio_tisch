@@ -160,7 +160,7 @@ export const SkinFile = z.object({
 }).strict();
 
 // ---------- layouts.yaml ----------
-// Siehe Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`. Tischzonen, Überschrift und SL-Leiste liegen
+// Siehe Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`. Tischzonen, Überschrift, Blatt und Schachtel liegen
 // relativ zur Tischmitte (`middle`), die beide Ansichten nur verschieben (ARCHITEKTUR.md 10, Schritt 5d).
 const Point = z.tuple([z.number(), z.number()]);
 /** Rechteck x, y, w, h */
@@ -186,7 +186,7 @@ export const LayoutsFile = z.object({
   freeCardScale: z.number(),
   shapes: z.record(z.string(), Shape),
   middle: z.object({
-    size: Point, zones: z.record(z.string(), Point), resistTitle: Point, gmControlsInset: Point,
+    size: Point, zones: z.record(z.string(), Point), resistTitle: Point,
     lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
     /** Expeditionsblatt (5zb, 10.12) */
     expedition: z.object({

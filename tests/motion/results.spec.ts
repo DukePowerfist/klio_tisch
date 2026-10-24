@@ -30,7 +30,7 @@ const settled = (page: Page) => page.getByRole('dialog').evaluate((d) => Promise
 /** Klick auf einen Knopf im Fenster und warten, bis das Ereignis im Protokoll steht */
 async function rollAndWait(page: Page, button: string, logged: number) {
   await page.getByRole('dialog').getByRole('button', { name: button, exact: true }).click();
-  await expect(page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: /Expedition:|Orakel:/ })).toHaveCount(logged);
+  await expect(page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: /Expedition:/ })).toHaveCount(logged);
 }
 
 test('Expedition: beim Öffnen nichts; eigener Wurf mit gleichem Ergebnis blendet die Zeile ein, „Alles neu“ alle vier', async ({ page }) => {
@@ -54,20 +54,6 @@ test('Expedition: beim Öffnen nichts; eigener Wurf mit gleichem Ergebnis blende
   await fixRolls(page, LONGEST);
   await rollAndWait(page, 'Alles neu', 3);
   await expect.poll(() => faded(page)).toEqual([0, 1, 2, 3].map((part) => ({ part, duration: 150 })));
-});
-
-test('Orakel: neu ziehen blendet beide Begriffe ein, auch bei denselben Karten', async ({ page }) => {
-  await fromMenu(page, 'Protokoll');
-  await record(page);
-  // Herz 2 und Pik 3 (Farbe, dann Wert je Begriff)
-  await fixRolls(page, [0, 0, 1, 1]);
-  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Orakel' }).locator('.value')).toHaveCount(2);
-  await settled(page);
-  expect(await faded(page)).toEqual([]);
-  await fixRolls(page, [0, 0, 1, 1]);
-  await rollAndWait(page, 'Neu ziehen', 2);
-  await expect.poll(() => faded(page)).toEqual([0, 1].map((part) => ({ part, duration: 150 })));
 });
 
 test('Stufe „Aus“ (Bewegung reduzieren): das Einblenden bleibt', async ({ page }) => {

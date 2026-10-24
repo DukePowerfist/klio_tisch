@@ -9,8 +9,8 @@
 <script lang="ts">
   // Gemeinsames Fenster: abgedunkelter Hintergrund, Klick daneben oder Esc (nur das oberste) schließt.
   // Größe: narrow (Rückfragen, schmal), wide (Trumpf), pane (Einstellungen: feste Größe, Inhalt ordnet sich selbst),
-  // result (Orakel, 5t: Spalte ohne Innenrand, Knöpfe zeichnet das Fenster selbst), sheet (Leselage des
-  // Expeditionsblatts, 5zb: ohne Fläche und Rahmen, das Blatt ist der Inhalt; Größe über `style`, eigenes Herangleiten).
+  // sheet (Leselage des Expeditionsblatts, 5zb: ohne Fläche und Rahmen, das Blatt ist der Inhalt; Größe über `style`,
+  // eigenes Herangleiten).
   // anchor: öffnet mittig, danach bleibt die Oberkante fest und die Höhe ändert sich nur nach unten (5t, 10.6).
   // Tab bleibt im obersten Fenster (Schritt 5f), statt in den Tisch dahinter zu laufen.
   import type { Snippet } from 'svelte';
@@ -20,7 +20,7 @@
     onclose: () => void;
     /** Esc zuerst hier (z. B. offene Rückfrage abbrechen); true = erledigt, Fenster bleibt offen */
     onescape?: () => boolean;
-    size?: 'narrow' | 'wide' | 'pane' | 'result' | 'sheet';
+    size?: 'narrow' | 'wide' | 'pane' | 'sheet';
     anchor?: boolean;
     /** Inline-Stil des Fensters (Größe der Leselage, 5zb) */
     style?: string;
@@ -96,19 +96,18 @@
   .box.pane { --box-pad-y: 0px; --box-pad-x: 0px; width: min(780px, 94vw); height: min(620px, 85vh); max-height: none; padding: 0; overflow: hidden; display: flex; }
   /* max-height gilt für den Inhalt: Innenrand und Rahmen abziehen, sonst ragt ein hohes Fenster unten hinaus (5v) */
   .box.anchored { align-self: flex-start; max-height: calc(100vh - 24px - 2 * var(--box-pad-y) - 2px); }
-  .box.result { --box-pad-y: 0px; --box-pad-x: 0px; width: min(560px, 94vw); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
   /* Leselage (5zb): das Blatt ist das Fenster; Maße in TP über Containereinheiten (ExpeditionReader.svelte) */
   .box.sheet { --box-pad-y: 0px; --box-pad-x: 0px; padding: 0; background: none; border: 0; border-radius: 0; overflow: visible; max-height: none; animation: none; container-type: inline-size; position: relative; }
   /* Drei Arten von Knöpfen (5v, 10.8) in narrow, wide und pane: normal (Tönung und feiner Rand wie „Neu“ im
      Ergebnisfenster), Hauptknopf `.main`, gefährlich `.danger`. Das Ergebnisfenster zeichnet seine selbst, das ×
      (CloseX) ist ausgenommen. :where hält die Stärke wie bisher (0,2,1, 5t Q1), auch beim Überfahren: örtliche Regeln
      der Fenster (Seitenleiste, Wahlflächen) gehen weiter vor */
-  .box:where(:not(.result, .sheet)) :global(button:where(:not(.dialog-close))) { background: var(--menu-item-hover); color: var(--ink); border: 1px solid var(--menu-rule); border-radius: var(--radius-m); padding: 8px 16px; font: inherit; cursor: pointer; transition: scale var(--press) ease-out, background-color 80ms; }
-  .box:where(:not(.result, .sheet)) :global(button:where(:not(.dialog-close):hover:not(:disabled))) { background: var(--menu-confirm); }
-  .box:where(:not(.result, .sheet)) :global(button:disabled) { opacity: 0.45; cursor: not-allowed; }
-  .box:where(:not(.result, .sheet)) :global(button.main) { background: var(--menu-main); border-color: transparent; font-weight: 600; }
-  .box:where(:not(.result, .sheet)) :global(button.main:where(:hover:not(:disabled))) { background: var(--menu-main-hover); }
-  .box:where(:not(.result, .sheet)) :global(button.danger) { background: var(--warn-bg); border-color: transparent; }
+  .box:where(:not(.sheet)) :global(button:where(:not(.dialog-close))) { background: var(--menu-item-hover); color: var(--ink); border: 1px solid var(--menu-rule); border-radius: var(--radius-m); padding: 8px 16px; font: inherit; cursor: pointer; transition: scale var(--press) ease-out, background-color 80ms; }
+  .box:where(:not(.sheet)) :global(button:where(:not(.dialog-close):hover:not(:disabled))) { background: var(--menu-confirm); }
+  .box:where(:not(.sheet)) :global(button:disabled) { opacity: 0.45; cursor: not-allowed; }
+  .box:where(:not(.sheet)) :global(button.main) { background: var(--menu-main); border-color: transparent; font-weight: 600; }
+  .box:where(:not(.sheet)) :global(button.main:where(:hover:not(:disabled))) { background: var(--menu-main-hover); }
+  .box:where(:not(.sheet)) :global(button.danger) { background: var(--warn-bg); border-color: transparent; }
   .box :global(select) { background: var(--panel-bg); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 3px 9px; font: inherit; }
   /* gemeinsame Bausteine der Fenster: Hinweiszeile und Knopfreihe */
   .box :global(.note) { font-size: 13px; opacity: 0.75; }

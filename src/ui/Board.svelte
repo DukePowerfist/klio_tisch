@@ -10,7 +10,6 @@
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
   import ExpeditionSheet from './ExpeditionSheet.svelte';
-  import GmControls from './GmControls.svelte';
   import FeltMarkings from './FeltMarkings.svelte';
   import Lamp from './Lamp.svelte';
   import OracleBox from './OracleBox.svelte';
@@ -480,7 +479,6 @@
       <!-- Expedition und Orakel am unteren Rand (5zb, 10.12) -->
       <ExpeditionSheet {layout} {flame} dragging={!!drag?.moved} scale={sc} />
       <OracleBox {layout} {fitScale} {flame} />
-      <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} maxH={layout.gmControlsMaxH} tab={layout.gmTab} scale={sc} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
       {#each Object.values(layout.sheets) as box (box.seat)}

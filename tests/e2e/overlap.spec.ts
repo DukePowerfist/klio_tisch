@@ -1,4 +1,5 @@
-// Überdeckungen und Lesbarkeit (Schritt 5v, Teil 1, ARCHITEKTUR.md 10.8): Meldung, SL-Leiste, „DECK“, Kartenvorschau.
+// Überdeckungen und Lesbarkeit (Schritt 5v, Teil 1, ARCHITEKTUR.md 10.8): Meldung, Blatt und Schachtel (seit 5zb statt
+// der SL-Leiste), „DECK“, Kartenvorschau.
 
 import { expect, test, type Page } from '@playwright/test';
 import { box, expectCount, fromMenu, openMenuAndClick, ready, type Box } from './helpers';
@@ -10,7 +11,7 @@ const label = (page: Page, text: string) => page.locator('.zone .label').filter(
 /** Ansicht gleitet nicht (reducedMotion), aber der Zoom passt sich nach dem Wechsel an */
 const settled = (page: Page) => page.waitForTimeout(200);
 
-test('SL-Leiste verdeckt „Fortschritt“ nicht, „DECK“ ganz lesbar: beide Fenstergrößen, beide Ansichten, Protokoll offen und zu', async ({ page }) => {
+test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „DECK“ ganz lesbar: beide Fenstergrößen, beide Ansichten, Protokoll offen und zu (5zb)', async ({ page }) => {
   for (const [width, height] of [[1600, 900], [1024, 640]] as const) {
     await page.setViewportSize({ width, height });
     for (const log of [false, true]) {
@@ -19,8 +20,10 @@ test('SL-Leiste verdeckt „Fortschritt“ nicht, „DECK“ ganz lesbar: beide 
         await page.keyboard.press(key);
         await settled(page);
         const what = `${width} × ${height}, Protokoll ${log}, Taste ${key}`;
-        const bar = await box(page.locator('[data-gm-bar]'));
-        expect(apart(bar, await box(label(page, 'FORTSCHRITT'))), what).toBe(true);
+        for (const sel of ['[data-expedition-sheet]', '[data-oracle-box]']) {
+          const thing = await box(page.locator(sel));
+          for (const text of ['FORTSCHRITT', 'KREUZ']) expect(apart(thing, await box(label(page, text))), `${what}, ${sel}, ${text}`).toBe(true);
+        }
         // die unterste Kante des vollen Decks endet über der Beschriftung
         const deck = await box(label(page, 'DECK'));
         const edges = await page.locator('[data-zone=deck] .edge').evaluateAll((els) => Math.max(...els.map((e) => e.getBoundingClientRect().bottom)));
@@ -31,7 +34,7 @@ test('SL-Leiste verdeckt „Fortschritt“ nicht, „DECK“ ganz lesbar: beide 
   }
 });
 
-test('Meldung nach dem Ziehen verdeckt SL-Leiste, Blatt und Schachtel nicht und steht sonst unten (5v, 5zb)', async ({ page }) => {
+test('Meldung nach dem Ziehen verdeckt Blatt und Schachtel nicht und steht sonst unten (5v, 5zb)', async ({ page }) => {
   // jede Karte bringt eine neue Meldung, die beim Erscheinen misst
   for (const [i, [width, height]] of ([[1600, 900], [1024, 640], [2400, 900]] as const).entries()) {
     await page.setViewportSize({ width, height });
@@ -43,8 +46,8 @@ test('Meldung nach dem Ziehen verdeckt SL-Leiste, Blatt und Schachtel nicht und 
     await expect(toast).toHaveText(/^Aufgedeckt: /);
     const t = await box(toast);
     const what = `${width} × ${height}`;
-    const avoid = await page.locator('[data-gm-bar], [data-toast-avoid]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number }));
-    expect(avoid.length, what).toBe(3);
+    const avoid = await page.locator('[data-toast-avoid]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number }));
+    expect(avoid.length, what).toBe(2);
     let bottom = 28;
     for (const r of avoid) {
       expect(apart(t, r), what).toBe(true);

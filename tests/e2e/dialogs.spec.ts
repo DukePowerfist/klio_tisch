@@ -40,10 +40,6 @@ test('Jedes Fenster hat denselben Kopf mit × und Linie bis an den Rand; × und 
   await expectHead(settings, 'Darstellung');
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Orakel', exact: true }).click();
-  const oracle = page.getByRole('dialog', { name: 'Orakel' });
-  await expectHead(oracle, 'Orakel');
-  await page.keyboard.press('Escape');
 
   await page.locator('[data-plate=seat2]').click();
   await page.locator('[data-plate-menu]').getByText('Farbe …').click();
