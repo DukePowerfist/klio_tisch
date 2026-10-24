@@ -13,9 +13,11 @@
    *  Menüs aus) */
   function place(el: HTMLElement) {
     const r = el.getBoundingClientRect();
+    // Blatt und Schachtel sind an der Tischkante abgeschnitten: nur der Teil darüber zählt
+    const edge = document.querySelector('.board')?.getBoundingClientRect().bottom ?? innerHeight;
     const avoid = [...document.querySelectorAll('[data-toast-avoid]')].map((e) => {
       const b = e.getBoundingClientRect();
-      return { x: b.left, y: b.top, w: b.width, h: b.height };
+      return { x: b.left, y: b.top, w: b.width, h: Math.max(0, Math.min(b.bottom, edge) - b.top) };
     });
     el.style.bottom = `${toastBottom({ x: r.left, y: r.top, w: r.width, h: r.height }, avoid, innerHeight, BASE, GAP)}px`;
   }

@@ -176,14 +176,23 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     light: role ? L.role.light : L.overview.light,
     expedition: { img, paper },
     oracle,
-    obstacles: [tilted(paper, E.tilt), oracleReach(c, oracle, M.oracle.maxScale)],
+    // nur was über der Brettkante zu sehen ist (darunter abgeschnitten), geneigt wie gezeigt
+    obstacles: [rotatedBounds({ ...paper, h: BH - paper.y }, E.tilt, { x: paper.x + paper.w / 2, y: paper.y }), oracleReach(c, oracle, M.oracle.maxScale)],
   };
 }
 
-/** Umriss eines um die obere Mitte geneigten Rechtecks (Blatt, `tilt` in Grad): oben um die gehobene Ecke höher */
-function tilted(r: Rect, tilt: number): Rect {
-  const up = (r.w / 2) * Math.sin((Math.abs(tilt) * Math.PI) / 180);
-  return { x: r.x, y: r.y - up, w: r.w, h: r.h + up };
+/** Umriss eines um `pivot` geneigten Rechtecks (`deg` in Grad, im Uhrzeigersinn wie CSS `rotate`) */
+export function rotatedBounds(r: Rect, deg: number, pivot: { x: number; y: number }): Rect {
+  const a = (deg * Math.PI) / 180;
+  const [cos, sin] = [Math.cos(a), Math.sin(a)];
+  const pts = [[r.x, r.y], [r.x + r.w, r.y], [r.x, r.y + r.h], [r.x + r.w, r.y + r.h]].map(([x, y]) => {
+    const [dx, dy] = [x! - pivot.x, y! - pivot.y];
+    return [pivot.x + dx * cos - dy * sin, pivot.y + dx * sin + dy * cos] as const;
+  });
+  const xs = pts.map((p) => p[0]);
+  const ys = pts.map((p) => p[1]);
+  const [x0, y0] = [Math.min(...xs), Math.min(...ys)];
+  return { x: x0, y: y0, w: Math.max(...xs) - x0, h: Math.max(...ys) - y0 };
 }
 
 type OracleSpec = KlioContent['layouts']['middle']['oracle'];
@@ -195,10 +204,12 @@ export function oracleRect(o: OracleSpec, at: { cx: number; bottom: number }, s:
   return { x: at.cx - (o.size[0] * s) / 2, y: at.bottom - (o.rest - above) * s, w: o.size[0] * s, h: o.size[1] * s };
 }
 
-/** Sichtbarer Platz der Schachtel samt herausragender Karten bis zur Brettkante (Hindernis, T1) */
+/** Sichtbarer Platz der Schachtel samt herausragender Karten bis zur Brettkante, geneigt um die Mitte an der Kante
+ *  (Hindernis, T1) */
 function oracleReach(c: KlioContent, at: { cx: number; bottom: number }, s: number): Rect {
   const o = c.layouts.middle.oracle;
-  return { x: at.cx - (o.size[0] * s) / 2, y: at.bottom - o.rest * s, w: o.size[0] * s, h: o.rest * s };
+  const r = { x: at.cx - (o.size[0] * s) / 2, y: at.bottom - o.rest * s, w: o.size[0] * s, h: o.rest * s };
+  return rotatedBounds(r, o.tilt, { x: at.cx, y: at.bottom });
 }
 
 /** Maßstab der Schachtel (S3, T7): die Wörter (`word` TP) mindestens `minPx` groß auf dem Bildschirm bei Zoom 1, also

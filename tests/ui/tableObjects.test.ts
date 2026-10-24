@@ -1,7 +1,7 @@
 // Expeditionsblatt und Kartenschachtel am unteren Rand (Schritt 5zb, ARCHITEKTUR.md 10.12): Lage, Maßstab, Ausweichen.
 
 import { describe, expect, it } from 'vitest';
-import { besideObjects, cardSize, computeLayout, freePosAt, lampGap, oracleRect, oracleScale, type Layout, type Rect } from '../../src/ui/layout';
+import { besideObjects, cardSize, computeLayout, freePosAt, lampGap, oracleRect, oracleScale, rotatedBounds, type Layout, type Rect } from '../../src/ui/layout';
 import { content } from '../helpers';
 
 const E = content.layouts.middle.expedition;
@@ -85,8 +85,11 @@ describe('Kartenschachtel (5zb)', () => {
   it('Hindernis immer mit maxScale, nicht mit dem gezeigten Maßstab (T1)', () => {
     const L = computeLayout(content, 4, null, null);
     const reach = L.obstacles[1]!;
-    expect(reach.w).toBeCloseTo(O.size[0] * O.maxScale);
-    expect(reach.y).toBeCloseTo(L.board.h - O.rest * O.maxScale);
+    const upright = { x: L.oracle.cx - (O.size[0] * O.maxScale) / 2, y: L.board.h - O.rest * O.maxScale, w: O.size[0] * O.maxScale, h: O.rest * O.maxScale };
+    expect(reach).toEqual(rotatedBounds(upright, O.tilt, { x: L.oracle.cx, y: L.board.h }));
+    // geneigt etwas breiter und höher als aufrecht
+    expect(reach.w).toBeGreaterThan(upright.w);
+    expect(reach.y).toBeLessThan(upright.y);
   });
 });
 
@@ -127,5 +130,23 @@ describe('Freie Karten weichen Blatt und Schachtel aus (5zb, F5, U3)', () => {
   it('weit weg von beiden bleibt die Karte, wo sie ist', () => {
     const r = { x: L.middle.x + 300, y: L.middle.y + 420, ...c };
     expect(besideObjects(L, r)).toEqual(r);
+  });
+});
+
+describe('Neigung (5zb)', () => {
+  it('rotatedBounds: um 0° unverändert, um 90° um die Mitte mit vertauschten Seiten', () => {
+    const r = { x: 0, y: 0, w: 40, h: 20 };
+    expect(rotatedBounds(r, 0, { x: 20, y: 10 })).toEqual(r);
+    const q = rotatedBounds(r, 90, { x: 20, y: 10 });
+    expect(q.w).toBeCloseTo(20);
+    expect(q.h).toBeCloseTo(40);
+    expect(q.x).toBeCloseTo(10);
+    expect(q.y).toBeCloseTo(-10);
+  });
+
+  it('Blatt und Schachtel sind zu verschiedenen Seiten geneigt, die Schachtel nur leicht', () => {
+    expect(Math.sign(E.tilt)).not.toBe(Math.sign(O.tilt));
+    expect(Math.abs(O.tilt)).toBeGreaterThan(0);
+    expect(Math.abs(O.tilt)).toBeLessThanOrEqual(5);
   });
 });

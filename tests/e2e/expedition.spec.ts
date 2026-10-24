@@ -155,3 +155,20 @@ test('Leselage am Kopf herunterziehen schließt, kurz gleitet sie zurück; Ziehe
   await page.mouse.up();
   await expect(reader(page)).toHaveCount(0);
 });
+
+test('in einem hohen Fenster enden Blatt und Schachtel an der Tischkante, darunter ist nichts von ihnen zu sehen', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 800 });
+  // oben klicken: die Mitte des Knopfs liegt im hohen Fenster unter der Tischkante, also abgeschnitten
+  await page.locator('[data-oracle-box]').click({ position: { x: 30, y: 30 } });
+  await expect(page.locator('[data-oracle-card]')).toHaveCount(2);
+  const board = (await page.locator('.board').boundingBox())!;
+  const edge = board.y + board.height;
+  expect(edge).toBeLessThan(790);
+  for (const sel of ['[data-expedition-sheet]', '[data-oracle-box]']) {
+    const r = (await page.locator(sel).boundingBox())!;
+    const x = r.x + r.width / 2;
+    const at = (y: number) => page.evaluate(({ x, y, sel }) => !!document.elementFromPoint(x, y)?.closest(sel), { x, y, sel });
+    expect(await at(edge - 4), `${sel} über der Kante`).toBe(true);
+    expect(await at(edge + 6), `${sel} unter der Kante`).toBe(false);
+  }
+});

@@ -476,9 +476,12 @@
         <FeltMarkings {layout} />
       </div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
-      <!-- Expedition und Orakel am unteren Rand (5zb, 10.12) -->
-      <ExpeditionSheet {layout} {flame} dragging={!!drag?.moved} scale={sc} />
-      <OracleBox {layout} {fitScale} {flame} />
+      <!-- Expedition und Orakel am unteren Rand (5zb, 10.12), an der Tischkante abgeschnitten (Hülle ohne Stapelkontext:
+           die z-Werte der beiden gelten weiter gegenüber den Karten) -->
+      <div class="table-edge" style:width="{BW}px" style:height="{BH}px">
+        <ExpeditionSheet {layout} {flame} dragging={!!drag?.moved} scale={sc} />
+        <OracleBox {layout} {fitScale} {flame} />
+      </div>
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
       {#each Object.values(layout.sheets) as box (box.seat)}
@@ -538,6 +541,8 @@
     box-shadow: 0 0 0 calc(var(--felt-rim-w) - 1px) var(--felt-rim), 0 0 0 var(--felt-rim-w) var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; color: var(--felt-print); font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.85; pointer-events: none; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
+  .table-edge { position: absolute; left: 0; top: 0; overflow: clip; pointer-events: none; }
+  .table-edge > :global(*) { pointer-events: auto; }
   .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */
   .preview { position: absolute; pointer-events: none; z-index: 99; border-radius: calc(var(--radius-card) * 3); box-shadow: 0 0 0 1px var(--menu-rim), var(--menu-shadow); }

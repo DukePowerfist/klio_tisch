@@ -197,7 +197,7 @@ export const LayoutsFile = z.object({
     oracle: z.object({
       cx: z.number(), size: Point, rest: z.number().positive(), out: Point, opening: z.number(),
       notch: z.tuple([z.number(), z.number(), z.number().positive()]), band: RectTuple, word: z.number().positive(),
-      maxScale: z.number().min(1),
+      maxScale: z.number().min(1), tilt: z.number(),
     }).strict(),
   }).strict(),
   sheets: z.object({ spacing: z.number().nonnegative() }).strict(),

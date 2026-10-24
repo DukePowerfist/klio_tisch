@@ -125,7 +125,8 @@
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein Bild mit Beschriftung -->
 <svelte:element this={may ? 'button' : 'div'} class="oracle" class:control={may} role={may ? undefined : 'img'} aria-label={label} title={may ? label : undefined}
   onclick={may ? shake : undefined} data-oracle-box
-  style:left="{rect.x}px" style:top="{rect.y}px" style:width="{rect.w}px" style:height="{rect.h}px">
+  style:left="{rect.x}px" style:top="{rect.y}px" style:width="{rect.w}px" style:height="{rect.h}px"
+  style:rotate="{O.tilt}deg" style:transform-origin="50% {layout.oracle.bottom - rect.y}px">
   <div class="inner" style:width="{W}px" style:height="{H}px" style:scale={scale}>
     <!-- Platz samt herausragender Karten: dem weicht die Meldung aus (das Knopfrechteck enthält die Karten nicht) -->
     <div class="reach" style:top="{O.opening - O.out[0]!}px" style:height="{H - O.opening + O.out[0]!}px" data-toast-avoid></div>
