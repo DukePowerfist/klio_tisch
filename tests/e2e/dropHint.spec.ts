@@ -1,12 +1,13 @@
 // Vorschau der Ablegestelle (11.6, Schritt 5h): gestrichelter Umriss beim Ziehen, genau dort, wo die Karte landet.
 
-import { expect, test, type Page } from '@playwright/test';
-import { buildFreePile as freePile, dragFromTo, expectCount, holdOver, ready, shiftHold, zoneCenter } from './helpers';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import { buildFreePile, cancelPointer, cardEl, dragFromTo, dragged, expectCount, holdOver, ready, shiftHold, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
-const box = async (page: Page, selector: string) => {
-  const b = (await page.locator(selector).boundingBox())!;
+/** Rechteck auf ganze Pixel gerundet; Selektor oder Locator */
+const box = async (page: Page, target: string | Locator) => {
+  const b = (await (typeof target === 'string' ? page.locator(target) : target).boundingBox())!;
   return [b.x, b.y, b.width, b.height].map(Math.round);
 };
 
@@ -21,7 +22,7 @@ test('Umriss über der Ablage an der Stelle, an der die Karte danach liegt; übe
   await page.mouse.up();
   await expectCount(page, 'ABLAGE', 1);
   await expect(hint).toHaveCount(0);
-  expect(await box(page, `.scene > [data-card="${dragged}"]`)).toEqual(shown);
+  expect(await box(page, cardEl(page, dragged!))).toEqual(shown);
 
   // zurück auf den eigenen Stapel: die Karte fiele an ihren Platz, kein Umriss
   await holdOver(page, deck, { x: deck.x + 10, y: deck.y + 10 });
@@ -47,7 +48,6 @@ test('kein Umriss über vollen Notizen (der Host würde ablehnen)', async ({ pag
 
 /** Breite der obersten Deckkarte in alter Größe (Maßstab 1) */
 const deckCardWidth = async (page: Page) => (await page.locator('.scene > .card').last().boundingBox())!.width;
-const dragged = (page: Page) => page.locator('.card.dragging');
 
 test('Deckkarte in der Hand: 0,6 so breit wie im Deck, über dem Filz wie über der Ablage; Umriss liegt über ihr', async ({ page }) => {
   const deck = await zoneCenter(page, 'DECK');
@@ -77,7 +77,7 @@ async function dropAt(page: Page, to: { x: number; y: number }) {
   const hint = (await page.locator('.drop-hint').boundingBox())!;
   await page.mouse.up();
   await expectCount(page, 'DECK', 26);
-  const el = page.locator(`.scene > [data-card="${card}"]`);
+  const el = cardEl(page, card);
   await expect(el).not.toHaveClass(/pending/);
   return { shown, hint, landed: (await el.boundingBox())! };
 }
@@ -122,14 +122,14 @@ test('verbotenes Ziel und abgebrochener Zug: kein Umriss, die Karte kehrt in alt
   expect((await dragged(page).boundingBox())!.width / full).toBeCloseTo(0.6, 2);
   await expect(page.locator('.drop-hint')).toHaveCount(0);
   await page.mouse.up();
-  const el = page.locator(`.scene > [data-card="${card}"]`);
+  const el = cardEl(page, card);
   await expect(el).not.toHaveClass(/dragging|pending/);
   await expect.poll(async () => (await el.boundingBox())!.width).toBeCloseTo(full, 1);
 
   // vom Browser abgebrochen (pointercancel)
   await holdOver(page, deck, { x: deck.x + 120, y: deck.y });
   await expect(dragged(page)).toHaveCount(1);
-  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true })));
+  await cancelPointer(page);
   await expect(el).not.toHaveClass(/dragging|pending/);
   await expect.poll(async () => (await el.boundingBox())!.width).toBeCloseTo(full, 1);
   await page.mouse.up();
@@ -146,20 +146,19 @@ test('Effektstufe „Aus“: die Größe springt beim Greifen, ohne Animation (1
 
 // ---------- Freie Karten mit Umschalt gemeinsam greifen (11.11, Schritt 5zc) ----------
 
-const cardEl = (page: Page, card: string) => page.locator(`.scene > [data-card="${card}"]`);
 /** oberste Karte unter einem Punkt (Bildschirm) */
 const topAt = (page: Page, p: { x: number; y: number }) =>
   page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-card]')?.dataset.card ?? null, p);
 
 test('Haufen auf dem Filz: mit Umschalt alle, ohne nur die oberste; wieder abgelegt und gegriffen, dann in die Ablage', async ({ page }) => {
-  const { cards, at } = await freePile(page);
+  const { cards, at } = await buildFreePile(page);
   expect(await topAt(page, at)).toBe(cards[2]);
 
   // ohne Umschalt nur die oberste
   await holdOver(page, at, { x: at.x, y: at.y + 80 });
   await expect(dragged(page)).toHaveCount(1);
   await expect(dragged(page)).toHaveAttribute('data-card', cards[2]!);
-  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true })));
+  await cancelPointer(page);
   await page.mouse.up();
   await expect(cardEl(page, cards[2]!)).not.toHaveClass(/dragging|pending/);
 
@@ -169,10 +168,10 @@ test('Haufen auf dem Filz: mit Umschalt alle, ohne nur die oberste; wieder abgel
   await expect(dragged(page)).toHaveCount(3);
   await expect(page.locator('.drop-hint')).toHaveCount(3);
   await page.mouse.up();
-  for (const c of cards) await expect(cardEl(page, c)).not.toHaveClass(/pending|dragging/);
-  const b = (await cardEl(page, cards[0]!).boundingBox())!;
-  for (const c of cards) expect(await box(page, `.scene > [data-card="${c}"]`)).toEqual([b.x, b.y, b.width, b.height].map(Math.round));
-  const again = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  await expect(page.locator('.scene > .card.pending, .scene > .card.dragging')).toHaveCount(0);
+  const [x, y, w, h] = await box(page, cardEl(page, cards[0]!));
+  for (const c of cards) expect(await box(page, cardEl(page, c))).toEqual([x, y, w, h]);
+  const again = { x: x! + w! / 2, y: y! + h! / 2 };
 
   // wieder mit Umschalt gegriffen: alle, auf der Ablage in derselben Reihenfolge
   const discard = await zoneCenter(page, 'ABLAGE');
@@ -186,7 +185,7 @@ test('Haufen auf dem Filz: mit Umschalt alle, ohne nur die oberste; wieder abgel
 });
 
 test('Doppelklick mit Umschalt auf einen freien Haufen dreht nur die oberste Karte um', async ({ page }) => {
-  const { cards, at } = await freePile(page);
+  const { cards, at } = await buildFreePile(page);
   const down = () => Promise.all(cards.map((c) => cardEl(page, c).locator('.inner').evaluate((e) => e.classList.contains('down'))));
   const before = await down();
   await page.keyboard.down('Shift');
@@ -203,7 +202,7 @@ const anyCount = (page: Page) => page.locator('.scene > .card .count');
 const anyEdge = (page: Page) => page.locator('.scene > .card .edge');
 
 test('Haufen: Zahl und Kante an der obersten Karte; Karten in der Hand zählen nicht mit', async ({ page }) => {
-  const { cards, at } = await freePile(page);
+  const { cards, at } = await buildFreePile(page);
   await expect(countOf(page, cards[2]!)).toHaveText('3');
   await expect(edgesOf(page, cards[2]!)).toHaveCount(1);
   await expect(anyCount(page)).toHaveCount(1);
@@ -215,7 +214,7 @@ test('Haufen: Zahl und Kante an der obersten Karte; Karten in der Hand zählen n
   await expect(countOf(page, cards[1]!)).toHaveText('2');
   await expect(countOf(page, cards[2]!)).toHaveCount(0);
   await expect(edgesOf(page, cards[2]!)).toHaveCount(0);
-  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true })));
+  await cancelPointer(page);
   await page.mouse.up();
   await expect(countOf(page, cards[2]!)).toHaveText('3');
 
@@ -230,7 +229,7 @@ test('Haufen: Zahl und Kante an der obersten Karte; Karten in der Hand zählen n
 });
 
 test('Haufen: Kanten und Zahl fangen keinen Klick ab; die Kanten bleiben beim Ansichtswechsel an der Karte', async ({ page }) => {
-  const { cards } = await freePile(page);
+  const { cards } = await buildFreePile(page);
   const top = cardEl(page, cards[2]!);
   const rel = async () => {
     const [c, e, n] = await Promise.all([top.boundingBox(), edgesOf(page, cards[2]!).boundingBox(), countOf(page, cards[2]!).boundingBox()]);
@@ -251,7 +250,7 @@ test('Haufen: Kanten und Zahl fangen keinen Klick ab; die Kanten bleiben beim An
   expect(await hit(before.n.x + 3, before.n.y + before.n.height - 3)).toBe('karte');
 
   await page.keyboard.press('1');
-  await expect.poll(async () => (await rel()).c.x).not.toBeCloseTo(before.c.x, 0);
+  await expect.poll(async () => (await top.boundingBox())!.x).not.toBeCloseTo(before.c.x, 0);
   const after = await rel();
   for (const [i, v] of after.d.entries()) expect(v).toBeCloseTo(before.d[i]!, 2);
 });
@@ -270,8 +269,8 @@ test('einzelne Karte und zwei von Hand leicht versetzt übereinander gelegte: ke
 });
 
 test('Einrasten: eine Karte vom Deck auf den Haufen liegt genau darauf, daneben bleibt sie einzeln', async ({ page }) => {
-  const { cards, at } = await freePile(page);
-  const pile = await box(page, `.scene > [data-card="${cards[2]}"]`);
+  const { cards, at } = await buildFreePile(page);
+  const pile = await box(page, cardEl(page, cards[2]!));
   const deck = await zoneCenter(page, 'DECK');
   await holdOver(page, deck, at);
   const card = (await dragged(page).getAttribute('data-card'))!;
@@ -280,7 +279,7 @@ test('Einrasten: eine Karte vom Deck auf den Haufen liegt genau darauf, daneben 
   await page.mouse.up();
   await expect(cardEl(page, card)).not.toHaveClass(/pending|dragging/);
   await expect(countOf(page, card)).toHaveText('4');
-  expect(await box(page, `.scene > [data-card="${card}"]`)).toEqual(pile);
+  expect(await box(page, cardEl(page, card))).toEqual(pile);
   await expect(anyCount(page)).toHaveCount(1);
 
   // Zeiger neben dem Haufen: frei, die Karte bleibt einzeln
@@ -293,13 +292,13 @@ test('Einrasten: eine Karte vom Deck auf den Haufen liegt genau darauf, daneben 
 });
 
 test('Einrasten (F5 a): die oberste Karte leicht versetzt über dem Haufen losgelassen kehrt auf ihn zurück', async ({ page }) => {
-  const { cards, at } = await freePile(page);
-  const pile = await box(page, `.scene > [data-card="${cards[2]}"]`);
+  const { cards, at } = await buildFreePile(page);
+  const pile = await box(page, cardEl(page, cards[2]!));
   await holdOver(page, at, { x: at.x + 15, y: at.y + 10 });
   await expect(dragged(page)).toHaveAttribute('data-card', cards[2]!);
   await expect(page.locator('.drop-hint')).toHaveCount(0);
   await page.mouse.up();
   await expect(cardEl(page, cards[2]!)).not.toHaveClass(/pending|dragging/);
-  await expect.poll(() => box(page, `.scene > [data-card="${cards[2]}"]`)).toEqual(pile);
+  await expect.poll(() => box(page, cardEl(page, cards[2]!))).toEqual(pile);
   await expect(countOf(page, cards[2]!)).toHaveText('3');
 });

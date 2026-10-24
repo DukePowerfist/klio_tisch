@@ -66,6 +66,9 @@ export function lay(state: K, card: string, pos: FreePos): K {
   return next;
 }
 
+/** Mehrere Karten frei an dieselbe Lage legen, in dieser Reihenfolge: ein freier Haufen (11.12) */
+export const layAll = (state: K, cards: string[], pos: FreePos): K => cards.reduce((t, c) => lay(t, c, pos), state);
+
 /** Karten direkt in Zonen legen (nur für Tests): entfernt sie überall und setzt sie ans Ende. */
 export function place(state: K, zone: string, cards: string[], faceUp = false): K {
   const next = structuredClone(state);

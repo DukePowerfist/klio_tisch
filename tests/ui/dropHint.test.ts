@@ -4,19 +4,23 @@ import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
 import type { Actor, CardId, CardSource, CardTarget, FreePos } from '../../src/engine/types';
 import { dropHints, dropTarget, inHand } from '../../src/ui/dropHint';
-import { cardSize, computeLayout, freeHeaps, lampGap, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
-import { content, engine, fresh, GM, lay, place, player, run, type K } from '../helpers';
+import { cardRect, cardSize, computeLayout, freeHeaps, lampGap, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
+import { content, engine, fresh, GM, lay, layAll, place, player, run, type K } from '../helpers';
 
 const L = computeLayout(content, 4, null, null);
 const center = (id: string) => {
   const z = L.zones[id]!;
   return [z.x + z.w / 2, z.y + z.h / 2] as const;
 };
+/** Mitte einer Karte (Tischpunkte) */
+function mid(s: K, card: string): [number, number] {
+  const r = cardRect(L, placeCards(s, L)[card as CardId]!);
+  return [r.x + r.w / 2, r.y + r.h / 2];
+}
 /** Versatz, mit dem die erste Karte mit ihrer Mitte über (x, y) liegt */
 function over(s: K, card: string, x: number, y: number) {
-  const p = placeCards(s, L)[card as CardId]!;
-  const size = cardSize(L, p);
-  return { dx: x - (p.x + size.w / 2), dy: y - (p.y + size.h / 2) };
+  const [cx, cy] = mid(s, card);
+  return { dx: x - cx, dy: y - cy };
 }
 /** freie Stelle auf dem Filz neben der Ablage, weit weg von Laterne, Blatt und Schachtel */
 const freeSpot = (): [number, number] => {
@@ -242,15 +246,10 @@ describe('Haufen vom freien Tisch (11.11)', () => {
 
 describe('Einrasten auf einen Haufen (11.12, F1 c, F5 a)', () => {
   const P = { anchor: 'center' as const, x: 0.3, y: 0.3 };
-  const heap = (cards: string[], pos: FreePos = P, s = fresh()) => cards.reduce((t, c) => lay(t, c, pos), s);
-  /** Mitte einer Karte (Tischpunkte) */
-  const mid = (s: K, card: string): [number, number] => {
-    const p = placeCards(s, L)[card as CardId]!;
-    const size = cardSize(L, p);
-    return [p.x + size.w / 2, p.y + size.h / 2];
-  };
-  /** Ziel wie das Brett: eine Deckkarte, Zeiger bei `ptr` */
-  const target = (s: K, ptr: [number, number], cards = [s.zones['deck']!.at(-1)!] as string[], skip: string[] = []) => {
+  const heap = (cards: string[], pos: FreePos = P, s = fresh()) => layAll(s, cards, pos);
+  /** Ziel wie das Brett: gezogen `cards` (sonst die oberste Deckkarte), Zeiger bei `ptr`, dazu weitere Karten in der
+   *  Hand `skip` */
+  const target = (s: K, ptr: [number, number], { cards = [s.zones['deck']!.at(-1)!] as string[], skip = [] as string[] } = {}) => {
     const d = { cards: cards as CardId[], ...over(s, cards[0]!, ...ptr) };
     return dropTarget(L, placeCards(s, L), d, ptr, { state: s, skip: [...cards, ...skip] as CardId[] });
   };
@@ -280,13 +279,13 @@ describe('Einrasten auf einen Haufen (11.12, F1 c, F5 a)', () => {
     s = lay(s, 'H9', { anchor: 'center', x: 0.31, y: 0.305 });
     const ptr = mid(s, 'H9');
     expect(target(s, ptr)).not.toEqual({ free: P });
-    expect(target(s, ptr, undefined, ['H9'])).toEqual({ free: P });
+    expect(target(s, ptr, { skip: ['H9'] })).toEqual({ free: P });
   });
 
   it('oberste Karte eines Haufens aus zwei über dem Rest losgelassen: seine Lage, kein Umriss (gleitet zurück)', () => {
     const s = heap(['H2', 'H3']);
     const ptr = mid(s, 'H2');
-    const to = target(s, ptr, ['H3']);
+    const to = target(s, ptr, { cards: ['H3'] });
     expect(to).toEqual({ free: P });
     expect(hints(s, ['H3'], { free: true }, to)).toEqual([]);
   });
@@ -294,7 +293,7 @@ describe('Einrasten auf einen Haufen (11.12, F1 c, F5 a)', () => {
   it('Haufen mit Umschalt auf einen Haufen: ein Haufen aus allen', () => {
     let s = heap(['H2', 'H3']);
     s = heap(['H4', 'H5'], { anchor: 'center', x: 0.6, y: 0.6 }, s);
-    const to = target(s, mid(s, 'H3'), ['H4', 'H5']);
+    const to = target(s, mid(s, 'H3'), { cards: ['H4', 'H5'] });
     expect(to).toEqual({ free: P });
     const after = run(s, { type: 'cards.move', cards: ['H4', 'H5'], from: { free: true }, to }).state;
     expect(freeHeaps(after, placeCards(after, L))).toMatchObject([{ cards: ['H2', 'H3', 'H4', 'H5'], count: 4 }]);

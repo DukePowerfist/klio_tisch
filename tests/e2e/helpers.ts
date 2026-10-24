@@ -43,34 +43,51 @@ export async function shiftHold(page: Page, from: { x: number; y: number }, to: 
   await page.keyboard.up('Shift');
 }
 
+/** Karte auf dem Tisch (Element in der Szene) */
+export const cardEl = (page: Page, card: string) => page.locator(`.scene > [data-card="${card}"]`);
+/** gerade selbst gezogene Karten */
+export const dragged = (page: Page) => page.locator('.card.dragging');
+
+/** Der Browser bricht den Zeiger ab (pointercancel: Systemgeste, Handballen); ohne `at` wie bei einem echten Abbruch
+ *  oft an 0/0 */
+export const cancelPointer = (page: Page, at?: { x: number; y: number }) =>
+  page.evaluate((at) => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', clientX: at?.x ?? 0, clientY: at?.y ?? 0 })), at);
+
+/** warten, bis keine Animation mehr läuft (Projekt „mit Bewegung“), im ganzen Dokument oder nur an `scope` */
+export async function settled(page: Page, scope?: Locator) {
+  const running = scope
+    ? () => scope.evaluateAll((els) => els.reduce((n, e) => n + e.getAnimations({ subtree: true }).length, 0))
+    : () => page.evaluate(() => document.getAnimations().length);
+  await expect.poll(running).toBe(0);
+}
+
 /** Drei Deckkarten in die Gefahr (aufgefächert), dann mit Umschalt ab der ersten alle frei auf den Filz neben die
  *  Ablage: ein deckungsgleicher Haufen, wie er in der App entsteht (11.11). Liefert die Karten von unten nach oben und
  *  die Mitte des Haufens. */
 export async function buildFreePile(page: Page) {
   const deck = await zoneCenter(page, 'DECK');
   const danger = await zoneCenter(page, 'GEFAHR');
-  const dragged = page.locator('.card.dragging');
-  const el = (c: string) => page.locator(`.scene > [data-card="${c}"]`);
   const cards: string[] = [];
   for (let i = 1; i <= 3; i++) {
     await holdOver(page, deck, danger);
-    cards.push((await dragged.getAttribute('data-card'))!);
+    cards.push((await dragged(page).getAttribute('data-card'))!);
     await page.mouse.up();
     await expectCount(page, 'GEFAHR', i);
   }
-  for (const c of cards) await expect(el(c)).not.toHaveClass(/pending/);
-  const first = await box(el(cards[0]!));
+  const unsettled = page.locator('.scene > .card.pending, .scene > .card.dragging');
+  await expect(unsettled).toHaveCount(0);
+  const first = await box(cardEl(page, cards[0]!));
   const discard = await zoneCenter(page, 'ABLAGE');
   await shiftHold(page, { x: first.x + 5, y: first.y + first.height / 2 }, { x: discard.x + 120, y: discard.y });
-  await expect(dragged).toHaveCount(3);
+  await expect(dragged(page)).toHaveCount(3);
   await page.mouse.up();
   await expectCount(page, 'GEFAHR', 0);
-  for (const c of cards) await expect(el(c)).not.toHaveClass(/pending|dragging/);
-  // mit Bewegung gleiten sie noch: warten, bis keine Animation an ihnen mehr läuft und alle gleich liegen
-  await expect.poll(() => page.evaluate((ids) => ids.every((c) => !document.querySelector(`.scene > [data-card="${c}"]`)!.getAnimations({ subtree: true }).length), cards)).toBe(true);
-  const round = (r: Box) => [r.x, r.y, r.width, r.height].map(Math.round);
-  await expect.poll(async () => new Set(await Promise.all(cards.map(async (c) => round(await box(el(c))).join()))).size).toBe(1);
-  const b = await box(el(cards[0]!));
+  await expect(unsettled).toHaveCount(0);
+  // mit Bewegung gleiten sie noch
+  await settled(page, page.locator(cards.map((c) => `.scene > [data-card="${c}"]`).join(', ')));
+  const round = (r: Box) => [r.x, r.y, r.width, r.height].map(Math.round).join();
+  const b = await box(cardEl(page, cards[0]!));
+  for (const c of cards.slice(1)) expect(round(await box(cardEl(page, c)))).toBe(round(b));
   return { cards, at: { x: b.x + b.width / 2, y: b.y + b.height / 2 } };
 }
 

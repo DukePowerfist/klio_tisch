@@ -1,7 +1,7 @@
 // Tisch im lokalen Betrieb (Schritt 3a): Stapel, Ziehen und Ablegen, Ansichten, Speichern.
 
 import { expect, test } from '@playwright/test';
-import { dragFromTo, expectCount, holdOver, nameCharacter, openMenuAndClick, ready, setPlayers, shuffleBack, stackItem, zoneCenter } from './helpers';
+import { cancelPointer, dragFromTo, expectCount, holdOver, nameCharacter, openMenuAndClick, ready, setPlayers, shuffleBack, stackItem, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -51,10 +51,6 @@ test('Karte in die Gefahr ziehen, dann frei auf den Tisch, Stand bleibt nach Neu
   await expectCount(page, 'DECK', 25);
   await expect(page.locator('[data-card]')).toHaveCount(52);
 });
-
-/** Der Browser bricht den Zeiger ab (Systemgeste, Handballen); `at` wie bei einem echten Abbruch oft 0/0 */
-const cancelPointer = (page: import('@playwright/test').Page, at: { x: number; y: number }) =>
-  page.evaluate(({ x, y }) => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', clientX: x, clientY: y })), at);
 
 test('Abgebrochener Zug legt nichts ab, ein abgebrochener Druck öffnet kein Menü (5x)', async ({ page }) => {
   const deck = await zoneCenter(page, 'DECK');

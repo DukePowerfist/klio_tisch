@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { buildFreePile, dragFromTo, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, shiftHold, zoneCenter } from './helpers';
+import { buildFreePile, cancelPointer, cardEl, dragFromTo, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, shiftHold, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -650,42 +650,36 @@ test('Zug bleibt bei der SL bestehen, wenn der Zeiger den Tisch verlässt; abgeb
   expect(marked.length).toBeGreaterThan(5);
   expect(Math.min(...marked)).toBe(1);
   // Abbruch durch den Browser: kein Ablegen, und ohne weitere Bewegung endet der Zug bei der SL (vor der Haltefrist)
-  await player.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse' })));
+  await cancelPointer(player);
   await expect(ghost).toHaveCount(0, { timeout: 900 });
   await player.mouse.up();
   await expectCount(gm, 'DECK', 27);
 });
 
-test('Haufen vom freien Tisch mit Umschalt (5zc, 11.11): die SL sieht alle Karten am fremden Zeiger', async ({ browser }) => {
+test('Freier Haufen mit Mitspieler (5zc, 5zd): dieselbe Zahl auch nach dem Einrasten; mit Umschalt gegriffen sieht die SL alle Karten am fremden Zeiger', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();
   await joinAs(player, link, 'Ida', 2);
   await player.keyboard.press('0');
   const { cards, at } = await buildFreePile(player);
-  for (const c of cards) await expect(gm.locator(`.scene > [data-card="${c}"]`)).not.toHaveClass(/pending|marked/);
+  const count = (page: Page) => page.locator('.scene > .card .count');
+  await expect(cardEl(gm, cards[2]!).locator('.count')).toHaveText('3');
+  // eine Karte vom Deck rastet ein (11.12), auch in der Rollenansicht dieselbe Zahl
+  await dragFromTo(player, await zoneCenter(player, 'DECK'), at);
+  await expect(count(player)).toHaveText('4');
+  await expect(count(gm)).toHaveText('4');
+  await gm.keyboard.press('2');
+  await expect(count(gm)).toHaveText('4');
+  // mit Umschalt der ganze Haufen (11.11): bei der SL alle vier am fremden Zeiger
+  await expect(gm.locator('.scene > .card.marked')).toHaveCount(0);
   const discard = await zoneCenter(player, 'ABLAGE');
   await shiftHold(player, at, { x: discard.x, y: discard.y - 60 });
-  await expect(gm.locator('.card.marked')).toHaveCount(3);
-  for (const c of cards) await expect(gm.locator(`.scene > [data-card="${c}"]`)).toHaveClass(/marked/);
+  await expect(gm.locator('.card.marked')).toHaveCount(4);
+  for (const c of cards) await expect(cardEl(gm, c)).toHaveClass(/marked/);
   await player.mouse.move(discard.x, discard.y, { steps: 4 });
   await player.mouse.up();
-  await expectCount(gm, 'ABLAGE', 3);
+  await expectCount(gm, 'ABLAGE', 4);
   await expect(gm.locator('.card.marked')).toHaveCount(0);
-});
-
-test('Freier Haufen mit Mitspieler (5zd, 11.12): beide sehen dieselbe Zahl, auch nach dem Einrasten', async ({ browser }) => {
-  const { gm, link } = await openRoom(browser);
-  const player = await (await browser.newContext()).newPage();
-  await joinAs(player, link, 'Ida', 2);
-  await player.keyboard.press('0');
-  const { cards, at } = await buildFreePile(player);
-  await expect(gm.locator(`.scene > [data-card="${cards[2]}"] .count`)).toHaveText('3');
-  await dragFromTo(player, await zoneCenter(player, 'DECK'), at);
-  await expect(player.locator('.scene > .card .count')).toHaveText('4');
-  await expect(gm.locator('.scene > .card .count')).toHaveText('4');
-  // auch in der Rollenansicht
-  await gm.keyboard.press('2');
-  await expect(gm.locator('.scene > .card .count')).toHaveText('4');
 });
 
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */

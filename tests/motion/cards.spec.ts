@@ -2,7 +2,7 @@
 // Gemessen wird an den laufenden Animationen (Web Animations API) direkt nach dem Auslösen, nicht an Bildern.
 
 import { expect, test, type Page } from '@playwright/test';
-import { buildFreePile, dragFromTo, expectCount, fromMenu, holdOver, openSettings, ready, resetTable, saveArchive, stackItem, zoneCenter } from '../e2e/helpers';
+import { buildFreePile, dragFromTo, expectCount, fromMenu, holdOver, openSettings, ready, resetTable, saveArchive, settled, stackItem, zoneCenter } from '../e2e/helpers';
 
 type Anim = { card: string | null; part: string; props: string[]; delay: number; duration: number; easing: string };
 
@@ -429,7 +429,8 @@ test('Öffnen eines Stapels wächst weiter mit --shift (Gegenprobe zu 5m)', asyn
   expect(seen).toContain('CSSTransition width zone 350');
 });
 
-/** Beschriftungen, deren Zahl gerade springt (beobachtet ab jetzt, 2 s lang) */
+/** Zahlen, die gerade springen (beobachtet ab jetzt, 2 s lang): an Stapeln (`.n`) mit der Beschriftung der Zone, an
+ *  freien Haufen (`.count`, 11.12) mit der Zahl selbst */
 function watchCounts(page: Page) {
   return page.evaluate(() => {
     const seen = new Set<string>();
@@ -438,6 +439,7 @@ function watchCounts(page: Page) {
       for (const a of document.getAnimations()) {
         const el = (a.effect as KeyframeEffect).target as HTMLElement;
         if (el.classList.contains('n')) seen.add(el.parentElement!.firstChild!.textContent!.trim());
+        if (el.classList.contains('count')) seen.add(el.textContent!.trim());
       }
     }, 10);
     setTimeout(() => clearInterval(watch), 2000);
@@ -460,29 +462,17 @@ test('Zahl am Stapel: springt beim Ziehen an Deck und Ablage, nicht beim Zurück
 
 test('Zahl am freien Haufen (11.12): springt, wenn eine Karte einrastet; nicht, wenn eine Karte heruntergenommen wird', async ({ page }) => {
   const { at } = await buildFreePile(page);
-  const watchHeap = () => page.evaluate(() => {
-    const w = window as unknown as { heapPops: string[] };
-    w.heapPops = [];
-    const watch = setInterval(() => {
-      for (const a of document.getAnimations()) {
-        const el = (a.effect as KeyframeEffect).target as HTMLElement;
-        if (el.classList.contains('count') && !w.heapPops.includes(el.textContent!)) w.heapPops.push(el.textContent!);
-      }
-    }, 10);
-    setTimeout(() => clearInterval(watch), 2000);
-  });
-  const heapPops = () => page.evaluate(() => (window as unknown as { heapPops: string[] }).heapPops);
-  await page.waitForTimeout(800);
-  await watchHeap();
+  await watchCounts(page);
   await dragFromTo(page, await zoneCenter(page, 'DECK'), at);
-  await expect.poll(heapPops).toEqual(['4']);
-  await page.waitForTimeout(1500);
-  await watchHeap();
-  const discard = await zoneCenter(page, 'ABLAGE');
-  await dragFromTo(page, at, discard);
+  // die Zahl am Haufen und die am Deck
+  await expect.poll(() => pops(page)).toEqual(['4', 'DECK']);
+  await settled(page);
+  await watchCounts(page);
+  await dragFromTo(page, at, await zoneCenter(page, 'ABLAGE'));
   await expectCount(page, 'ABLAGE', 1);
-  await page.waitForTimeout(800);
-  expect(await heapPops()).toEqual([]);
+  await settled(page);
+  // nur die Ablage, nicht der Haufen
+  expect(await pops(page)).toEqual(['ABLAGE']);
 });
 
 /** Namen der CSS-Animationen, die gerade laufen */
