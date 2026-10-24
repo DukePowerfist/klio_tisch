@@ -112,6 +112,7 @@
   --glide-ease: cubic-bezier(0.2, 0.7, 0.2, 1);  /* weiches Auslaufen */
   --land: 80ms;    /* Karte setzt am Ziel auf */
   --grab: 0.22s;   /* Karte hebt sich beim Greifen (mit --spring), senkt sich beim Loslassen (mit --spring-soft) */
+  --hand-resize: 120ms; /* Karte wird beim Greifen weich auf die Handgröße (11.10) */
   /* Federkurven (11.6): gedämpfte Feder mit kurzem Überschwingen bzw. ohne; Rückfall unten */
   --spring: linear(0, 0.124, 0.394, 0.688, 0.928, 1.083, 1.153, 1.159, 1.127, 1.079, 1.034, 1.000, 0.980, 0.974, 0.976, 0.982, 0.990, 0.997, 1.002, 1.004, 1);
   --spring-soft: linear(0, 0.110, 0.310, 0.503, 0.657, 0.771, 0.850, 0.904, 0.939, 0.962, 0.976, 0.985, 0.991, 0.994, 0.997, 0.998, 1);
@@ -152,7 +153,7 @@
 }
 /* Effektstufe „Aus“ (11.5; data-effects setzt effectLevel.svelte.ts, ohne eigene Wahl bei „Bewegung reduzieren“):
    keine Bewegung; Karten blenden ein, gemischte Stapel und Schaden leuchten kurz am Rand auf */
-:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --away: 0s; --back: 0s; --arrive: 0s; --arrive-lift: 0s; --ping: 0s; --pointer-out: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s; --lamp-on: 0s; --lamp-off: 0s;
+:root[data-effects='off'] { --glide: 0s; --land: 0s; --hold: 0s; --grab: 0s; --hand-resize: 0s; --glow: 0s; --flip: 0s; --shift: 0s; --view-out: 0s; --view-in: 0s; --away: 0s; --back: 0s; --arrive: 0s; --arrive-lift: 0s; --ping: 0s; --pointer-out: 0s; --cut: 0s; --strike: 0s; --hover: 0s; --wiggle: 0s; --count-pop: 0s; --lamp-on: 0s; --lamp-off: 0s;
   --sheet-glide: 0s; --nudge: 0s; --oracle-sink: 0s; --oracle-shake: 0s; --oracle-rise: 0s;
   /* Fenster und Meldungen blenden nur ein (ohne Wachsen und Gleiten), Knöpfe geben nicht nach */
   --pop-from: 1; --rise: 0px; --press: 0s; --press-scale: 1; }

@@ -510,6 +510,7 @@
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}
           pending={offsetOf.has(card) && off !== drag}
+          grip={drag && off === drag ? [drag.ax, drag.ay] : undefined}
           mark={remoteOf.get(card)?.color}
           hover={hovered?.card === card}
           wiggle={hovered?.card === card && hovered.wiggle}

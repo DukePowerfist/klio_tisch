@@ -4,13 +4,13 @@
   import { untrack } from 'svelte';
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
-  import { appear, cause, cue, cut, events, fade, move, revealed, strike, Tilt, timing, turn, wobble } from './animator.svelte';
+  import { appear, cause, cue, cut, events, fade, move, resize, revealed, shownScale, strike, Tilt, timing, turn, wobble } from './animator.svelte';
   import { cardSize, type LampBox } from './layout';
   import { HEIGHT, onCard, shadowCss, shadowOver } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = 0, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = 0, slot = '', dragging = false, pending = false, grip, mark, still = false, hover = false, wiggle = false }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number };
     /** Flamme der Laterne für den Schatten (11.9); null: Laterne aus, Schatten weich nach unten */
@@ -23,6 +23,8 @@
     /** Platz im Stand (`CardPlace.slot`) */
     slot?: string;
     dragging?: boolean; pending?: boolean;
+    /** eigener Zug: Zeiger in Tischpunkten, um ihn wird die Karte beim Greifen weich auf die Handgröße (11.10) */
+    grip?: readonly [number, number] | undefined;
     /** Farbe, wenn jemand anderes die Karte gerade zieht; sie folgt dann dessen Zeiger (8.3) */
     mark?: string | undefined;
     /** ohne Animation (Vorschau) */
@@ -71,8 +73,11 @@
         // Schnitt beim Ansichtswechsel (11.8): gleicher Platz springt (`shift` ist dann 0); nicht über `still`, das
         // auch Umklappen, Abheben und Stoß aus Ereignissen im selben Bild unterdrücken würde
         const t = timing();
+        // eben gegriffen: von der gezeigten Lage (auch im Flug) weich auf die Handgröße (11.10); vor `move` gelesen
+        const from = grip && frame.follow === 'own' && shown.frame.follow !== 'own' ? shownScale(el, shown.frame.scale) : null;
         const motion = planMove(shown.frame, frame, t, cause(), cue(card));
         move(el, lift, shown.transform, motion, z);
+        if (from !== null && grip) resize(lift, from, new DOMMatrix(to), grip, rotated, size);
         if (motion?.kind === 'glide') arrives = performance.now() + arrival(motion, t);
         if (frame.follow) tilt.track(x);
         else if (shown.frame.follow) tilt.release();

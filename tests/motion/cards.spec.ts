@@ -143,6 +143,72 @@ test('Greifen im Flug: der Zug beginnt an der gezeigten Lage, die Karte springt 
   expect(moved.dy).toBeCloseTo(12 + 20 * (1 - moved.k), 0);
 });
 
+test('Greifen (11.10): Karte schrumpft weich um den Greifpunkt, Ursprung und Lage ohne Sprung, keine Neigung', async ({ page }) => {
+  const deck = await zoneCenter(page, 'DECK');
+  // erst warten, bis nichts mehr läuft (Einblenden, Wackeln unter der Maus)
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(async ({ x, y }) => {
+    const card = document.elementFromPoint(x, y)!.closest<HTMLElement>('.scene > .card')!;
+    const lift = card.querySelector<HTMLElement>('.lift')!;
+    const origin = getComputedStyle(lift).transformOrigin;
+    const before = card.getBoundingClientRect();
+    const at = (dx: number, dy: number) => ({ bubbles: true, clientX: x + dx, clientY: y + dy, pointerType: 'mouse', button: 0, isPrimary: true, pointerId: 1 });
+    card.dispatchEvent(new PointerEvent('pointerdown', at(0, 0)));
+    // nur senkrecht: Ein Sprung der Lage `x` durch das Schrumpfen dürfte keine Neigung auslösen
+    window.dispatchEvent(new PointerEvent('pointermove', at(0, 12)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    const hand = lift.getAnimations().filter((a) => a.id === 'hand');
+    const move = card.getAnimations().filter((a) => a.id === 'move');
+    // zu Beginn sieht die Karte aus wie vorher, nur 12 px tiefer: alle Animationen auf `.lift` an den Anfang
+    // (auch Hebung und Schatten über CSS-Übergänge)
+    const all = lift.getAnimations();
+    for (const a of all) { a.pause(); a.currentTime = 0; }
+    const start = lift.getBoundingClientRect();
+    const total = Number(hand[0]?.effect?.getTiming().duration ?? 0);
+    for (const a of hand) a.currentTime = total;
+    const end = lift.getBoundingClientRect();
+    for (const a of all) a.play();
+    const shown = card.getBoundingClientRect();
+    // ein paar Bilder später: keine Neigung
+    for (let i = 0; i < 6; i++) await new Promise((r) => requestAnimationFrame(r));
+    const rotate = lift.style.rotate;
+    const originAfter = getComputedStyle(lift).transformOrigin;
+    window.dispatchEvent(new PointerEvent('pointerup', at(0, 12)));
+    return { origin, originAfter, before: before.toJSON(), start: start.toJSON(), end: end.toJSON(), shown: shown.toJSON(), hand: hand.length, move: move.length, total, rotate };
+  }, { x: deck.x, y: deck.y });
+  expect(r.hand).toBe(1);
+  expect(r.total).toBe(120);
+  // `.card` springt (folgt dem Zeiger ohne Verzögerung), schon in Handgröße
+  expect(r.move).toBe(0);
+  expect(r.shown.width / r.before.width).toBeCloseTo(0.6, 2);
+  // am Anfang: alte Größe an alter Stelle, 12 px tiefer
+  expect(r.start.x).toBeCloseTo(r.before.x, 0);
+  expect(r.start.y).toBeCloseTo(r.before.y + 12, 0);
+  expect(r.start.width).toBeCloseTo(r.before.width, 0);
+  // am Ende: die kleine Karte, der Greifpunkt (Mitte) liegt weiter unter dem Zeiger
+  expect(r.end.width).toBeCloseTo(r.shown.width, 0);
+  expect(r.end.x + r.end.width / 2).toBeCloseTo(deck.x, 0);
+  expect(r.end.y + r.end.height / 2).toBeCloseTo(deck.y + 12, 0);
+  // Ursprung unverändert in der Mitte (P1), keine Neigung durch den Sprung
+  expect(r.originAfter).toBe(r.origin);
+  expect(r.rotate).toBe('');
+  // losgelassen noch über dem Deck: zurück auf den Stapel
+  await expectCount(page, 'DECK', 27);
+});
+
+test('nach dem Ablegen hebt Überfahren die Karte wieder normal (11.10, Risiko: `transform` auf `.lift`)', async ({ page }) => {
+  const deck = await zoneCenter(page, 'DECK');
+  const discard = await zoneCenter(page, 'ABLAGE');
+  await dragFromTo(page, deck, discard);
+  await expectCount(page, 'ABLAGE', 1);
+  await page.mouse.move(discard.x + 2, discard.y + 2);
+  const lift = page.locator('.scene > .card.hover .lift');
+  await expect(lift).toHaveCount(1);
+  await expect.poll(() => lift.evaluate((e) => e.getAnimations().filter((a) => a.id === 'hand').length)).toBe(0);
+  // Überfahren: translateY(-2px) scale(1.02)
+  await expect.poll(() => lift.evaluate((e) => new DOMMatrix(getComputedStyle(e).transform).a)).toBeCloseTo(1.02, 3);
+});
+
 test('Mischen: Karten der Ablage fliegen gestaffelt ein, danach heben sich die oberen Karten ab', async ({ page }) => {
   await openMenu(page, 'DECK');
   for (let i = 0; i < 3; i++) await stackItem(page, 'Ziehen').click();

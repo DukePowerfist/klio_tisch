@@ -135,3 +135,11 @@ test('verbotenes Ziel und abgebrochener Zug: kein Umriss, die Karte kehrt in alt
   await page.mouse.up();
   await expectCount(page, 'DECK', 24);
 });
+
+test('Effektstufe „Aus“: die Größe springt beim Greifen, ohne Animation (11.10)', async ({ page }) => {
+  const deck = await zoneCenter(page, 'DECK');
+  await holdOver(page, deck, { x: deck.x + 60, y: deck.y }, 3);
+  await expect(dragged(page)).toHaveCount(1);
+  expect(await dragged(page).locator('.lift').evaluate((e) => e.getAnimations().filter((a) => a.id === 'hand').length)).toBe(0);
+  await page.mouse.up();
+});

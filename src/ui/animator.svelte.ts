@@ -11,6 +11,8 @@ const MOVE = 'move';
 const TURN = 'turn';
 /** Abheben und Stoß (aus den Ereignissen, nicht aus der Lage) */
 const CUE = 'cue';
+/** Schrumpfen beim Greifen (11.10); eigene Kennung, sonst bräche das nächste Bild des Zugs (`move`) es ab */
+const HAND = 'hand';
 /** Stapelung während eines Flugs: über den liegenden Karten, unter gezogenen (400000) und dem Stapelmenü */
 const FLYING_Z = 300000;
 
@@ -18,7 +20,9 @@ const FLYING_Z = 300000;
  *  Blatt und Schachtel (5zb) */
 type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; arriveLift: number; arriveEase: string; ping: number; pointerOut: number; pop: number;
   /** Expedition und Orakel am Tisch (5zb) */
-  sheetGlide: number; nudge: number; oracleSink: number; oracleShake: number; oracleRise: number };
+  sheetGlide: number; nudge: number; oracleSink: number; oracleShake: number; oracleRise: number;
+  /** Karte in der Hand (11.10) */
+  handResize: number };
 let cached: AllTiming | null = null;
 let cachedCut: AllTiming | null = null;
 /** Schnitt beim Ansichtswechsel (11.8, view.svelte.ts): `shift` ist dann 0, wie `--shift` unter `[data-cut]` */
@@ -46,6 +50,7 @@ function readTiming(): AllTiming {
     ping: cssMs(v('--ping')), pointerOut: cssMs(v('--pointer-out')), pop: cssMs(v('--pop')),
     sheetGlide: cssMs(v('--sheet-glide')), nudge: cssMs(v('--nudge')),
     oracleSink: cssMs(v('--oracle-sink')), oracleShake: cssMs(v('--oracle-shake')), oracleRise: cssMs(v('--oracle-rise')),
+    handResize: cssMs(v('--hand-resize')),
   };
 }
 /** Effektstufe gewechselt: Werte neu lesen */
@@ -280,6 +285,34 @@ function flash(lift: HTMLElement, color: string, delay: number): void {
 /** Stufe „Aus“: an der neuen Lage bzw. mit der neuen Seite einblenden */
 export function fade(el: HTMLElement, duration: number): void {
   if (duration > 0) tag(el.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: 'ease-out' }), MOVE);
+}
+
+/** Maßstab, in dem die Karte gerade gezeigt wird: mitten in einer Bewegung aus dem DOM, sonst der zuletzt gezeigte
+ *  `last`. Vor `move` lesen, das die Bewegung abbricht. */
+export function shownScale(el: HTMLElement, last: number): number {
+  if (!running(el, MOVE).length) return last;
+  const m = new DOMMatrix(getComputedStyle(el).transform);
+  return Math.hypot(m.a, m.b);
+}
+
+/** Greifen (11.10): `.card` springt schon in Handgröße an die Lage in der Hand; `.lift` zeigt die Karte zuerst in der
+ *  alten Größe `from` und schrumpft bzw. wächst dann auf die neue, der Greifpunkt `grip` bleibt dabei unter dem Zeiger.
+ *  Über `transform` mit `translate` und `scale`, ohne `transform-origin` zu ändern: Der Ursprung gilt auch für Hebung,
+ *  Neigung und Aufsetzen auf `.lift` (P1). `to`: neue Lage von `.card` (Tischpunkte), `grip`: Zeiger (Tischpunkte),
+ *  `size`: Karte in Maßstab 1, so groß wie `.lift`. */
+export function resize(lift: HTMLElement, from: number, to: DOMMatrix, grip: readonly [number, number], rotated: boolean, size: { w: number; h: number }): void {
+  const d = timing().handResize;
+  const s1 = Math.hypot(to.a, to.b);
+  for (const a of running(lift, HAND)) a.cancel();
+  if (d <= 0 || Math.abs(from - s1) < 1e-3) return;
+  const f = from / s1;
+  // Greifpunkt in Kartenkoordinaten; quer liegend ist `.card` um 90° gedreht
+  const [ex, ey] = [(grip[0] - to.e) / s1, (grip[1] - to.f) / s1];
+  const [ux, uy] = rotated ? [ey, -ex] : [ex, ey];
+  // um den Greifpunkt mit f skaliert, gerechnet um die Mitte (der Ursprung von `.lift`)
+  const tx = (ux - size.w / 2) * (1 - f);
+  const ty = (uy - size.h / 2) * (1 - f);
+  tag(lift.animate([{ transform: `translate(${tx}px, ${ty}px) scale(${f})` }, { transform: 'none' }], { duration: d, easing: 'ease-out' }), HAND);
 }
 
 /** Wie weit die Karte gerade (mitten in einer Bewegung) von ihrer Endlage entfernt gezeigt wird, in Tischpunkten.
