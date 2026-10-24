@@ -44,6 +44,26 @@ test('erstes Orakel: nichts zu versenken, sonst derselbe Ablauf', async ({ page 
   await expect.poll(() => seen(page)).toEqual(['oracle-shake', 'oracle-rise#0@0', 'oracle-rise#1@192']);
 });
 
+test('neues Orakel mitten im Ablauf: der alte springt ans Ende, danach stehen die neuen Wörter ohne hängende Animation', async ({ page }) => {
+  await box(page).click();
+  await expect(box(page).locator('[data-oracle-card]')).toHaveCount(2);
+  for (const wait of [60, 250, 500]) {
+    await box(page).click({ position: { x: 20, y: 5 } });
+    await page.waitForTimeout(wait);
+    await box(page).click({ position: { x: 20, y: 5 } });
+  }
+  await page.waitForTimeout(2000);
+  const after = await box(page).evaluate((el) => ({
+    running: el.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length,
+    words: [...el.querySelectorAll('.word')].map((w) => w.textContent),
+    label: el.getAttribute('aria-label'),
+    offset: [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => getComputedStyle(c).translate),
+  }));
+  expect(after.running).toBe(0);
+  expect(after.label).toBe(`Orakel ziehen: ${after.words.join(', ')}`);
+  for (const t of after.offset) expect(['none', '0px', '0px 0px']).toContain(t);
+});
+
 test('Stufe „Aus“ (Bewegung reduzieren): keine Bewegung, nur die Wörter wechseln', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await ready(page, true);

@@ -1,6 +1,6 @@
 <script lang="ts">
   // Laterne und Licht (ARCHITEKTUR.md 11.9, Schritt 5n). Die Laterne liegt über den Zonen und unter den Karten (z 5),
-  // das Licht über allen Karten (z 450000), Stapelmenüs, SL-Leiste und Zeiger darüber. Ob sie brennt, steht im Stand
+  // das Licht über allen Karten (z 450000), Stapelmenüs und Zeiger darüber; Blatt und Schachtel (5zb) liegen darunter. Ob sie brennt, steht im Stand
   // (`lamp`) und gilt für alle; Anzünden und Löschen laufen am Ereignis `lampChanged`, beim Laden ohne Übergang.
   import { untrack } from 'svelte';
   import { timing } from './animator.svelte';

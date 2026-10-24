@@ -10,11 +10,14 @@ const overlaps = (a: Rect, b: Rect) => across(a, b) && a.y < b.y + b.h && b.y < 
  *  ausweicht (seit 5zb Blatt und Schachtel am Rand statt der SL-Leiste), und reicht es so weit herauf, steht sie `gap`
  *  darüber.
  *  `toast` ist die Meldung an ihrem Grundplatz. Nur der sichtbare Teil zählt: Was über den oberen Rand hinausreicht
- *  (beim Hineinzoomen), schiebt die Meldung höchstens bis an den oberen Rand. */
+ *  (beim Hineinzoomen), schiebt die Meldung höchstens bis an den oberen Rand; was ganz über ihrem Grundplatz liegt, zählt
+ *  nicht. */
 export function toastBottom(toast: Rect, avoid: readonly Rect[], viewH: number, base: number, gap: number): number {
   let bottom = base;
+  /** Grundplatz der Meldung (senkrecht): Was ganz darüber liegt (beim Hineinzoomen), verdeckt sie nicht */
+  const top = viewH - base - toast.h;
   for (const r of avoid) {
-    if (!across(toast, r) || r.y >= viewH - base || r.y + r.h <= 0) continue;
+    if (!across(toast, r) || r.y >= viewH - base || r.y + r.h <= top) continue;
     bottom = Math.max(bottom, viewH - Math.max(0, r.y) + gap);
   }
   return Math.min(bottom, viewH - toast.h);

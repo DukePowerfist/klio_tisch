@@ -98,8 +98,8 @@
   .box.anchored { align-self: flex-start; max-height: calc(100vh - 24px - 2 * var(--box-pad-y) - 2px); }
   /* Leselage (5zb): das Blatt ist das Fenster; Maße in TP über Containereinheiten (ExpeditionReader.svelte) */
   .box.sheet { --box-pad-y: 0px; --box-pad-x: 0px; padding: 0; background: none; border: 0; border-radius: 0; overflow: visible; max-height: none; animation: none; container-type: inline-size; position: relative; }
-  /* Drei Arten von Knöpfen (5v, 10.8) in narrow, wide und pane: normal (Tönung und feiner Rand wie „Neu“ im
-     Ergebnisfenster), Hauptknopf `.main`, gefährlich `.danger`. Das Ergebnisfenster zeichnet seine selbst, das ×
+  /* Drei Arten von Knöpfen (5v, 10.8) in narrow, wide und pane: normal (Tönung und feiner Rand), Hauptknopf `.main`,
+     gefährlich `.danger`. Die Leselage des Expeditionsblatts (sheet, 5zb) zeichnet ihre selbst, das ×
      (CloseX) ist ausgenommen. :where hält die Stärke wie bisher (0,2,1, 5t Q1), auch beim Überfahren: örtliche Regeln
      der Fenster (Seitenleiste, Wahlflächen) gehen weiter vor */
   .box:where(:not(.sheet)) :global(button:where(:not(.dialog-close))) { background: var(--menu-item-hover); color: var(--ink); border: 1px solid var(--menu-rule); border-radius: var(--radius-m); padding: 8px 16px; font: inherit; cursor: pointer; transition: scale var(--press) ease-out, background-color 80ms; }

@@ -1,5 +1,5 @@
 // Ereignis → Effekt, an einer Stelle (ARCHITEKTUR.md 11): Meldungen (Texte aus eventText.ts), Kartenbewegungen (an
-// animator.svelte.ts), Hervorhebung, Ergebnisfenster.
+// animator.svelte.ts), Hervorhebung, Einblenden und Hochrücken am Expeditionsblatt (5zb).
 // Dauern stehen in theme.css; bei „Bewegung reduzieren“ sind die Bewegungen aus.
 
 import type { EngineEvent, SeatId } from '../engine/types';

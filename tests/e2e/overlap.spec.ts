@@ -12,6 +12,9 @@ const label = (page: Page, text: string) => page.locator('.zone .label').filter(
 const settled = (page: Page) => page.waitForTimeout(200);
 
 test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „DECK“ ganz lesbar: beide Fenstergrößen, beide Ansichten, Protokoll offen und zu (5zb)', async ({ page }) => {
+  // mit gezogenem Orakel, damit die herausragenden Karten mitzählen
+  await page.locator('[data-oracle-box]').click();
+  await expect(page.locator('[data-oracle-card]')).toHaveCount(2);
   for (const [width, height] of [[1600, 900], [1024, 640]] as const) {
     await page.setViewportSize({ width, height });
     for (const log of [false, true]) {
@@ -20,7 +23,7 @@ test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „
         await page.keyboard.press(key);
         await settled(page);
         const what = `${width} × ${height}, Protokoll ${log}, Taste ${key}`;
-        for (const sel of ['[data-expedition-sheet]', '[data-oracle-box]']) {
+        for (const sel of ['[data-expedition-sheet]', '[data-oracle-box] .reach']) {
           const thing = await box(page.locator(sel));
           for (const text of ['FORTSCHRITT', 'KREUZ']) expect(apart(thing, await box(label(page, text))), `${what}, ${sel}, ${text}`).toBe(true);
         }
@@ -35,6 +38,9 @@ test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „
 });
 
 test('Meldung nach dem Ziehen verdeckt Blatt und Schachtel nicht und steht sonst unten (5v, 5zb)', async ({ page }) => {
+  // mit gezogenem Orakel: die Karten ragen über die Schachtel hinaus und zählen mit
+  await page.locator('[data-oracle-box]').click();
+  await expect(page.locator('[data-oracle-card]')).toHaveCount(2);
   // jede Karte bringt eine neue Meldung, die beim Erscheinen misst
   for (const [i, [width, height]] of ([[1600, 900], [1024, 640], [2400, 900]] as const).entries()) {
     await page.setViewportSize({ width, height });
@@ -49,10 +55,12 @@ test('Meldung nach dem Ziehen verdeckt Blatt und Schachtel nicht und steht sonst
     const avoid = await page.locator('[data-toast-avoid]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number }));
     expect(avoid.length, what).toBe(2);
     let bottom = 28;
+    // auch die herausragenden Orakelkarten verdeckt sie nicht
+    for (const card of await page.locator('[data-oracle-card]').all()) expect(apart(t, await box(card)), `${what}, Karte`).toBe(true);
     for (const r of avoid) {
       expect(apart(t, r), what).toBe(true);
       const across = t.x < r.x + r.width && r.x < t.x + t.width;
-      if (across && r.y < height - 28) bottom = Math.max(bottom, height - r.y + 8);
+      if (across && r.y < height - 28 && r.y + r.height > height - 28 - t.height) bottom = Math.max(bottom, height - r.y + 8);
     }
     // ohne Überdeckung unten (28 px), sonst 8 px über dem höchsten, das darunter liegt
     expect(height - (t.y + t.height), what).toBeCloseTo(bottom, 0);

@@ -1,6 +1,6 @@
 <script lang="ts">
   // Kopf jedes Fensters (5v, 10.8): Titel, daneben optional ein Schild (`badge`), rechts optional Knöpfe (`actions`,
-  // z. B. der Hauptknopf im Ergebnisfenster) und das ×; feine Linie bis an den Rand des Fensters. Den Innenrand des
+  // z. B. ein Hauptknopf) und das ×; feine Linie bis an den Rand des Fensters. Den Innenrand des
   // Fensters (--box-pad-y, --box-pad-x aus Modal.svelte) gleicht der Kopf mit negativem Rand aus.
   import type { Snippet } from 'svelte';
   import type { Attachment } from 'svelte/attachments';

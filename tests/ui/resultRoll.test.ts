@@ -1,4 +1,4 @@
-// Ergebnisfenster (5t, 10.6): welche Zeilen der Expedition nach einem Wurf einblenden.
+// Welche Zeilen der Expedition nach einem Wurf einblenden (5t, seit 5zb in der Leselage des Blatts, 10.12).
 
 import { describe, expect, it } from 'vitest';
 import { OwnRolls, rolledRows } from '../../src/ui/resultRoll';

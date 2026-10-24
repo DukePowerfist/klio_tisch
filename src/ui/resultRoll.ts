@@ -1,4 +1,4 @@
-// Ergebnisfenster (5t, 10.6): welche Zeilen der Expedition nach einem Wurf kurz einblenden.
+// Welche Zeilen der Expedition nach einem Wurf kurz einblenden (5t, seit 5zb in der Leselage des Blatts, 10.12).
 
 /** Zeilen eines eigenen Wurfs: eine Zeile (`table`) oder alle (ohne `table`) */
 export type OwnRoll = number | 'all';

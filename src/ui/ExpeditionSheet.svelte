@@ -40,6 +40,7 @@
   let swallowClick = false;
   function down(e: PointerEvent) {
     if (e.button > 0) return;
+    swallowClick = false;
     press = { id: e.pointerId, y: e.clientY, moved: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
@@ -60,6 +61,14 @@
     if (-pull * scale >= innerHeight * OPEN_AT) view.openExpedition();
     // zurück in die Ruhelage; offen gleitet die Leselage von der gezeigten Stelle heran (gemessen vor diesem Bild)
     requestAnimationFrame(() => (pull = 0));
+  }
+  /** abgebrochen (Systemgeste am unteren Rand): zurück in die Ruhelage, ohne zu öffnen und ohne den nächsten Klick zu
+   *  verschlucken */
+  function cancel(e: PointerEvent) {
+    if (!press || e.pointerId !== press.id) return;
+    press = null;
+    pulling = false;
+    pull = 0;
   }
   function click() {
     if (swallowClick) return void (swallowClick = false);
@@ -97,7 +106,7 @@
   onpointerdown={down}
   onpointermove={move}
   onpointerup={up}
-  onpointercancel={up}
+  onpointercancel={cancel}
 >
   <div class="pull" class:pulling style:height="{paper.h}px" style:translate="0 {pull}px" data-expedition-pull>
   <div class="lift" style:height="{paper.h}px">
@@ -110,8 +119,8 @@
 </button>
 
 <style>
-  /* über den Zonen (wie die Laterne), unter frei liegenden Karten (U3) und dem Licht */
-  .expedition { position: absolute; z-index: 6; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 0; touch-action: none; }
+  /* über den Zonen und ihren Karten, knapp unter frei liegenden Karten (FREE_Z 20000, U3) und dem Licht */
+  .expedition { position: absolute; z-index: 19990; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 0; touch-action: none; }
   .expedition:focus:not(:focus-visible) { outline: none; }
   .pull, .lift, .nudge { position: absolute; left: 0; top: 0; width: 100%; }
   .pull { transition: translate var(--sheet-glide) ease-out; }

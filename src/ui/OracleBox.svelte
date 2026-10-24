@@ -124,9 +124,11 @@
 
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein Bild mit Beschriftung -->
 <svelte:element this={may ? 'button' : 'div'} class="oracle" class:control={may} role={may ? undefined : 'img'} aria-label={label} title={may ? label : undefined}
-  onclick={may ? shake : undefined} data-oracle-box data-toast-avoid
+  onclick={may ? shake : undefined} data-oracle-box
   style:left="{rect.x}px" style:top="{rect.y}px" style:width="{rect.w}px" style:height="{rect.h}px">
   <div class="inner" style:width="{W}px" style:height="{H}px" style:scale={scale}>
+    <!-- Platz samt herausragender Karten: dem weicht die Meldung aus (das Knopfrechteck enthält die Karten nicht) -->
+    <div class="reach" style:top="{O.opening - O.out[0]!}px" style:height="{H - O.opening + O.out[0]!}px" data-toast-avoid></div>
     <div class="shake" bind:this={shakeEl} style:transform-origin="50% {H}px">
       <div class="shadow" style:top="{O.opening}px" style:box-shadow={shadow}></div>
       <img class="box" src={boxImage} alt="" draggable="false" />
@@ -142,13 +144,14 @@
 </svelte:element>
 
 <style>
-  /* über den Zonen, unter frei liegenden Karten und dem Licht, wie das Blatt */
-  .oracle { position: absolute; z-index: 6; padding: 0; border: 0; background: none; display: block; }
+  /* über den Zonen und ihren Karten, knapp unter frei liegenden Karten und dem Licht, wie das Blatt */
+  .oracle { position: absolute; z-index: 19990; padding: 0; border: 0; background: none; display: block; }
   div.oracle { pointer-events: none; }
   button.oracle { cursor: pointer; }
   button.oracle:focus:not(:focus-visible) { outline: none; }
   .inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; transition: translate var(--hover) ease-out; }
   .shake { position: absolute; inset: 0; }
+  .reach { position: absolute; left: 0; right: 0; pointer-events: none; }
   @media (hover: hover) {
     /* Hinweis „schütteln“: hebt sich leicht, nur mit Recht */
     button.oracle:hover .inner { translate: 0 -3px; }

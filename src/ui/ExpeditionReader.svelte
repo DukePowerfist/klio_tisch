@@ -43,16 +43,20 @@
   const rest = () => document.querySelector<HTMLElement>('[data-expedition-sheet]');
   /** gezeigtes Papier des Blatts in Ruhe (auch hochgezogen), Ausgangspunkt des Gleitens */
   const restPaper = () => document.querySelector<HTMLElement>('[data-expedition-pull]') ?? rest();
+  /** Transform, das das Fenster (natürliche Lage `to`) auf das Rechteck `r` legt (Ursprung oben links) */
+  const onto = (r: DOMRect, to: DOMRect) => `translate(${r.left - to.left}px, ${r.top - to.top}px) scale(${r.width / to.width}, ${r.height / to.height})`;
   function glide(dir: 'in' | 'out'): Promise<void> {
     const ms = timing().sheetGlide;
-    const from = restPaper()?.getBoundingClientRect();
+    const rest = restPaper()?.getBoundingClientRect();
     const el = box();
-    if (!ms || !from || from.width === 0) return Promise.resolve();
+    if (!ms || !rest || rest.width === 0) return Promise.resolve();
+    // beim Schließen von der gezeigten Lage aus, auch mitten im Hereingleiten (gemessen, bevor es abgebrochen wird)
+    const shown = el.getBoundingClientRect();
+    for (const a of el.getAnimations()) a.cancel();
     const to = el.getBoundingClientRect();
-    const away = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
-    const frames = [{ transform: away }, { transform: 'none' }];
-    const a = el.animate(dir === 'in' ? frames : frames.reverse(), { duration: ms, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: dir === 'out' ? 'forwards' : 'none' });
     el.style.transformOrigin = '0 0';
+    const frames = dir === 'in' ? [{ transform: onto(rest, to) }, { transform: 'none' }] : [{ transform: onto(shown, to) }, { transform: onto(rest, to) }];
+    const a = el.animate(frames, { duration: ms, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: dir === 'out' ? 'forwards' : 'none' });
     return a.finished.then(() => undefined, () => undefined);
   }
 
@@ -72,6 +76,12 @@
     if (!press.moved && Math.abs(dy) < SLOP) return;
     press.moved = true;
     box().style.translate = `0 ${Math.max(0, dy)}px`;
+  }
+  /** abgebrochen (Systemgeste): zurück, ohne zu schließen */
+  function gripCancel(e: PointerEvent) {
+    if (!press || e.pointerId !== press.id) return;
+    press = null;
+    box().style.translate = '';
   }
   function gripUp(e: PointerEvent) {
     if (!press || e.pointerId !== press.id) return;
@@ -126,7 +136,7 @@
       style:left={tp(-px)} style:top={tp(-py)} style:width={tp(E.size[0])} style:height={tp(E.size[1])} />
     <!-- Griff zum Herunterziehen: der Kopf bis zur Kopflinie, unter dem Knopf „Alles neu“ -->
     <!-- svelte-ignore a11y_no_static_element_interactions (Ziehen ist eine Abkürzung; Schließen geht auch mit Esc) -->
-    <div class="grip" style:height={tp(E.rows[0]! - py)} onpointerdown={gripDown} onpointermove={gripMove} onpointerup={gripUp} onpointercancel={gripUp} data-expedition-grip></div>
+    <div class="grip" style:height={tp(E.rows[0]! - py)} onpointerdown={gripDown} onpointermove={gripMove} onpointerup={gripUp} onpointercancel={gripCancel} data-expedition-grip></div>
     {#if reroll}
       <button class="all" style:left={tp(141)} style:top={tp(18)} style:font-size={tp(12)} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.rerollAll')}</button>
     {/if}

@@ -43,7 +43,7 @@
    *  keinen (Nutzer 2026-10-24: ein Schatten unter der untersten Karte ergibt keinen Sinn) */
   const edgeShadow = (k: number) => (k === edges.length ? 'none' : shadowCss(shadowOver(flame, { x: zone.x, y: zone.y, w: card.w * zone.scale, h: card.h * zone.scale }, 1 + k)));
   const fan = $derived(!onSheet && actions.length === 0 && !!(zone.fanX || zone.fanY));
-  /** Schrift aus layout.ts (dort rechnet die SL-Leiste mit); unter einem Stapel rückt die Beschriftung mit den Kanten
+  /** Schrift aus layout.ts (dort rechnen die Tests von Blatt und Schachtel mit, 5zb); unter einem Stapel rückt die Beschriftung mit den Kanten
    *  nach unten, damit sie nicht angeschnitten wird (5v, 10.8). Bogenzonen tragen sie innen, ihr Maß steht im CSS. */
   const labelStyle = $derived.by(() => {
     const parts = zone.label.x === null ? [] : [`left:${zone.label.x * 100}%`];

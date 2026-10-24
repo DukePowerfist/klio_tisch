@@ -2,7 +2,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 import { readContent } from '../content/read';
-import { ready } from './helpers';
+import { dragFromTo, expectCount, ready, zoneCenter } from './helpers';
 
 const raw = readContent() as unknown as { expedition: { oracle: Record<string, Record<string, string>> } };
 const words = Object.values(raw.expedition.oracle).flatMap((byRank) => Object.values(byRank));
@@ -56,4 +56,17 @@ test('Maske: unter der Öffnungskante ist keine Karte zu sehen, in der Daumenker
     return { belowEdge: at(14, 46), inNotch: at(48, 40), aboveEdge: at(48, 20) };
   });
   expect(hit).toEqual({ belowEdge: null, inNotch: '1', aboveEdge: '1' });
+});
+
+test('Karte neben die Schachtel fallen lassen: landet nicht auf ihr, auch nicht auf den Karten darüber (F5, T1)', async ({ page }) => {
+  const deck = await zoneCenter(page, 'DECK');
+  const reach = (await box(page).locator('.reach').boundingBox())!;
+  await dragFromTo(page, deck, { x: reach.x + reach.width / 2, y: reach.y + 5 });
+  await expectCount(page, 'DECK', 26);
+  const free = page.locator('[data-card][style*="rotate(90deg)"]');
+  await expect(free).toHaveCount(1);
+  await expect.poll(async () => {
+    const c = (await free.boundingBox())!;
+    return c.x + c.width <= reach.x || c.x >= reach.x + reach.width || c.y + c.height <= reach.y;
+  }).toBe(true);
 });
