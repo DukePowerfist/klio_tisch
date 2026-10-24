@@ -108,3 +108,50 @@ test('Karte auf das Blatt fallen lassen: landet daneben (F5)', async ({ page }) 
     return c.y + c.height <= s.y + 1;
   }).toBe(true);
 });
+
+// ---------- Ziehen (Teil 2b, T4) ----------
+
+test('Blatt hochziehen öffnet die Leselage, kurzes Ziehen gleitet zurück; ein Ziehen ist kein Klick', async ({ page }) => {
+  const s = (await sheet(page).boundingBox())!;
+  const at = { x: s.x + s.width / 2, y: s.y + s.height / 2 };
+  const start = (await page.locator('[data-expedition-pull]').boundingBox())!.y;
+  // kurz: weniger als ein Viertel der Fensterhöhe
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x, at.y - 80, { steps: 6 });
+  await page.mouse.up();
+  await expect(reader(page)).toHaveCount(0);
+  const pulled = page.locator('[data-expedition-pull]');
+  await expect.poll(async () => Math.abs((await pulled.boundingBox())!.y - start)).toBeLessThan(1);
+  // weit genug: öffnet
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x, at.y - 300, { steps: 10 });
+  await page.mouse.up();
+  await expect(reader(page)).toBeVisible();
+});
+
+test('Leselage am Kopf herunterziehen schließt, kurz gleitet sie zurück; Ziehen auf einem Abschnitt schließt nicht (S5)', async ({ page }) => {
+  await sheet(page).click();
+  const grip = (await reader(page).locator('[data-expedition-grip]').boundingBox())!;
+  const at = { x: grip.x + 30, y: grip.y + grip.height / 2 };
+  // auf einem Abschnitt: markiert Text, schließt nicht
+  const row = (await reader(page).locator('section.row').nth(1).boundingBox())!;
+  await page.mouse.move(row.x + 10, row.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(row.x + 10, row.y + 400, { steps: 8 });
+  await page.mouse.up();
+  await expect(reader(page)).toBeVisible();
+  // am Kopf kurz: bleibt
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x, at.y + 60, { steps: 6 });
+  await page.mouse.up();
+  await expect(reader(page)).toBeVisible();
+  // am Kopf weit: schließt
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x, at.y + 400, { steps: 10 });
+  await page.mouse.up();
+  await expect(reader(page)).toHaveCount(0);
+});

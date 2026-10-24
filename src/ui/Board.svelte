@@ -478,7 +478,7 @@
       </div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
       <!-- Expedition und Orakel am unteren Rand (5zb, 10.12) -->
-      <ExpeditionSheet {layout} {flame} dragging={!!drag?.moved} />
+      <ExpeditionSheet {layout} {flame} dragging={!!drag?.moved} scale={sc} />
       <OracleBox {layout} {fitScale} {flame} />
       <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} maxH={layout.gmControlsMaxH} tab={layout.gmTab} scale={sc} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>

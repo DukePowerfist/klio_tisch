@@ -4,6 +4,7 @@
   // Jeder öffnet es selbst (F3). Klick aufs Blatt tut nichts außer an den Knöpfen, Klick daneben und Esc schließen.
   // Würfeln nur mit Recht: „Alles neu“ im Kopf, „Neu“ je Abschnitt in der Zeile der Frage. Lange Antworten werden bis
   // 12 TP kleiner (fitBlock, T2). Maße in TP des Bilds über Containereinheiten: 1 TP = 100cqw / Breite des Papiers.
+  // Am Kopf herunterziehen schließt (Teil 2b, T4); auf den Abschnitten heißt Ziehen Text markieren (S5).
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import Modal from './Modal.svelte';
@@ -40,9 +41,11 @@
   /** Fensterfläche (Modal) und Blatt in Ruhe am Bildschirm, für das Gleiten */
   const box = () => paperEl.closest<HTMLElement>('[aria-modal="true"]')!;
   const rest = () => document.querySelector<HTMLElement>('[data-expedition-sheet]');
+  /** gezeigtes Papier des Blatts in Ruhe (auch hochgezogen), Ausgangspunkt des Gleitens */
+  const restPaper = () => document.querySelector<HTMLElement>('[data-expedition-pull]') ?? rest();
   function glide(dir: 'in' | 'out'): Promise<void> {
     const ms = timing().sheetGlide;
-    const from = rest()?.getBoundingClientRect();
+    const from = restPaper()?.getBoundingClientRect();
     const el = box();
     if (!ms || !from || from.width === 0) return Promise.resolve();
     const to = el.getBoundingClientRect();
@@ -51,6 +54,36 @@
     const a = el.animate(dir === 'in' ? frames : frames.reverse(), { duration: ms, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: dir === 'out' ? 'forwards' : 'none' });
     el.style.transformOrigin = '0 0';
     return a.finished.then(() => undefined, () => undefined);
+  }
+
+  // ---------- Herunterziehen am Kopf (Teil 2b) ----------
+  const SLOP = 4;
+  /** Anteil der Fensterhöhe, ab dem losgelassen die Leselage schließt */
+  const CLOSE_AT = 0.2;
+  let press: { id: number; y: number; moved: boolean } | null = null;
+  function gripDown(e: PointerEvent) {
+    if (e.button > 0) return;
+    press = { id: e.pointerId, y: e.clientY, moved: false };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function gripMove(e: PointerEvent) {
+    if (!press || e.pointerId !== press.id) return;
+    const dy = e.clientY - press.y;
+    if (!press.moved && Math.abs(dy) < SLOP) return;
+    press.moved = true;
+    box().style.translate = `0 ${Math.max(0, dy)}px`;
+  }
+  function gripUp(e: PointerEvent) {
+    if (!press || e.pointerId !== press.id) return;
+    const moved = press.moved;
+    press = null;
+    if (!moved) return;
+    const el = box();
+    const dy = parseFloat(el.style.translate.split(' ')[1] ?? '0') || 0;
+    if (dy >= innerHeight * CLOSE_AT) return void close();
+    const ms = timing().sheetGlide;
+    if (ms) el.animate([{ translate: `0 ${dy}px` }, { translate: '0 0' }], { duration: ms, easing: 'ease-out' });
+    el.style.translate = '';
   }
 
   async function close() {
@@ -91,6 +124,9 @@
   <div class="paper" tabindex="-1" bind:this={paperEl} style:font-family={HAND_FONT} style:--tp="calc(100cqw / {pw})" data-expedition-reader>
     <img class="bg" src={image} alt="" draggable="false"
       style:left={tp(-px)} style:top={tp(-py)} style:width={tp(E.size[0])} style:height={tp(E.size[1])} />
+    <!-- Griff zum Herunterziehen: der Kopf bis zur Kopflinie, unter dem Knopf „Alles neu“ -->
+    <!-- svelte-ignore a11y_no_static_element_interactions (Ziehen ist eine Abkürzung; Schließen geht auch mit Esc) -->
+    <div class="grip" style:height={tp(E.rows[0]! - py)} onpointerdown={gripDown} onpointermove={gripMove} onpointerup={gripUp} onpointercancel={gripUp} data-expedition-grip></div>
     {#if reroll}
       <button class="all" style:left={tp(141)} style:top={tp(18)} style:font-size={tp(12)} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.rerollAll')}</button>
     {/if}
@@ -125,4 +161,5 @@
   button:hover { background: rgba(255, 255, 255, 0.8); }
   button:active { scale: var(--press-scale); }
   .all { position: absolute; }
+  .grip { position: absolute; left: 0; right: 0; top: 0; cursor: grab; touch-action: none; user-select: none; }
 </style>
