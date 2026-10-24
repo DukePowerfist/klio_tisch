@@ -52,7 +52,7 @@ middle:
   # notch = Daumenkerbe (von x, bis x, Tiefe); band = Wortband auf der Karte (x, y, w, h); word = Schrift der Wörter;
   # maxScale = größter Maßstab auf kleinen Bildschirmen, mit ihm weichen freie Karten immer aus; tilt = Neigung in Grad
   # um die Mitte an der Brettkante (zur anderen Seite als das Blatt).
-  oracle: { cx: 576, size: [ 96, 160 ], rest: 90, out: [ 60, 30 ], opening: 36, notch: [ 33, 63, 13 ],
+  oracle: { cx: 576, size: [ 96, 160 ], rest: 116, out: [ 60, 30 ], opening: 36, notch: [ 33, 63, 13 ],
     band: [ 4.5, 6, 72.5, 19 ], word: 13, maxScale: 1.9, tilt: 3 }
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
