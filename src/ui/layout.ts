@@ -318,14 +318,14 @@ export function freePosAt(layout: Layout, x: number, y: number): FreePos {
 const LAMP_GAP = 4;
 
 /** Karte (Rechteck in der Tischmitte) von der Laterne wegschieben wie vom Rand der Tischmitte (11.9, F3): berührt sie
- *  den Kreis samt Abstand, nach links, rechts oder unten knapp neben das umgebende Quadrat (nach oben ist kein Platz),
+ *  den Kreis samt Abstand, nach links, rechts, oben oder unten knapp neben das umgebende Quadrat,
  *  nur ganz in der Tischmitte, auf dem kürzesten Weg. */
 function besideLamp(layout: Layout, r: Rect): { x: number; y: number } {
   const { lamp, middle: m } = layout;
   if (lampGap(lamp, r) >= LAMP_GAP) return r;
   const s = lamp.r + LAMP_GAP;
   const fits = (p: { x: number; y: number }) => p.x >= m.x && p.y >= m.y && p.x + r.w <= m.x + m.w && p.y + r.h <= m.y + m.h;
-  const options = [{ x: lamp.cx - s - r.w, y: r.y }, { x: lamp.cx + s, y: r.y }, { x: r.x, y: lamp.cy + s }].filter(fits);
+  const options = [{ x: lamp.cx - s - r.w, y: r.y }, { x: lamp.cx + s, y: r.y }, { x: r.x, y: lamp.cy - s - r.h }, { x: r.x, y: lamp.cy + s }].filter(fits);
   const dist = (p: { x: number; y: number }) => Math.hypot(p.x - r.x, p.y - r.y);
   return options.sort((a, b) => dist(a) - dist(b))[0] ?? r;
 }

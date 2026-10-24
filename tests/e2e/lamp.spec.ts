@@ -13,16 +13,15 @@ async function nearDeck(page: Page) {
   return { x: (l.x + l.width / 2 - d.x) / d.width, y: (l.y + l.height / 2 - d.y) / d.width };
 }
 
-test('Laterne oben mittig im Filz, in beiden Ansichten an derselben Stelle der Tischmitte', async ({ page }) => {
+test('Laterne rechts neben dem Zielwert, in beiden Ansichten an derselben Stelle der Tischmitte', async ({ page }) => {
   const over = await nearDeck(page);
   await page.keyboard.press('3');
   await page.waitForTimeout(200);
   const role = await nearDeck(page);
   expect(role.x).toBeCloseTo(over.x, 2);
   expect(role.y).toBeCloseTo(over.y, 2);
-  // Mitte der Laterne (350, 60) und Deck (182, 430) in der Tischmitte, Deck 80 breit
-  expect(over.x).toBeCloseTo((350 - 182) / 80, 1);
-  expect(over.y).toBeCloseTo((60 - 430) / 80, 1);
+  expect(over.x).toBeCloseTo((560 - 208) / 80, 1);
+  expect(over.y).toBeCloseTo((354 - 484) / 80, 1);
 });
 
 test('SL löscht und zündet an: Protokoll, Stand bleibt nach dem Neuladen, Tisch verschiebt und zoomt nicht', async ({ page }) => {

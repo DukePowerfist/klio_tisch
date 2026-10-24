@@ -9,7 +9,10 @@ cards:
 zones:
   deck: DECK
   discard: ABLAGE
-  display: ""                             # Auslage hat keine Beschriftung (wie bisher)
+  display: ZIELWERT
+  displayTitle: Schwierigkeitsgrad der Aktion · aus einem der drei Karo-Stapel
+  difficultyTitle: SCHWIERIGKEIT
+  tableTitle: EXPEDITIONSTISCH
   diamonds_easy: LEICHT (2-6)
   diamonds_medium: MITTEL (7-10)
   diamonds_hard: SCHWIERIG (11-14)

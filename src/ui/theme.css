@@ -5,6 +5,7 @@
   --room: radial-gradient(ellipse at 50% 40%, #1a140f, #050403 75%);
   --wood: #4a2f1e;          /* Grundton der Tischplatte, bis das Bild dekodiert ist */
   --felt: #163e25;          /* Grundton des Filzbilds, bis es dekodiert ist */
+  --felt-print: #cec7ad;
   --felt-rim: #23160d;
   --felt-rim-light: rgba(255, 220, 170, 0.12);
   --lamp-out: rgb(217, 215, 212);  /* Laterne aus (F4): der ganze Tisch gleichmäßig leicht gedämpft (0,85) */

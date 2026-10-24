@@ -104,7 +104,7 @@ test('Rollenansicht: kein Bogen unter dem Menüknopf, bei 2 bis 4 Spielern, mit 
   }
 });
 
-test('Alter Spielstand (Format 1) aus einer Datei: frei liegende Karte liegt wie vorher zum Deck; neueres Format abgelehnt', async ({ page }) => {
+test('Alter Spielstand (Format 1) aus einer Datei: freie Karte behält ihre Filzposition aus Format 2; neueres Format abgelehnt', async ({ page }) => {
   // eine Karte frei in die Tischmitte, dann speichern
   const deck = await zoneCenter(page, 'DECK');
   await dragFromTo(page, deck, { x: deck.x + 150, y: deck.y - 120 });
@@ -114,7 +114,7 @@ test('Alter Spielstand (Format 1) aus einer Datei: frei liegende Karte liegt wie
   const [card] = saved.state.free as string[];
 
   // so, wie es eine alte Fassung gespeichert hätte: alter Spielbereich der Draufsicht (4 Spieler: x 372, Breite 1016),
-  // Stapel 48 weiter rechts als heute. Karte 100 rechts von der linken Kante des Decks (heute Tisch-x 712, damals 760).
+  // Karte 100 rechts von der damaligen linken Deckkante bei Tisch-x 760.
   const old = structuredClone(saved);
   old.state.format = 1;
   old.state.freePos[card!] = { anchor: 'center', x: (760 + 100 - 372) / 1016, y: (430 + 10 - 10) / 970 };
@@ -123,10 +123,11 @@ test('Alter Spielstand (Format 1) aus einer Datei: frei liegende Karte liegt wie
   await expect(dialog.getByText(/vor dem Laden einer Datei/)).toBeVisible();
   await page.keyboard.press('Escape');
   const d = (await zoneCenter(page, 'DECK')).box;
+  const panel = await box(page.locator('.panel'));
   const c = (await free(page).boundingBox())!;
   const unit = d.width / 80; // Tischpunkt in Bildschirmpunkten
-  expect((c.x - d.x) / unit).toBeCloseTo(100, 0);
-  expect((c.y - d.y) / unit).toBeCloseTo(0, 0);
+  expect((c.x - panel.x) / unit).toBeCloseTo(282, 0);
+  expect((c.y - panel.y) / unit).toBeCloseTo(430, 0);
 
   const newer = structuredClone(saved);
   newer.state.format = 99;

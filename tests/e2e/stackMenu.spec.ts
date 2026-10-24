@@ -229,7 +229,7 @@ test('Kürzel: Z, U, M groß und klein; nicht mit Strg, Alt oder Meta; gehaltene
   await expect(count(page)).toHaveText('25');
   await expect(stackItem(page, 'Mischen')).toHaveText('Mischen');
   // U dreht die oberste Karte um, das Menü bleibt
-  const faceUp = page.locator('[data-card] .inner:not(.down)');
+  const faceUp = page.locator('.scene > [data-card] .inner:not(.down)');
   const before = await faceUp.count();
   await page.keyboard.press('u');
   await expect(faceUp).toHaveCount(before + 1);

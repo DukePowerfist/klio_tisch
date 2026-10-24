@@ -11,6 +11,8 @@ Noch im Bau. Online: https://dukepowerfist.github.io/klio_tisch/
 
 Der Verbindungstest liegt unter `verbindungstest.html`.
 
+Der Filz folgt dem Spielablauf: oben die drei Schwierigkeitsstapel, mittig Zielwert, Deck und Ablage, unten Gefahr und Fortschritt mit dem Kreuzvorrat. Die Laterne beleuchtet den Probenbereich von rechts. Positionen und Größen stehen in `content/klio/layouts.yaml`, die aufgedruckten Markierungen in `src/ui/FeltMarkings.svelte`. Frei abgelegte Karten behalten beim Laden ihre gespeicherte Filzposition.
+
 Lizenz: MIT für den Programmcode (siehe `LICENSE`). Spielinhalte sind davon ausgenommen.
 
 Bilder des Tisches (`public/assets/table/`: Holz und Laterne) sind mit ChatGPT erzeugt und bearbeitet (Freistellen, Vergrößern mit Real-ESRGAN, Leuchtmaske; `scripts/table-assets.py`). Auch sie fallen nicht unter die MIT-Lizenz.

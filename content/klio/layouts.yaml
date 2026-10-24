@@ -11,15 +11,15 @@ freeCardScale: 0.6
 # shapes: Größe, Kartenmaßstab, Fächerabstand; menu = bevorzugte Seite des Stapelmenüs (left/right, ohne Angabe right;
 # so gesetzt, wie sie im Normalfall herauskommt, ARCHITEKTUR.md 10.2); label = Beschriftung (center, rotated, x = Anteil)
 shapes:
-  deck: { w: 80, h: 112, menu: left }
-  discard: { w: 80, h: 112 }
-  display: { w: 80, h: 112 }
-  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: left, label: { center: true } }  # rechts läge es über der Auslage
+  deck: { w: 80, h: 112, menu: left, label: { center: true } }
+  discard: { w: 80, h: 112, label: { center: true } }
+  display: { w: 80, h: 112, label: { center: true } }
+  diamonds_easy: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: left, label: { center: true } }
   diamonds_medium: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: right, label: { center: true } }
   diamonds_hard: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: right, label: { center: true } }
   clubs: { w: 48, h: 68, scale: 0.6, growOnOpen: true, menu: right, label: { center: true } }
-  danger: { w: 330, h: 70, scale: 0.6, fanX: 26 }
-  progress: { w: 330, h: 70, scale: 0.6, fanX: 26 }
+  danger: { w: 400, h: 70, scale: 0.6, fanX: 26 }
+  progress: { w: 400, h: 70, scale: 0.6, fanX: 26 }
   seat.damage: { scale: 1, label: { rotated: true, x: 0.22 } }
   seat.notes: { scale: 1, fanX: 40 }
   seat.collect: { scale: 0.4, fanY: 12, label: { rotated: true } }
@@ -29,20 +29,20 @@ shapes:
 middle:
   size: [ 700, 970 ]
   zones:
-    diamonds_easy: [ 73, 110 ]
-    diamonds_medium: [ 248, 110 ]
-    diamonds_hard: [ 448, 110 ]
-    display: [ 232, 260 ]
-    deck: [ 182, 430 ]
-    discard: [ 302, 430 ]
-    danger: [ 22, 630 ]
-    progress: [ 22, 750 ]
-    clubs: [ 432, 630 ]
-  resistTitle: [ 22, 606 ]
+    diamonds_easy: [ 104, 134 ]
+    diamonds_medium: [ 326, 134 ]
+    diamonds_hard: [ 548, 134 ]
+    display: [ 310, 292 ]
+    deck: [ 208, 484 ]
+    discard: [ 412, 484 ]
+    danger: [ 72, 654 ]
+    progress: [ 72, 766 ]
+    clubs: [ 552, 654 ]
+  resistTitle: [ 72, 626 ]
   gmControlsInset: [ 40, 26 ]
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
-  lamp: { at: [ 350, 60 ], size: 104, flame: [ 0.5024, 0.4561 ], height: 260 }
+  lamp: { at: [ 560, 354 ], size: 128, flame: [ 0.5024, 0.4561 ], height: 260 }
 # Bögen (Schritt 5q, ARCHITEKTUR.md 10.3): ein Abstand ab der sichtbaren Kante des Lederrands, zur Tischkante, zum Filz und
 # zwischen zwei Bögen. Jede Gruppe von Bögen so groß, wie sie mit diesem Abstand neben den Filz passt (Gruppe = Bögen
 # mit einem Maßstab: in der Draufsicht beide Spalten zusammen, in der Rollenansicht jede Spalte für sich). Der Rest liegt

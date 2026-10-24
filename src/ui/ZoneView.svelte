@@ -86,12 +86,16 @@
   .zone.hot { border-color: var(--pickable-bright); background: color-mix(in srgb, var(--pickable-bright) 10%, transparent); }
   /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
   .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }
-  .zone.fan { border-color: var(--zone-fan-rim); background: none; }
+  .zone:not(.sheet) { border: 1px solid color-mix(in srgb, var(--felt-print) 38%, transparent); background: rgba(0, 0, 0, 0.06); }
+  .zone.fan { border-style: dashed; border-color: color-mix(in srgb, var(--felt-print) 28%, transparent); background: rgba(0, 0, 0, 0.025); }
+  .zone:not(.sheet).hot { border-color: var(--pickable-bright); background: color-mix(in srgb, var(--pickable-bright) 10%, transparent); }
   /* Kanten eines Stapels: Kartengröße, ab der Ecke der Zone (innerhalb des Rahmens), nach rechts unten versetzt;
      wachsen beim Öffnen mit der Zone und den Karten (--shift), statt vorauszuspringen */
   .edge { position: absolute; left: -2px; top: -2px; box-sizing: border-box; border-radius: var(--radius-card); background: var(--stack-edge); border: 1px solid var(--stack-edge-line); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); pointer-events: none; transition: width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), translate var(--shift) var(--shift-ease); }
   .label { position: absolute; left: 0; top: 100%; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: var(--label-ink); background: var(--label-bg); padding: 2px 8px; border-radius: var(--radius-s); text-shadow: 0 1px 2px #000; pointer-events: none; transition: margin-top var(--shift) var(--shift-ease); }
   .center .label { left: 50%; transform: translateX(-50%); }
+  .zone:not(.sheet) .label { color: var(--felt-print); background: none; font-weight: 600; letter-spacing: 0.06em; }
+  .zone:not(.sheet) .edge { left: -1px; top: -1px; }
   .fan .label { font-weight: 600; opacity: 0.7; background: none; padding: 2px 0; }
   .n { display: inline-block; line-height: normal; margin-left: 7px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--label-count-bg); font-size: 12px; font-weight: 600; }
   /* Bogenzonen: dezent, Beschriftung innen */

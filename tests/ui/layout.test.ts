@@ -48,8 +48,7 @@ describe('Ansichten', () => {
     expect(L.sheets.seat1.x).toBeLessThan(L.middle.x);
     expect(L.sheets.seat2.x).toBeGreaterThan(L.middle.x + L.middle.w);
     expect(L.sheets.seat3.y).toBeGreaterThan(L.sheets.seat1.y);
-    // gegenüber der alten Datei um 48 nach links (5d)
-    expect(L.zones['deck']).toMatchObject({ x: 760 - 48, y: 440, w: 80, h: 112, scale: 1 });
+    expect(L.zones['deck']).toMatchObject({ x: 738, y: 494, w: 80, h: 112, scale: 1 });
     expect(L.gmControls).toEqual({ x: 1230, y: 980 - 26 });
     const two = computeLayout(content, 2, null, null);
     expect(two.sheets.seat3.visible).toBe(false);
@@ -66,7 +65,7 @@ describe('Ansichten', () => {
     expect(L.sheets.seat1.x).toBeGreaterThan(L.middle.x + L.middle.w);
     expect(L.sheets.seat1.y).toBe(70);
     expect(L.sheets.seat3.y).toBeGreaterThan(L.sheets.seat1.y);
-    expect(L.zones['clubs']).toMatchObject({ x: 1010 - 48 - 530 + 710, y: 640 });
+    expect(L.zones['clubs']).toMatchObject({ x: 1262, y: 664 });
   });
 
   it('Tischmitte ist in beiden Ansichten gleich, nur verschoben', () => {
@@ -256,23 +255,23 @@ describe('Laterne (5n, 11.9)', () => {
   const MIDDLE_ZONES = ['diamonds_easy', 'diamonds_medium', 'diamonds_hard', 'display', 'deck', 'discard', 'danger', 'progress', 'clubs'];
   const views = [null, 'seat1', 'seat2', 'seat3', 'seat4'] as const;
 
-  it('oben mittig in der Tischmitte, 104 TP, in beiden Ansichten an derselben Stelle der Tischmitte', () => {
+  it('rechts neben dem Zielwert, 128 TP, in beiden Ansichten an derselben Stelle der Tischmitte', () => {
     for (const players of [2, 3, 4] as const) {
       for (const role of views) {
         const L = computeLayout(content, players, role, null);
-        expect(L.lamp.cx - L.middle.x).toBe(350);
-        expect(L.lamp.cy - L.middle.y).toBe(60);
-        expect(L.lamp).toMatchObject({ w: 104, h: 104, r: 52 });
+        expect(L.lamp.cx - L.middle.x).toBe(560);
+        expect(L.lamp.cy - L.middle.y).toBe(354);
+        expect(L.lamp).toMatchObject({ w: 128, h: 128, r: 64 });
       }
     }
-    expect(computeLayout(content, 4, null, null).lamp).toMatchObject({ cx: 880, cy: 70 });
-    expect(computeLayout(content, 4, 'seat1', null).lamp).toMatchObject({ cx: 1060, cy: 70 });
+    expect(computeLayout(content, 4, null, null).lamp).toMatchObject({ cx: 1090, cy: 364 });
+    expect(computeLayout(content, 4, 'seat1', null).lamp).toMatchObject({ cx: 1270, cy: 364 });
   });
 
   it('Flamme im Kamin, Höhe für die Schatten', () => {
     const { lamp } = computeLayout(content, 4, null, null);
-    expect(lamp.flame.x).toBeCloseTo(lamp.x + 104 * 0.5024);
-    expect(lamp.flame.y).toBeCloseTo(lamp.y + 104 * 0.4561);
+    expect(lamp.flame.x).toBeCloseTo(lamp.x + lamp.w * 0.5024);
+    expect(lamp.flame.y).toBeCloseTo(lamp.y + lamp.h * 0.4561);
     expect(lamp.flame.h).toBe(260);
   });
 
@@ -300,7 +299,7 @@ describe('Laterne (5n, 11.9)', () => {
   it('Abstand zum Kreis: 0 bei Überlapp, sonst Abstand zum Rand', () => {
     const { lamp } = computeLayout(content, 4, null, null);
     expect(lampGap(lamp, { x: lamp.cx - 5, y: lamp.cy - 5, w: 10, h: 10 })).toBe(0);
-    expect(lampGap(lamp, { x: lamp.cx + 62, y: lamp.cy - 5, w: 10, h: 10 })).toBeCloseTo(10);
+    expect(lampGap(lamp, { x: lamp.cx + lamp.r + 10, y: lamp.cy - 5, w: 10, h: 10 })).toBeCloseTo(10);
     // Ecke des Quadrats liegt außerhalb des Kreises
     expect(lampGap(lamp, { x: lamp.x - 10, y: lamp.y - 10, w: 12, h: 12 })).toBeGreaterThan(0);
   });
@@ -323,24 +322,25 @@ describe('Ablegen neben der Laterne (5n, F3)', () => {
       const { cx, cy } = L.lamp;
       for (const [x, y] of [[cx - 30, cy - 20], [cx - 70, cy - 10], [cx + 20, cy - 30], [cx - 30, L.middle.y - 40], [cx - 30, cy + 30]] as const) {
         const r = rect(L, x, y);
-        expect(lampGap(L.lamp, r), `bei (${x}, ${y})`).toBeGreaterThanOrEqual(4 - 1e-6);
+        expect(lampGap(L.lamp, r), `bei (${x}, ${y})`).toBeGreaterThanOrEqual(4 - 0.1);
         expect(inMiddle(L, r)).toBe(true);
       }
     }
   });
 
-  it('kürzester Weg: links der Mitte nach links, rechts nach rechts, knapp über dem unteren Rand nach unten', () => {
+  it('kürzester Weg: an jedem Rand nach außen, auch oberhalb der versetzten Laterne', () => {
     const L = views[0]!;
     const { cx, cy, r: R } = L.lamp;
     // Lage als Anteil auf vier Stellen gespeichert, also auf etwa 0,1 TP genau
     expect(rect(L, cx - 60, cy - 20).x + 67.2).toBeCloseTo(cx - R - 4, 1);
     expect(rect(L, cx + 10, cy - 20).x).toBeCloseTo(cx + R + 4, 1);
+    expect(rect(L, cx - 34, cy - R - 20).y + 48).toBeCloseTo(cy - R - 4, 1);
     expect(rect(L, cx - 34, cy + 30).y).toBeCloseTo(cy + R + 4, 1);
   });
 
   it('neben der Laterne unverändert, wie bisher', () => {
     const L = views[0]!;
     expect(freePosAt(L, 880, 900)).toEqual({ anchor: 'center', x: expect.closeTo((880 - L.middle.x) / L.middle.w, 4), y: expect.closeTo((900 - L.middle.y) / L.middle.h, 4) });
-    expect(rect(L, L.lamp.cx + 60, L.lamp.cy - 20).x).toBeCloseTo(L.lamp.cx + 60, 1);
+    expect(rect(L, L.lamp.cx + L.lamp.r + 8, L.lamp.cy - 20).x).toBeCloseTo(L.lamp.cx + L.lamp.r + 8, 1);
   });
 });

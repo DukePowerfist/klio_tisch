@@ -10,6 +10,7 @@
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
   import GmControls from './GmControls.svelte';
+  import FeltMarkings from './FeltMarkings.svelte';
   import Lamp from './Lamp.svelte';
   import { shadowCss, shadowOver, stackHeight, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
@@ -470,7 +471,9 @@
 >
   <div class="board" bind:this={boardEl} data-cut={view.cutting || undefined} style:width="{BW}px" style:height="{BH}px" style:transform="translate({geo.tx}px, {geo.ty}px) scale({sc})" style:background-image={wood}>
     <div class="scene" bind:this={sceneEl}>
-      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-rim-w="{FELT_RIM}px" style:--felt-shadow={feltShadow} style:background-image={felt}></div>
+      <div class="panel" style:left="{layout.middle.x}px" style:top="{layout.middle.y}px" style:width="{layout.middle.w}px" style:height="{layout.middle.h}px" style:--felt-rim-w="{FELT_RIM}px" style:--felt-shadow={feltShadow} style:background-image={felt}>
+        <FeltMarkings {layout} />
+      </div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
       <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} maxH={layout.gmControlsMaxH} tab={layout.gmTab} scale={sc} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
@@ -529,7 +532,7 @@
   /* Filz als Einlage: Struktur über der Filzfarbe, dunkler Rand wie Leder, Schatten nach innen und aufs Holz */
   .panel { position: absolute; background: var(--felt) center / cover no-repeat; border-radius: 56px; box-sizing: border-box;
     box-shadow: 0 0 0 calc(var(--felt-rim-w) - 1px) var(--felt-rim), 0 0 0 var(--felt-rim-w) var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
-  .ptitle { position: absolute; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; opacity: 0.85; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
+  .ptitle { position: absolute; color: var(--felt-print); font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.85; pointer-events: none; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
   /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
   .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */

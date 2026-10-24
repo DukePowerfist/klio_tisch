@@ -14,14 +14,13 @@ function old(players: number, pos: FreePos): unknown {
 const placed = (s: K, players: number) => placeCards(s, computeLayout(content, players, null, null)).S5!;
 
 describe('Format 1 → 2: Tischmitte', () => {
-  it.each([[4, 372, 1016], [2, 486, 788]])('%i Spieler: Karte neben dem Deck bleibt neben dem Deck', (players, x0, w0) => {
+  it.each([[4, 372, 1016], [2, 486, 788]])('%i Spieler: freie Karte behält ihre Position auf dem Filz aus Format 2', (players, x0, w0) => {
     // alt: 100 rechts neben dem Deck (760, 440) in der Draufsicht
     const s = engine.parseState(old(players, { anchor: 'center', x: (760 + 100 - x0) / w0, y: (440 - 10) / 970 }));
     expect(s.format).toBe(FORMAT); // die Kette läuft bis zum aktuellen Format
-    const deck = computeLayout(content, players, null, null).zones['deck']!;
     const p = placed(s, players);
-    expect(p.x - deck.x).toBeCloseTo(100, 0);
-    expect(p.y - deck.y).toBeCloseTo(0, 0);
+    expect(p.x).toBeCloseTo(760 - 48 + 100, 0);
+    expect(p.y).toBeCloseTo(440, 0);
   });
 
   it('außerhalb der Tischmitte: ganz hinein an den Rand', () => {
