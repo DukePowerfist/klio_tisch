@@ -29,9 +29,9 @@ shapes:
 middle:
   size: [ 700, 970 ]
   zones:
-    diamonds_easy: [ 104, 134 ]
-    diamonds_medium: [ 326, 134 ]
-    diamonds_hard: [ 548, 134 ]
+    diamonds_easy: [ 104, 104 ]
+    diamonds_medium: [ 326, 104 ]
+    diamonds_hard: [ 548, 104 ]
     display: [ 310, 292 ]
     deck: [ 208, 484 ]
     discard: [ 412, 484 ]

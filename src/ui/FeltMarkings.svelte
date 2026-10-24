@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Aufdruck auf dem Filz: Wortmarke, Überschriften mit Strichen, Raute unter dem Zielwert. Liegt unter allen Zonen,
+  // Aufdruck auf dem Filz: Rahmen mit der Wortmarke in seiner oberen Linie, Überschriften mit Strichen, Raute unter dem Zielwert. Liegt unter allen Zonen,
   // nimmt keine Klicks an. Maße in Tischpunkten ab der Ecke des Filzes; die Striche sind auf die deutschen Texte
   // abgestimmt (längere Überschriften brauchen größere Lücken).
   import type { Layout } from './layout';
@@ -10,9 +10,11 @@
   /** Abstand des Rahmens vom Filzrand und Abstand der Striche von den Seiten */
   const RIM = 20;
   const SIDE = 72;
-  /** Wortmarke: Grundlinie, Länge der Striche daneben und Lücke für „KLIO“ */
-  const WORD_Y = 55;
-  const WORD_RULE = 76;
+  /** Rundung der Ecken des Rahmens */
+  const RIM_R = 38;
+  /** Wortmarke: steht mittig auf der oberen Rahmenlinie, die für „KLIO“ eine Lücke lässt; Grundlinie so, dass die
+   *  Großbuchstaben (etwa 18 hoch) auf der Linie zentriert sind */
+  const WORD_Y = RIM + 9;
   const WORD_GAP = 136;
   /** Überschrift „Schwierigkeit“: Abstand über den Karo-Stapeln, Lücke der Striche für den Text */
   const DIFFICULTY_ABOVE = 38;
@@ -31,13 +33,18 @@
   const target = $derived(layout.zones['display']!);
   const targetX = $derived(target.x - middle.x + target.w / 2);
   const targetY = $derived(target.y - middle.y + target.h / 2);
+  /** Rahmen als Pfad, beginnt rechts der Lücke und läuft im Uhrzeigersinn bis links der Lücke */
+  const rim = $derived.by(() => {
+    const [x0, y0, x1, y1, r] = [RIM, RIM, middle.w - RIM, middle.h - RIM, RIM_R];
+    const arc = (x: number, y: number) => `A ${r} ${r} 0 0 1 ${x} ${y}`;
+    return `M ${mid + WORD_GAP / 2} ${y0} H ${x1 - r} ${arc(x1, y0 + r)} V ${y1 - r} ${arc(x1 - r, y1)} H ${x0 + r} ${arc(x0, y1 - r)} V ${y0 + r} ${arc(x0 + r, y0)} H ${mid - WORD_GAP / 2}`;
+  });
 </script>
 
 <svg class="felt-markings" viewBox="0 0 {middle.w} {middle.h}" aria-hidden="true">
-  <rect class="rim" x={RIM} y={RIM} width={middle.w - 2 * RIM} height={middle.h - 2 * RIM} rx="38" />
-  <path class="rule" d="M {mid - WORD_GAP / 2 - WORD_RULE} {WORD_Y - 7} h {WORD_RULE} m {WORD_GAP} 0 h {WORD_RULE}" />
+  <path class="rim" d={rim} />
   <text class="wordmark" x={mid} dx={center(7)} y={WORD_Y}>KLIO</text>
-  <text class="subtitle" x={mid} dx={center(2.7)} y={WORD_Y + 19}>{t('zones.feltTable')}</text>
+  <text class="subtitle" x={mid} dx={center(2.7)} y={WORD_Y + 14}>{t('zones.feltTable')}</text>
   <path class="rule" d="M {SIDE} {difficultyY} H {mid - DIFFICULTY_GAP / 2} M {mid + DIFFICULTY_GAP / 2} {difficultyY} H {middle.w - SIDE}" />
   <text class="heading" x={mid} dx={center(2)} y={difficultyY + 4}>{t('zones.feltDifficulty')}</text>
   <path class="target" d="M {targetX} {targetY - 17} l 11 17 -11 17 -11 -17 Z" />
