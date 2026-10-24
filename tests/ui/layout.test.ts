@@ -255,17 +255,17 @@ describe('Laterne (5n, 11.9)', () => {
   const MIDDLE_ZONES = ['diamonds_easy', 'diamonds_medium', 'diamonds_hard', 'display', 'deck', 'discard', 'danger', 'progress', 'clubs'];
   const views = [null, 'seat1', 'seat2', 'seat3', 'seat4'] as const;
 
-  it('rechts neben dem Zielwert, 128 TP, in beiden Ansichten an derselben Stelle der Tischmitte', () => {
+  it('links neben dem Zielwert, 128 TP, in beiden Ansichten an derselben Stelle der Tischmitte', () => {
     for (const players of [2, 3, 4] as const) {
       for (const role of views) {
         const L = computeLayout(content, players, role, null);
-        expect(L.lamp.cx - L.middle.x).toBe(560);
+        expect(L.lamp.cx - L.middle.x).toBe(120);
         expect(L.lamp.cy - L.middle.y).toBe(354);
         expect(L.lamp).toMatchObject({ w: 128, h: 128, r: 64 });
       }
     }
-    expect(computeLayout(content, 4, null, null).lamp).toMatchObject({ cx: 1090, cy: 364 });
-    expect(computeLayout(content, 4, 'seat1', null).lamp).toMatchObject({ cx: 1270, cy: 364 });
+    expect(computeLayout(content, 4, null, null).lamp).toMatchObject({ cx: 650, cy: 364 });
+    expect(computeLayout(content, 4, 'seat1', null).lamp).toMatchObject({ cx: 830, cy: 364 });
   });
 
   it('Flamme im Kamin, Höhe für die Schatten', () => {
@@ -332,7 +332,9 @@ describe('Ablegen neben der Laterne (5n, F3)', () => {
     const L = views[0]!;
     const { cx, cy, r: R } = L.lamp;
     // Lage als Anteil auf vier Stellen gespeichert, also auf etwa 0,1 TP genau
-    expect(rect(L, cx - 60, cy - 20).x + 67.2).toBeCloseTo(cx - R - 4, 1);
+    // links bis zum Filzrand kein Platz mehr: dort der kürzere Weg nach unten (88 statt 96 nach oben)
+    expect(cx - R - 4 - 67.2).toBeLessThan(L.middle.x);
+    expect(rect(L, cx - 60, cy - 20)).toMatchObject({ x: expect.closeTo(cx - 60, 1), y: expect.closeTo(cy + R + 4, 1) });
     expect(rect(L, cx + 10, cy - 20).x).toBeCloseTo(cx + R + 4, 1);
     expect(rect(L, cx - 34, cy - R - 20).y + 48).toBeCloseTo(cy - R - 4, 1);
     expect(rect(L, cx - 34, cy + 30).y).toBeCloseTo(cy + R + 4, 1);

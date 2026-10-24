@@ -13,14 +13,14 @@ async function nearDeck(page: Page) {
   return { x: (l.x + l.width / 2 - d.x) / d.width, y: (l.y + l.height / 2 - d.y) / d.width };
 }
 
-test('Laterne rechts neben dem Zielwert, in beiden Ansichten an derselben Stelle der Tischmitte', async ({ page }) => {
+test('Laterne links neben dem Zielwert, in beiden Ansichten an derselben Stelle der Tischmitte', async ({ page }) => {
   const over = await nearDeck(page);
   await page.keyboard.press('3');
   await page.waitForTimeout(200);
   const role = await nearDeck(page);
   expect(role.x).toBeCloseTo(over.x, 2);
   expect(role.y).toBeCloseTo(over.y, 2);
-  expect(over.x).toBeCloseTo((560 - 208) / 80, 1);
+  expect(over.x).toBeCloseTo((120 - 208) / 80, 1);
   expect(over.y).toBeCloseTo((354 - 484) / 80, 1);
 });
 
