@@ -1,5 +1,6 @@
-// Ergebnisfenster von Expedition und Orakel (Schritt 5t, ARCHITEKTUR.md 10.6): neu gewürfelte Teile blenden kurz ein,
-// am Ereignis statt am Text (auch bei gleichem Ergebnis), nicht beim Öffnen; auch in der Stufe „Aus“.
+// Ergebnisse von Expedition und Orakel (Schritt 5t, 10.6; Expedition seit 5zb in der Leselage des Blatts, 10.12): neu
+// gewürfelte Teile blenden kurz ein, am Ereignis statt am Text (auch bei gleichem Ergebnis), nicht beim Öffnen; auch in
+// der Stufe „Aus“.
 
 import { expect, test, type Page } from '@playwright/test';
 import { fixRolls, fromMenu, LONGEST, ready } from '../e2e/helpers';
@@ -34,9 +35,14 @@ async function rollAndWait(page: Page, button: string, logged: number) {
 
 test('Expedition: beim Öffnen nichts; eigener Wurf mit gleichem Ergebnis blendet die Zeile ein, „Alles neu“ alle vier', async ({ page }) => {
   await fromMenu(page, 'Protokoll');
-  await record(page);
+  await page.locator('[data-expedition-sheet]').click();
   await fixRolls(page, LONGEST);
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  await rollAndWait(page, 'Alles neu', 1);
+  // schließen und wieder öffnen: beim Öffnen blendet nichts ein
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Expedition' })).toHaveCount(0);
+  await record(page);
+  await page.locator('[data-expedition-sheet]').click();
   await expect(page.getByRole('dialog', { name: 'Expedition' }).locator('.value')).toHaveCount(4);
   await settled(page);
   expect(await faded(page)).toEqual([]);
@@ -69,23 +75,9 @@ test('Stufe „Aus“ (Bewegung reduzieren): das Einblenden bleibt', async ({ pa
   await ready(page, true);
   await fromMenu(page, 'Protokoll');
   await record(page);
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  await page.locator('[data-expedition-sheet]').click();
+  await rollAndWait(page, 'Alles neu', 1);
   await expect(page.getByRole('dialog', { name: 'Expedition' }).locator('.value')).toHaveCount(4);
   await rollAndWait(page, 'Neu würfeln: Bekannt für …', 2);
   await expect.poll(() => faded(page)).toContainEqual({ part: 1, duration: 150 });
-});
-
-test('Höhe gleitet mit --shift, wenn ein Ergebnis länger wird; währenddessen keine Scrollbar, danach wieder Bildlauf möglich', async ({ page }) => {
-  await fromMenu(page, 'Protokoll');
-  await fixRolls(page, [8, 7, 1, 4]);
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Expedition' });
-  await expect(dialog.locator('.row .value').nth(2)).toHaveCount(1);
-  await settled(page);
-  const body = dialog.locator('.body');
-  await fixRolls(page, [LONGEST[2]!]);
-  await rollAndWait(page, 'Neu würfeln: Ihr seid hier, weil …', 2);
-  const during = await body.evaluate((b) => ({ anims: b.getAnimations().map((a) => Number((a.effect as KeyframeEffect).getTiming().duration)), overflow: getComputedStyle(b).overflowY }));
-  expect(during).toEqual({ anims: [350], overflow: 'hidden' });
-  await expect.poll(() => body.evaluate((b) => getComputedStyle(b).overflowY)).toBe('auto');
 });

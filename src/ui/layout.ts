@@ -57,6 +57,12 @@ export type Layout = {
   lamp: LampBox;
   /** Licht der Laterne in dieser Ansicht: Reichweite in TP, Grundlicht am Rand */
   light: { reach: number; ambient: number };
+  /** Expeditionsblatt in Ruhe (5zb, 10.12): ganzes Bild und Papier darin, über der unteren Brettkante */
+  expedition: { img: Rect; paper: Rect };
+  /** Kartenschachtel (5zb): Mitte und Unterkante (Brettkante); das Rechteck je Maßstab liefert `oracleRect` */
+  oracle: { cx: number; bottom: number };
+  /** Hindernisse für frei abgelegte Karten (5zb, F5): Papier des Blatts, Schachtel samt Karten mit `maxScale` (T1) */
+  obstacles: Rect[];
 };
 
 /** Grundbreite eines Bogens auf dem Tisch bei Maßstab 1 (wie bisher 380 × 537). */
@@ -171,6 +177,13 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     return z.y + z.h + LABEL.gap + (small ? SMALL_LABEL.line : LABEL.line) + 2 * LABEL_PAD;
   }));
 
+  // Blatt und Schachtel (5zb, 10.12): waagerecht relativ zur Tischmitte, senkrecht ab der unteren Brettkante (F1)
+  const E = M.expedition;
+  const img = { x: mx + E.x, y: BH - E.rest, w: E.size[0], h: E.size[1] };
+  const [px, py, pw, ph] = E.paper;
+  const paper = { x: img.x + px, y: img.y + py, w: pw, h: ph };
+  const oracle = { cx: mx + M.oracle.cx, bottom: BH };
+
   return {
     role,
     board: { w: BW, h: BH },
@@ -187,7 +200,38 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
     light: role ? L.role.light : L.overview.light,
+    expedition: { img, paper },
+    oracle,
+    obstacles: [tilted(paper, E.tilt), oracleReach(c, oracle, M.oracle.maxScale)],
   };
+}
+
+/** Umriss eines um die obere Mitte geneigten Rechtecks (Blatt, `tilt` in Grad): oben um die gehobene Ecke höher */
+function tilted(r: Rect, tilt: number): Rect {
+  const up = (r.w / 2) * Math.sin((Math.abs(tilt) * Math.PI) / 180);
+  return { x: r.x, y: r.y - up, w: r.w, h: r.h + up };
+}
+
+type OracleSpec = KlioContent['layouts']['middle']['oracle'];
+
+/** Bild der Schachtel bei Maßstab `s` (5zb): unten mittig an `cx`; vom Bild liegt so viel über der Brettkante, dass
+ *  ab der Oberkante der hinteren Karte (`out[0]` über der Öffnung) `rest · s` zu sehen sind. */
+export function oracleRect(o: OracleSpec, at: { cx: number; bottom: number }, s: number): Rect {
+  const above = o.out[0] - o.opening;
+  return { x: at.cx - (o.size[0] * s) / 2, y: at.bottom - (o.rest - above) * s, w: o.size[0] * s, h: o.size[1] * s };
+}
+
+/** Sichtbarer Platz der Schachtel samt herausragender Karten bis zur Brettkante (Hindernis, T1) */
+function oracleReach(c: KlioContent, at: { cx: number; bottom: number }, s: number): Rect {
+  const o = c.layouts.middle.oracle;
+  return { x: at.cx - (o.size[0] * s) / 2, y: at.bottom - o.rest * s, w: o.size[0] * s, h: o.rest * s };
+}
+
+/** Maßstab der Schachtel (S3, T7): die Wörter (`word` TP) mindestens `minPx` groß auf dem Bildschirm bei Zoom 1, also
+ *  bei Tischmaßstab `fitScale`; zwischen 1 und `maxScale`. Beim Hineinzoomen wächst sie nicht weiter. */
+export function oracleScale(o: Pick<OracleSpec, 'word' | 'maxScale'>, fitScale: number, minPx = 12): number {
+  if (!(fitScale > 0)) return 1;
+  return clamp(minPx / (o.word * fitScale), 1, o.maxScale);
 }
 
 function lampBox(c: { x: number; y: number }, l: KlioContent['layouts']['middle']['lamp']): LampBox {
@@ -310,7 +354,8 @@ export function freePosAt(layout: Layout, x: number, y: number): FreePos {
   const seat = sheetAt(layout, x, y);
   if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
   const c = cardSize(layout, { scale: layout.freeCardScale, rotated: true });
-  const at = besideLamp(layout, { ...clampIntoMiddle(layout, x, y, c.w, c.h), ...c });
+  const near = besideLamp(layout, { ...clampIntoMiddle(layout, x, y, c.w, c.h), ...c });
+  const at = besideObjects(layout, { ...near, ...c });
   return { anchor: 'center', ...relIn(layout.middle, at.x, at.y) };
 }
 
@@ -326,6 +371,27 @@ function besideLamp(layout: Layout, r: Rect): { x: number; y: number } {
   const s = lamp.r + LAMP_GAP;
   const fits = (p: { x: number; y: number }) => p.x >= m.x && p.y >= m.y && p.x + r.w <= m.x + m.w && p.y + r.h <= m.y + m.h;
   const options = [{ x: lamp.cx - s - r.w, y: r.y }, { x: lamp.cx + s, y: r.y }, { x: r.x, y: lamp.cy - s - r.h }, { x: r.x, y: lamp.cy + s }].filter(fits);
+  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - r.x, p.y - r.y);
+  return options.sort((a, b) => dist(a) - dist(b))[0] ?? r;
+}
+
+/** Mindestabstand einer abgelegten Karte zu Blatt und Schachtel (5zb) */
+const OBJECT_GAP = 4;
+const hits = (a: Rect, b: Rect, gap: number) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+
+/** Karte (Rechteck in der Tischmitte) aus Blatt und Schachtel schieben (5zb, F5, U3): liegt sie auf einem der
+ *  Hindernisse, links, rechts oder darüber knapp daneben, auf dem kürzesten Weg; nur ganz in der Tischmitte, ohne
+ *  ein anderes Hindernis oder die Laterne zu berühren. Findet sich nichts, bleibt sie, wo sie ist. */
+export function besideObjects(layout: Layout, r: Rect): { x: number; y: number } {
+  const { obstacles, middle: m, lamp } = layout;
+  const free = (p: Rect) => !obstacles.some((o) => hits(p, o, OBJECT_GAP - 0.01)) && lampGap(lamp, p) >= LAMP_GAP;
+  if (!obstacles.some((o) => hits(r, o, OBJECT_GAP - 0.01))) return r;
+  const g = OBJECT_GAP;
+  const fits = (p: { x: number; y: number }) => p.x >= m.x && p.y >= m.y && p.x + r.w <= m.x + m.w && p.y + r.h <= m.y + m.h;
+  const options = obstacles.flatMap((o) => [
+    { x: o.x - g - r.w, y: r.y }, { x: o.x + o.w + g, y: r.y }, { x: r.x, y: o.y - g - r.h },
+    { x: o.x - g - r.w, y: o.y - g - r.h }, { x: o.x + o.w + g, y: o.y - g - r.h },
+  ]).filter((p) => fits(p) && free({ ...p, w: r.w, h: r.h }));
   const dist = (p: { x: number; y: number }) => Math.hypot(p.x - r.x, p.y - r.y);
   return options.sort((a, b) => dist(a) - dist(b))[0] ?? r;
 }

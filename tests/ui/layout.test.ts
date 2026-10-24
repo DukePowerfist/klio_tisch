@@ -143,10 +143,14 @@ describe('Karten und Ablegen', () => {
       const m = L.middle;
       // links neben der Tischmitte, rechts darüber hinaus, unten heraus
       expect(freePosAt(L, m.x - 5, 500)).toEqual({ anchor: 'center', x: 0, y: expect.closeTo((500 - m.y) / m.h, 4) });
-      const r = freePosAt(L, m.x + m.w - 10, m.y + m.h - 5);
+      // rechts und unten getrennt: die unteren Ecken belegen seit 5zb Blatt und Schachtel (10.12), unten frei ist es
+      // zwischen beiden
+      const r = freePosAt(L, m.x + m.w - 10, m.y + 500);
       expect(r.anchor).toBe('center');
       expect(m.x + r.x * m.w + c.w).toBeCloseTo(m.x + m.w, 1);
-      expect(m.y + r.y * m.h + c.h).toBeCloseTo(m.y + m.h, 1);
+      const between = (L.expedition.paper.x + L.expedition.paper.w + L.obstacles[1]!.x) / 2 - c.w / 2;
+      const b = freePosAt(L, between, m.y + m.h - 5);
+      expect(m.y + b.y * m.h + c.h).toBeCloseTo(m.y + m.h, 1);
     }
     // Rollenansicht: Lücke in der Spalte der kleinen Bögen
     const role = computeLayout(content, 4, 'seat2', null);

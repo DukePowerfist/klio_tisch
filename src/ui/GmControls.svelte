@@ -21,8 +21,9 @@
 
   let { at, maxW, maxH, tab, scale }: { at: { x: number; y: number }; maxW: number; maxH: number; tab: number; scale: number } = $props();
 
-  /** Zurücksetzen steht seit 5zb im Menü oben rechts (10.12), die Leiste hat nur noch Expedition und Orakel */
-  const draw = $derived(session.can({ type: 'gm.expedition' }) || session.can({ type: 'gm.oracle' }));
+  /** Zurücksetzen steht seit 5zb im Menü oben rechts, Expedition am Blatt unten (10.12); die Leiste hat nur noch das
+   *  Orakel, bis Teil 3 die Kartenschachtel es übernimmt */
+  const draw = $derived(session.can({ type: 'gm.oracle' }));
   let open = $state(localStorage.getItem(OPEN_KEY) !== '0');
   function flip() {
     open = !open;
@@ -59,9 +60,6 @@
       <div class="rows" id="gm-bar" role="group" aria-label={t('gm.bar')} bind:offsetWidth={w} bind:offsetHeight={h}
         transition:slide onintrostart={() => (moving = true)} onintroend={() => (moving = false)} onoutrostart={() => (moving = true)} onoutroend={() => (moving = false)}>
         <div class="group">
-          {#if session.can({ type: 'gm.expedition' })}
-            <button class="menu-item" title={t('gm.expeditionTitle')} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.expeditionShort')}</button>
-          {/if}
           {#if session.can({ type: 'gm.oracle' })}
             <button class="menu-item" title={t('gm.oracleTitle')} onclick={() => submitOrSay({ type: 'gm.oracle' })}>{t('gm.oracle')}</button>
           {/if}

@@ -31,7 +31,7 @@ test('SL-Leiste verdeckt „Fortschritt“ nicht, „DECK“ ganz lesbar: beide 
   }
 });
 
-test('Meldung nach dem Ziehen verdeckt die SL-Leiste nicht und steht sonst unten', async ({ page }) => {
+test('Meldung nach dem Ziehen verdeckt SL-Leiste, Blatt und Schachtel nicht und steht sonst unten (5v, 5zb)', async ({ page }) => {
   // jede Karte bringt eine neue Meldung, die beim Erscheinen misst
   for (const [i, [width, height]] of ([[1600, 900], [1024, 640], [2400, 900]] as const).entries()) {
     await page.setViewportSize({ width, height });
@@ -42,13 +42,17 @@ test('Meldung nach dem Ziehen verdeckt die SL-Leiste nicht und steht sonst unten
     const toast = page.getByRole('status');
     await expect(toast).toHaveText(/^Aufgedeckt: /);
     const t = await box(toast);
-    const bar = await box(page.locator('[data-gm-bar]'));
     const what = `${width} × ${height}`;
-    expect(apart(t, bar), what).toBe(true);
-    const across = t.x < bar.x + bar.width && bar.x < t.x + t.width;
-    // ohne Überdeckung unten (28 px), sonst 8 px über der Leiste
-    if (across) expect(t.y + t.height, what).toBeCloseTo(bar.y - 8, 0);
-    else expect(height - (t.y + t.height), what).toBeCloseTo(28, 0);
+    const avoid = await page.locator('[data-gm-bar], [data-toast-avoid]').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number }));
+    expect(avoid.length, what).toBe(3);
+    let bottom = 28;
+    for (const r of avoid) {
+      expect(apart(t, r), what).toBe(true);
+      const across = t.x < r.x + r.width && r.x < t.x + t.width;
+      if (across && r.y < height - 28) bottom = Math.max(bottom, height - r.y + 8);
+    }
+    // ohne Überdeckung unten (28 px), sonst 8 px über dem höchsten, das darunter liegt
+    expect(height - (t.y + t.height), what).toBeCloseTo(bottom, 0);
   }
 });
 

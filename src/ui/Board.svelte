@@ -9,9 +9,11 @@
   import { sheetOf } from '../rules/klio/events';
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
+  import ExpeditionSheet from './ExpeditionSheet.svelte';
   import GmControls from './GmControls.svelte';
   import FeltMarkings from './FeltMarkings.svelte';
   import Lamp from './Lamp.svelte';
+  import OracleBox from './OracleBox.svelte';
   import { shadowCss, shadowOver, stackHeight, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
@@ -475,6 +477,9 @@
         <FeltMarkings {layout} />
       </div>
       <Lamp lamp={layout.lamp} light={layout.light} lit={table.lamp} bind:shadowsLit />
+      <!-- Expedition und Orakel am unteren Rand (5zb, 10.12) -->
+      <ExpeditionSheet {layout} {flame} dragging={!!drag?.moved} />
+      <OracleBox {layout} {fitScale} {flame} />
       <GmControls at={layout.gmControls} maxW={layout.gmControlsMaxW} maxH={layout.gmControlsMaxH} tab={layout.gmTab} scale={sc} />
       <div class="ptitle" style:left="{layout.resistTitle.x}px" style:top="{layout.resistTitle.y}px">{t('zones.resistTitle')}</div>
 
@@ -525,7 +530,8 @@
 </div>
 
 <style>
-  .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: hidden; touch-action: none; background: var(--room); }
+  /* clip statt hidden (5zb): nicht scrollbar, auch nicht, wenn der Browser ein fokussiertes Element (Blatt am Rand) ins Bild holen will */
+  .stage { position: fixed; inset: 0 var(--table-right) 0 0; overflow: clip; touch-action: none; background: var(--room); }
   .scene { position: absolute; inset: 0; }
   /* Holz (11.9): `border-radius` rundet die Platte ab; kein overflow: über den Rand gezogene Karten bleiben sichtbar */
   .board { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--wood) 0 0 / 100% 100% no-repeat; border-radius: 18px; box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.45); }

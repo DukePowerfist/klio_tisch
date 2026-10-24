@@ -22,3 +22,24 @@ export function fitText(text: string, width: number, base: number, weight: Weigh
   if (w <= width) return { size: base, cut: false };
   return { size: Math.max(MIN, Math.floor((base * width) / w * 10) / 10), cut: (w * MIN) / base > width };
 }
+
+/** Mehrzeiliger Text in fester Höhe (5zb, 10.12, T2): größter Faktor `k` zwischen `min` und 1, bei dem der Inhalt von
+ *  `el` nicht höher ist als `el` (gemessen über `scrollHeight`). `apply` setzt den Faktor (etwa als CSS-Variable der
+ *  Schriftgröße). Passt es auch bei `min` nicht (etwa ohne die mitgelieferte Schrift), wird ausnahmsweise weiter
+ *  verkleinert statt abgeschnitten, höchstens bis `min / 2`. */
+export function fitBlock(el: HTMLElement, apply: (k: number) => void, min: number): number {
+  const fits = (k: number) => {
+    apply(k);
+    return el.scrollHeight <= el.clientHeight + 0.5;
+  };
+  if (fits(1)) return 1;
+  let [lo, hi] = fits(min) ? [min, 1] : [min / 2, min];
+  if (hi === min && !fits(lo)) return lo;
+  for (let i = 0; i < 8; i++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) lo = mid;
+    else hi = mid;
+  }
+  apply(lo);
+  return lo;
+}

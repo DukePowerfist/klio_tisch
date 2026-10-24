@@ -6,15 +6,18 @@
   import { toastBottom } from './overlap';
   import { view } from './view.svelte';
 
-  /** Abstand zum unteren Rand, und zur SL-Leiste, wenn sie darunter liegt (5v, F1) */
+  /** Abstand zum unteren Rand, und zu SL-Leiste, Blatt und Schachtel, wenn sie darunter liegen (5v F1, 5zb) */
   const BASE = 28;
   const GAP = 8;
-  /** misst beim Erscheinen: gemessen wird die SL-Leiste (`data-gm-bar`), nicht `data-menu-avoid` (sonst wichen die Menüs aus) */
+  /** misst beim Erscheinen: SL-Leiste (`data-gm-bar`) und Gegenstände am Rand (`data-toast-avoid`, 5zb), nicht
+   *  `data-menu-avoid` (sonst wichen die Menüs aus) */
   function place(el: HTMLElement) {
     const r = el.getBoundingClientRect();
-    const b = document.querySelector('[data-gm-bar]')?.getBoundingClientRect();
-    const bar = b ? { x: b.left, y: b.top, w: b.width, h: b.height } : null;
-    el.style.bottom = `${toastBottom({ x: r.left, y: r.top, w: r.width, h: r.height }, bar, innerHeight, BASE, GAP)}px`;
+    const avoid = [...document.querySelectorAll('[data-gm-bar], [data-toast-avoid]')].map((e) => {
+      const b = e.getBoundingClientRect();
+      return { x: b.left, y: b.top, w: b.width, h: b.height };
+    });
+    el.style.bottom = `${toastBottom({ x: r.left, y: r.top, w: r.width, h: r.height }, avoid, innerHeight, BASE, GAP)}px`;
   }
 </script>
 

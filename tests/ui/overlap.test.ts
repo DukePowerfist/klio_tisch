@@ -6,14 +6,25 @@ import { previewPlace, toastBottom } from '../../src/ui/overlap';
 describe('Meldung über der SL-Leiste (F1)', () => {
   const toast = { x: 600, y: 800, w: 400, h: 44 };
   it('ohne Leiste oder ohne waagerechte Überdeckung unten', () => {
-    expect(toastBottom(toast, null, 900, 28, 8)).toBe(28);
-    expect(toastBottom(toast, { x: 1100, y: 820, w: 200, h: 48 }, 900, 28, 8)).toBe(28);
+    expect(toastBottom(toast, [], 900, 28, 8)).toBe(28);
+    expect(toastBottom(toast, [{ x: 1100, y: 820, w: 200, h: 48 }], 900, 28, 8)).toBe(28);
   });
   it('überdeckt sie sich mit der Leiste, steht sie 8 px darüber', () => {
-    expect(toastBottom(toast, { x: 900, y: 820, w: 300, h: 48 }, 900, 28, 8)).toBe(900 - 820 + 8);
+    expect(toastBottom(toast, [{ x: 900, y: 820, w: 300, h: 48 }], 900, 28, 8)).toBe(900 - 820 + 8);
   });
   it('liegt die Leiste ganz unter der Meldung, bleibt sie unten', () => {
-    expect(toastBottom(toast, { x: 900, y: 880, w: 300, h: 20 }, 900, 28, 8)).toBe(28);
+    expect(toastBottom(toast, [{ x: 900, y: 880, w: 300, h: 20 }], 900, 28, 8)).toBe(28);
+  });
+  it('mehrere Rechtecke (5zb): das höchste zählt, eines ganz außerhalb des Fensters nicht', () => {
+    const sheet = { x: 500, y: 840, w: 300, h: 400 };
+    const box = { x: 950, y: 800, w: 100, h: 300 };
+    const off = { x: 600, y: 1000, w: 300, h: 300 };
+    expect(toastBottom(toast, [sheet, box, off], 900, 28, 8)).toBe(900 - 800 + 8);
+    expect(toastBottom(toast, [off], 900, 28, 8)).toBe(28);
+  });
+  it('beim Hineinzoomen riesig (5zb): nur der sichtbare Teil zählt, die Meldung bleibt im Fenster', () => {
+    const huge = { x: 0, y: -2000, w: 3000, h: 4000 };
+    expect(toastBottom(toast, [huge], 900, 28, 8)).toBe(900 - toast.h);
   });
 });
 

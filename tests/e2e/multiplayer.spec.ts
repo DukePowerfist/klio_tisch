@@ -288,16 +288,16 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   // ohne Recht keine Leiste und keine Lasche
   await expect(player.locator('.ctl')).toHaveCount(0);
   await expect(player.locator('.toggle')).toHaveCount(0);
-  // nur Expedition: eine Gruppe, also keine Linie
+  // nur das Orakel (Expedition seit 5zb am Blatt): eine Gruppe, also keine Linie
   let rights = await openSettings(gm, 'Rechte der Spieler');
-  await rights.getByRole('combobox', { name: 'Expedition starten' }).selectOption('allow');
+  await rights.getByRole('combobox', { name: 'Orakel ziehen' }).selectOption('allow');
   await gm.keyboard.press('Escape');
-  await expect(bar.getByRole('button')).toHaveText(['Expedition']);
+  await expect(bar.getByRole('button')).toHaveText(['Orakel']);
   await expect(player.locator('.ctl .group')).toHaveCount(1);
   // Einfahren gilt nur im eigenen Browser: die SL fährt ein, beim Spieler bleibt die Leiste
   await gm.getByRole('button', { name: 'Leiste einfahren' }).click();
   await expect(gm.getByRole('group', { name: 'Spielleitung' })).toHaveCount(0);
-  await expect(bar.getByRole('button')).toHaveText(['Expedition']);
+  await expect(bar.getByRole('button')).toHaveText(['Orakel']);
   await expect(player.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
   await gm.getByRole('button', { name: 'Leiste ausfahren' }).click();
   // Spielerzahl ohne die übrigen Einstellungen: Seiten „Tisch“ und „Darstellung“
@@ -323,6 +323,45 @@ test('SL-Leiste und Seite „Tisch“ mit Mitspieler (5s): nur mit Recht, ohne �
   await rights.getByRole('combobox', { name: 'Tisch zurücksetzen' }).selectOption('allow');
   await gm.keyboard.press('Escape');
   await expect.poll(() => menuEntries(player)).toContain('Zurücksetzen');
+});
+
+test('Expeditionsblatt mit Mitspieler (5zb, 10.12): jeder öffnet selbst, ein Wurf öffnet nichts, das Blatt rückt nur hoch, nicht beim Kartenzug', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  // beim Spieler mit Bewegung, damit das Hochrücken läuft (sonst gilt „Aus“ wie in diesem Projekt)
+  const player = await (await browser.newContext({ reducedMotion: 'no-preference' })).newPage();
+  await player.goto(link);
+  const join = player.getByRole('dialog', { name: 'Platz wählen' });
+  await expect(join).toBeVisible({ timeout: 60_000 });
+  await join.getByRole('button', { name: /^Spieler 2/ }).click();
+  await seated(player);
+  const reader = (p: Page) => p.getByRole('dialog', { name: 'Expedition' });
+  const nudges = () => player.evaluate(() => document.querySelector('[data-expedition-sheet] .nudge')!.getAnimations().length);
+  // SL öffnet und würfelt: beim Spieler öffnet sich nichts, das Blatt rückt einmal hoch
+  await gm.locator('[data-expedition-sheet]').click();
+  await reader(gm).getByRole('button', { name: 'Alles neu' }).click();
+  await expect(reader(gm).locator('.value')).toHaveCount(4);
+  await expect.poll(nudges).toBe(1);
+  await expect(reader(player)).toHaveCount(0);
+  // geöffnet zeigt es dieselben Antworten, ohne Knöpfe
+  await player.locator('[data-expedition-sheet]').click();
+  await expect(reader(player).locator('.value')).toHaveText(await reader(gm).locator('.value').allTextContents());
+  await expect(reader(player).getByRole('button')).toHaveCount(0);
+  // einzelne Zeile neu: ändert beim Spieler nur diese Zeile, sein Blatt bleibt offen
+  const before = await reader(player).locator('.value').allTextContents();
+  await reader(gm).getByRole('button', { name: /^Neu würfeln: Bekannt/ }).click();
+  await expect.poll(async () => (await reader(player).locator('.value').allTextContents()).filter((v, i) => v !== before[i] && i !== 1).length).toBe(0);
+  // Schließen auf einer Seite ändert auf der anderen nichts
+  await player.keyboard.press('Escape');
+  await expect(reader(player)).toHaveCount(0);
+  await expect(reader(gm)).toBeVisible();
+  // Spieler hält eine Karte, SL würfelt: kein Hochrücken (U1)
+  await player.waitForTimeout(700);
+  const deck = await zoneCenter(player, 'DECK');
+  await holdOver(player, deck, { x: deck.x + 120, y: deck.y - 80 });
+  await reader(gm).getByRole('button', { name: 'Alles neu' }).click();
+  await player.waitForTimeout(400);
+  expect(await nudges()).toBe(0);
+  await player.mouse.up();
 });
 
 test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder, SL setzt um, gibt frei, weist zu', async ({ browser }) => {
@@ -586,9 +625,9 @@ test('Ergebnisfenster (5t, Q3): öffnet sich hinter offenen Einstellungen, ohne 
   await player.keyboard.press('Escape');
   await expect(player.getByRole('dialog')).toHaveCount(0);
   await gm.keyboard.press('Escape'); // Orakel bei der SL schließen, sonst fängt es den Klick ab
-  // ohne anderes Fenster: Fokus aufs ×
-  await gm.getByRole('button', { name: 'Expedition', exact: true }).click();
-  await expect(player.getByRole('dialog', { name: 'Expedition' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
+  // ohne anderes Fenster: Fokus aufs × (die Expedition öffnet seit 5zb bei niemandem etwas, 10.12)
+  await gm.getByRole('button', { name: 'Orakel', exact: true }).click();
+  await expect(player.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
 });
 
 test('Trumpf wählen mit Mitspieler (5y, F2 und F3): „Freie Wahl“ nur mit Recht; entzogen mitten in der Wahl steht der Grund im Fenster', async ({ browser }) => {

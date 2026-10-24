@@ -163,6 +163,8 @@ export const SkinFile = z.object({
 // Siehe Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`. Tischzonen, Überschrift und SL-Leiste liegen
 // relativ zur Tischmitte (`middle`), die beide Ansichten nur verschieben (ARCHITEKTUR.md 10, Schritt 5d).
 const Point = z.tuple([z.number(), z.number()]);
+/** Rechteck x, y, w, h */
+const RectTuple = z.tuple([z.number(), z.number(), z.number().positive(), z.number().positive()]);
 const MenuSide = z.enum(['left', 'right']);
 const Shape = z.object({
   w: z.number().optional(),
@@ -186,6 +188,17 @@ export const LayoutsFile = z.object({
   middle: z.object({
     size: Point, zones: z.record(z.string(), Point), resistTitle: Point, gmControlsInset: Point,
     lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
+    /** Expeditionsblatt (5zb, 10.12) */
+    expedition: z.object({
+      x: z.number(), size: Point, rest: z.number().positive(), lift: z.number().nonnegative(), tilt: z.number(),
+      read: z.number().positive().max(1), paper: RectTuple, rows: z.array(z.number()).length(5), text: Point,
+    }).strict(),
+    /** Kartenschachtel des Orakels (5zb, 10.12) */
+    oracle: z.object({
+      cx: z.number(), size: Point, rest: z.number().positive(), out: Point, opening: z.number(),
+      notch: z.tuple([z.number(), z.number(), z.number().positive()]), band: RectTuple, word: z.number().positive(),
+      maxScale: z.number().min(1),
+    }).strict(),
   }).strict(),
   sheets: z.object({ spacing: z.number().nonnegative() }).strict(),
   overview: z.object({

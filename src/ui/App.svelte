@@ -3,6 +3,7 @@
   import Board from './Board.svelte';
   import BigTrump from './BigTrump.svelte';
   import Dock from './Dock.svelte';
+  import ExpeditionReader from './ExpeditionReader.svelte';
   import FieldDialog from './FieldDialog.svelte';
   import { gameLog } from './log.svelte';
   import JoinDialog from './JoinDialog.svelte';
@@ -62,6 +63,9 @@
   <BigTrump />
   {#if view.gmDialog}
     {#key view.gmDialog}<ResultDialog kind={view.gmDialog} />{/key}
+  {/if}
+  {#if view.expeditionOpen}
+    <ExpeditionReader />
   {/if}
   {#if view.confirmReset}
     <ResetDialog />

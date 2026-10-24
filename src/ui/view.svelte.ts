@@ -50,8 +50,10 @@ class ViewState {
   trumpDialog = $state<SeatId | null>(null);
   /** Feldfenster (5z, 10.11): ganzer Text eines Bogenfelds, lesen oder bearbeiten */
   fieldDialog = $state<{ seat: SeatId; field: string } | null>(null);
-  /** offenes Ergebnisfenster (Expedition bzw. Orakel), geöffnet durch das Ereignis */
-  gmDialog = $state<'expedition' | 'oracle' | null>(null);
+  /** offenes Ergebnisfenster des Orakels, geöffnet durch das Ereignis (bis Teil 3 von 5zb) */
+  gmDialog = $state<'oracle' | null>(null);
+  /** Leselage des Expeditionsblatts (5zb, 10.12): nur in dieser Ansicht, jeder öffnet sie selbst (F3) */
+  expeditionOpen = $state(false);
   /** letzter Wurf dazu (5t, 10.6): welche Teile kurz einblenden (Zeilen bzw. Begriffe); jeder Wurf ein neues Objekt */
   gmRoll = $state.raw<{ kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
   /** Rückfrage vor dem Zurücksetzen (Fenster liegen außerhalb des skalierten Tisches, daher hier) */
@@ -80,6 +82,12 @@ class ViewState {
   closeStack(): void {
     this.open = null;
     this.stackMenu = null;
+  }
+
+  /** Leselage öffnen (5zb): offene Menüs schließen, sonst lägen sie unsichtbar unter dem abgedunkelten Tisch (T6) */
+  openExpedition(): void {
+    this.closeMenus();
+    this.expeditionOpen = true;
   }
 
   /** beide Menüs zu (Stapel und Namensschild) */

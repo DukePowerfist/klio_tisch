@@ -40,6 +40,21 @@ middle:
     clubs: [ 552, 654 ]
   resistTitle: [ 72, 626 ]
   gmControlsInset: [ 40, 26 ]
+  # Expeditionsblatt (Schritt 5zb, ARCHITEKTUR.md 10.12): Bild public/assets/sheet/expedition.webp in TP (Pixel / 4).
+  # x = linke Bildkante relativ zur Tischmitte; rest = so viel vom Bild liegt über der unteren Brettkante (der gemalte
+  # Kopf), der Rest hängt darüber und schneidet der Bildschirmrand ab; lift = Hochrücken beim Überfahren und bei einem
+  # Wurf; tilt = Neigung in Grad; read = Höhe der Leselage als Anteil der Fensterhöhe.
+  # Im Bild: paper = Papier (x, y, w, h), rows = Kopflinie und Unterkanten der Abschnitte I bis IV, text = Textfläche
+  # rechts der römischen Ziffern (von x, bis x).
+  expedition: { x: 22, size: [ 320, 450 ], rest: 75, lift: 20, tilt: -2, read: 0.85,
+    paper: [ 8.5, 17.75, 304.5, 423.25 ], rows: [ 71.5, 160, 255, 345, 441 ], text: [ 46, 300 ] }
+  # Kartenschachtel (5zb): Bild public/assets/cards/oracle-box.webp in TP, Karten public/assets/cards/oracle.webp.
+  # cx = Mitte relativ zur Tischmitte (unter Kreuz); rest = sichtbar ab der Oberkante der hinteren Karte bis zur Brettkante,
+  # mal Maßstab; out = so weit ragen hintere und vordere Karte über die Öffnung; opening = Öffnungskante im Bild (y);
+  # notch = Daumenkerbe (von x, bis x, Tiefe); band = Wortband auf der Karte (x, y, w, h); word = Schrift der Wörter;
+  # maxScale = größter Maßstab auf kleinen Bildschirmen, mit ihm weichen freie Karten immer aus.
+  oracle: { cx: 576, size: [ 96, 160 ], rest: 90, out: [ 60, 30 ], opening: 36, notch: [ 33, 63, 13 ],
+    band: [ 4.5, 6, 72.5, 19 ], word: 13, maxScale: 1.9 }
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
   lamp: { at: [ 120, 354 ], size: 128, flame: [ 0.5024, 0.4561 ], height: 260 }

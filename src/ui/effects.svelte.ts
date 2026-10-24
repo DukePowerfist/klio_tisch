@@ -117,10 +117,8 @@ class Effects {
       case 'damageTaken':
         this.hit.add([e.seat]);
         return;
-      // Ergebnis sehen alle (13.1): das Fenster öffnet sich mit dem Ereignis
-      case 'expeditionRolled':
-        view.gmDialog = 'expedition';
-        return;
+      // Expedition (5zb, F3): öffnet bei niemandem etwas; das Blatt rückt über `view.gmRoll` kurz hoch (rolled)
+      // Orakel: das Fenster öffnet sich bei allen mit dem Ereignis (13.1), bis Teil 3 die Schachtel es übernimmt
       case 'oracleDrawn':
         view.gmDialog = 'oracle';
         return;

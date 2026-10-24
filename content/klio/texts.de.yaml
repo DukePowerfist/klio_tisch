@@ -121,11 +121,15 @@ gm:
   bar: Spielleitung                       # Name der Leiste unten rechts für Bildschirmleser (5s, 10.5)
   barCollapse: Leiste einfahren           # Knopf rechts neben dem Filz (5s, Teil 4)
   barExpand: Leiste ausfahren
-  expeditionShort: Expedition             # Knopf in der Leiste (5s) und Titel des Ergebnisfensters (5t); der lange Text steht im Tooltip
+  expeditionShort: Expedition             # Beschriftung der Leselage am Blatt (5zb); bis Teil 3 auch noch Knopf in der Leiste
+  expeditionOpen: Expedition ansehen      # Blatt am unteren Rand (5zb, 10.12), für alle
   expeditionTitle: Expedition starten (Spielleitung)
   oracle: Orakel
   oracleTitle: "Orakel: zwei Begriffe ziehen"
-  reroll: Neu                             # je Zeile im Ergebnisfenster der Expedition (5t)
+  oracleDraw: "Orakel ziehen: {words}"    # Kartenschachtel mit Recht (5zb)
+  oracleShows: "Orakel: {words}"          # Kartenschachtel ohne Recht (5zb)
+  oracleNone: noch keins                  # dazu, bevor das erste Orakel gezogen ist
+  reroll: Neu                             # je Abschnitt in der Leselage der Expedition (5zb, vorher Ergebnisfenster 5t)
   rerollRow: "Neu würfeln: {prompt}"      # Tooltip und Name für Bildschirmleser dazu
   rerollAll: Alles neu
   redraw: Neu ziehen

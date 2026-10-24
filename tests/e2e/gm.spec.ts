@@ -5,19 +5,19 @@ import { dragFromTo, expectCount, fixRolls, fromMenu, LONGEST, menuButton, nameC
 
 test.beforeEach(async ({ page }) => ready(page));
 
-test('Expedition: vier Tabellen; „Neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
+test('Expedition am Blatt (5zb): vier Tabellen; „Neu“ würfelt nur die eigene Zeile; Esc schließt', async ({ page }) => {
   // Protokoll vorher öffnen: Daran sieht der Test, wann ein Ereignis angekommen ist
   await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  await page.locator('[data-expedition-sheet]').click();
   const dialog = page.getByRole('dialog', { name: 'Expedition' });
+  await expect(dialog).toContainText('Diese Expedition führt euch …');
+  await dialog.getByRole('button', { name: 'Alles neu' }).click();
   const rows = dialog.locator('.row .value');
   await expect(rows).toHaveCount(4);
-  await expect(dialog).toContainText('Diese Expedition führt euch …');
   const before = await rows.allTextContents();
   await expect(logged).toHaveCount(1);
   await dialog.getByRole('button', { name: 'Neu würfeln: Doch ihr müsst schnell handeln, denn …' }).click();
-  // erst weiter, wenn das Ereignis da ist (es öffnet das Fenster bei allen, also auch nach Esc wieder)
   await expect(logged).toHaveCount(2);
   await expect.poll(async () => (await rows.allTextContents()).slice(0, 3)).toEqual(before.slice(0, 3));
   await page.keyboard.press('Escape');
@@ -35,19 +35,7 @@ test('Orakel: zwei Begriffe mit Karte (Herz, Pik oder Kreuz)', async ({ page }) 
 
 // ---------- Ergebnisfenster im Stil der Einstellungen (5t, 10.6) ----------
 
-test('Ergebnisfenster: Kopf mit Titel, Hauptknopf und ×, vier verschieden benannte „Neu“', async ({ page }) => {
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Expedition' });
-  await expect(dialog.locator('h2')).toHaveText('Expedition');
-  await expect(dialog.locator('.row button')).toHaveText(['Neu', 'Neu', 'Neu', 'Neu']);
-  const names = await dialog.locator('.row button').evaluateAll((bs) => bs.map((b) => b.getAttribute('aria-label')));
-  expect(new Set(names).size).toBe(4);
-  expect(names[1]).toBe('Neu würfeln: Bekannt für …');
-  await expect(dialog.locator('header').getByRole('button')).toHaveText(['Alles neu', '']);
-  await expect(dialog.getByRole('button', { name: 'Schließen' })).toHaveCount(1);
-  // × schließt, Klick daneben auch
-  await dialog.getByRole('button', { name: 'Schließen' }).click();
-  await expect(dialog).toHaveCount(0);
+test('Ergebnisfenster des Orakels: Kopf mit Titel, Hauptknopf und ×; Klick daneben schließt', async ({ page }) => {
   await page.getByRole('button', { name: 'Orakel', exact: true }).click();
   const oracle = page.getByRole('dialog', { name: 'Orakel' });
   await expect(oracle.locator('h2')).toHaveText('Orakel');
@@ -56,84 +44,22 @@ test('Ergebnisfenster: Kopf mit Titel, Hauptknopf und ×, vier verschieden benan
   await expect(oracle).toHaveCount(0);
 });
 
-test('Ergebnisfenster: etwa 560 px breit; längste Einträge ohne Bildlauf, im kleinen Fenster scrollt nur der Inhalt', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 600 });
-  await fixRolls(page, LONGEST);
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Expedition' });
-  await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
-  const body = dialog.locator('.body');
-  const scrolls = () => body.evaluate((b) => b.scrollHeight > b.clientHeight);
-  expect((await dialog.boundingBox())!.width).toBeCloseTo(560, -1);
-  expect(await scrolls()).toBe(false);
-  await page.setViewportSize({ width: 1600, height: 900 });
-  expect(await scrolls()).toBe(false);
-  // kleines Fenster: nur der Inhalt scrollt, Kopf und Hauptknopf bleiben im Bild
-  await page.setViewportSize({ width: 800, height: 360 });
-  await expect.poll(scrolls).toBe(true);
-  for (const part of [dialog.getByRole('button', { name: 'Schließen' }), dialog.getByRole('button', { name: 'Alles neu' })]) {
-    const b = (await part.boundingBox())!;
-    expect(b.y).toBeGreaterThanOrEqual(0);
-    expect(b.y + b.height).toBeLessThanOrEqual(360);
-  }
-  const box = (await dialog.boundingBox())!;
-  expect(box.y + box.height).toBeLessThanOrEqual(360);
-});
-
-test('Ergebnisfenster: öffnet mittig, danach bleibt die Oberkante fest und es wächst nur nach unten', async ({ page }) => {
-  await fixRolls(page, [8, 7, 1, 4]);
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Expedition' });
-  await expect(dialog.locator('.row .value').first()).toHaveText('auf das offene Meer.');
-  const height = page.viewportSize()!.height;
-  const open = (await dialog.boundingBox())!;
-  expect(Math.abs(open.y - (height - open.y - open.height))).toBeLessThan(2);
-  const header = (await dialog.locator('header').boundingBox())!;
-  await fixRolls(page, [LONGEST[2]!]);
-  await dialog.getByRole('button', { name: 'Neu würfeln: Ihr seid hier, weil …' }).click();
-  await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
-  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(open.height + 20);
-  expect((await dialog.boundingBox())!.y).toBe(open.y);
-  expect((await dialog.locator('header').boundingBox())!).toEqual(header);
-  expect(await dialog.locator('.body').evaluate((b) => b.scrollHeight > b.clientHeight)).toBe(false);
-});
-
-test('Ergebnisfenster im kleinen Fenster: passt es unten nicht mehr, rückt es nur so weit wie nötig nach oben, ohne Bildlauf', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 600 });
-  await fixRolls(page, [8, 7, 1, 4]);
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Expedition' });
-  await expect(dialog.locator('.row .value').first()).toHaveText('auf das offene Meer.');
-  const open = (await dialog.boundingBox())!;
-  await fixRolls(page, LONGEST);
-  await dialog.getByRole('button', { name: 'Alles neu' }).click();
-  await expect(dialog.locator('.row .value').nth(2)).toHaveText(/^ihr einen Ort erreichen wollt/);
-  await expect.poll(async () => (await dialog.boundingBox())!.height).toBeGreaterThan(open.height + 20);
-  const grown = (await dialog.boundingBox())!;
-  expect(grown.y).toBeLessThanOrEqual(open.y);
-  expect(grown.y).toBeGreaterThanOrEqual(12);
-  expect(grown.y + grown.height).toBeLessThanOrEqual(600 - 12 + 0.5);
-  expect(await dialog.locator('.body').evaluate((b) => b.scrollHeight > b.clientHeight)).toBe(false);
-});
-
-test('Ergebnisfenster: Fokus beim Öffnen auf dem ×, Enter schließt ohne zu würfeln; ein weiterer Wurf lässt den Fokus', async ({ page }) => {
+test('Leselage (5zb): Fokus beim Öffnen aufs Fenster, Enter würfelt nicht; ein weiterer Wurf lässt den Fokus; Orakel: Fokus aufs ×', async ({ page }) => {
   await fromMenu(page, 'Protokoll');
   const logged = page.getByRole('list', { name: 'Protokoll' }).locator('li', { hasText: 'Expedition:' });
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
+  await page.locator('[data-expedition-sheet]').click();
   const dialog = page.getByRole('dialog', { name: 'Expedition' });
-  await expect(dialog.getByRole('button', { name: 'Schließen' })).toBeFocused();
+  await expect(dialog.locator('[data-expedition-reader]')).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(dialog).toHaveCount(0);
-  await expect(logged).toHaveCount(1);
-  // erneut öffnen, Fokus auf „Neu“ in Zeile 2, würfeln: der Fokus bleibt dort
-  await page.getByRole('button', { name: 'Expedition', exact: true }).click();
-  await expect(logged).toHaveCount(2);
+  await expect(dialog).toBeVisible();
+  // Fokus auf „Neu“ in Zeile 2, würfeln: der Fokus bleibt dort
   const second = dialog.getByRole('button', { name: 'Neu würfeln: Bekannt für …' });
   await second.focus();
   await page.keyboard.press('Enter');
-  await expect(logged).toHaveCount(3);
+  await expect(logged).toHaveCount(1);
+  await page.keyboard.press('Enter');
+  await expect(logged).toHaveCount(2);
   await expect(second).toBeFocused();
-  // Wechsel zum Orakel: neues Fenster, Fokus wieder aufs ×
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Orakel', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Orakel' }).getByRole('button', { name: 'Schließen' })).toBeFocused();
@@ -495,7 +421,7 @@ test('SL-Leiste im kleinen Fenster mit Protokoll: eine Zeile, im Filz, über kei
 
 test('Spielerzahl auf der Seite „Tisch“ (5s): Zahlenreihe mit einem Tabstopp und Pfeiltasten, nicht mehr in der Leiste', async ({ page }) => {
   const bar = page.getByRole('group', { name: 'Spielleitung' });
-  await expect(bar.getByRole('button')).toHaveText(['Expedition', 'Orakel']);
+  await expect(bar.getByRole('button')).toHaveText(['Orakel']);
   await expect(page.getByRole('combobox')).toHaveCount(0);
   const dialog = await openSettings(page, 'Tisch');
   const radios = dialog.getByRole('radio');
@@ -551,7 +477,7 @@ test('SL-Leiste einfahren (5s): nur die Lasche bleibt, außerhalb des Filzes und
   await fromMenu(page, 'Protokoll');
   await outside('kleines Fenster mit Protokoll');
   await expand.click();
-  await expect(page.getByRole('group', { name: 'Spielleitung' }).getByRole('button')).toHaveText(['Expedition', 'Orakel']);
+  await expect(page.getByRole('group', { name: 'Spielleitung' }).getByRole('button')).toHaveText(['Orakel']);
   await ready(page, true);
   await expect(page.getByRole('button', { name: 'Leiste einfahren' })).toBeVisible();
 });
