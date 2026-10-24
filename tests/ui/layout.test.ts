@@ -1,8 +1,9 @@
 // Geometrie wie in der alten Datei: Bögen, Zonen und Spielbereich je Ansicht (Werte aus layouts.yaml und Haut).
 
 import { describe, expect, it } from 'vitest';
-import { cardSize, computeLayout, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
+import { cardRect, cardSize, computeLayout, freePile, freePosAt, lampGap, placeCards, pointerAt, pointerPosAt, stackEdges, zoneAt, type CardPlace, type Rect } from '../../src/ui/layout';
 import { content, fresh, lay, place } from '../helpers';
+import type { CardId } from '../../src/engine/types';
 
 describe('Ansichten', () => {
   // Lage und Maßstab der Bögen prüft der Regeltest in sheetLayout.test.ts (5q)
@@ -329,5 +330,60 @@ describe('Ablegen neben der Laterne (5n, F3)', () => {
     const L = views[0]!;
     expect(freePosAt(L, 880, 900)).toEqual({ anchor: 'center', x: expect.closeTo((880 - L.middle.x) / L.middle.w, 4), y: expect.closeTo((900 - L.middle.y) / L.middle.h, 4) });
     expect(rect(L, L.lamp.cx + L.lamp.r + 8, L.lamp.cy - 20).x).toBeCloseTo(L.lamp.cx + L.lamp.r + 8, 1);
+  });
+});
+
+describe('Haufen auf dem freien Tisch (11.11, F1 b)', () => {
+  const L = computeLayout(content, 4, null, null);
+  const at = (x: number, y = 0.3) => ({ anchor: 'center' as const, x, y });
+  const pile = (s: ReturnType<typeof fresh>, card: string) => freePile(L, placeCards(s, L), s, card as CardId);
+
+  it('deckungsgleich: jede angefasste Karte nimmt alle mit, in der Reihenfolge von free', () => {
+    const s = ['H2', 'H3', 'H4'].reduce((t, c) => lay(t, c, at(0.3)), fresh());
+    for (const c of ['H2', 'H3', 'H4']) expect(pile(s, c)).toEqual(['H2', 'H3', 'H4']);
+  });
+
+  it('schräge Reihe A, B, C (C berührt nur B): nur was die angefasste überschneidet', () => {
+    // eine freie Karte ist 67,2 breit, die Tischmitte 700: Schritt 0,06 überschneidet, 0,12 nicht
+    let s = lay(fresh(), 'H2', at(0.3));
+    s = lay(s, 'H3', at(0.36));
+    s = lay(s, 'H4', at(0.42));
+    expect(pile(s, 'H2')).toEqual(['H2', 'H3']);
+    expect(pile(s, 'H3')).toEqual(['H2', 'H3', 'H4']);
+    expect(pile(s, 'H4')).toEqual(['H3', 'H4']);
+  });
+
+  it('Karte daneben ohne Überschneidung bleibt liegen; nur berührende Kanten zählen nicht', () => {
+    let s = lay(fresh(), 'H2', at(0.3));
+    s = lay(s, 'H3', at(0.6));
+    const a = placeCards(s, L).H2!;
+    const r = cardRect(L, a);
+    // Kante an Kante: H4 beginnt genau, wo H2 endet
+    s = lay(s, 'H4', { anchor: 'center', x: (r.x + r.w - L.middle.x) / L.middle.w, y: 0.3 });
+    expect(cardRect(L, placeCards(s, L).H4!).x).toBeCloseTo(r.x + r.w, 9);
+    expect(pile(s, 'H2')).toEqual(['H2']);
+    expect(freePile(L, placeCards(s, L), s, 'H3' as CardId)).toEqual(['H3']);
+  });
+
+  it('anderer Anker zählt nicht, auch wenn er sich in dieser Ansicht überschneidet', () => {
+    let s = lay(fresh(), 'H2', at(0.05));
+    const a = placeCards(s, L).H2!;
+    const sh = L.sheets.seat1;
+    // Karte am Bogen 1, die hier genau auf H2 liegt (über den Bogen hinaus)
+    s = lay(s, 'H3', { anchor: 'seat1', x: (a.x - sh.x) / sh.w, y: (a.y - sh.y) / sh.h });
+    const p = placeCards(s, L);
+    expect(p.H3!.x).toBeCloseTo(a.x, 6);
+    expect(pile(s, 'H2')).toEqual(['H2']);
+    expect(pile(s, 'H3')).toEqual(['H3']);
+  });
+
+  it('Karte am ausgeblendeten Bogen fehlt; ohne Lage nur die Karte selbst', () => {
+    const two = computeLayout(content, 2, null, null);
+    let s = lay(fresh(), 'H2', at(0.3));
+    s = lay(s, 'H3', { anchor: 'seat4', x: 0.5, y: 0.5 });
+    const p = placeCards(s, two);
+    expect(p.H3).toBeUndefined();
+    expect(freePile(two, p, s, 'H2' as CardId)).toEqual(['H2']);
+    expect(freePile(two, p, s, 'H3' as CardId)).toEqual(['H3']);
   });
 });

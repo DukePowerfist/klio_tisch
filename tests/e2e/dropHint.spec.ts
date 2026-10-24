@@ -1,7 +1,7 @@
 // Vorschau der Ablegestelle (11.6, Schritt 5h): gestrichelter Umriss beim Ziehen, genau dort, wo die Karte landet.
 
 import { expect, test, type Page } from '@playwright/test';
-import { dragFromTo, expectCount, holdOver, ready, zoneCenter } from './helpers';
+import { buildFreePile as freePile, dragFromTo, expectCount, holdOver, ready, shiftHold, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -142,4 +142,55 @@ test('Effektstufe „Aus“: die Größe springt beim Greifen, ohne Animation (1
   await expect(dragged(page)).toHaveCount(1);
   expect(await dragged(page).locator('.lift').evaluate((e) => e.getAnimations().filter((a) => a.id === 'hand').length)).toBe(0);
   await page.mouse.up();
+});
+
+// ---------- Freie Karten mit Umschalt gemeinsam greifen (11.11, Schritt 5zc) ----------
+
+const cardEl = (page: Page, card: string) => page.locator(`.scene > [data-card="${card}"]`);
+/** oberste Karte unter einem Punkt (Bildschirm) */
+const topAt = (page: Page, p: { x: number; y: number }) =>
+  page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-card]')?.dataset.card ?? null, p);
+
+test('Haufen auf dem Filz: mit Umschalt alle, ohne nur die oberste; wieder abgelegt und gegriffen, dann in die Ablage', async ({ page }) => {
+  const { cards, at } = await freePile(page);
+  expect(await topAt(page, at)).toBe(cards[2]);
+
+  // ohne Umschalt nur die oberste
+  await holdOver(page, at, { x: at.x, y: at.y + 80 });
+  await expect(dragged(page)).toHaveCount(1);
+  await expect(dragged(page)).toHaveAttribute('data-card', cards[2]!);
+  await page.evaluate(() => window.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true })));
+  await page.mouse.up();
+  await expect(cardEl(page, cards[2]!)).not.toHaveClass(/dragging|pending/);
+
+  // mit Umschalt alle, je ein Umriss; frei woanders abgelegt wieder deckungsgleich
+  const there = { x: at.x, y: at.y + 90 };
+  await shiftHold(page, at, there);
+  await expect(dragged(page)).toHaveCount(3);
+  await expect(page.locator('.drop-hint')).toHaveCount(3);
+  await page.mouse.up();
+  for (const c of cards) await expect(cardEl(page, c)).not.toHaveClass(/pending|dragging/);
+  const b = (await cardEl(page, cards[0]!).boundingBox())!;
+  for (const c of cards) expect(await box(page, `.scene > [data-card="${c}"]`)).toEqual([b.x, b.y, b.width, b.height].map(Math.round));
+  const again = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+
+  // wieder mit Umschalt gegriffen: alle, auf der Ablage in derselben Reihenfolge
+  const discard = await zoneCenter(page, 'ABLAGE');
+  await shiftHold(page, again, discard);
+  await expect(dragged(page)).toHaveCount(3);
+  await expect(page.locator('.drop-hint')).toHaveCount(3);
+  await page.mouse.up();
+  await expectCount(page, 'ABLAGE', 3);
+  for (const c of cards) await expect(cardEl(page, c)).not.toHaveClass(/pending/);
+  expect(await topAt(page, discard)).toBe(cards[2]);
+});
+
+test('Doppelklick mit Umschalt auf einen freien Haufen dreht nur die oberste Karte um', async ({ page }) => {
+  const { cards, at } = await freePile(page);
+  const down = () => Promise.all(cards.map((c) => cardEl(page, c).locator('.inner').evaluate((e) => e.classList.contains('down'))));
+  const before = await down();
+  await page.keyboard.down('Shift');
+  await page.mouse.dblclick(at.x, at.y);
+  await page.keyboard.up('Shift');
+  await expect.poll(down).toEqual([before[0], before[1], !before[2]]);
 });

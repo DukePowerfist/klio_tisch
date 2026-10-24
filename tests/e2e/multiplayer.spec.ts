@@ -2,7 +2,7 @@
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
 import { expect, test, type Page } from '@playwright/test';
-import { expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, zoneCenter } from './helpers';
+import { buildFreePile, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, shiftHold, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -654,6 +654,23 @@ test('Zug bleibt bei der SL bestehen, wenn der Zeiger den Tisch verlässt; abgeb
   await expect(ghost).toHaveCount(0, { timeout: 900 });
   await player.mouse.up();
   await expectCount(gm, 'DECK', 27);
+});
+
+test('Haufen vom freien Tisch mit Umschalt (5zc, 11.11): die SL sieht alle Karten am fremden Zeiger', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('0');
+  const { cards, at } = await buildFreePile(player);
+  for (const c of cards) await expect(gm.locator(`.scene > [data-card="${c}"]`)).not.toHaveClass(/pending|marked/);
+  const discard = await zoneCenter(player, 'ABLAGE');
+  await shiftHold(player, at, { x: discard.x, y: discard.y - 60 });
+  await expect(gm.locator('.card.marked')).toHaveCount(3);
+  for (const c of cards) await expect(gm.locator(`.scene > [data-card="${c}"]`)).toHaveClass(/marked/);
+  await player.mouse.move(discard.x, discard.y, { steps: 4 });
+  await player.mouse.up();
+  await expectCount(gm, 'ABLAGE', 3);
+  await expect(gm.locator('.card.marked')).toHaveCount(0);
 });
 
 /** Browser tritt über den Link bei und nimmt Platz `n` mit Namen */

@@ -5,7 +5,8 @@
 import type { CardId, CardTarget, TableState } from '../engine/types';
 import { cardSize, freePosAt, placeCards, zoneAt, type CardPlace, type Layout, type Places } from './layout';
 
-type Drag = { cards: readonly CardId[]; dx: number; dy: number };
+/** `card`: die angefasste Karte (11.11), ohne Angabe die erste */
+type Drag = { card?: CardId; cards: readonly CardId[]; dx: number; dy: number };
 
 /** Gezeigte Lage einer gezogenen Karte (11.10): in Handgröße (`freeCardScale`), um den Anker (den Zeiger) auf diese
  *  Größe gebracht, die Stelle unter dem Zeiger bleibt also unter ihm; gedreht wie an der Herkunft. `delta`: Versatz
@@ -19,9 +20,9 @@ export function inHand(layout: Layout, place: CardPlace, delta: { dx: number; dy
 
 /** Ziel beim Loslassen (F1): die Zone unter dem Zeiger, sonst der freie Tisch an der linken oberen Ecke der Karte, wie
  *  sie in der Hand gezeigt wird; ob auf einem Bogen oder in der Tischmitte, entscheidet auch dort der Zeiger (F5).
- *  `pointer` in Tischpunkten; null, wenn die Karte keine Lage hat. */
+ *  Die Ecke ist die der angefassten Karte (11.11). `pointer` in Tischpunkten; null, wenn die Karte keine Lage hat. */
 export function dropTarget(layout: Layout, places: Places, drag: Drag, pointer: readonly [number, number]): CardTarget | null {
-  const p = places[drag.cards[0]!];
+  const p = places[drag.card ?? drag.cards[0]!];
   if (!p) return null;
   const zone = zoneAt(layout, pointer[0], pointer[1]);
   if (zone) return { zone: zone.id };

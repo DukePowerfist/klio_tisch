@@ -20,7 +20,7 @@
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropHints, dropTarget, inHand } from './dropHint';
-  import { clamp, computeLayout, FELT_RIM, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
+  import { clamp, computeLayout, FELT_RIM, freePile, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -95,10 +95,11 @@
   }
 
   // ---------- Ziehen und Ablegen ----------
-  /** `grab`: Greifpunkt für die anderen (8.3), gesetzt, sobald die Karte bewegt wird */
+  /** `card`: die angefasste Karte; nach ihr richten sich Klick, Ablage und gezeigte Lage beim Losziehen (11.11)
+   *  `grab`: Greifpunkt für die anderen (8.3), gesetzt, sobald die Karte bewegt wird */
   /** `ox`, `oy`: wo die Karte beim Losziehen gezeigt wurde, gemessen von ihrer Endlage (im Flug gegriffen, 11.2);
    *  `ax`, `ay`: Zeiger jetzt (Tischpunkte), um ihn steht die Karte in Handgröße (11.10) */
-  type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
+  type Drag = PendingDrop & { card: CardId; from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
   /** Schatten von der Flamme weg (11.9); setzt die Laterne: beim Anzünden am Anfang, beim Löschen am Ende des Übergangs */
@@ -191,11 +192,14 @@
       if (e.shiftKey) grabbed = list.slice(where.index);
       else if (!topOrFanned(where)) return;
       from = { zone: where.zone };
+    } else if (e.shiftKey) {
+      // freier Tisch: mit Umschalt die Karte samt allen, die sie überschneiden (11.11)
+      grabbed = freePile(layout, places, table, card);
     }
     e.preventDefault();
     preview = null;
     hover = null;
-    drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, ax: 0, ay: 0, moved: false, ox: 0, oy: 0 };
+    drag = { card, cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, ax: 0, ay: 0, moved: false, ox: 0, oy: 0 };
   }
 
   /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
@@ -237,7 +241,7 @@
       if (!drag.moved && Math.hypot(dx, dy) * sc < 4) return;
       if (!drag.moved) {
         drag.grab = pointerPosAt(layout, places, table.free, ...toBoard(drag.sx, drag.sy));
-        const el = sceneEl.querySelector<HTMLElement>(`:scope > [data-card="${drag.cards[0]}"]`);
+        const el = sceneEl.querySelector<HTMLElement>(`:scope > [data-card="${drag.card}"]`);
         if (el) ({ dx: drag.ox, dy: drag.oy } = shownOffset(el));
       }
       drag.moved = true;
@@ -330,7 +334,7 @@
   async function onPointerUp(e: PointerEvent) {
     const d = release(e);
     if (!d) return;
-    if (!d.moved) return click(d.cards[0]!);
+    if (!d.moved) return click(d.card);
 
     // derselbe Zeiger wie für Lage und Umriss beim letzten Bewegen, sonst lägen gezeigte Ecke und Ablage auseinander
     const to = dropTarget(layout, places, d, [d.ax, d.ay]);

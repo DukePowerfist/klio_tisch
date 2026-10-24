@@ -201,3 +201,41 @@ describe('Umrisse aus dem Probelauf', () => {
     expect(hints(s, cards, { zone: 'deck' }, { zone: 'danger' })).toHaveLength(2);
   });
 });
+
+describe('Haufen vom freien Tisch (11.11)', () => {
+  const pile = () => ['H2', 'H3', 'H4'].reduce((t, c, i) => lay(t, c, { anchor: 'center', x: 0.3 + i * 0.02, y: 0.3 }), fresh());
+
+  it('in die Ablage: alle, in der Reihenfolge von free', () => {
+    const s = pile();
+    const hs = hints(s, ['H2', 'H3', 'H4'], { free: true }, { zone: 'discard' });
+    expect(hs.map((h) => h.card)).toEqual(['H2', 'H3', 'H4']);
+    const after = run(s, { type: 'cards.move', cards: ['H2', 'H3', 'H4'], from: { free: true }, to: { zone: 'discard' } }).state;
+    expect(after.zones['discard']!.slice(-3)).toEqual(['H2', 'H3', 'H4']);
+  });
+
+  it('auf den freien Tisch: deckungsgleich an der Ecke der angefassten Karte, auch wenn sie nicht die unterste ist', () => {
+    const s = pile();
+    const places = placeCards(s, L);
+    const [fx, fy] = freeSpot();
+    const d = { card: 'H3' as CardId, cards: ['H2', 'H3', 'H4'] as CardId[], ...over(s, 'H3', fx, fy) };
+    const shown = inHand(L, places.H3!, d, [fx, fy]);
+    const hs = hints(s, d.cards, { free: true }, dropTarget(L, places, d, [fx, fy]));
+    expect(hs).toHaveLength(3);
+    for (const h of hs) {
+      expect(h.x).toBeCloseTo(shown.x, 0);
+      expect(h.y).toBeCloseTo(shown.y, 0);
+    }
+    // mit der untersten als Anker läge der Haufen woanders
+    const byFirst = dropTarget(L, places, { cards: d.cards, dx: d.dx, dy: d.dy }, [fx, fy]) as { free: { x: number } };
+    expect(L.middle.x + byFirst.free.x * L.middle.w).not.toBeCloseTo(shown.x, 0);
+  });
+
+  it('auf einem fremden Bogen bei „nur eigener Bogen“: abgelehnt, kein Umriss', () => {
+    let s = fresh();
+    for (const c of ['H2', 'H3']) s = lay(s, c, { anchor: 'seat2', x: 0.5, y: 0.5 });
+    for (const c of ['H4', 'H5']) s = lay(s, c, { anchor: 'seat1', x: 0.5, y: 0.5 });
+    s = run(s, { type: 'table.setSettings', permissionOverrides: { player: { 'cards.move': 'own' } } }).state;
+    expect(hints(s, ['H2', 'H3'], { free: true }, { zone: 'discard' }, player('seat1'))).toEqual([]);
+    expect(hints(s, ['H4', 'H5'], { free: true }, { zone: 'discard' }, player('seat1'))).toHaveLength(2);
+  });
+});

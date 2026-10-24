@@ -308,7 +308,8 @@ const intoMiddle = (layout: Layout, x: number, y: number, w = 0, h = 0) => {
 };
 /** sichtbarer Bogen unter einem Punkt */
 const sheetAt = (layout: Layout, x: number, y: number) => SEATS.find((s) => layout.sheets[s].visible && inside(layout.sheets[s], x, y));
-const cardRect = (layout: Layout, p: CardPlace): Rect => ({ x: p.x, y: p.y, ...cardSize(layout, p) });
+/** Rechteck einer Karte auf dem Tisch */
+export const cardRect = (layout: Layout, p: CardPlace): Rect => ({ x: p.x, y: p.y, ...cardSize(layout, p) });
 
 /** Zone unter einem Punkt (Tischkoordinaten). */
 export function zoneAt(layout: Layout, x: number, y: number): ZoneBox | null {
@@ -394,4 +395,20 @@ export function pointerAt(layout: Layout, places: Places, pos: PointerPos): { x:
   const card = 'card' in pos ? places[pos.card] : undefined;
   const r = 'card' in pos ? card && cardRect(layout, card) : 'zone' in pos ? layout.zones[pos.zone] : anchorRect(layout, pos.anchor);
   return r ? pointIn(r, pos) : null;
+}
+
+/** Haufen zum gemeinsamen Greifen mit Umschalt (11.11, F1 b): die frei liegende Karte `card` und alle frei liegenden
+ *  Karten mit demselben Anker, die sie echt überschneiden (bloße Kantenberührung zählt nicht), darüber und darunter;
+ *  in der Reihenfolge von `free`. Nur derselbe Anker, weil die Bögen je nach Ansicht woanders stehen: Der Haufen ist
+ *  so in jeder Ansicht derselbe. Karten ohne Lage (ausgeblendeter Bogen) zählen nicht. */
+export function freePile(layout: Layout, places: Places, state: Pick<TableState<unknown>, 'free' | 'freePos'>, card: CardId): CardId[] {
+  const p = places[card];
+  const anchor = state.freePos[card]?.anchor;
+  if (!p || !anchor) return [card];
+  const r = cardRect(layout, p);
+  return state.free.filter((c) => {
+    if (c === card) return true;
+    const q = places[c];
+    return !!q && state.freePos[c]?.anchor === anchor && hits(r, cardRect(layout, q), 0);
+  });
 }
