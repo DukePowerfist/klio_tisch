@@ -47,7 +47,6 @@
   --sheet-hit: rgba(190, 40, 30, 0.75);          /* Rahmen bei Schaden */
   --sheet-zone-rim: rgba(0, 0, 0, 0.35);
   --zone-bg: rgba(255, 255, 255, 0.04);
-  --zone-fan-rim: rgba(255, 255, 255, 0.2);      /* aufgefächerte Zone */
   --label-ink: #fff;       /* Beschriftung der Tischzonen */
   --label-bg: rgba(0, 0, 0, 0.45);
   --label-count-bg: rgba(255, 255, 255, 0.22);
