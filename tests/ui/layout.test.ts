@@ -102,6 +102,22 @@ describe('Karten und Ablegen', () => {
     expect(freePosAt(L, 880, 900).anchor).toBe('center');
   });
 
+  it('Anker nach dem Zeiger (5za, F5): Bogen unter dem Zeiger, auch wenn die Ecke daneben liegt', () => {
+    for (const L of [computeLayout(content, 4, null, null), computeLayout(content, 4, 'seat2', null)]) {
+      const s = L.sheets.seat2;
+      // eine Höhe am linken Rand des Bogens ohne Zone
+      const y = [0.15, 0.3, 0.5, 0.7, 0.85].map((f) => s.y + f * s.h).find((v) => !zoneAt(L, s.x + 10, v))!;
+      const on = freePosAt(L, s.x - 14, y, [s.x + 10, y]);
+      expect(on.anchor).toBe('seat2');
+      expect(on.x).toBeLessThan(0);
+      expect(s.x + on.x * s.w).toBeCloseTo(s.x - 14, 1);
+      // Ecke auf dem Bogen, Zeiger daneben: nicht auf den Bogen
+      expect(freePosAt(L, s.x + 5, y, [s.x - 10, y]).anchor).toBe('center');
+      // ohne Zeiger wie bisher nach der Ecke
+      expect(freePosAt(L, s.x - 14, y).anchor).toBe('center');
+    }
+  });
+
   it('außerhalb von Bogen und Tischmitte: ganz in der Tischmitte an ihrem Rand (A32)', () => {
     const c = cardSize(computeLayout(content, 4, null, null), { scale: 0.6, rotated: true });
     for (const L of [computeLayout(content, 4, null, null), computeLayout(content, 2, null, null), computeLayout(content, 4, 'seat2', null)]) {

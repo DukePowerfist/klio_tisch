@@ -135,10 +135,12 @@ test('Greifen im Flug: der Zug beginnt an der gezeigten Lage, die Karte springt 
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const after = el.getBoundingClientRect();
     window.dispatchEvent(new PointerEvent('pointerup', at(12, 12)));
-    return { dx: after.x - before.x, dy: after.y - before.y };
+    return { dx: after.x - before.x, dy: after.y - before.y, k: after.width / before.width };
   }, card);
-  expect(moved.dx).toBeCloseTo(12, 0);
-  expect(moved.dy).toBeCloseTo(12, 0);
+  // in Handgröße (11.10): die Karte wird um den Greifpunkt (20 px von der Ecke) kleiner, er bleibt unter dem Zeiger
+  expect(moved.k).toBeCloseTo(0.6, 2);
+  expect(moved.dx).toBeCloseTo(12 + 20 * (1 - moved.k), 0);
+  expect(moved.dy).toBeCloseTo(12 + 20 * (1 - moved.k), 0);
 });
 
 test('Mischen: Karten der Ablage fliegen gestaffelt ein, danach heben sich die oberen Karten ab', async ({ page }) => {

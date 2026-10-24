@@ -3,26 +3,30 @@
 // Engine (`session.predict`), so laufen Vorschau und Ergebnis nicht auseinander.
 
 import type { CardId, CardTarget, TableState } from '../engine/types';
-import { cardSize, freePosAt, placeCards, zoneAt, type Layout, type Places } from './layout';
+import { cardSize, freePosAt, placeCards, zoneAt, type CardPlace, type Layout, type Places } from './layout';
 
 type Drag = { cards: readonly CardId[]; dx: number; dy: number };
 
-/** Mitte der ersten gezogenen Karte in Tischpunkten; null, wenn die Karte keine Lage hat */
-export function dropCenter(layout: Layout, places: Places, drag: Drag): [number, number] | null {
-  const p = places[drag.cards[0]!];
-  if (!p) return null;
-  const s = cardSize(layout, p);
-  return [p.x + drag.dx + s.w / 2, p.y + drag.dy + s.h / 2];
+/** Gezeigte Lage einer gezogenen Karte (11.10): in Handgröße (`freeCardScale`), um den Anker (den Zeiger) auf diese
+ *  Größe gebracht, die Stelle unter dem Zeiger bleibt also unter ihm; gedreht wie an der Herkunft. `delta`: Versatz
+ *  von der Lage an der Herkunft, wie die Karte in ihrer alten Größe gezeigt würde. Für den eigenen Zug, die noch nicht
+ *  bestätigten und die Züge der anderen. */
+export function inHand(layout: Layout, place: CardPlace, delta: { dx: number; dy: number }, anchor: readonly [number, number]): { x: number; y: number; scale: number; rotated: boolean } {
+  const k = layout.freeCardScale / place.scale;
+  const [ax, ay] = anchor;
+  return { x: ax + (place.x + delta.dx - ax) * k, y: ay + (place.y + delta.dy - ay) * k, scale: layout.freeCardScale, rotated: place.rotated };
 }
 
-/** Ziel beim Loslassen: die Zone unter der Mitte der ersten Karte, sonst die unter dem Zeiger, sonst der freie Tisch
- *  an der Lage der Karte. `pointer` in Tischpunkten; null, wenn die Karte keine Lage hat. */
+/** Ziel beim Loslassen (F1): die Zone unter dem Zeiger, sonst der freie Tisch an der linken oberen Ecke der Karte, wie
+ *  sie in der Hand gezeigt wird; ob auf einem Bogen oder in der Tischmitte, entscheidet auch dort der Zeiger (F5).
+ *  `pointer` in Tischpunkten; null, wenn die Karte keine Lage hat. */
 export function dropTarget(layout: Layout, places: Places, drag: Drag, pointer: readonly [number, number]): CardTarget | null {
   const p = places[drag.cards[0]!];
-  const c = dropCenter(layout, places, drag);
-  if (!p || !c) return null;
-  const zone = zoneAt(layout, c[0], c[1]) ?? zoneAt(layout, pointer[0], pointer[1]);
-  return zone ? { zone: zone.id } : { free: freePosAt(layout, p.x + drag.dx, p.y + drag.dy) };
+  if (!p) return null;
+  const zone = zoneAt(layout, pointer[0], pointer[1]);
+  if (zone) return { zone: zone.id };
+  const at = inHand(layout, p, drag, pointer);
+  return { free: freePosAt(layout, at.x, at.y, pointer) };
 }
 
 /** Umriss einer Karte an ihrer künftigen Lage (Tischpunkte), `scale` für die Rundung der Ecken */

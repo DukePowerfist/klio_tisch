@@ -142,6 +142,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await player.keyboard.press('0');
   const deck = await zoneCenter(player, 'DECK');
   const discard = await zoneCenter(player, 'ABLAGE');
+  const fullAtGm = (await gm.locator('.scene > .card').last().boundingBox())!.width;
   await holdOver(player, deck, { x: deck.x - 60, y: deck.y - 40 }, 6);
   const ghost = gm.locator('.card.marked');
   await expect(ghost).toHaveCount(1);
@@ -150,6 +151,8 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect.poll(async () => (await ghost.boundingBox())!.x).toBeLessThan(x1 - 50);
   // gegriffen in der Mitte: die Mitte der Karte liegt unter dem Zeiger (gleiche Ansicht und Fenstergröße)
   await expect.poll(async () => { const b = (await ghost.boundingBox())!; return Math.abs(b.x + b.width / 2 - (deck.x - 160)); }).toBeLessThan(8);
+  // in Handgröße wie beim Spieler (11.10): 0,6 so breit wie im Deck
+  await expect.poll(async () => (await ghost.boundingBox())!.width / fullAtGm).toBeCloseTo(0.6, 2);
   await player.mouse.move(discard.x, discard.y, { steps: 6 });
   await player.mouse.up();
   await expectCount(gm, 'ABLAGE', 2);

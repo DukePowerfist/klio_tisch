@@ -19,7 +19,7 @@
   import { shownOffset } from './animator.svelte';
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
-  import { dropCenter, dropHints, dropTarget } from './dropHint';
+  import { dropHints, dropTarget, inHand } from './dropHint';
   import { clamp, computeLayout, FELT_RIM, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
@@ -96,7 +96,8 @@
 
   // ---------- Ziehen und Ablegen ----------
   /** `grab`: Greifpunkt für die anderen (8.3), gesetzt, sobald die Karte bewegt wird */
-  /** `ox`, `oy`: wo die Karte beim Losziehen gezeigt wurde, gemessen von ihrer Endlage (im Flug gegriffen, 11.2) */
+  /** `ox`, `oy`: wo die Karte beim Losziehen gezeigt wurde, gemessen von ihrer Endlage (im Flug gegriffen, 11.2);
+   *  `ax`, `ay`: Zeiger jetzt (Tischpunkte), um ihn steht die Karte in Handgröße (11.10) */
   type Drag = PendingDrop & { from: CardSource; sx: number; sy: number; moved: boolean; grab?: PointerPos; ox: number; oy: number };
   let drag = $state<Drag | null>(null);
   let boardEl: HTMLDivElement;
@@ -137,19 +138,14 @@
   /** große Vorschau einer offenen Karte, Lage in der Bühne (5v, F2) */
   let preview = $state<{ card: CardId; x: number; y: number } | null>(null);
 
-  /** Zeiger beim Ziehen (Tischpunkte): Ziel, wenn die Kartenmitte über keiner Zone liegt */
-  let dragPointer = $state<[number, number] | null>(null);
   /** Vorschau der Ablegestelle (11.6): Probelauf des Befehls, den das Loslassen senden würde */
   const hints = $derived.by(() => {
-    const to = drag?.moved && dragPointer ? dropTarget(layout, places, drag, dragPointer) : null;
+    const to = drag?.moved ? dropTarget(layout, places, drag, [drag.ax, drag.ay]) : null;
     if (!drag || !to) return [];
     return dropHints(layout, places, session.predict({ type: 'cards.move', cards: drag.cards, from: drag.from, to }), drag.cards);
   });
-  /** Zone unter der gezogenen Karte (hervorgehoben, Ziel beim Loslassen) */
-  const hot = $derived.by(() => {
-    const c = drag?.moved ? dropCenter(layout, places, drag) : null;
-    return c ? (zoneAt(layout, c[0], c[1])?.id ?? null) : null;
-  });
+  /** Zone unter dem Zeiger beim Ziehen (hervorgehoben, Ziel beim Loslassen, F1) */
+  const hot = $derived(drag?.moved ? (zoneAt(layout, drag.ax, drag.ay)?.id ?? null) : null);
 
   /** Abstand und Mitte der ersten beiden Finger */
   function pinchOf() {
@@ -199,7 +195,7 @@
     e.preventDefault();
     preview = null;
     hover = null;
-    drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, moved: false, ox: 0, oy: 0 };
+    drag = { cards: grabbed, from, sx: e.clientX, sy: e.clientY, dx: 0, dy: 0, ax: 0, ay: 0, moved: false, ox: 0, oy: 0 };
   }
 
   /** Eigenen Zeiger und gezogene Karten den anderen zeigen (8.3) */
@@ -247,7 +243,7 @@
       drag.moved = true;
       drag.dx = drag.ox + dx;
       drag.dy = drag.oy + dy;
-      dragPointer = toBoard(e.clientX, e.clientY);
+      [drag.ax, drag.ay] = toBoard(e.clientX, e.clientY);
       return;
     }
     if (pan) {
@@ -321,7 +317,6 @@
     pan = null;
     const d = drag;
     drag = null;
-    dragPointer = null;
     return d;
   }
   /** Zug ohne Ablegen beendet: Die anderen lassen die Karte sofort zurückgleiten, nicht erst nach der Haltefrist
@@ -337,9 +332,10 @@
     if (!d) return;
     if (!d.moved) return click(d.cards[0]!);
 
-    const to = dropTarget(layout, places, d, toBoard(e.clientX, e.clientY));
+    // derselbe Zeiger wie für Lage und Umriss beim letzten Bewegen, sonst lägen gezeigte Ecke und Ablage auseinander
+    const to = dropTarget(layout, places, d, [d.ax, d.ay]);
     if (!to) return endDrag(e);
-    await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy });
+    await submit({ type: 'cards.move', cards: d.cards, from: d.from, to }, { cards: d.cards, dx: d.dx, dy: d.dy, ax: d.ax, ay: d.ay });
   }
 
   /** Vom Browser abgebrochen (Systemgeste, Handballen): kein Ablegen, kein Klick; die Karte gleitet zurück (5x, F2) */
@@ -438,14 +434,15 @@
     if (drag?.moved) for (const c of drag.cards) m.set(c, drag);
     return m;
   });
-  /** Von anderen gezogen: Versatz = deren Zeiger jetzt − beim Greifen, in dieser Ansicht (8.3) */
+  /** Von anderen gezogen: Versatz = deren Zeiger jetzt − beim Greifen, in dieser Ansicht (8.3); in Handgröße um
+   *  deren Zeiger (11.10) */
   const remoteOf = $derived.by(() => {
-    const m = new Map<CardId, { dx: number; dy: number; color: string }>();
+    const m = new Map<CardId, { dx: number; dy: number; ax: number; ay: number; color: string }>();
     for (const r of session.remoteDrags) {
       const a = pointerAt(layout, places, r.start);
       const b = pointerAt(layout, places, r.last);
       if (!a || !b) continue;
-      for (const c of r.cards) if (!offsetOf.has(c)) m.set(c, { dx: b.x - a.x, dy: b.y - a.y, color: whoColor(r.who) });
+      for (const c of r.cards) if (!offsetOf.has(c)) m.set(c, { dx: b.x - a.x, dy: b.y - a.y, ax: b.x, ay: b.y, color: whoColor(r.who) });
     }
     return m;
   });
@@ -497,11 +494,12 @@
 
       {#each cards as [card, p] (card)}
         {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
+        {@const at = off ? inHand(layout, p, off, [off.ax, off.ay]) : p}
         <Card
           {card}
-          x={p.x + (off?.dx ?? 0)}
-          y={p.y + (off?.dy ?? 0)}
-          scale={p.scale}
+          x={at.x}
+          y={at.y}
+          scale={at.scale}
           rotated={p.rotated}
           z={p.z}
           slot={p.slot}
@@ -540,10 +538,10 @@
   .panel { position: absolute; background: var(--felt) center / cover no-repeat; border-radius: 56px; box-sizing: border-box;
     box-shadow: 0 0 0 calc(var(--felt-rim-w) - 1px) var(--felt-rim), 0 0 0 var(--felt-rim-w) var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; color: var(--felt-print); font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.85; pointer-events: none; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
-  /* Vorschau der Ablegestelle: über den liegenden Karten, unter der gezogenen (400000 + z); blendet ein */
+  /* Vorschau der Ablegestelle: über den gezogenen Karten (400000 + z, 11.10), unter dem Licht (450000); blendet ein */
   .table-edge { position: absolute; left: 0; top: 0; overflow: clip; pointer-events: none; }
   .table-edge > :global(*) { pointer-events: auto; }
-  .drop-hint { position: absolute; z-index: 390000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
+  .drop-hint { position: absolute; z-index: 440000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */
   .preview { position: absolute; pointer-events: none; z-index: 99; border-radius: calc(var(--radius-card) * 3); box-shadow: 0 0 0 1px var(--menu-rim), var(--menu-shadow); }
 </style>

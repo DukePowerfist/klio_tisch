@@ -43,7 +43,9 @@ type ReplacedListener = (reason: string) => void;
 type ArrivalListener = (signals: ArrivalSignal[], state: KlioTableState) => void;
 
 /** Abgelegte Karten, deren Befehl noch nicht bestätigt ist: bleiben an der Ablegestelle (8.2). */
-export type PendingDrop = { cards: CardId[]; dx: number; dy: number };
+/** abgelegt, noch nicht bestätigt: Versatz von der Herkunft und Zeiger beim Loslassen (Tischpunkte), um den die
+ *  Karte in Handgröße stehen bleibt (11.10) */
+export type PendingDrop = { cards: CardId[]; dx: number; dy: number; ax: number; ay: number };
 type Pending = PendingDrop & { id: string };
 
 export type Mode = 'local' | 'host' | 'client';

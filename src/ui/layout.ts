@@ -321,11 +321,13 @@ function pointAt(layout: Layout, pos: FreePos): { x: number; y: number } | null 
   return r && pointIn(r, pos);
 }
 
-/** Anker für eine frei abgelegte Karte (linke obere Ecke): Bogen unter dem Punkt, sonst Spielbereich (A32).
- *  Lage als Anteil 0–1. Im Spielbereich liegt die ganze gedrehte Karte in der Tischmitte; was außerhalb von Bogen
- *  und Tischmitte abgelegt wird, kommt an ihren Rand, damit es in jeder Ansicht an derselben Stelle liegt. */
-export function freePosAt(layout: Layout, x: number, y: number): FreePos {
-  const seat = sheetAt(layout, x, y);
+/** Anker für eine frei abgelegte Karte (linke obere Ecke): Bogen unter dem Punkt `by`, sonst Spielbereich (A32).
+ *  `by` ist beim Ablegen der Zeiger (5za, F5), sonst die Ecke selbst. Lage als Anteil 0–1, auf einem Bogen auch
+ *  darüber hinaus, wenn die Ecke neben ihm liegt. Im Spielbereich liegt die ganze gedrehte Karte in der Tischmitte;
+ *  was außerhalb von Bogen und Tischmitte abgelegt wird, kommt an ihren Rand, damit es in jeder Ansicht an derselben
+ *  Stelle liegt. */
+export function freePosAt(layout: Layout, x: number, y: number, by: readonly [number, number] = [x, y]): FreePos {
+  const seat = sheetAt(layout, by[0], by[1]);
   if (seat) return { anchor: seat, ...relIn(layout.sheets[seat], x, y) };
   const c = cardSize(layout, { scale: layout.freeCardScale, rotated: true });
   const near = besideLamp(layout, { ...clampIntoMiddle(layout, x, y, c.w, c.h), ...c });
