@@ -1,7 +1,7 @@
 // Schatten von der Flamme weg (ARCHITEKTUR.md 11.9).
 
 import { describe, expect, it } from 'vitest';
-import { HEIGHT, MAX_OFFSET, onCard, shadowAt, shadowCss, shadowDown, shadowFrom } from '../../src/ui/light';
+import { HEIGHT, MAX_OFFSET, onCard, shadowAt, shadowCss, shadowDown, shadowFrom, stackHeight } from '../../src/ui/light';
 
 const flame = { x: 880, y: 70, h: 260 };
 /** niedrige Höhe für die Rechnung (wie ein Bogen knapp über dem Tisch) */
@@ -28,6 +28,11 @@ describe('Schatten der Laterne', () => {
     expect(high.blur).toBeGreaterThan(low.blur);
     const far = shadowAt(flame, 0, 990, HEIGHT.lifted);
     expect(Math.hypot(far.x, far.y)).toBeCloseTo(MAX_OFFSET);
+  });
+
+  it('Stapel: 2 + Zahl der Kanten', () => {
+    expect(stackHeight(1)).toBe(3);
+    expect(stackHeight(3)).toBe(5);
   });
 
   it('auf der Karte: ungedreht nur durch den Maßstab geteilt', () => {

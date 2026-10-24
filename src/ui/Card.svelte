@@ -10,15 +10,16 @@
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
 
-  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, under = false, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
+  let { card, x, y, scale, rotated, z, faceUp, size, flame = null, shaded = false, height = 0, slot = '', dragging = false, pending = false, mark, still = false, hover = false, wiggle = false }: {
     card: CardId; x: number; y: number; scale: number; rotated: boolean; z: number; faceUp: boolean;
     size: { w: number; h: number };
     /** Flamme der Laterne für den Schatten (11.9); null: Laterne aus, Schatten weich nach unten */
     flame?: LampBox['flame'] | null;
     /** liegt auf dem Tisch und bekommt Schatten nach 11.9; ohne (Vorschau): der Schatten aus dem CSS */
     shaded?: boolean;
-    /** liegt unter der obersten Karte eines Stapels: ohne eigenen Umriss */
-    under?: boolean;
+    /** Höhe über dem Tisch, liegend (11.9): oberste Karte eines Stapels mit Kanten wirft einen Schatten in dieser Höhe;
+     *  0: einzelne Karte, liegt flach auf (nur Umriss); null: liegt unter der obersten Karte eines Stapels, ohne beides */
+    height?: number | null;
     /** Platz im Stand (`CardPlace.slot`) */
     slot?: string;
     dragging?: boolean; pending?: boolean;
@@ -33,15 +34,16 @@
   /** angehoben: selbst oder von jemand anderem gezogen */
   const lifted = $derived(dragging || !!mark);
 
-  /** Schatten von der Flamme weg (11.9), umgerechnet ins Koordinatensystem der Karte (gedreht, verkleinert), nur
-   *  angehoben (auch von anderen gezogen) und beim Überfahren, lang und weich auf `.lift::before`. Liegend nur ein feiner
-   *  Umriss auf `.face`: Ein Schatten unter einer liegenden Karte ließe sie schweben (Nutzer 2026-10-24) */
+  /** Schatten von der Flamme weg (11.9), umgerechnet ins Koordinatensystem der Karte (gedreht, verkleinert): auf `.face`
+   *  nur als oberste Karte eines Stapels (eine einzelne Karte liegt flach auf, ein Schatten ließe sie schweben, Nutzer
+   *  2026-10-24), angehoben (auch von anderen gezogen) und beim Überfahren lang und weich auf `.lift::before` */
+  const OUTLINE = '0 0 1px rgba(0, 0, 0, 0.6)';
   const shadows = $derived.by(() => {
     if (!shaded) return null;
     const rect = { x, y, ...cardSize({ card: size }, { scale, rotated }) };
     const at = (height: number) => onCard(shadowOver(flame, rect, height), rotated, scale);
     return {
-      face: under ? 'none' : '0 0 1px rgba(0, 0, 0, 0.6)',
+      face: height === null ? 'none' : height === 0 ? OUTLINE : `${OUTLINE}, ${shadowCss(at(height))}`,
       lift: lifted || hover ? `${shadowCss(at(HEIGHT.lifted), 0.42)}, ${shadowCss(at(HEIGHT.lifted / 3), 0.3)}` : undefined,
     };
   });

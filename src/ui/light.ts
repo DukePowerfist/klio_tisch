@@ -5,8 +5,10 @@ import type { LampBox, Rect } from './layout';
 
 export type Shadow = { x: number; y: number; blur: number; alpha: number };
 
-/** Höhe über dem Tisch in TP; eine angehobene Karte (`lifted`) 40. Liegende Karten und Stapel werfen keinen Schatten. */
+/** Höhe über dem Tisch in TP; ein Stapel ist 2 + Zahl seiner Kanten hoch, eine angehobene Karte (`lifted`) 40. Einzelne
+ *  liegende Karten liegen flach auf und werfen keinen Schatten. */
 export const HEIGHT = { sheet: 1.5, felt: 2, lifted: 40 } as const;
+export const stackHeight = (edges: number): number => 2 + edges;
 
 export const MAX_OFFSET = 70;
 

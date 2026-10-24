@@ -48,31 +48,42 @@ async function screenShadow(page: Page, selector: string, pseudo?: string, first
   }, { pseudo, first });
 }
 
-test('Liegende Karten werfen keinen Schatten, nur einen feinen Umriss: Stapel samt Kanten, Kreuz, frei liegende Karte; auch gelöscht', async ({ page }) => {
+test('Stapel werfen Schatten von der Flamme weg, nur die unterste Kante nicht; einzelne Karten liegen flach; gelöscht weich nach unten', async ({ page }) => {
   /** oberste Karte an einer Stelle des Bildschirms */
   const cardAt = (p: { x: number; y: number }) => page.evaluate(({ x, y }) => document.elementsFromPoint(x, y).find((e) => e.closest('[data-card]'))!.closest<HTMLElement>('[data-card]')!.dataset['card'], p);
-  const faceShadow = (card: string) => page.locator(`[data-card="${card}"] .face.back`).evaluate((e) => getComputedStyle(e).boxShadow);
-  const edgeShadows = () => page.locator('.edge').evaluateAll((es) => [...new Set(es.map((e) => getComputedStyle(e).boxShadow))]);
+  /** Schatten der Kanten eines Stapels, von der untersten (DOM zuerst) bis zur obersten */
+  const edgeShadows = (label: string) => page.locator('.zone').filter({ hasText: new RegExp(`^${label}`) }).first().locator('.edge').evaluateAll((es) => es.map((e) => getComputedStyle(e).boxShadow));
   const OUTLINE = 'rgba(0, 0, 0, 0.6) 0px 0px 1px 0px';
+  // Deck und Kreuz liegen rechts unter der Laterne
   const deckZone = await zoneCenter(page, 'DECK');
-  const deckCard = (await cardAt(deckZone))!;
+  const deck = await screenShadow(page, `[data-card="${await cardAt(deckZone)}"] .face.back`);
+  expect(deck.x).toBeGreaterThan(0);
+  expect(deck.y).toBeGreaterThan(0);
+  const [bottom, ...above] = await edgeShadows('DECK');
+  expect(bottom).toBe('none');
+  expect(above.length).toBeGreaterThan(0);
+  for (const s of above) expect(s).not.toBe('none');
   const clubCard = (await cardAt(await zoneCenter(page, 'KREUZ')))!;
-  expect(await faceShadow(deckCard)).toBe(OUTLINE);
-  expect(await faceShadow(clubCard)).toBe(OUTLINE);
-  expect(await edgeShadows()).toEqual(['none']);
-  // frei abgelegt (gedreht)
+  const right = await screenShadow(page, `[data-card="${clubCard}"] .face.back`);
+  expect(right.x).toBeGreaterThan(0);
+  expect(right.y).toBeGreaterThan(0);
+  // einzelne Karte frei abgelegt (gedreht): nur der Umriss
   const unit = deckZone.box.width / 80;
   await dragFromTo(page, deckZone, { x: deckZone.x + 120 * unit, y: deckZone.y + 95 * unit });
   await expectCount(page, 'DECK', 26);
   await page.mouse.move(0, 0);
   await page.waitForTimeout(800);
   expect(await page.locator('.scene > [data-card][style*="rotate(90deg)"] .face.back').evaluate((e) => getComputedStyle(e).boxShadow)).toBe(OUTLINE);
-  // gelöscht (F4): ebenso
+  // gelöscht (F4): weich nach unten, auch dann nur die oberste Karte eines Stapels und ohne Schatten der untersten Kante
   await page.locator('button[data-lamp]').click();
-  await expect(page.locator('[data-lamp]')).toHaveAttribute('data-lit', 'false');
-  await page.waitForTimeout(900);
-  expect(await faceShadow(clubCard)).toBe(OUTLINE);
-  expect(await edgeShadows()).toEqual(['none']);
+  await expect.poll(() => screenShadow(page, `[data-card="${clubCard}"] .face.back`).then((s) => s.x)).toBe(0);
+  expect((await screenShadow(page, `[data-card="${clubCard}"] .face.back`)).y).toBeGreaterThan(0);
+  expect((await edgeShadows('KREUZ'))[0]).toBe('none');
+  const under = await page.evaluate((top) => [...document.querySelectorAll<HTMLElement>('.scene > [data-card]')].find((c) => {
+    const t = document.querySelector<HTMLElement>(`[data-card="${top}"]`)!;
+    return c !== t && c.style.transform === t.style.transform;
+  })!.dataset['card'], clubCard);
+  expect(await page.locator(`[data-card="${under}"] .face.back`).evaluate((e) => getComputedStyle(e).boxShadow)).toBe('none');
 });
 
 test('Überfahren hebt die Karte an: dann wirft sie einen Schatten von der Flamme weg', async ({ page }) => {

@@ -12,7 +12,7 @@
   import GmControls from './GmControls.svelte';
   import FeltMarkings from './FeltMarkings.svelte';
   import Lamp from './Lamp.svelte';
-  import { shadowCss, shadowOver, HEIGHT } from './light';
+  import { shadowCss, shadowOver, stackHeight, HEIGHT } from './light';
   import Sheet from './Sheet.svelte';
   import ZoneView from './ZoneView.svelte';
   import { shownOffset } from './animator.svelte';
@@ -103,6 +103,10 @@
   let shadowsLit = $state(true);
   /** Flamme für die Schatten; null bei gelöschter Laterne: dann fallen sie weich nach unten (F4) */
   const flame = $derived(shadowsLit ? layout.lamp.flame : null);
+  /** Höhe einer liegenden Karte über dem Tisch (11.9): oberste Karte eines Stapels mit Kanten 2 + Zahl seiner Kanten,
+   *  eine einzelne Karte 0 (flach, ohne Schatten). Null für die Karten darunter: Sie liegen genau unter der obersten, und
+   *  jeder eigene Schatten machte den Rand des Stapels mit jeder Karte dunkler; die Dicke zeigen die Kanten. */
+  const heightOf = (p: CardPlace): number | null => (p.under ? null : p.edges ? stackHeight(p.edges) : 0);
   const feltShadow = $derived(shadowCss(shadowOver(flame, layout.middle, HEIGHT.felt)));
   // Tischplatte (11.9); der Pfad hängt am Basispfad und steht deshalb nicht im CSS. Erst nach dem Dekodieren setzen:
   // Sonst dekodiert der Browser das große Bild beim ersten Zeichnen im Hauptthread (gemessen etwa 150 ms, ein Ruck
@@ -482,7 +486,7 @@
 
       {#each layout.zoneList as zone (zone.id)}
         {@const openedBy = session.openZones.get(zone.id)}
-        <ZoneView {zone} count={table.zones[zone.id]?.length ?? 0} card={layout.card} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} onToggle={() => toggleMenu(zone.id)} />
+        <ZoneView {zone} {flame} count={table.zones[zone.id]?.length ?? 0} card={layout.card} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} onToggle={() => toggleMenu(zone.id)} />
       {/each}
 
       {#each cards as [card, p] (card)}
@@ -498,7 +502,7 @@
           size={layout.card}
           {flame}
           shaded
-          under={!!p.under}
+          height={heightOf(p)}
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}
           pending={offsetOf.has(card) && off !== drag}

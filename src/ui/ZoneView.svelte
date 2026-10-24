@@ -4,13 +4,16 @@
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { countChanged, events, popCount } from './animator.svelte';
-  import { LABEL, SMALL_LABEL, stackEdges, type ZoneBox } from './layout';
+  import { LABEL, SMALL_LABEL, stackEdges, type LampBox, type ZoneBox } from './layout';
+  import { shadowCss, shadowOver } from './light';
   import { session } from './session.svelte';
   import { STACK_ACTIONS } from './stackMenu';
   import { t, tMaybe } from './texts';
 
-  let { zone, count, card, hot, mark, onToggle }: {
+  let { zone, count, card, hot, mark, flame = null, onToggle }: {
     zone: ZoneBox; count: number; hot: boolean;
+    /** Flamme der Laterne für die Schatten der Kanten (11.9); null: Laterne aus, Schatten nach unten */
+    flame?: LampBox['flame'] | null;
     /** Kartengröße bei Maßstab 1 (für die Kanten eines Stapels) */
     card: { w: number; h: number };
     /** Farbe, wenn jemand anderes das Menü dieses Stapels offen hat (8.3) */
@@ -35,6 +38,10 @@
       if (n && countChanged(zone.id)) popCount(n);
     });
   });
+  /** Schatten der Kanten von der Flamme weg (11.9); die Kanten liegen in Tischkoordinaten, ohne Drehung und Maßstab.
+   *  Kante k (k-ter Versatz) in Höhe 1 + k, wie in der Musterseite. Die unterste Kante liegt auf dem Filz und wirft
+   *  keinen (Nutzer 2026-10-24: ein Schatten unter der untersten Karte ergibt keinen Sinn) */
+  const edgeShadow = (k: number) => (k === edges.length ? 'none' : shadowCss(shadowOver(flame, { x: zone.x, y: zone.y, w: card.w * zone.scale, h: card.h * zone.scale }, 1 + k)));
   const fan = $derived(!onSheet && actions.length === 0 && !!(zone.fanX || zone.fanY));
   /** Schrift aus layout.ts (dort rechnet die SL-Leiste mit); unter einem Stapel rückt die Beschriftung mit den Kanten
    *  nach unten, damit sie nicht angeschnitten wird (5v, 10.8). Bogenzonen tragen sie innen, ihr Maß steht im CSS. */
@@ -71,7 +78,7 @@
     <div class="label" style={labelStyle}>{label}{#if !onSheet}<span class="n" bind:this={n}>{count}</span>{/if}</div>
   {/if}
   {#each edges as k (k)}
-    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})"></div>
+    <div class="edge" style:width="{card.w * zone.scale}px" style:height="{card.h * zone.scale}px" style:translate="{k * step}px {k * step}px" style:filter="brightness({1 - k * 0.07})" style:box-shadow={edgeShadow(k)}></div>
   {/each}
 </div>
 
@@ -84,8 +91,7 @@
   /* angewählt von jemand anderem: Rahmen in dessen Farbe außen um den Stapel (die Karten decken die Zone ab), ohne Vergrößerung */
   .zone.marked { outline: 3px solid var(--mark); outline-offset: 5px; }
   /* Kanten eines Stapels: Kartengröße, ab der Ecke der Zone (innerhalb des Rahmens), nach rechts unten versetzt;
-     wachsen beim Öffnen mit der Zone und den Karten (--shift), statt vorauszuspringen. Ohne Schatten: Der Stapel liegt
-     auf dem Filz; seine Dicke zeigen Versatz und Abdunklung der Kanten */
+     wachsen beim Öffnen mit der Zone und den Karten (--shift), statt vorauszuspringen */
   .edge { position: absolute; left: -2px; top: -2px; box-sizing: border-box; border-radius: var(--radius-card); background: var(--stack-edge); border: 1px solid var(--stack-edge-line); pointer-events: none; transition: width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease), translate var(--shift) var(--shift-ease); }
   .label { position: absolute; left: 0; top: 100%; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; color: var(--label-ink); background: var(--label-bg); padding: 2px 8px; border-radius: var(--radius-s); text-shadow: 0 1px 2px #000; pointer-events: none; transition: margin-top var(--shift) var(--shift-ease); }
   .center .label { left: 50%; transform: translateX(-50%); }
