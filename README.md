@@ -17,4 +17,4 @@ Lizenz: MIT für den Programmcode (siehe `LICENSE`). Spielinhalte sind davon aus
 
 Bilder des Tisches (`public/assets/table/`: Holz und Laterne) sind mit ChatGPT erzeugt und bearbeitet (Freistellen, Vergrößern mit Real-ESRGAN, Leuchtmaske; `scripts/table-assets.py`). Auch sie fallen nicht unter die MIT-Lizenz.
 
-Expeditionsblatt und Kartenschachtel des Orakels (`public/assets/sheet/expedition.webp`, `public/assets/cards/oracle-box.webp`, `public/assets/cards/oracle.webp`) sind mit einem Bildgenerator erzeugt und fallen ebenfalls nicht unter die MIT-Lizenz. Die Handschrift darauf ist „Patrick Hand“ von Patrick Wagesreiter unter der SIL Open Font License 1.1 (`public/assets/fonts/patrick-hand-OFL.txt`).
+Expeditionsblatt und Kartenschachtel des Orakels (`public/assets/sheet/expedition.webp`, `public/assets/cards/oracle-box.webp`, `public/assets/cards/oracle.webp`) sind mit einem Bildgenerator erzeugt (das Expeditionsblatt danach von Hand retuschiert) und fallen ebenfalls nicht unter die MIT-Lizenz. Die Handschrift darauf ist „Patrick Hand“ von Patrick Wagesreiter unter der SIL Open Font License 1.1 (`public/assets/fonts/patrick-hand-OFL.txt`).
