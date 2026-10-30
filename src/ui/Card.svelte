@@ -41,7 +41,9 @@
 
   /** Schatten von der Flamme weg (11.9), umgerechnet ins Koordinatensystem der Karte (gedreht, verkleinert): auf `.face`
    *  nur als oberste Karte eines Stapels (eine einzelne Karte liegt flach auf, ein Schatten ließe sie schweben, Nutzer
-   *  2026-10-24), auf `.lift::before` angehoben (auch von anderen gezogen) lang und weich, beim Überfahren kurz (5zj) */
+   *  2026-10-24), auf `.lift::before` angehoben (auch von anderen gezogen) lang und weich, sonst kurz wie beim Überfahren
+   *  (5zj). Immer gesetzt, sichtbar macht ihn die Deckkraft: Beim Verlassen und Loslassen blendet so der kurze Schatten
+   *  aus, nicht der lange Ersatzwert `--lift` */
   const OUTLINE = '0 0 1px rgba(0, 0, 0, 0.6)';
   const shadows = $derived.by(() => {
     if (!shaded) return null;
@@ -50,7 +52,7 @@
     const liftShadow = (h: number) => `${shadowCss(at(h), 0.42)}, ${shadowCss(at(h / 3), 0.3)}`;
     return {
       face: height === null ? 'none' : height === 0 ? OUTLINE : `${OUTLINE}, ${shadowCss(at(height))}`,
-      lift: lifted || hover ? liftShadow(lifted ? HEIGHT.lifted : HEIGHT.hover) : undefined,
+      lift: liftShadow(lifted ? HEIGHT.lifted : HEIGHT.hover),
     };
   });
   /** Kanten eines freien Haufens (11.12): 2,5 Tischpunkte je Kante nach rechts unten wie in verkleinerten Zonen (11.6),

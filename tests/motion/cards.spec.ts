@@ -96,24 +96,35 @@ test('Überfahren: die oberste Karte hebt sich leicht und wackelt einmal, auch n
   expect(await wiggles(page)).toBe(1);
 });
 
-/** Versatz der ersten Lage von `--lift-shadow` am Bildschirm (die Karte ist mit ihrem Maßstab verkleinert) */
-const liftOffset = (page: Page) =>
-  page.locator('.card.hover, .card.dragging').first().evaluate((e) => {
-    const [x, y] = (e as HTMLElement).style.getPropertyValue('--lift-shadow').match(/-?[\d.]+px/g)!.map(parseFloat);
-    return Math.hypot(x!, y!) * new DOMMatrix(getComputedStyle(e).transform).a;
+/** Versatz der ersten Lage von `--lift-shadow` und Breite der Karte, beide in Tischpunkten (der Schatten liegt im
+ *  verkleinerten, gegebenenfalls gedrehten Koordinatensystem der Karte); leer: kein Schatten gesetzt */
+const liftOffset = (page: Page, selector: string) =>
+  page.locator(selector).first().evaluate((e) => {
+    const m = new DOMMatrix(getComputedStyle(e).transform);
+    const scale = Math.hypot(m.a, m.b);
+    const [x, y] = ((e as HTMLElement).style.getPropertyValue('--lift-shadow').match(/-?[\d.]+px/g) ?? []).map(parseFloat);
+    return { offset: x === undefined ? NaN : Math.hypot(x, y!) * scale, width: (e as HTMLElement).offsetWidth * scale };
   });
 
-test('Überfahren (5zj): fern der Laterne liegt der Schatten knapp an der Karte, beim Greifen wieder lang', async ({ page }) => {
+test('Überfahren (5zj): fern der Laterne liegt der Schatten knapp an der Karte, auch beim Ausblenden; beim Greifen wieder lang', async ({ page }) => {
   const z = await zoneCenter(page, 'SCHWIERIG');
   await page.mouse.move(z.x - 200, z.y + 150);
   await page.mouse.move(z.x, z.y, { steps: 5 });
   await expect(page.locator('.card.hover')).toHaveCount(1);
-  const hover = await liftOffset(page);
-  expect(hover).toBeLessThan(z.box.width / 4);
+  const card = await page.locator('.card.hover').getAttribute('data-card');
+  const hover = await liftOffset(page, '.card.hover');
+  expect(hover.offset).toBeLessThan(hover.width / 4);
+  // weg von der Karte: der kurze Schatten bleibt stehen, während er ausblendet (kein Rückfall auf `--lift`)
+  await page.mouse.move(z.x - 200, z.y + 150);
+  await expect(page.locator('.card.hover')).toHaveCount(0);
+  const left = await liftOffset(page, `[data-card="${card}"]`);
+  expect(left.offset).toBeLessThan(left.width / 4);
+  await page.mouse.move(z.x, z.y, { steps: 5 });
+  await expect(page.locator('.card.hover')).toHaveCount(1);
   await page.mouse.down();
   await page.mouse.move(z.x + 40, z.y + 120, { steps: 5 });
   await expect(page.locator('.card.dragging')).toHaveCount(1);
-  expect(await liftOffset(page)).toBeGreaterThan(hover * 3);
+  expect((await liftOffset(page, '.card.dragging')).offset).toBeGreaterThan(hover.offset * 3);
   await page.mouse.up();
 });
 
