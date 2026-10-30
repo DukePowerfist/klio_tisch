@@ -79,11 +79,12 @@
   --menu-bg: #17332a;
   --menu-rim: rgba(255, 255, 255, 0.22);
   --menu-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --menu-shadow-light: 0 4px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);  /* Stapelmenü, ruhiger (5zi) */
   --menu-bar-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
   --menu-radius: 10px;
   --menu-pad: 8px;
   --menu-gap: 10px;         /* Abstand Anker zu Menü, Platz für den Zipfel; wie MENU_GAP in stackMenu.ts */
-  --menu-w: 208px;          /* fest, Höhe und Lage bleiben (D5) */
+  --menu-w: 120px;          /* Stapelmenü ohne Kopf, an jedem Stapel gleich (5zi, 10.15) */
   --menu-w-wide: 240px;     /* Namensschild-Menü und Menü oben rechts (5p): „Charakter importieren …“, Namen beim Umsetzen */
   --menu-head: rgba(243, 239, 227, 0.8);
   --menu-count: rgba(243, 239, 227, 0.62);  /* Zahl, Name im Kopf, „offen“, Pfeil; 4,7 : 1 auch beim Überfahren (5p) */
@@ -209,6 +210,7 @@ button { font: inherit; }
    am Panel), Name rechts im Kopf, Inhalt unter dem Kopf scrollt bei Höchsthöhe, Zusatz rechts im Eintrag, aufklappende
    Einträge mit Pfeil und Unterpunkten */
 .menu-panel.wide { width: var(--menu-w-wide); }
+.menu-panel.light { box-shadow: var(--menu-shadow-light); }
 .menu-panel[data-side='below'] { transform-origin: var(--tip, 0px) 0; }
 .menu-panel[data-side='above'] { transform-origin: var(--tip, 0px) 100%; }
 .menu-panel[data-side='left'] { transform-origin: 100% var(--tip, 0px); }

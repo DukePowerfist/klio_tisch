@@ -2,6 +2,7 @@
   // Stapelmenü (ARCHITEKTUR.md 10.2, Schritt 5o): an jedem Stapel gleich, direkt am Stapel, außerhalb des skalierten
   // Tisches (gleich große Schrift bei jedem Zoom). Einträge und Lage rechnet stackMenu.ts, die Geometrie liefert
   // Board.svelte beim Öffnen (view.stackMenu); verschiebt sich der Stapel, schließt Board.svelte das Menü (N4).
+  // Seit 5zi (10.15) schmal und ohne Kopf: Name und Kartenzahl stehen an der Beschriftung des Stapels daneben.
   import content from 'virtual:klio-content';
   import type { CardId } from '../engine/types';
   import { locate } from '../engine/zones';
@@ -16,7 +17,6 @@
   const zone = at.zone;
   const label = t(`zones.${zone}`);
 
-  const count = $derived(session.state?.zones[zone]?.length ?? 0);
   const entries = $derived(
     session.state
       ? stackEntries({ content, table: session.state, zone, can: (type) => session.can({ type, zone }), predict: (cmd) => session.predict(cmd) })
@@ -73,7 +73,7 @@
 <svelte:window onpointerdown={outside} onkeydowncapture={onKey} />
 
 <div
-  class="menu-panel control"
+  class="menu-panel light control"
   role="menu"
   aria-label={label}
   data-stack-menu={zone}
@@ -85,7 +85,6 @@
   style:visibility={place ? null : 'hidden'}
 >
   {#if place && place.tip !== null}<div class="menu-tip" data-side={place.side}></div>{/if}
-  <div class="menu-head"><span>{label}</span><span class="count">{count}</span></div>
   {#each entries as e, i (e.action)}
     {#if i === 1}<hr class="menu-rule" />{/if}
     <button role="menuitem" class="menu-item" class:menu-main={e.action === 'draw'} aria-disabled={e.enabled ? null : 'true'} title={e.title} onclick={() => run(e)}>{e.label}</button>

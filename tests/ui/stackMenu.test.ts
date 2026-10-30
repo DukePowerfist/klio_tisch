@@ -101,8 +101,11 @@ describe('Stapelmenü: Wirkung des Mischens aus dem Probelauf (N1)', () => {
 
 // ---------- Lage mit den echten Maßen ----------
 
-/** Panel aus der Musterseite (Variante B, 208 px breit) */
-const PANEL = { w: 208, h: 160 };
+/** Panel seit 5zi (10.15): 120 px breit, ohne Kopf, gemessen 133 px hoch */
+const PANEL = { w: 120, h: 133 };
+/** Panel bis 5zi (208 px breit): Auf diese Größe sind die Sonderfälle und die Begründung für „Leicht“ links ausgelegt;
+ *  die Regeln von placeMenu hängen nicht von der Größe ab */
+const WIDE = { w: 208, h: 160 };
 const LOG_W = 300;
 
 /** Bildschirmrechtecke wie Board.svelte bei Zoom 1: Tisch eingepasst und mittig in der Bühne */
@@ -155,14 +158,14 @@ describe('Stapelmenü: Lage am Stapel mit den echten Maßen (10.2)', () => {
     });
   }
 
-  it('aufgeklapptes „Leicht“ (Endmaß): mit rechts als Vorliebe müsste das Menü über die Auslage ausweichen, deshalb links (N9)', () => {
+  it('aufgeklapptes „Leicht“ (Endmaß), mit dem breiten Panel bis 5zi: rechts müsste das Menü über die Auslage ausweichen, deshalb links (N9)', () => {
     const { L, toScreen, area } = scene(1280, 720, null, 'diamonds_easy');
     const anchor = toScreen(L.zones['diamonds_easy']!);
     const target = toScreen(L.zones['display']!);
     expect(L.zones['diamonds_easy']!.w).toBeGreaterThan(48);
     // bevorzugte Seite geht vor „oben bündig“: rechts bleibt, aber nach oben verschoben, über der Auslage
-    expect(placeMenu(anchor, [target], area, PANEL, ['right', 'left'])).toMatchObject({ side: 'right', y: target.y - PANEL.h });
-    expect(placeMenu(anchor, [target], area, PANEL, ['left', 'right'])).toMatchObject({ side: 'left', y: anchor.y });
+    expect(placeMenu(anchor, [target], area, WIDE, ['right', 'left'])).toMatchObject({ side: 'right', y: target.y - WIDE.h });
+    expect(placeMenu(anchor, [target], area, WIDE, ['left', 'right'])).toMatchObject({ side: 'left', y: anchor.y });
   });
 });
 
@@ -172,28 +175,28 @@ describe('Stapelmenü: Lage, Sonderfälle', () => {
 
   it('am Fensterrand: Gegenseite', () => {
     const atEdge = { ...anchor, x: 1008 - 70 };
-    expect(placeMenu(atEdge, [], area, PANEL, ['right', 'left'])).toMatchObject({ side: 'left', x: atEdge.x - MENU_GAP - PANEL.w, fallback: false });
+    expect(placeMenu(atEdge, [], area, WIDE, ['right', 'left'])).toMatchObject({ side: 'left', x: atEdge.x - MENU_GAP - WIDE.w, fallback: false });
   });
 
   it('unten am Rand: so weit nach oben geschoben wie nötig, Zipfel bleibt auf Höhe des Stapels', () => {
     const low = { ...anchor, y: 560 };
-    const p = placeMenu(low, [], area, PANEL, ['right']);
-    expect(p.y).toBe(608 - PANEL.h);
+    const p = placeMenu(low, [], area, WIDE, ['right']);
+    expect(p.y).toBe(608 - WIDE.h);
     expect(p.tip).toBeCloseTo(low.y + low.h / 4 - p.y);
   });
 
   it('Zipfel: begrenzt auf den geraden Teil der Kante, entfällt außerhalb des Panels (N3)', () => {
     // kleiner Stapel, oben bündig: h / 4 läge in der Ecke, der Zipfel rückt auf den Anfang des geraden Teils
-    expect(placeMenu({ ...anchor, h: 40 }, [], area, PANEL, ['right']).tip).toBe(TIP_INSET);
-    expect(placeMenu(anchor, [], area, PANEL, ['right']).tip).toBe(anchor.h / 4);
+    expect(placeMenu({ ...anchor, h: 40 }, [], area, WIDE, ['right']).tip).toBe(TIP_INSET);
+    expect(placeMenu(anchor, [], area, WIDE, ['right']).tip).toBe(anchor.h / 4);
     // Ziel rechts oben: das Panel muss unter das Ziel, die Höhe des Stapels liegt über seiner Oberkante
     const target = { x: anchor.x + anchor.w + 20, y: 0, w: 100, h: 200 };
-    expect(placeMenu(anchor, [target], area, PANEL, ['right'])).toMatchObject({ side: 'right', y: 200, tip: null, fallback: false });
+    expect(placeMenu(anchor, [target], area, WIDE, ['right'])).toMatchObject({ side: 'right', y: 200, tip: null, fallback: false });
   });
 
   it('Ziel wird gemieden, auch wenn dafür verschoben werden muss', () => {
     const target = { x: anchor.x + anchor.w + 20, y: anchor.y - 20, w: 80, h: 60 };
-    const p = placeMenu(anchor, [target], area, PANEL, ['right']);
+    const p = placeMenu(anchor, [target], area, WIDE, ['right']);
     expect(p).toMatchObject({ side: 'right', y: target.y + target.h, fallback: false });
   });
 
@@ -202,10 +205,10 @@ describe('Stapelmenü: Lage, Sonderfälle', () => {
       const small: Area = { bounds: { x: 0, y: 0, w: 320, h: 200 }, blocked: [] };
       const a = { x: 20, y: 40, w: 60, h: 80 };
       const target = { x: 100, y: 40, w: 60, h: 80 };
-      const p = placeMenu(a, [target], small, PANEL, ['left', 'right']);
+      const p = placeMenu(a, [target], small, WIDE, ['left', 'right']);
       expect(p).toMatchObject({ side: 'right', fallback: true });
-      expect(inside({ x: p.x, y: p.y, ...PANEL }, small.bounds)).toBe(true);
-      expect(overlaps({ x: p.x, y: p.y, ...PANEL }, a)).toBe(false);
+      expect(inside({ x: p.x, y: p.y, ...WIDE }, small.bounds)).toBe(true);
+      expect(overlaps({ x: p.x, y: p.y, ...WIDE }, a)).toBe(false);
     });
 
     it('Vorrang 2 vor 3: Stapel frei geht vor Ziel frei', () => {
@@ -213,9 +216,9 @@ describe('Stapelmenü: Lage, Sonderfälle', () => {
       const small: Area = { bounds: { x: 0, y: 0, w: 320, h: 170 }, blocked: [] };
       const a = { x: 30, y: 10, w: 60, h: 150 };
       const target = { x: 150, y: 10, w: 60, h: 150 };
-      const p = placeMenu(a, [target], small, PANEL, ['left', 'right']);
+      const p = placeMenu(a, [target], small, WIDE, ['left', 'right']);
       expect(p.side).toBe('right');
-      expect(overlaps({ x: p.x, y: p.y, ...PANEL }, a)).toBe(false);
+      expect(overlaps({ x: p.x, y: p.y, ...WIDE }, a)).toBe(false);
     });
 
     it('Vorrang 3: die Seite, auf der weniger vom Ziel verdeckt wird; bei Gleichstand die bevorzugte', () => {
@@ -223,33 +226,33 @@ describe('Stapelmenü: Lage, Sonderfälle', () => {
       const a = { x: 260, y: 10, w: 60, h: 150 };
       const bigLeft = { x: 0, y: 0, w: 250, h: 170 };
       const smallRight = { x: 500, y: 0, w: 100, h: 170 };
-      expect(placeMenu(a, [bigLeft, smallRight], small, PANEL, ['left', 'right'])).toMatchObject({ side: 'right', fallback: true });
+      expect(placeMenu(a, [bigLeft, smallRight], small, WIDE, ['left', 'right'])).toMatchObject({ side: 'right', fallback: true });
       // Gleichstand: ein Ziel über die ganze Breite, beide Seiten verdecken es gleich
       const wide = [{ x: 0, y: 0, w: 600, h: 170 }];
-      expect(placeMenu(a, wide, small, PANEL, ['right', 'left'])).toMatchObject({ side: 'right', fallback: true });
-      expect(placeMenu(a, wide, small, PANEL, ['left', 'right'])).toMatchObject({ side: 'left', fallback: true });
+      expect(placeMenu(a, wide, small, WIDE, ['right', 'left'])).toMatchObject({ side: 'right', fallback: true });
+      expect(placeMenu(a, wide, small, WIDE, ['left', 'right'])).toMatchObject({ side: 'left', fallback: true });
       // mehrere Ziele: das erste ist wichtiger (`avoid` nach Wichtigkeit)
       const two = [{ x: 0, y: 0, w: 120, h: 170 }, { x: 330, y: 0, w: 270, h: 170 }];
-      expect(placeMenu(a, two, small, PANEL, ['left', 'right'])).toMatchObject({ side: 'right', fallback: true });
+      expect(placeMenu(a, two, small, WIDE, ['left', 'right'])).toMatchObject({ side: 'right', fallback: true });
     });
 
     it('Fenster schmaler als Stapel und Panel: Panel darf den Stapel überdecken, bleibt aber sichtbar', () => {
       const tiny: Area = { bounds: { x: 0, y: 0, w: 240, h: 300 }, blocked: [] };
       const a = { x: 80, y: 20, w: 80, h: 112 };
-      const p = placeMenu(a, [], tiny, PANEL, ['right', 'left']);
+      const p = placeMenu(a, [], tiny, WIDE, ['right', 'left']);
       expect(p.fallback).toBe(true);
       expect(p.tip).toBeNull();
-      expect(inside({ x: p.x, y: p.y, ...PANEL }, tiny.bounds)).toBe(true);
+      expect(inside({ x: p.x, y: p.y, ...WIDE }, tiny.bounds)).toBe(true);
     });
   });
 
   it('Namensschild als Anker (5p): unten, links bündig; am unteren Rand oben', () => {
     const plate = { x: 300, y: 100, w: 120, h: 24 };
-    expect(placeMenu(plate, [], area, PANEL, ['below', 'above'])).toMatchObject({ side: 'below', x: 300, y: 124 + MENU_GAP, tip: 60, fallback: false });
+    expect(placeMenu(plate, [], area, WIDE, ['below', 'above'])).toMatchObject({ side: 'below', x: 300, y: 124 + MENU_GAP, tip: 60, fallback: false });
     const low = { ...plate, y: 520 };
-    expect(placeMenu(low, [], area, PANEL, ['below', 'above'])).toMatchObject({ side: 'above', y: 520 - MENU_GAP - PANEL.h });
+    expect(placeMenu(low, [], area, WIDE, ['below', 'above'])).toMatchObject({ side: 'above', y: 520 - MENU_GAP - WIDE.h });
     const right = { ...plate, x: 950 };
-    expect(placeMenu(right, [], area, PANEL, ['below', 'above'])).toMatchObject({ side: 'below', x: 1008 - PANEL.w });
+    expect(placeMenu(right, [], area, WIDE, ['below', 'above'])).toMatchObject({ side: 'below', x: 1008 - WIDE.w });
   });
 });
 

@@ -48,11 +48,12 @@ for (const role of [null, '1'] as const) {
   });
 }
 
-test('gleicher Aufbau an jedem Stapel: Kopf mit Name und Zahl, Ziehen, Umdrehen, Mischen', async ({ page }) => {
+test('gleicher Aufbau an jedem Stapel: ohne Kopf, gleich breit, Name als Beschriftung; Ziehen, Umdrehen, Mischen (10.15)', async ({ page }) => {
   for (const s of STACKS) {
     await open(page, s);
-    await expect(menu(page).locator('.menu-head span').first()).toHaveText(new RegExp(`^${s.label}`));
-    await expect(menu(page).locator('.menu-head .count')).toHaveText(/^\d+$/);
+    await expect(menu(page).locator('.menu-head')).toHaveCount(0);
+    await expect(menu(page)).toHaveAttribute('aria-label', new RegExp(`^${s.label}`, 'i'));
+    expect((await menu(page).boundingBox())!.width, s.label).toBe(120);
     await expect(menu(page).getByRole('menuitem')).toHaveText(['Ziehen', 'Umdrehen', 'Mischen']);
     await expect(menu(page).locator('.menu-main')).toHaveText('Ziehen');
     await page.keyboard.press('Escape');
@@ -94,7 +95,7 @@ test('kleines Fenster mit offenem Protokoll: Men체 vollst채ndig sichtbar, an jed
 test('letzte Karte ziehen: Ziehen und Umdrehen werden ausgegraut mit Grund, Men체 bleibt offen', async ({ page }) => {
   await openMenuAndClick(page, 'LEICHT', 'Ziehen');
   for (let i = 0; i < 4; i++) await stackItem(page, 'Ziehen').click();
-  await expect(menu(page).locator('.count')).toHaveText('0');
+  await expectCount(page, 'LEICHT', 0);
   for (const a of ['Ziehen', 'Umdrehen'] as const) {
     await expect(stackItem(page, a)).toHaveAttribute('aria-disabled', 'true');
     await expect(stackItem(page, a)).toHaveAttribute('title', 'Stapel leer');
@@ -105,9 +106,9 @@ test('letzte Karte ziehen: Ziehen und Umdrehen werden ausgegraut mit Grund, Men�
   // ausgegraut: ein Klick tut nichts, der Eintrag bleibt fokussierbar (force: Playwright klickt sonst nicht auf aria-disabled)
   await stackItem(page, 'Ziehen').click({ force: true });
   await expect(stackItem(page, 'Ziehen')).toBeFocused();
-  await expect(menu(page).locator('.count')).toHaveText('0');
+  await expectCount(page, 'LEICHT', 0);
   await stackItem(page, 'Mischen').click();
-  await expect(menu(page).locator('.count')).toHaveText('5');
+  await expectCount(page, 'LEICHT', 5);
   await expect(stackItem(page, 'Ziehen')).not.toHaveAttribute('aria-disabled', 'true');
 });
 
@@ -190,7 +191,8 @@ test('Spielerzahl 채ndern bewegt die Stapel nicht: das Men체 bleibt offen und am
 
 // ---------- Teil 4: Mischen ohne R체ckfrage und K체rzel (F2, N5) ----------
 
-const count = (page: Page) => menu(page).locator('.count');
+/** Kartenzahl an der Beschriftung des Decks (das Men체 hat seit 5zi keinen Kopf mehr) */
+const count = (page: Page) => page.locator('.zone').filter({ hasText: /^DECK/ }).first().locator('.n');
 
 test('leeres Deck mit Karten in der Ablage: nur Mischen, ein Klick mischt sofort, danach liegen die Karo in ihren Stapeln', async ({ page }) => {
   // eine Karo-Karte auf die Ablage, dann das Deck mit Z leer ziehen
