@@ -1,4 +1,4 @@
-// Spielleitung und Charaktere: Wiederbeleben, Expedition, Orakel.
+// Spielleitung und Charaktere: Wiederbeleben, Expedition, Orakel ziehen und Schachtel schließen.
 // Spielerzahl, Einstellungen und Zurücksetzen sind Engine-Befehle (src/engine/commands.ts).
 
 import { z } from 'zod';
@@ -24,6 +24,13 @@ export function tableCommands() {
       z.object({ type: z.literal('gm.oracle') }).strict(),
       'gm.oracle',
       (_cmd, _state, _actor, rng) => [drawOracle(rng)],
+    ),
+
+    // Schachtel schließen (5zh): dasselbe Recht wie Ziehen; schon zu, dann nichts
+    'gm.oracleClose': command(
+      z.object({ type: z.literal('gm.oracleClose') }).strict(),
+      'gm.oracle',
+      (_cmd, state) => (state.game.oracleOpen ? [{ type: 'oracleClosed' }] : []),
     ),
   };
 }

@@ -1,10 +1,11 @@
 // Klio-Migrationen. Format 1 → 2: Spielbereich wird zur Tischmitte (Schritt 5d, ARCHITEKTUR.md 10).
+// Format 4 → 5: Kartenschachtel offen oder zu (Schritt 5zh, ARCHITEKTUR.md 11.14).
 
 import { describe, expect, it } from 'vitest';
 import { computeLayout, placeCards } from '../../src/ui/layout';
 import { FORMAT } from '../../src/engine/setup';
 import type { FreePos } from '../../src/engine/types';
-import { content, engine, fresh, lay, type K } from '../helpers';
+import { content, engine, fresh, lay, run, type K } from '../helpers';
 
 /** Stand im alten Format mit S5 frei im Spielbereich bzw. am Bogen */
 function old(players: number, pos: FreePos): unknown {
@@ -38,5 +39,23 @@ describe('Format 1 → 2: Tischmitte', () => {
   it('Karten am Bogen bleiben unverändert', () => {
     const s = engine.parseState(old(4, { anchor: 'seat3', x: 0.25, y: 0.5 }));
     expect(s.freePos.S5).toEqual({ anchor: 'seat3', x: 0.25, y: 0.5 });
+  });
+});
+
+describe('Format 4 → 5: Kartenschachtel offen oder zu', () => {
+  /** Stand im Format 4: ohne `oracleOpen` */
+  function format4(s: K): unknown {
+    const { oracleOpen: _, ...game } = s.game;
+    return { ...s, format: 4, game };
+  }
+
+  it('mit Orakel offen, damit nichts verschwindet', () => {
+    const s = engine.parseState(format4(run(fresh(), { type: 'gm.oracle' }).state));
+    expect(s.format).toBe(FORMAT);
+    expect(s.game.oracleOpen).toBe(true);
+  });
+
+  it('ohne Orakel zu', () => {
+    expect(engine.parseState(format4(fresh())).game.oracleOpen).toBe(false);
   });
 });

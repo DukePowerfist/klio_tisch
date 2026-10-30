@@ -23,6 +23,7 @@ describe('Rechte (9.2)', () => {
   it('Spieler: keine SL-Funktionen und keine freie Wahl', () => {
     for (const cmd of [
       { type: 'gm.oracle' },
+      { type: 'gm.oracleClose' },
       { type: 'gm.expedition' },
       { type: 'table.reset', includeCharacters: false },
       { type: 'table.setPlayers', players: 2 },
@@ -32,7 +33,7 @@ describe('Rechte (9.2)', () => {
   });
 
   it('SL darf alles', () => {
-    run(s, { type: 'gm.oracle' }, GM);
+    run(run(s, { type: 'gm.oracle' }, GM).state, { type: 'gm.oracleClose' }, GM);
     run(s, { type: 'sheet.setText', seat: 'seat3', field: 'name', value: 'Ida' }, GM);
   });
 

@@ -23,6 +23,21 @@ describe('Spielleitung', () => {
     }
   });
 
+  it('Kartenschachtel (5zh): zu am Anfang, Ziehen öffnet, Schließen schließt und lässt das Orakel stehen', () => {
+    expect(fresh().game.oracleOpen).toBe(false);
+    const open = run(fresh(), { type: 'gm.oracle' }).state;
+    expect(open.game.oracleOpen).toBe(true);
+    const closed = run(open, { type: 'gm.oracleClose' });
+    expect(closed.events).toEqual([{ type: 'oracleClosed' }]);
+    expect(closed.state.game.oracleOpen).toBe(false);
+    expect(closed.state.game.oracle).toEqual(open.game.oracle);
+    // schon zu: nichts
+    expect(run(closed.state, { type: 'gm.oracleClose' }).events).toEqual([]);
+    // offen noch einmal ziehen: neues Orakel, bleibt offen
+    const again = run(open, { type: 'gm.oracle' }, undefined, seededRng(11)).state;
+    expect(again.game.oracleOpen).toBe(true);
+  });
+
   it('Spielerzahl ändern blendet nur aus, nichts geht verloren (8.2)', () => {
     let s = place(fresh(), 'seat4.notes', ['H2'], true);
     s = withSheet(s, 'seat4', (b) => (b.name = 'Ida'));

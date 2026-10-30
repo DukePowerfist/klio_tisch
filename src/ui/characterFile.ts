@@ -9,8 +9,8 @@ import { KlioSheet } from '../rules/klio/state';
 
 export const CHARACTER_KIND = 'klio-charakter';
 
-/** Ältestes Format mit gleichem Bogen: Charakterdateien von dort bis `FORMAT` lassen sich laden (A36; 5n hat nur den
- *  Tisch geändert, nicht den Bogen). Ändert sich der Bogen, steigt dieser Wert, oder es kommt eine Migration dazu. */
+/** Ältestes Format mit gleichem Bogen: Charakterdateien von dort bis `FORMAT` lassen sich laden (A36; 5n und 5zh haben nur
+ *  den Tisch geändert, nicht den Bogen). Ändert sich der Bogen, steigt dieser Wert, oder es kommt eine Migration dazu. */
 export const SHEET_SINCE = 3;
 
 /** Inhalt der Datei; das Foto steht als Base64 daneben, sein Name (Hash) ergibt sich beim Laden */

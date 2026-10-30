@@ -47,9 +47,9 @@ describe('Migrationen', () => {
   it('Format 3 → 4 (5n): alte Stände bekommen eine brennende Laterne', () => {
     const { lamp: _, ...old } = structuredClone(fresh());
     const parsed = engine.parseState({ ...old, format: 3 });
-    expect(parsed.format).toBe(4);
+    expect(parsed.format).toBe(FORMAT); // die Kette läuft weiter bis zum aktuellen Format
     expect(parsed.lamp).toBe(true);
-    expect(() => engine.parseState({ ...structuredClone(fresh()), format: 5 })).toThrow(NewerFormatError);
+    expect(() => engine.parseState({ ...structuredClone(fresh()), format: FORMAT + 1 })).toThrow(NewerFormatError);
   });
 });
 

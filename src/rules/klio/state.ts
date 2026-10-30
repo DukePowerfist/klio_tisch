@@ -50,6 +50,8 @@ export const KlioState = z.object({
   sheets: z.array(KlioSheet).length(4),
   expedition: Expedition.nullable(),
   oracle: Oracle.nullable(),
+  /** Kartenschachtel offen: die Karten des Orakels ragen heraus (5zh); zu nur ihre Oberkanten */
+  oracleOpen: z.boolean(),
 }).strict();
 export type KlioState = z.infer<typeof KlioState>;
 
@@ -73,5 +75,5 @@ export function emptySheet(): KlioSheet {
 }
 
 export function initialKlioState(): KlioState {
-  return { sheets: [emptySheet(), emptySheet(), emptySheet(), emptySheet()], expedition: null, oracle: null };
+  return { sheets: [emptySheet(), emptySheet(), emptySheet(), emptySheet()], expedition: null, oracle: null, oracleOpen: false };
 }

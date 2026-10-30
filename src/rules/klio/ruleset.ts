@@ -7,6 +7,7 @@ import { sheetCommands } from './commands/sheet';
 import { tableCommands } from './commands/table';
 import { trumpCommands } from './commands/trump';
 import { klioEvents } from './events';
+import { oracleOpen } from './migrations/oracleOpen';
 import { tischmitte } from './migrations/tischmitte';
 import { damageReaction } from './reactions/damage';
 import { initialKlioState, KlioState } from './state';
@@ -32,7 +33,7 @@ export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
     events: klioEvents,
     reactions: [damageReaction(expandZones(zones))],
     permissions: content.permissions,
-    migrations: [tischmitte],
+    migrations: [tischmitte, oracleOpen],
     seatColors: content.layouts.seatColors,
   };
 }

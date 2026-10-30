@@ -43,6 +43,8 @@ const E = {
   characterImported: z.object({ type: z.literal('characterImported'), seat: Seat, sheet: KlioSheet }).strict(),
   expeditionRolled: z.object({ type: z.literal('expeditionRolled'), expedition: Expedition }).strict(),
   oracleDrawn: z.object({ type: z.literal('oracleDrawn'), oracle: Oracle }).strict(),
+  /** Kartenschachtel geschlossen (5zh); das Orakel bleibt im Stand */
+  oracleClosed: z.object({ type: z.literal('oracleClosed') }).strict(),
 };
 
 export type KlioEvent = { [K in keyof typeof E]: z.infer<(typeof E)[K]> }[keyof typeof E];
@@ -107,5 +109,9 @@ export const klioEvents = {
   }),
   oracleDrawn: def('oracleDrawn', (s, e) => {
     s.game.oracle = [{ ...e.oracle[0] }, { ...e.oracle[1] }];
+    s.game.oracleOpen = true;
+  }),
+  oracleClosed: def('oracleClosed', (s) => {
+    s.game.oracleOpen = false;
   }),
 } satisfies { [K in keyof typeof E]: EventDef<KlioState, KlioEventOf<K>> };
