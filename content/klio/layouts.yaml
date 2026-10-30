@@ -39,14 +39,16 @@ middle:
     clubs: [ 552, 654 ]
   resistTitle: [ 72, 626 ]
   # Expeditionsblatt (Schritt 5zb, ARCHITEKTUR.md 10.12): Bild public/assets/sheet/expedition.webp in TP (Pixel / 4).
-  # x = linke Bildkante relativ zur Tischmitte; rest = so viel vom Bild liegt über der unteren Brettkante (der gemalte
-  # Kopf), der Rest hängt darüber und schneidet der Bildschirmrand ab; lift = Hochrücken beim Überfahren und bei einem
-  # Wurf; tilt = Neigung in Grad; read = Höhe der Leselage als Anteil der Fensterhöhe.
+  # In Ruhe (5zg, 10.14) erscheint das Bild mit dem Maßstab restScale; Werte in TP des Bilds (size, rest, paper, rows,
+  # text, index) gelten dann mal restScale, Werte in TP des Tischs (cx, lift) nicht. cx = Mitte des Papiers relativ zur
+  # Tischmitte; rest = so viel vom Bild liegt über der unteren Brettkante (der Kopf bis zur Kopflinie, mit Logo, ohne
+  # Titel), der Rest hängt darüber und schneidet der Bildschirmrand ab; lift = Hochrücken beim Überfahren und bei einem
+  # Wurf; tilt = Neigung in Grad; read = Höhe der Leselage als Anteil der Fensterhöhe (die Leselage ignoriert restScale).
   # Im Bild: paper = Papier (x, y, w, h), rows = Kopflinie und Unterkanten der Abschnitte I bis IV, text = Textfläche
   # rechts der römischen Ziffern (von x, bis x); index = Fläche des Kartenwerts unter der Ziffer (5zf, 10.13): x, dy ab
   # der Linie über dem Abschnitt, w, h; zwei Zeilen hoch, die zweite für ein späteres Symbol (Kreise der Ziffern gemessen
   # bis dy 26,5 und x 16,5 bis 38); indexSize = dessen Schrift.
-  expedition: { x: 22, size: [ 320, 450 ], rest: 75, lift: 20, tilt: -2, read: 0.85,
+  expedition: { cx: 182.75, restScale: 0.75, size: [ 320, 450 ], rest: 75, lift: 20, tilt: -2, read: 0.85,
     paper: [ 8.5, 17.75, 304.5, 423.25 ], rows: [ 71.5, 160, 255, 345, 441 ], text: [ 46, 300 ],
     index: [ 17, 30, 20, 19 ], indexSize: 10 }
   # Kartenschachtel (5zb): Bild public/assets/cards/oracle-box.webp in TP, Karten public/assets/cards/oracle.webp.

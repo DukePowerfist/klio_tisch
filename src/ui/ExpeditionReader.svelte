@@ -144,7 +144,8 @@
     <!-- svelte-ignore a11y_no_static_element_interactions (Ziehen ist eine Abkürzung; Schließen geht auch mit Esc) -->
     <div class="grip" style:height={tp(E.rows[0]! - py)} onpointerdown={gripDown} onpointermove={gripMove} onpointerup={gripUp} onpointercancel={gripCancel} data-expedition-grip></div>
     {#if reroll}
-      <button class="all" style:left={tp(141)} style:top={tp(18)} style:font-size={tp(12)} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.rerollAll')}</button>
+      <!-- linksbündig mit den Textflächen (5zg F2 a) -->
+      <button class="all" style:left={tp(tx0 - px)} style:top={tp(18)} style:font-size={tp(12)} onclick={() => submitOrSay({ type: 'gm.expedition' })}>{t('gm.rerollAll')}</button>
     {/if}
     {#each tables as table, i (i)}
       <section class="row" bind:this={rows[i]} style:left={tp(tx0 - px)} style:width={tp(tx1 - tx0)} style:top={tp(rowTop(i))} style:height={tp(rowHeight(i))}>

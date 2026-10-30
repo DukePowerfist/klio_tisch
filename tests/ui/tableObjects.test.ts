@@ -24,16 +24,34 @@ const views = () => {
 
 describe('Expeditionsblatt in Ruhe (5zb)', () => {
   it('liegt über der unteren Brettkante, links unter Gefahr und Fortschritt; der Kopf liegt auf dem Tisch', () => {
+    const s = E.restScale;
     for (const { L, label } of views()) {
       const { img, paper } = L.expedition;
-      expect(img.y, label).toBe(L.board.h - E.rest);
+      expect(img.y, label).toBe(L.board.h - E.rest * s);
       expect(img.y + img.h, label).toBeGreaterThan(L.board.h);
-      expect(img.x, label).toBe(L.middle.x + E.x);
+      // in Ruhe kleiner (5zg), die Mitte des Papiers bei `cx`
+      expect(img.w, label).toBeCloseTo(E.size[0] * s);
+      expect(paper.w, label).toBeCloseTo(E.paper[2] * s);
+      expect(paper.x + paper.w / 2, label).toBeCloseTo(L.middle.x + E.cx);
       // ganz links der Raute in der Mitte des Filzaufdrucks
       expect(paper.x + paper.w, label).toBeLessThan(L.middle.x + L.middle.w / 2 - 6);
-      // der gemalte Kopf (bis zur Kopflinie) liegt auf dem Tisch
-      expect(img.y + E.rows[0]!, label).toBeLessThanOrEqual(L.board.h);
+      // der Kopf (bis zur Kopflinie) liegt auf dem Tisch
+      expect(img.y + E.rows[0]! * s, label).toBeLessThanOrEqual(L.board.h);
     }
+  });
+
+  it('mit restScale 1 genau wie vor 5zg (Bild ab x 22 der Tischmitte, 75 TP über der Kante)', () => {
+    const full = { ...content, layouts: { ...content.layouts, middle: { ...content.layouts.middle, expedition: { ...E, restScale: 1 } } } };
+    const L = computeLayout(full, 4, null, null);
+    const { img, paper } = L.expedition;
+    expect(img.x).toBeCloseTo(L.middle.x + 22);
+    expect(img.y).toBe(L.board.h - 75);
+    expect(img.w).toBe(E.size[0]);
+    expect(img.h).toBe(E.size[1]);
+    expect(paper.x).toBeCloseTo(img.x + E.paper[0]);
+    expect(paper.y).toBeCloseTo(img.y + E.paper[1]);
+    expect(paper.w).toBe(E.paper[2]);
+    expect(paper.h).toBe(E.paper[3]);
   });
 
   it('verdeckt auch hochgerückt und geneigt keine Zone und keine Beschriftung', () => {

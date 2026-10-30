@@ -190,7 +190,7 @@ export const LayoutsFile = z.object({
     lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
     /** Expeditionsblatt (5zb, 10.12) */
     expedition: z.object({
-      x: z.number(), size: Point, rest: z.number().positive(), lift: z.number().nonnegative(), tilt: z.number(),
+      cx: z.number(), restScale: z.number().positive().max(1), size: Point, rest: z.number().positive(), lift: z.number().nonnegative(), tilt: z.number(),
       read: z.number().positive().max(1), paper: RectTuple, rows: z.array(z.number()).length(5), text: Point,
       index: RectTuple, indexSize: z.number().positive(),
     }).strict(),

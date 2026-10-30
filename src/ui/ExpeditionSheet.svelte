@@ -1,6 +1,6 @@
 <script lang="ts">
   // Expeditionsblatt in Ruhe (Schritt 5zb, ARCHITEKTUR.md 10.12): ragt vom unteren Bildschirmrand herein, über der
-  // unteren Brettkante; vom Bild liegt nur der gemalte Kopf auf dem Tisch, gesetzter Text steht erst in der Leselage
+  // unteren Brettkante, in Ruhe kleiner (`restScale`, 5zg); vom Bild liegt nur der Kopf mit Logo auf dem Tisch, gesetzter Text steht erst in der Leselage
   // (ExpeditionReader.svelte, U4). Ein Knopf für alle; über den Zonen, unter frei liegenden Karten und dem Licht (U3).
   // Beim Überfahren rückt es hoch und hebt sich ab; nach einem Wurf rückt es bei allen einmal kurz hoch, nicht während
   // eines eigenen Kartenzugs (U1). Hochziehen öffnet die Leselage wie ein Klick (Teil 2b, T4): Das Blatt folgt dem Zeiger

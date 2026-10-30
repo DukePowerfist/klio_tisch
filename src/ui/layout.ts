@@ -156,10 +156,12 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
   }
 
   // Blatt und Schachtel (5zb, 10.12): waagerecht relativ zur Tischmitte, senkrecht ab der unteren Brettkante (F1)
+  // In Ruhe kleiner (5zg, 10.14): Maße des Bilds mal `restScale`, die Mitte des Papiers bleibt bei `cx`
   const E = M.expedition;
-  const img = { x: mx + E.x, y: BH - E.rest, w: E.size[0], h: E.size[1] };
+  const s = E.restScale;
   const [px, py, pw, ph] = E.paper;
-  const paper = { x: img.x + px, y: img.y + py, w: pw, h: ph };
+  const img = { x: mx + E.cx - (px + pw / 2) * s, y: BH - E.rest * s, w: E.size[0] * s, h: E.size[1] * s };
+  const paper = { x: img.x + px * s, y: img.y + py * s, w: pw * s, h: ph * s };
   const oracle = { cx: mx + M.oracle.cx, bottom: BH };
 
   return {

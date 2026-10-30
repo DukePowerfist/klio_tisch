@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
   await ready(page);
 });
 
-test('Blatt am unteren Rand: ein Knopf, nur der gemalte Kopf; Leselage vor der ersten Expedition ohne Antworten (F4, U4)', async ({ page }) => {
+test('Blatt am unteren Rand: ein Knopf, nur der Kopf mit Logo; Leselage vor der ersten Expedition ohne Antworten (F4, U4)', async ({ page }) => {
   await expect(sheet(page)).toHaveAccessibleName('Expedition ansehen');
   // in Ruhe kein gesetzter Text
   await expect(sheet(page)).toHaveText('');
