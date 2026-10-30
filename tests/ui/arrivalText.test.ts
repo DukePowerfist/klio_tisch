@@ -1,4 +1,4 @@
-// Texte zu Kommen und Gehen (11.7): Protokoll und Meldung, mit und ohne Namen. Dazu Laterne (5n) und Orakel (5ze).
+// Texte zu Kommen und Gehen (11.7): Protokoll und Meldung, mit und ohne Namen. Dazu Laterne (5n), Orakel (5ze) und Expedition (5zf).
 
 import { describe, expect, it } from 'vitest';
 import { SEATS, type TableState } from '../../src/engine/types';
@@ -47,5 +47,12 @@ describe('Orakel im Protokoll (5ze, F1 a)', () => {
     const o = content.expedition.oracle;
     expect(describeEvent({ type: 'oracleDrawn', oracle: [{ suit: 'H', rank: '7' }, { suit: 'S', rank: 'Q' }] })).toEqual({ text: `Orakel: ${o.H['7']} (Herz 7), ${o.S.Q} (Pik D)`, level: 'log' });
     expect(describeEvent({ type: 'oracleDrawn', oracle: [{ suit: 'C', rank: '10' }, { suit: 'H', rank: 'A' }] })?.text).toBe(`Orakel: ${o.C['10']} (Kreuz 10), ${o.H.A} (Herz A)`);
+  });
+});
+
+describe('Expedition im Protokoll (5zf, F1 a)', () => {
+  it('nennt je Tabelle Antwort und Wert', () => {
+    const e = content.expedition.expedition;
+    expect(describeEvent({ type: 'expeditionRolled', expedition: [0, 10, 12, 3] })).toEqual({ text: `Expedition: ${e[0]!.entries[0]} (2) · ${e[1]!.entries[10]} (D) · ${e[2]!.entries[12]} (A) · ${e[3]!.entries[3]} (5)`, level: 'log' });
   });
 });

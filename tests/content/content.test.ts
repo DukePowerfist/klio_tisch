@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { RANKS } from '../../src/engine/types';
 import { validateContent, type RawContent } from '../../src/rules/klio/content/validate';
 import { content } from '../helpers';
 import { readContent } from './read';
@@ -27,6 +28,8 @@ describe('Inhalte', () => {
     expect(Object.values(c.deck.start).flat()).toHaveLength(52);
     expect(c.deck.start['deck']).toHaveLength(27);
     expect(c.expedition.expedition).toHaveLength(4);
+    // Eintrag i gehört zum Wert RANKS[i] (5zf, 10.13): ändert sich die Zahl, bricht die Zuordnung
+    for (const table of c.expedition.expedition) expect(table.entries).toHaveLength(RANKS.length);
   });
 
   it('Trümpfe je Kategorie und Stufe wie bisher', () => {

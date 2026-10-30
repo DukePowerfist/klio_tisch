@@ -7,6 +7,7 @@ import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { trumpById } from '../rules/klio/trumps';
 import type { ArrivalSignal } from './arrivals';
+import { expeditionCards, expeditionText } from './expedition';
 import { oracleCards, oracleText } from './oracle';
 import { cardName, hasText, t, tMaybe } from './texts';
 
@@ -49,7 +50,7 @@ export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>
     case 'trumpRemoved':
       return say(t('log.trumpRemoved', { seat: seatNo(e.seat) }));
     case 'expeditionRolled':
-      return say(t('log.expedition', { result: e.expedition.map((n, i) => content.expedition.expedition[i]!.entries[n]).join(' · ') }));
+      return say(t('log.expedition', { result: expeditionText(expeditionCards(e.expedition)) }));
     case 'oracleDrawn':
       return say(t('log.oracle', { words: oracleText(oracleCards(e.oracle)) }));
     default:

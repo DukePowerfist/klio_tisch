@@ -4,12 +4,14 @@
   // Jeder öffnet es selbst (F3). Klick aufs Blatt tut nichts außer an den Knöpfen, Klick daneben und Esc schließen.
   // Würfeln nur mit Recht: „Alles neu“ im Kopf, „Neu“ je Abschnitt in der Zeile der Frage. Lange Antworten werden bis
   // 12 TP kleiner (fitBlock, T2). Maße in TP des Bilds über Containereinheiten: 1 TP = 100cqw / Breite des Papiers.
+  // Unter jeder römischen Ziffer klein und blass der Wert der gezogenen Karte (5zf, 10.13).
   // Am Kopf herunterziehen schließt (Teil 2b, T4); auf den Abschnitten heißt Ziehen Text markieren (S5).
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import Modal from './Modal.svelte';
   import { fade, timing } from './animator.svelte';
   import { submitOrSay } from './commands';
+  import { expeditionCards, expeditionIndex } from './expedition';
   import { fitBlock } from './fitText';
   import { HAND_FONT, handFont } from './fonts';
   import { session } from './session.svelte';
@@ -19,6 +21,7 @@
   const E = content.layouts.middle.expedition;
   const [px, py, pw, ph] = E.paper;
   const [tx0, tx1] = E.text;
+  const [ix, idy, iw, ih] = E.index;
   /** Antworten in 14 TP, Fragen in 11 TP; kleiner nur bis 12 TP (S3) */
   const ANSWER = 14;
   const MIN_ANSWER = 12;
@@ -29,6 +32,7 @@
 
   const game = $derived(session.state!.game);
   const tables = content.expedition.expedition;
+  const cards = $derived(expeditionCards(game.expedition));
   const reroll = $derived(session.can({ type: 'gm.expedition' }));
   /** Abschnitt i im Papier: von der Linie darüber bis zur nächsten */
   const rowTop = (i: number) => E.rows[i]! - py;
@@ -126,6 +130,8 @@
     for (const i of r.parts) {
       const v = rows[i]?.querySelector<HTMLElement>('.value');
       if (v) fade(v, timing().pop);
+      const sign = paperEl.querySelector<HTMLElement>(`[data-expedition-index="${i}"]`);
+      if (sign) fade(sign, timing().pop);
     }
   });
 </script>
@@ -149,10 +155,18 @@
             <button class="one" style:font-size={tp(10)} aria-label={name} title={name} onclick={() => submitOrSay({ type: 'gm.expedition', table: i })}>{t('gm.reroll')}</button>
           {/if}
         </div>
-        {#if game.expedition}
-          <p class="value" style:font-size="calc(var(--tp) * {ANSWER} * var(--k, 1))">{table.entries[game.expedition[i]!]}</p>
+        {#if cards[i]}
+          <p class="value" style:font-size="calc(var(--tp) * {ANSWER} * var(--k, 1))">{cards[i].entry}</p>
         {/if}
       </section>
+      {#if cards[i]}
+        <!-- Wert wie die Ecke der Karten des Decks, zweite Zeile für ein späteres Symbol; das Protokoll nennt den Wert -->
+        {@const sign = expeditionIndex(cards[i])}
+        <span class="index" aria-hidden="true" data-expedition-index={i} style:left={tp(ix - px)} style:top={tp(rowTop(i) + idy)} style:width={tp(iw)} style:height={tp(ih)} style:font-size={tp(E.indexSize)}>
+          <span>{sign.rank}</span>
+          {#if sign.suit}<span class:red={sign.suit.red}>{sign.suit.symbol}</span>{/if}
+        </span>
+      {/if}
     {/each}
   </div>
 </Modal>
@@ -164,6 +178,10 @@
   .row { position: absolute; box-sizing: border-box; padding: calc(var(--tp) * 3) 0 calc(var(--tp) * 2); overflow: hidden; display: flex; flex-direction: column; }
   .q { display: flex; align-items: baseline; gap: calc(var(--tp) * 6); }
   .prompt { flex: 1; min-width: 0; opacity: 0.7; line-height: 1.2; }
+  /* zwei Zeilen wie die Ecke (Card.svelte), klein und blass; oben bündig, die zweite Zeile bleibt ohne Farbe leer */
+  .index { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; font-family: Georgia, serif; font-weight: 700;
+    line-height: 0.95; color: var(--card-black); opacity: 0.6; white-space: nowrap; user-select: none; }
+  .index .red { color: var(--card-red); }
   .value { margin: calc(var(--tp) * 1) 0 0; line-height: 1.22; overflow-wrap: break-word; }
   /* Knöpfe auf Papier: Tinte, feiner Rand, kein Menüstil */
   button { position: relative; flex: none; font: inherit; color: var(--sheet-ink); background: rgba(255, 255, 255, 0.45); border: 1px solid rgba(0, 0, 0, 0.35);

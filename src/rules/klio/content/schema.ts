@@ -192,6 +192,7 @@ export const LayoutsFile = z.object({
     expedition: z.object({
       x: z.number(), size: Point, rest: z.number().positive(), lift: z.number().nonnegative(), tilt: z.number(),
       read: z.number().positive().max(1), paper: RectTuple, rows: z.array(z.number()).length(5), text: Point,
+      index: RectTuple, indexSize: z.number().positive(),
     }).strict(),
     /** Kartenschachtel des Orakels (5zb, 10.12) */
     oracle: z.object({

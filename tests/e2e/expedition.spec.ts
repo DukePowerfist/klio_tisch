@@ -1,4 +1,4 @@
-// Expeditionsblatt am unteren Rand und seine Leselage (Schritt 5zb, Teil 2a, ARCHITEKTUR.md 10.12).
+// Expeditionsblatt am unteren Rand und seine Leselage (Schritt 5zb, Teil 2a, ARCHITEKTUR.md 10.12). Kartenwert (5zf, 10.13).
 
 import { expect, test, type Page } from '@playwright/test';
 import { readContent } from '../content/read';
@@ -94,6 +94,38 @@ test('Würfeln: Alles neu und einzelne Zeile; jede Antwort aller Tabellen passt 
   await expect(reader(page).locator('.value')).toHaveText([tables[0]!.entries[12]!, tables[1]!.entries[12]!, tables[2]!.entries[5]!, tables[3]!.entries[12]!]);
   // ein Wurf öffnet nichts Neues und schließt nichts
   await expect(reader(page)).toHaveCount(1);
+});
+
+test('Kartenwert unter jeder Ziffer: passt zur Antwort, wechselt mit ihr, berührt weder Kreis noch Antwort (5zf)', async ({ page }) => {
+  await sheet(page).click();
+  const signs = reader(page).locator('[data-expedition-index]');
+  await expect(signs).toHaveCount(0);
+  // „10“ ist der breiteste Wert
+  await rollAll(page, 8);
+  await expect(signs).toHaveText(['10', '10', '10', '10']);
+  await expect(signs.first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(reader(page).locator('.value')).toHaveText(tables.map((t) => t.entries[8]!));
+  // Rechtecke in TP des Bilds: Text des Zeichens unter dem Kreis der Ziffer (bis dy 26,5, x 16,5 bis 38) und links der Antwort
+  const bad = await reader(page).locator('[data-expedition-reader]').evaluate((paper) => {
+    const p = paper.getBoundingClientRect();
+    const k = p.width / 304.5;
+    const [PX, PY] = [8.5, 17.75];
+    const ROWS = [71.5, 160, 255, 345];
+    return [...paper.querySelectorAll<HTMLElement>('[data-expedition-index]')].flatMap((el, i) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const r = range.getBoundingClientRect();
+      const v = paper.querySelectorAll<HTMLElement>('.value')[i]!.getBoundingClientRect();
+      const text = { left: (r.left - p.left) / k + PX, right: (r.right - p.left) / k + PX, top: (r.top - p.top) / k + PY - ROWS[i]!, bottom: (r.bottom - p.top) / k + PY - ROWS[i]! };
+      const ok = text.top > 26.5 && text.left >= 8.5 && r.right < v.left && r.bottom < (paper.querySelectorAll('section.row')[i]!.getBoundingClientRect().bottom);
+      return ok ? [] : [{ i, ...text }];
+    });
+  });
+  expect(bad).toEqual([]);
+  // eine Zeile neu: nur ihr Wert wechselt
+  await fixRolls(page, [11]);
+  await reader(page).getByRole('button', { name: `Neu würfeln: ${tables[1]!.prompt}` }).click();
+  await expect(signs).toHaveText(['10', 'K', '10', '10']);
 });
 
 test('Karte auf das Blatt fallen lassen: landet daneben (F5)', async ({ page }) => {

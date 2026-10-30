@@ -2,7 +2,7 @@
 
 import content from 'virtual:klio-content';
 import { rankOf, suitOf } from '../engine/schemas';
-import type { CardId, SuitId, TextRef } from '../engine/types';
+import type { CardId, RankId, SuitId, TextRef } from '../engine/types';
 import { resolveText } from '../rules/klio/content/texts';
 
 const lookup = (key: string): string | undefined => resolveText(content, key);
@@ -20,8 +20,11 @@ export const tMaybe = (key: string): string | undefined => (hasText(key) ? t(key
 
 export const text = (ref: TextRef): string => t(ref.key, ref.params);
 
+/** Kurzbezeichnung eines Werts: 2–10, B, D, K, A (13.1). */
+export const rankText = (rank: RankId): string => lookup(`cards.ranks.${rank}`) ?? rank;
+
 /** Kurzbezeichnung auf der Karte: 2–10, B, D, K, A (13.1). */
-export const rankLabel = (card: CardId): string => lookup(`cards.ranks.${rankOf(card)}`) ?? rankOf(card);
+export const rankLabel = (card: CardId): string => rankText(rankOf(card));
 
 export const cardName = (card: CardId): string => t('cards.name', { suit: t(`cards.suits.${suitOf(card)}`), rank: rankLabel(card) });
 

@@ -43,9 +43,12 @@ middle:
   # Kopf), der Rest hängt darüber und schneidet der Bildschirmrand ab; lift = Hochrücken beim Überfahren und bei einem
   # Wurf; tilt = Neigung in Grad; read = Höhe der Leselage als Anteil der Fensterhöhe.
   # Im Bild: paper = Papier (x, y, w, h), rows = Kopflinie und Unterkanten der Abschnitte I bis IV, text = Textfläche
-  # rechts der römischen Ziffern (von x, bis x).
+  # rechts der römischen Ziffern (von x, bis x); index = Fläche des Kartenwerts unter der Ziffer (5zf, 10.13): x, dy ab
+  # der Linie über dem Abschnitt, w, h; zwei Zeilen hoch, die zweite für ein späteres Symbol (Kreise der Ziffern gemessen
+  # bis dy 26,5 und x 16,5 bis 38); indexSize = dessen Schrift.
   expedition: { x: 22, size: [ 320, 450 ], rest: 75, lift: 20, tilt: -2, read: 0.85,
-    paper: [ 8.5, 17.75, 304.5, 423.25 ], rows: [ 71.5, 160, 255, 345, 441 ], text: [ 46, 300 ] }
+    paper: [ 8.5, 17.75, 304.5, 423.25 ], rows: [ 71.5, 160, 255, 345, 441 ], text: [ 46, 300 ],
+    index: [ 17, 30, 20, 19 ], indexSize: 10 }
   # Kartenschachtel (5zb): Bild public/assets/cards/oracle-box.webp in TP, Karten public/assets/cards/oracle.webp.
   # cx = Mitte relativ zur Tischmitte (unter Kreuz); rest = sichtbar ab der Oberkante der hinteren Karte bis zur Brettkante,
   # mal Maßstab; out = so weit ragen hintere und vordere Karte über die Öffnung; opening = Öffnungskante im Bild (y);
