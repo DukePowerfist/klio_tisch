@@ -1,4 +1,4 @@
-// Kartenschachtel des Orakels (Schritt 5zb, Teil 3, ARCHITEKTUR.md 10.12): Wörter lesbar, Maske, Größe.
+// Kartenschachtel des Orakels (Schritt 5zb, Teil 3, ARCHITEKTUR.md 10.12): Wörter lesbar, Maske, Größe. Eckzeichen (5ze, 11.13).
 
 import { expect, test, type Page } from '@playwright/test';
 import { readContent } from '../content/read';
@@ -27,6 +27,57 @@ test('jedes Orakelwort passt ganz ins Wortband, auch das breiteste (gemessen, T7
     return wide;
   }, words);
   expect(tooWide).toEqual([]);
+});
+
+test('Wort und Eckzeichen: der Text jedes Wortes liegt rechts vom linken Nagel und links vom Zeichen, auch neben „10“ (5ze)', async ({ page }) => {
+  const NAIL = 7.6; // rechte Kante des linken gemalten Nagels in TP der Karte (11.13)
+  const bad = await box(page).evaluate((el, { all, nail }) => {
+    el.style.rotate = '0deg'; // gemessen wird in TP der Karte, ohne die Neigung der Schachtel
+    const card = el.querySelector<HTMLElement>('[data-oracle-card]')!;
+    const word = card.querySelector<HTMLElement>('.word')!;
+    const index = card.querySelector<HTMLElement>('[data-oracle-index]')!;
+    const c = card.getBoundingClientRect();
+    const k = c.width / card.offsetWidth;
+    /** waagrechte Ausdehnung des Textes in TP der Karte */
+    const extent = (node: HTMLElement) => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const r = range.getBoundingClientRect();
+      return { left: (r.left - c.left) / k, right: (r.right - c.left) / k };
+    };
+    const was = { word: word.textContent, index: index.innerHTML };
+    index.innerHTML = '10<br>♣';
+    const sign = extent(index);
+    const out = all.flatMap((w) => {
+      word.textContent = w;
+      const text = extent(word);
+      return text.left <= nail || text.right >= sign.left ? [{ w, ...text, sign: sign.left }] : [];
+    });
+    word.textContent = was.word;
+    index.innerHTML = was.index;
+    el.style.rotate = '';
+    return out;
+  }, { all: words, nail: NAIL });
+  expect(bad).toEqual([]);
+});
+
+test('Eckzeichen: Wert und Symbol wie in der Beschriftung, Herz rot, Pik und Kreuz dunkel, blass, für Bildschirmleser versteckt (5ze)', async ({ page }) => {
+  // mehrmals ziehen, damit meist beide Farben vorkommen
+  for (let i = 0; i < 4; i++) {
+    if (i) await box(page).click({ position: { x: 20, y: 5 } });
+    await expect.poll(() => box(page).locator('[data-oracle-index]').count()).toBe(2);
+    const signs = await box(page).locator('[data-oracle-index]').evaluateAll((els) => els.map((el) => {
+      const css = getComputedStyle(el);
+      return { text: el.textContent!, color: css.color, opacity: css.opacity, hidden: el.getAttribute('aria-hidden'), inWord: !!el.closest('.word') };
+    }));
+    for (const s of signs) {
+      const red = s.text.endsWith('♥');
+      expect(s.text).toMatch(/^(10|[2-9]|B|D|K|A)[♥♠♣]$/);
+      expect(s.color).toBe(red ? 'rgb(192, 57, 43)' : 'rgb(34, 34, 34)');
+      expect(Number(s.opacity)).toBeLessThan(1);
+      expect(s).toMatchObject({ hidden: 'true', inWord: false });
+    }
+  }
 });
 
 test('Wörter mindestens 12 px bei 1024 × 600 und 1920 × 1080 (die Schachtel wächst im kleinen Fenster, S3)', async ({ page }) => {

@@ -123,6 +123,7 @@ gm:
   oracleDraw: "Orakel ziehen: {words}"    # Kartenschachtel mit Recht (5zb)
   oracleShows: "Orakel: {words}"          # Kartenschachtel ohne Recht (5zb)
   oracleNone: noch keins                  # dazu, bevor das erste Orakel gezogen ist
+  oracleWord: "{word} ({card})"           # je Orakelkarte in Beschriftung und Protokoll (5ze)
   reroll: Neu                             # je Abschnitt in der Leselage der Expedition (5zb, vorher Ergebnisfenster 5t)
   rerollRow: "Neu würfeln: {prompt}"      # Tooltip und Name für Bildschirmleser dazu
   rerollAll: Alles neu

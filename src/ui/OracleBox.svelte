@@ -1,7 +1,7 @@
 <script lang="ts">
   // Kartenschachtel des Orakels (Schritt 5zb, ARCHITEKTUR.md 10.12): die Schachtel des Spieldecks, ragt unter Kreuz vom
   // unteren Bildschirmrand herein. Die zwei Karten des letzten Orakels stecken gerade darin, die hintere ragt weiter
-  // heraus; auf jedem Rand ein Wort, ohne Farbe und Wert. Ein Bild für die Schachtel: Die Karten liegen darüber, sind
+  // heraus; auf jedem Rand ein Wort, rechts daneben klein und blass Wert und Symbol der Karte (5ze, 11.13). Ein Bild für die Schachtel: Die Karten liegen darüber, sind
   // aber auf die Fläche über der Öffnung und die Daumenkerbe zugeschnitten (Maske), so scheinen sie darin zu stecken.
   // Auf kleinen Bildschirmen größer, damit die Wörter mindestens 12 px groß sind (S3); ausgewichen wird immer mit dem
   // größten Maßstab (T1, layout.ts).
@@ -10,13 +10,15 @@
   // Laden, Beitreten, Wiederherstellen: ohne Ereignis, also ohne Ablauf (wie die Laterne).
   import { tick, untrack } from 'svelte';
   import content from 'virtual:klio-content';
+  import { suitOf } from '../engine/schemas';
   import { timing } from './animator.svelte';
   import { submitOrSay } from './commands';
   import { HAND_FONT, handFont } from './fonts';
   import { oracleRect, oracleScale, type Layout } from './layout';
   import { shadowCss, shadowOver, stackHeight } from './light';
+  import { oracleCards, oracleText, type OracleCard, type OracleDraw } from './oracle';
   import { session } from './session.svelte';
-  import { t } from './texts';
+  import { isRed, rankLabel, SUIT_SYMBOL, t } from './texts';
 
   let { layout, fitScale, flame }: { layout: Layout; fitScale: number; flame: Layout['lamp']['flame'] | null } = $props();
 
@@ -36,11 +38,9 @@
   const may = $derived(session.can({ type: 'gm.oracle' }));
   const scale = $derived(oracleScale(O, fitScale));
   const rect = $derived(oracleRect(O, layout.oracle, scale));
-  type Draw = { suit: 'H' | 'S' | 'C'; rank: string };
-  const wordsOf = (o: readonly Draw[] | null) => (o ? o.map((d) => content.expedition.oracle[d.suit][d.rank as '2']) : []);
-  const current = $derived(wordsOf(session.state?.game.oracle ?? null));
-  /** gezeigte Wörter: folgen dem Stand, während des Ablaufs erst nach dem Sinken */
-  let shown = $state<string[]>(untrack(() => current));
+  const current = $derived(oracleCards(session.state?.game.oracle ?? null));
+  /** gezeigte Karten: folgen dem Stand, während des Ablaufs erst nach dem Sinken */
+  let shown = $state<OracleCard[]>(untrack(() => current));
   let running = 0;
   $effect(() => {
     const now = current;
@@ -49,7 +49,7 @@
     });
   });
 
-  const names = $derived(shown.length ? shown.join(', ') : t('gm.oracleNone'));
+  const names = $derived(shown.length ? oracleText(shown) : t('gm.oracleNone'));
   const label = $derived(t(may ? 'gm.oracleDraw' : 'gm.oracleShows', { words: names }));
   /** flacher Schatten wie ein Stapel, nur unter der Vorderseite (ab der Öffnung) */
   const body = $derived({ x: rect.x, y: rect.y + O.opening * scale, w: rect.w, h: rect.h - O.opening * scale });
@@ -64,6 +64,7 @@
   /** so weit sinkt eine Karte, bis sie ganz in der Schachtel steckt */
   const sunk = (i: number) => `0 ${O.out[i]! + 2}px`;
   const [bx, by, bw, bh] = O.band;
+  const [ix, iy, iw, ih] = O.index;
 
   let shakeEl: HTMLDivElement;
   let cardsEl: HTMLDivElement;
@@ -72,7 +73,7 @@
   const done = (as: Animation[]) => Promise.all(as.map((a) => a.finished.catch(() => undefined)));
 
   /** Ablauf zum Ereignis; ein neues Orakel mitten im Ablauf springt ans Ende des alten und beginnt neu */
-  async function draw(next: string[]): Promise<void> {
+  async function draw(next: OracleCard[]): Promise<void> {
     const run = ++running;
     for (const a of [...shakeEl.getAnimations(), ...cardsEl.getAnimations({ subtree: true })]) a.finish();
     const ms = timing();
@@ -101,10 +102,10 @@
   }
 
   $effect(() => session.onEvents((events) => {
-    let last: Draw[] | null = null;
-    for (const e of events) if (e.type === 'oracleDrawn') last = e.oracle as Draw[];
+    let last: OracleDraw[] | null = null;
+    for (const e of events) if (e.type === 'oracleDrawn') last = e.oracle as OracleDraw[];
     if (last) {
-      const next = wordsOf(last);
+      const next = oracleCards(last);
       untrack(() => void draw(next));
     }
   }));
@@ -134,9 +135,11 @@
       <div class="shadow" style:top="{O.opening}px" style:box-shadow={shadow}></div>
       <img class="box" src={boxImage} alt="" draggable="false" />
       <div class="cards" bind:this={cardsEl} style:top="{-ABOVE}px" style:width="{W}px" style:height="{H + ABOVE}px" style:clip-path={clip}>
-        {#each shown as word, i (i)}
+        {#each shown as { word, card }, i (i)}
           <div class="card" data-oracle-card={i} style:left="{(W - CW) / 2}px" style:top="{cardTop(O.out[i]!)}px" style:width="{CW}px" style:height="{CH}px" style:background-image="url({cardImage})">
             <span class="word" style:left="{bx}px" style:top="{by}px" style:width="{bw}px" style:height="{bh}px" style:font-size="{O.word}px" style:font-family={HAND_FONT}>{word}</span>
+            <!-- Wert und Symbol wie die Ecke der Karten des Decks; die Beschriftung der Schachtel nennt die Karte -->
+            <span class="index" class:red={isRed(card)} aria-hidden="true" data-oracle-index style:left="{ix}px" style:top="{iy}px" style:width="{iw}px" style:height="{ih}px" style:font-size="{O.indexSize}px">{rankLabel(card)}<br />{SUIT_SYMBOL[suitOf(card)]}</span>
           </div>
         {/each}
       </div>
@@ -165,5 +168,8 @@
   /* mit Recht zählen auch die herausragenden Karten zum Knopf (die Maske schneidet auch die Trefferfläche zu) */
   button.oracle .cards { pointer-events: auto; }
   .card { position: absolute; background-size: 100% 100%; }
+  /* zwei Zeilen wie die Ecke (Card.svelte), aber klein und blass; das Symbol verdeckt den rechten Nagel (11.13) */
+  .index { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-family: Georgia, serif; line-height: 0.95; color: var(--card-black); opacity: 0.6; white-space: nowrap; }
+  .index.red { color: var(--card-red); }
   .word { position: absolute; display: flex; align-items: center; justify-content: center; color: var(--sheet-ink); line-height: 1; white-space: nowrap; overflow: hidden; }
 </style>

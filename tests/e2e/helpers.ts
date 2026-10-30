@@ -259,3 +259,10 @@ export async function fixRolls(page: Page, values: number[]) {
 
 /** Indizes der längsten Einträge je Tabelle der Expedition (expedition.yaml) */
 export const LONGEST = [6, 10, 12, 5];
+
+/** Text des Eckzeichens einer Orakelkarte („10♥“) → Name der Karte wie in der Beschriftung („Herz 10“, 5ze) */
+export const oracleCardName = (index: string): string => {
+  const suit = ({ '♥': 'Herz', '♠': 'Pik', '♣': 'Kreuz' } as Record<string, string>)[index.slice(-1)];
+  if (!suit) throw new Error(`kein Orakelzeichen: ${index}`);
+  return `${suit} ${index.slice(0, -1)}`;
+};

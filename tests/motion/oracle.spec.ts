@@ -1,7 +1,7 @@
 // Ablauf an der Kartenschachtel (Schritt 5zb, Teil 3, ARCHITEKTUR.md 10.12): Sinken, Wackeln, hintere Karte, vordere.
 
 import { expect, test, type Page } from '@playwright/test';
-import { ready } from '../e2e/helpers';
+import { oracleCardName, ready } from '../e2e/helpers';
 
 const box = (page: Page) => page.locator('[data-oracle-box]');
 
@@ -56,11 +56,12 @@ test('neues Orakel mitten im Ablauf: der alte springt ans Ende, danach stehen di
   const after = await box(page).evaluate((el) => ({
     running: el.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length,
     words: [...el.querySelectorAll('.word')].map((w) => w.textContent),
+    cards: [...el.querySelectorAll('[data-oracle-index]')].map((w) => w.textContent!),
     label: el.getAttribute('aria-label'),
     offset: [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => getComputedStyle(c).translate),
   }));
   expect(after.running).toBe(0);
-  expect(after.label).toBe(`Orakel ziehen: ${after.words.join(', ')}`);
+  expect(after.label).toBe(`Orakel ziehen: ${after.words.map((w, i) => `${w} (${oracleCardName(after.cards[i]!)})`).join(', ')}`);
   for (const t of after.offset) expect(['none', '0px', '0px 0px']).toContain(t);
 });
 

@@ -1,8 +1,9 @@
-// Texte zu Kommen und Gehen (11.7): Protokoll und Meldung, mit und ohne Namen.
+// Texte zu Kommen und Gehen (11.7): Protokoll und Meldung, mit und ohne Namen. Dazu Laterne (5n) und Orakel (5ze).
 
 import { describe, expect, it } from 'vitest';
 import { SEATS, type TableState } from '../../src/engine/types';
 import { describe as describeEvent, describeArrival, noticeArrival } from '../../src/ui/eventText';
+import { content } from '../helpers';
 
 type Seats = TableState<unknown>['seats'];
 const seats = Object.fromEntries(SEATS.map((s) => [s, { occupied: true }])) as Seats;
@@ -38,5 +39,13 @@ describe('Laterne im Protokoll (5n)', () => {
     expect(describeEvent({ type: 'lampChanged', lit: false, by: 'seat2' }, seats)?.text).toBe('Ida hat die Laterne gelöscht.');
     expect(describeEvent({ type: 'lampChanged', lit: false, by: 'seat3' }, seats)?.text).toBe('Spieler 3 hat die Laterne gelöscht.');
     expect(describeEvent({ type: 'lampChanged', lit: true, by: 'spectator' })?.text).toBe('Ein Zuschauer hat die Laterne angezündet.');
+  });
+});
+
+describe('Orakel im Protokoll (5ze, F1 a)', () => {
+  it('nennt je Karte Wort und Karte', () => {
+    const o = content.expedition.oracle;
+    expect(describeEvent({ type: 'oracleDrawn', oracle: [{ suit: 'H', rank: '7' }, { suit: 'S', rank: 'Q' }] })).toEqual({ text: `Orakel: ${o.H['7']} (Herz 7), ${o.S.Q} (Pik D)`, level: 'log' });
+    expect(describeEvent({ type: 'oracleDrawn', oracle: [{ suit: 'C', rank: '10' }, { suit: 'H', rank: 'A' }] })?.text).toBe(`Orakel: ${o.C['10']} (Kreuz 10), ${o.H.A} (Herz A)`);
   });
 });

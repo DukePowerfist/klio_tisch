@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test, type Locator } from '@playwright/test';
-import { dragFromTo, expectCount, fixRolls, fromMenu, LONGEST, menuButton, nameCharacter, openMenuAndClick, openSettings, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fixRolls, fromMenu, LONGEST, menuButton, nameCharacter, openMenuAndClick, openSettings, oracleCardName, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -24,15 +24,17 @@ test('Expedition am Blatt (5zb): vier Tabellen; „Neu“ würfelt nur die eigen
   await expect(dialog).toHaveCount(0);
 });
 
-test('Orakel an der Kartenschachtel (5zb): Klick zieht zwei Begriffe, je auf einer Karte, ohne Farbe und Wert', async ({ page }) => {
+test('Orakel an der Kartenschachtel (5zb, 5ze): Klick zieht zwei Begriffe, je auf einer Karte, Wert und Symbol daneben', async ({ page }) => {
   const box = page.locator('[data-oracle-box]');
   await expect(box).toHaveAccessibleName('Orakel ziehen: noch keins');
   await expect(box.locator('[data-oracle-card]')).toHaveCount(0);
   await box.click();
   await expect(box.locator('[data-oracle-card]')).toHaveCount(2);
   const words = await box.locator('.word').allTextContents();
-  await expect(box).toHaveAccessibleName(`Orakel ziehen: ${words.join(', ')}`);
-  for (const w of words) expect(w).not.toMatch(/Herz|Pik|Kreuz|\d/);
+  const cards = (await box.locator('[data-oracle-index]').allTextContents()).map(oracleCardName);
+  await expect(box).toHaveAccessibleName(`Orakel ziehen: ${words.map((w, i) => `${w} (${cards[i]})`).join(', ')}`);
+  // das Wort allein in `.word`, Wert und Symbol stehen daneben
+  for (const w of words) expect(w).not.toMatch(/Herz|Pik|Kreuz|[♥♠♣]|\d/);
   // kein Fenster mehr
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await box.click({ position: { x: 20, y: 5 } });

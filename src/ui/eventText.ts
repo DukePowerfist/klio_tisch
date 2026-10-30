@@ -7,6 +7,7 @@ import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { trumpById } from '../rules/klio/trumps';
 import type { ArrivalSignal } from './arrivals';
+import { oracleCards, oracleText } from './oracle';
 import { cardName, hasText, t, tMaybe } from './texts';
 
 export type EventText = { text: string; level: 'log' | 'toast' | 'warn' };
@@ -50,7 +51,7 @@ export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>
     case 'expeditionRolled':
       return say(t('log.expedition', { result: e.expedition.map((n, i) => content.expedition.expedition[i]!.entries[n]).join(' · ') }));
     case 'oracleDrawn':
-      return say(t('log.oracle', { words: e.oracle.map((d) => content.expedition.oracle[d.suit][d.rank]).join(', ') }));
+      return say(t('log.oracle', { words: oracleText(oracleCards(e.oracle)) }));
     default:
       return null;
   }
