@@ -85,8 +85,11 @@ describe.skipIf(!existsSync(LEGACY))('wortgetreu aus der alten Datei', () => {
     ];
   }
 
+  // Bewusst an das Regelwerk 2.1 angepasst, steht daher anders in der alten Datei
+  const updated = new Set([content.trumps.find((t) => t.id === 'kuehler-kopf')!.text]);
+
   it('jeder Text kommt in der alten Datei als Zeichenkette vor', () => {
-    const missing = texts().filter((t) => !quoted(t));
+    const missing = texts().filter((t) => !quoted(t) && !updated.has(t));
     expect(missing).toEqual([]);
   });
 

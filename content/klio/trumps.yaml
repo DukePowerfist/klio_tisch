@@ -1,5 +1,5 @@
 # Trümpfe. `id` ist fest und ändert sich nie, auch wenn der Name korrigiert wird.
-# Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs), wortgetreu.
+# Aus „Kartentisch (3).html“ übernommen (scripts/extract-legacy.mjs), wortgetreu; Kühler Kopf an Regelwerk 2.1 angepasst.
 
 - id: schnelle-reflexe
   category: K
@@ -150,7 +150,7 @@
   attributes: [ V ]
   level: 1
   name: Kühler Kopf
-  text: Ziehst du in einer gefährlichen Situation ♣, darfst du der SL eine Frage stellen, die sie wahrheitsgemäß beantwortet. Erhalte zusätzlich eine Forschungsnotiz.
+  text: Ziehst du in einer gefährlichen Situation ♣ als letzte Karte, darfst du der SL eine Frage stellen, die sie wahrheitsgemäß beantwortet. Erhalte zusätzlich eine Forschungsnotiz.
 - id: bastler
   category: V
   attributes: [ V ]
