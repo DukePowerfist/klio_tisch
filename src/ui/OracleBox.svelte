@@ -230,7 +230,7 @@
   /* mit Recht zählen auch die herausragenden Karten zum Knopf (die Maske schneidet auch die Trefferfläche zu) */
   button.oracle .cards { pointer-events: auto; }
   .card { position: absolute; background-size: 100% 100%; }
-  /* zwei Zeilen wie die Ecke (Card.svelte), aber klein und blass; das Symbol verdeckt den rechten Nagel (11.13) */
+  /* zwei Zeilen wie die Ecke (Card.svelte), aber klein und blass; mittig im gemalten Rahmen, der Nagel scheint durch (11.13) */
   .index { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-family: Georgia, serif; line-height: 0.95; color: var(--card-black); opacity: 0.6; white-space: nowrap; }
   .index.red { color: var(--card-red); }
   .word { position: absolute; display: flex; align-items: center; justify-content: center; color: var(--sheet-ink); line-height: 1; white-space: nowrap; overflow: hidden; }
