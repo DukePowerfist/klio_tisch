@@ -104,7 +104,7 @@ test('Maske: unter der Öffnungskante ist keine Karte zu sehen, in der Daumenker
     /** Punkt im Bild der Schachtel (TP) → Element am Bildschirm */
     const at = (x: number, y: number) => document.elementFromPoint(r.left + x * k, r.top + y * k)?.closest('[data-oracle-card]')?.getAttribute('data-oracle-card') ?? null;
     // vordere Karte (Index 1) reicht von 6 bis 118 TP im Bild; links neben der Kerbe unter der Kante verdeckt
-    return { belowEdge: at(14, 46), inNotch: at(48, 40), aboveEdge: at(48, 20) };
+    return { belowEdge: at(14, 46), inNotch: at(48, 44), aboveEdge: at(48, 20) };
   });
   expect(hit).toEqual({ belowEdge: null, inNotch: '1', aboveEdge: '1' });
 });
@@ -130,8 +130,8 @@ const measure = (page: Page) => box(page).evaluate((el) => {
   const r = inner.getBoundingClientRect();
   const k = r.width / inner.offsetWidth;
   const at = (x: number, y: number) => document.elementFromPoint(r.left + x * k, r.top + y * k)?.closest('[data-oracle-card]')?.getAttribute('data-oracle-card') ?? null;
-  const out = [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => 36 - (c.getBoundingClientRect().top - r.top) / k);
-  const res = { top: r.top, k, out, aboveEdge: at(48, 26), inNotch: at(48, 40), words: el.querySelectorAll('.word, [data-oracle-index]').length };
+  const out = [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => 40 - (c.getBoundingClientRect().top - r.top) / k);
+  const res = { top: r.top, k, out, aboveEdge: at(48, 26), inNotch: at(48, 44), words: el.querySelectorAll('.word, [data-oracle-index]').length };
   el.style.rotate = '';
   return res;
 });
@@ -143,7 +143,7 @@ test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 
   const m = await measure(page);
   expect(m.out[0]).toBeCloseTo(5.5, 0);
   expect(m.out[1]).toBeCloseTo(3.5, 0);
-  // 26 TP liegt klar über beiden Kanten (Öffnung bei 36): leer; in der Kerbe sieht man die vordere Karte, aber ohne Wort
+  // 26 TP liegt klar über beiden Kanten (Öffnung bei 40): leer; in der Kerbe sieht man die vordere Karte, aber ohne Wort
   expect(m).toMatchObject({ aboveEdge: null, inNotch: '1', words: 0 });
   await drawOracle(page, { x: 20, y: 5 });
   await page.mouse.move(0, 0);
