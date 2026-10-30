@@ -12,13 +12,13 @@ fields:
   attributes.K: { x: 255, y: 57, w: 31, h: 31, font: 22 }
   attributes.V: { x: 367, y: 57, w: 31, h: 31, font: 22 }
   attributes.P: { x: 477, y: 57, w: 31, h: 31, font: 22 }
-  strengths.text.0: { x: 104, y: 171, w: 262, h: 28, font: 17 }
-  strengths.text.1: { x: 238, y: 207, w: 170, h: 26, font: 17 }
-  strengths.text.2: { x: 72, y: 238, w: 228, h: 27, font: 17 }
-  strengths.text.3: { x: 86, y: 269, w: 226, h: 27, font: 17 }
-  strengths.text.4: { x: 192, y: 304, w: 212, h: 27, font: 17 }
-  weaknesses.0: { x: 190, y: 339, w: 205, h: 26, font: 17 }
-  weaknesses.1: { x: 88, y: 371, w: 232, h: 24, font: 17 }
+  strengths.text.0: { x: 114, y: 171, w: 246, h: 28, font: 17 }
+  strengths.text.1: { x: 244, y: 207, w: 157, h: 26, font: 17 }
+  strengths.text.2: { x: 81, y: 238, w: 209, h: 27, font: 17 }
+  strengths.text.3: { x: 92, y: 269, w: 213, h: 27, font: 17 }
+  strengths.text.4: { x: 197, y: 304, w: 200, h: 27, font: 17 }
+  weaknesses.0: { x: 198, y: 339, w: 176, h: 26, font: 17 }
+  weaknesses.1: { x: 98, y: 371, w: 211, h: 24, font: 17 }
   strengths.improved.0: { x: 388, y: 190, size: 20, hit: 32, font: 22 }
   strengths.improved.1: { x: 426, y: 220, size: 20, hit: 32, font: 22 }
   strengths.improved.2: { x: 317, y: 256, size: 20, hit: 25, font: 22 }
