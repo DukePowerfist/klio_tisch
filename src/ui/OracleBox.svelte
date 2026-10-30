@@ -11,6 +11,8 @@
   // Ereignis bei allen: Öffnen = die Schachtel wackelt, dann schiebt sich die hintere Karte heraus, danach die vordere,
   // Wort und Zeichen erst mit dem Steigen (sonst stünden sie vorab in der Daumenkerbe); Schließen = die Karten sinken bis
   // auf die Kanten, danach ohne Wort; ein neues Orakel bei offener Schachtel sinkt erst, dann wie Öffnen. „Aus“ springt.
+  // Zu sinkt auch die Schachtel um `drop` unter die Brettkante: Schließen = erst die Karten, dann die Schachtel; Öffnen =
+  // erst kommt die Schachtel hoch, dann wie oben. Ein neues Orakel bei offener Schachtel lässt sie oben.
   // Laden, Beitreten, Wiederherstellen: ohne Ereignis, also ohne Ablauf (wie die Laterne).
   import { tick, untrack } from 'svelte';
   import content from 'virtual:klio-content';
@@ -37,6 +39,8 @@
   /** Kennungen der Animationen (Tests) */
   const SINK = 'oracle-sink';
   const SHAKE = 'oracle-shake';
+  const DROP = 'oracle-drop';
+  const LIFT = 'oracle-lift';
   const RISE = 'oracle-rise';
 
   const may = $derived(session.can({ type: 'gm.oracle' }));
@@ -48,6 +52,8 @@
    *  ist schon neu, bevor das Ereignis ankommt). Offen heißt auch: mit Wort und Zeichen. */
   let shown = $state<OracleCard[]>(untrack(() => current));
   let shownOpen = $state(untrack(() => open));
+  /** Schachtel gezeigt abgesunken (zu); im Ablauf getrennt von `shownOpen`: erst die Karten, dann die Schachtel */
+  let shownDown = $state(untrack(() => !open));
   let running = 0;
   /** Endzustand des laufenden Ablaufs: dorthin springt er, wenn ein neuer beginnt */
   let target: { cards: OracleCard[]; open: boolean } | null = null;
@@ -57,6 +63,7 @@
       if (running) return;
       shown = now.cards;
       shownOpen = now.open;
+      shownDown = !now.open;
     });
   });
 
@@ -75,9 +82,12 @@
   const cardTop = (out: number) => top - out;
   /** so weit sinkt eine Karte beim Schließen, bis nur noch ihre Oberkante herausragt */
   const sunk = (i: number) => `0 ${O.out[i]! - O.closed[i]!}px`;
+  /** so weit sinkt die geschlossene Schachtel, am Bildschirm (außerhalb des Maßstabs) */
+  const dropped = $derived(`0 ${O.drop * scale}px`);
   const [bx, by, bw, bh] = O.band;
   const [ix, iy, iw, ih] = O.index;
 
+  let rootEl: HTMLElement;
   let shakeEl: HTMLDivElement;
   let cardsEl: HTMLDivElement;
   const cardEls = () => [...cardsEl.querySelectorAll<HTMLElement>('[data-oracle-card]')];
@@ -88,14 +98,15 @@
    *  springt ans Ende des alten und beginnt dann. */
   async function play(next: OracleCard[] | null): Promise<void> {
     const run = ++running;
-    for (const a of [...shakeEl.getAnimations(), ...cardsEl.getAnimations({ subtree: true })]) a.cancel();
-    if (target) ({ cards: shown, open: shownOpen } = target);
+    for (const a of rootEl.getAnimations({ subtree: true })) a.cancel();
+    if (target) ({ cards: shown, open: shownOpen } = target), (shownDown = !target.open);
     target = next ? { cards: next, open: true } : { cards: shown, open: false };
     const end = target;
     const stale = () => run !== running;
     const finish = () => {
       if (stale()) return;
       ({ cards: shown, open: shownOpen } = end);
+      shownDown = !end.open;
       target = null;
       running = 0;
     };
@@ -103,7 +114,7 @@
     await tick();
     if (stale()) return;
     if (!next && !shownOpen) return finish();
-    if (next ? !ms.oracleShake && !ms.oracleSink && !ms.oracleRise : !ms.oracleClose) return finish();
+    if (next ? !ms.oracleShake && !ms.oracleSink && !ms.oracleRise && !ms.oracleDrop : !ms.oracleClose && !ms.oracleDrop) return finish();
     // offen: die Karten sinken bis auf die Kanten, beim Schließen langsamer als vor einem neuen Orakel
     if (shownOpen) {
       const sink = cardEls().map((el, i) => tagged(el.animate([{ translate: '0 0' }, { translate: sunk(i) }],
@@ -115,7 +126,24 @@
       if (stale()) return;
       for (const a of sink) a.cancel();
     }
-    if (!next) return finish();
+    // zu: die Schachtel sinkt unter die Brettkante
+    if (!next) {
+      shownDown = true;
+      await tick();
+      if (stale()) return;
+      await done([tagged(rootEl.animate([{ translate: '0 0' }, { translate: dropped }], { duration: ms.oracleDrop, easing: 'ease-in-out' }), DROP)]);
+      return finish();
+    }
+    // abgesunken: erst kommt die Schachtel hoch
+    if (shownDown) {
+      const lift = tagged(rootEl.animate([{ translate: dropped }, { translate: '0 0' }], { duration: ms.oracleDrop, easing: 'ease-out', fill: 'forwards' }), LIFT);
+      await done([lift]);
+      if (stale()) return;
+      shownDown = false;
+      await tick();
+      if (stale()) return;
+      lift.cancel();
+    }
     shown = next;
     await done([tagged(shakeEl.animate([{ rotate: '0deg' }, { rotate: '-4deg' }, { rotate: '3.5deg' }, { rotate: '-2deg' }, { rotate: '1deg' }, { rotate: '0deg' }], { duration: ms.oracleShake, easing: 'ease-in-out' }), SHAKE)]);
     if (stale()) return;
@@ -155,7 +183,7 @@
 
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein Bild mit Beschriftung -->
 <svelte:element this={may ? 'button' : 'div'} class="oracle" class:control={may} role={may ? undefined : 'img'} aria-label={label} title={may ? label : undefined}
-  onclick={may ? shake : undefined} data-oracle-box data-oracle-open={shownOpen}
+  onclick={may ? shake : undefined} data-oracle-box data-oracle-open={shownOpen} bind:this={rootEl} style:translate={shownDown ? dropped : undefined}
   style:left="{rect.x}px" style:top="{rect.y}px" style:width="{rect.w}px" style:height="{rect.h}px"
   style:rotate="{O.tilt}deg" style:transform-origin="50% {layout.oracle.bottom - rect.y}px">
   <div class="inner" style:width="{W}px" style:height="{H}px" style:scale={scale}>

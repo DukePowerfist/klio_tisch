@@ -196,7 +196,7 @@ export const LayoutsFile = z.object({
     }).strict(),
     /** Kartenschachtel des Orakels (5zb, 10.12) */
     oracle: z.object({
-      cx: z.number(), size: Point, rest: z.number().positive(), out: Point, closed: Point, opening: z.number(),
+      cx: z.number(), size: Point, rest: z.number().positive(), out: Point, closed: Point, drop: z.number().nonnegative(), opening: z.number(),
       notch: z.tuple([z.number(), z.number(), z.number().positive()]), band: RectTuple, word: z.number().positive(),
       index: RectTuple, indexSize: z.number().positive(), maxScale: z.number().min(1), tilt: z.number(),
     }).strict(),

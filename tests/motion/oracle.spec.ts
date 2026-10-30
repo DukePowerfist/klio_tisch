@@ -1,5 +1,5 @@
 // Ablauf an der Kartenschachtel (Schritt 5zb, Teil 3, ARCHITEKTUR.md 10.12): Sinken, Wackeln, hintere Karte, vordere.
-// Auf- und zuklappen (5zh, 11.14): Öffnen = Wackeln, Steigen; Schließen = nur Sinken. Ein neues Orakel bei offener
+// Auf- und zuklappen (5zh, 11.14): Öffnen = Schachtel hoch, Wackeln, Steigen; Schließen = Karten sinken, dann die Schachtel. Ein neues Orakel bei offener
 // Schachtel (Sinken, Wackeln, Steigen) kommt nur von einer zweiten Spielleitung und ist hier nicht nachzustellen.
 
 import { expect, test, type Page } from '@playwright/test';
@@ -33,7 +33,7 @@ test.beforeEach(async ({ page }) => ready(page));
 
 const at = { position: { x: 20, y: 5 } };
 
-test('Öffnen: die Schachtel wackelt, dann hinten, danach vorn versetzt; kein Sinken; Wörter erst mit dem Steigen (5zh)', async ({ page }) => {
+test('Öffnen: die Schachtel kommt hoch und wackelt, dann hinten, danach vorn versetzt; kein Sinken; Wörter erst mit dem Steigen (5zh)', async ({ page }) => {
   await record(page);
   // während des Wackelns noch ohne Wort (sonst stünde es vorab in der Daumenkerbe)
   await page.evaluate(() => {
@@ -47,7 +47,7 @@ test('Öffnen: die Schachtel wackelt, dann hinten, danach vorn versetzt; kein Si
     requestAnimationFrame(step);
   });
   await box(page).click();
-  await expect.poll(() => seen(page)).toEqual(['oracle-shake', 'oracle-rise#0@0', 'oracle-rise#1@192']);
+  await expect.poll(() => seen(page)).toEqual(['oracle-lift', 'oracle-shake', 'oracle-rise#0@0', 'oracle-rise#1@192']);
   await oracleSettled(page);
   const shaking = await page.evaluate(() => (window as unknown as { wordsWhileShaking: number[] }).wordsWhileShaking);
   expect(shaking.length).toBeGreaterThan(0);
@@ -55,20 +55,22 @@ test('Öffnen: die Schachtel wackelt, dann hinten, danach vorn versetzt; kein Si
   await expect(box(page).locator('.word')).toHaveCount(2);
 });
 
-test('Schließen: nur Sinken, langsamer als vor einem neuen Orakel, ohne Wackeln; Wörter erst danach weg (5zh)', async ({ page }) => {
+test('Schließen: Karten sinken, langsamer als vor einem neuen Orakel, ohne Wackeln, dann sinkt die Schachtel; Wörter erst danach weg (5zh)', async ({ page }) => {
   await drawOracle(page);
   await record(page);
   await box(page).click(at);
-  await expect.poll(() => seen(page)).toEqual(['oracle-sink#0@0', 'oracle-sink#1@0']);
+  await expect.poll(() => seen(page)).toContain('oracle-sink#1@0');
   const sinking = await box(page).evaluate((el) => ({
     words: el.querySelectorAll('.word').length,
     duration: el.getAnimations({ subtree: true }).map((a) => Number((a.effect as KeyframeEffect).getTiming().duration)),
   }));
   expect(sinking.words).toBe(2);
   for (const d of sinking.duration) expect(d).toBe(300);
+  await expect.poll(() => seen(page)).toEqual(['oracle-sink#0@0', 'oracle-sink#1@0', 'oracle-drop']);
   await oracleSettled(page);
   await expect(box(page)).toHaveAttribute('data-oracle-open', 'false');
   await expect(box(page).locator('.word')).toHaveCount(0);
+  expect(await box(page).evaluate((el) => getComputedStyle(el).translate)).toMatch(/^0px \d/);
 });
 
 test('Auf und zu mitten im Ablauf: der alte springt ans Ende, danach ein stimmiger Zustand ohne hängende Animation', async ({ page }) => {
@@ -84,13 +86,15 @@ test('Auf und zu mitten im Ablauf: der alte springt ans Ende, danach ein stimmig
     cards: [...el.querySelectorAll('[data-oracle-index]')].map((w) => w.textContent!),
     label: el.getAttribute('aria-label'),
     offset: [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => getComputedStyle(c).translate),
+    boxOffset: getComputedStyle(el).translate,
   }));
   expect(after.running).toBe(0);
   if (after.open === 'true') {
     expect(after.label).toBe(`Orakel: ${after.words.map((w, i) => `${w} (${oracleCardName(after.cards[i]!)})`).join(', ')}. Klicken schließt die Schachtel`);
-    for (const t of after.offset) expect(['none', '0px', '0px 0px']).toContain(t);
+    for (const t of [...after.offset, after.boxOffset]) expect(['none', '0px', '0px 0px']).toContain(t);
   } else {
     expect(after).toMatchObject({ open: 'false', words: [], label: 'Orakel ziehen' });
+    expect(after.boxOffset).toMatch(/^0px \d/);
     // hintere 60 − 5,5, vordere 30 − 3,5 TP tiefer
     expect(after.offset).toEqual(['0px 54.5px', '0px 26.5px']);
   }

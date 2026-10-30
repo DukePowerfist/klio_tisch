@@ -131,21 +131,25 @@ const measure = (page: Page) => box(page).evaluate((el) => {
   const k = r.width / inner.offsetWidth;
   const at = (x: number, y: number) => document.elementFromPoint(r.left + x * k, r.top + y * k)?.closest('[data-oracle-card]')?.getAttribute('data-oracle-card') ?? null;
   const out = [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => 36 - (c.getBoundingClientRect().top - r.top) / k);
-  const res = { out, aboveEdge: at(48, 26), inNotch: at(48, 40), words: el.querySelectorAll('.word, [data-oracle-index]').length };
+  const res = { top: r.top, k, out, aboveEdge: at(48, 26), inNotch: at(48, 40), words: el.querySelectorAll('.word, [data-oracle-index]').length };
   el.style.rotate = '';
   return res;
 });
 
-test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 TP; ohne Wort und Zeichen, auch in der Kerbe', async ({ page }) => {
+test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 TP; ohne Wort und Zeichen, auch in der Kerbe; die Schachtel 40 TP tiefer', async ({ page }) => {
   await box(page).click({ position: { x: 20, y: 5 } });
   await expect(box(page)).toHaveAttribute('data-oracle-open', 'false');
+  await page.mouse.move(0, 0); // ohne das Anheben beim Überfahren
   const m = await measure(page);
   expect(m.out[0]).toBeCloseTo(5.5, 0);
   expect(m.out[1]).toBeCloseTo(3.5, 0);
   // 26 TP liegt klar über beiden Kanten (Öffnung bei 36): leer; in der Kerbe sieht man die vordere Karte, aber ohne Wort
   expect(m).toMatchObject({ aboveEdge: null, inNotch: '1', words: 0 });
   await drawOracle(page, { x: 20, y: 5 });
+  await page.mouse.move(0, 0);
   const open = await measure(page);
+  // senkrecht am Bildschirm, mal Maßstab; gemessen ohne Neigung
+  expect((m.top - open.top) / m.k).toBeCloseTo(40, 0);
   expect(open.out[0]).toBeCloseTo(60, 0);
   expect(open.out[1]).toBeCloseTo(30, 0);
   expect(open.words).toBe(4);
