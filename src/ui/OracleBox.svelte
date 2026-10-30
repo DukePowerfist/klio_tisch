@@ -5,8 +5,12 @@
   // aber auf die Fläche über der Öffnung und die Daumenkerbe zugeschnitten (Maske), so scheinen sie darin zu stecken.
   // Auf kleinen Bildschirmen größer, damit die Wörter mindestens 12 px groß sind (S3); ausgewichen wird immer mit dem
   // größten Maßstab (T1, layout.ts).
-  // Mit Recht ein Knopf: Klick zieht ein neues Orakel. Mit dem Ereignis bei allen: die alten Karten sinken hinein, die
-  // Schachtel wackelt, dann schiebt sich die hintere Karte heraus, danach die vordere; „Aus“ wechselt nur die Wörter.
+  // Auf- und zuklappen (5zh, 11.14): zu ragen nur die Oberkanten heraus (`closed`), ohne Wort und Zeichen, auch vor dem
+  // ersten Orakel; offen oder zu steht im Stand und gilt für alle.
+  // Mit Recht ein Knopf: Klick auf die geschlossene Schachtel zieht ein neues Orakel, auf die offene schließt sie. Mit dem
+  // Ereignis bei allen: Öffnen = die Schachtel wackelt, dann schiebt sich die hintere Karte heraus, danach die vordere,
+  // Wort und Zeichen erst mit dem Steigen (sonst stünden sie vorab in der Daumenkerbe); Schließen = die Karten sinken bis
+  // auf die Kanten, danach ohne Wort; ein neues Orakel bei offener Schachtel sinkt erst, dann wie Öffnen. „Aus“ springt.
   // Laden, Beitreten, Wiederherstellen: ohne Ereignis, also ohne Ablauf (wie die Laterne).
   import { tick, untrack } from 'svelte';
   import content from 'virtual:klio-content';
@@ -39,18 +43,26 @@
   const scale = $derived(oracleScale(O, fitScale));
   const rect = $derived(oracleRect(O, layout.oracle, scale));
   const current = $derived(oracleCards(session.state?.game.oracle ?? null));
-  /** gezeigte Karten: folgen dem Stand, während des Ablaufs erst nach dem Sinken */
+  const open = $derived(session.state?.game.oracleOpen ?? false);
+  /** gezeigte Karten und gezeigt offen: folgen dem Stand ohne laufenden Ablauf, sonst setzt ihn der Ablauf (der Stand
+   *  ist schon neu, bevor das Ereignis ankommt). Offen heißt auch: mit Wort und Zeichen. */
   let shown = $state<OracleCard[]>(untrack(() => current));
+  let shownOpen = $state(untrack(() => open));
   let running = 0;
+  /** Endzustand des laufenden Ablaufs: dorthin springt er, wenn ein neuer beginnt */
+  let target: { cards: OracleCard[]; open: boolean } | null = null;
   $effect(() => {
-    const now = current;
+    const now = { cards: current, open };
     untrack(() => {
-      if (!running) shown = now;
+      if (running) return;
+      shown = now.cards;
+      shownOpen = now.open;
     });
   });
 
-  const names = $derived(shown.length ? oracleText(shown) : t('gm.oracleNone'));
-  const label = $derived(t(may ? 'gm.oracleDraw' : 'gm.oracleShows', { words: names }));
+  const label = $derived(shownOpen && shown.length
+    ? t(may ? 'gm.oracleClose' : 'gm.oracleShows', { words: oracleText(shown) })
+    : t(may ? 'gm.oracleDraw' : 'gm.oracleClosed'));
   /** flacher Schatten wie ein Stapel, nur unter der Vorderseite (ab der Öffnung) */
   const body = $derived({ x: rect.x, y: rect.y + O.opening * scale, w: rect.w, h: rect.h - O.opening * scale });
   const shadow = $derived(shadowCss(shadowOver(flame, body, stackHeight(1))));
@@ -61,8 +73,8 @@
   const clip = `path('M0 0 H${W} V${top} H0 Z M${n0} ${top} A${(n1 - n0) / 2} ${depth} 0 0 0 ${n1} ${top} Z')`;
   /** Oberkante der Karten in der Hülle: hintere `out[0]`, vordere `out[1]` über der Öffnung */
   const cardTop = (out: number) => top - out;
-  /** so weit sinkt eine Karte, bis sie ganz in der Schachtel steckt */
-  const sunk = (i: number) => `0 ${O.out[i]! + 2}px`;
+  /** so weit sinkt eine Karte beim Schließen, bis nur noch ihre Oberkante herausragt */
+  const sunk = (i: number) => `0 ${O.out[i]! - O.closed[i]!}px`;
   const [bx, by, bw, bh] = O.band;
   const [ix, iy, iw, ih] = O.index;
 
@@ -72,41 +84,59 @@
   const tagged = (a: Animation, id: string) => ((a.id = id), a);
   const done = (as: Animation[]) => Promise.all(as.map((a) => a.finished.catch(() => undefined)));
 
-  /** Ablauf zum Ereignis; ein neues Orakel mitten im Ablauf springt ans Ende des alten und beginnt neu */
-  async function draw(next: OracleCard[]): Promise<void> {
+  /** Ablauf zum Ereignis: neues Orakel (`next`) bzw. Schachtel schließen (`null`). Ein neues Ereignis mitten im Ablauf
+   *  springt ans Ende des alten und beginnt dann. */
+  async function play(next: OracleCard[] | null): Promise<void> {
     const run = ++running;
-    for (const a of [...shakeEl.getAnimations(), ...cardsEl.getAnimations({ subtree: true })]) a.finish();
-    const ms = timing();
+    for (const a of [...shakeEl.getAnimations(), ...cardsEl.getAnimations({ subtree: true })]) a.cancel();
+    if (target) ({ cards: shown, open: shownOpen } = target);
+    target = next ? { cards: next, open: true } : { cards: shown, open: false };
+    const end = target;
     const stale = () => run !== running;
-    if (!ms.oracleShake && !ms.oracleSink && !ms.oracleRise) {
-      shown = next;
-      if (!stale()) running = 0;
-      return;
-    }
-    // alte Karten sinken in die Schachtel und bleiben dort, bis die neuen herauskommen
-    const old = cardEls().map((el, i) => tagged(el.animate([{ translate: '0 0' }, { translate: sunk(i) }], { duration: ms.oracleSink, easing: 'ease-in', fill: 'forwards' }), SINK));
-    await done(old);
-    if (stale()) return;
-    shown = next;
+    const finish = () => {
+      if (stale()) return;
+      ({ cards: shown, open: shownOpen } = end);
+      target = null;
+      running = 0;
+    };
+    const ms = timing();
     await tick();
     if (stale()) return;
-    const hold = cardEls().map((el, i) => el.animate([{ translate: sunk(i) }, { translate: sunk(i) }], { duration: 1, fill: 'forwards' }));
-    for (const a of old) a.cancel();
+    if (!next && !shownOpen) return finish();
+    if (next ? !ms.oracleShake && !ms.oracleSink && !ms.oracleRise : !ms.oracleClose) return finish();
+    // offen: die Karten sinken bis auf die Kanten, beim Schließen langsamer als vor einem neuen Orakel
+    if (shownOpen) {
+      const sink = cardEls().map((el, i) => tagged(el.animate([{ translate: '0 0' }, { translate: sunk(i) }],
+        next ? { duration: ms.oracleSink, easing: 'ease-in', fill: 'forwards' } : { duration: ms.oracleClose, easing: 'ease-in-out', fill: 'forwards' }), SINK));
+      await done(sink);
+      if (stale()) return;
+      shownOpen = false;
+      await tick();
+      if (stale()) return;
+      for (const a of sink) a.cancel();
+    }
+    if (!next) return finish();
+    shown = next;
     await done([tagged(shakeEl.animate([{ rotate: '0deg' }, { rotate: '-4deg' }, { rotate: '3.5deg' }, { rotate: '-2deg' }, { rotate: '1deg' }, { rotate: '0deg' }], { duration: ms.oracleShake, easing: 'ease-in-out' }), SHAKE)]);
     if (stale()) return;
-    // hintere zuerst, die vordere versetzt
+    // Wort und Zeichen erst jetzt; hintere zuerst, die vordere versetzt
+    shownOpen = true;
+    await tick();
+    if (stale()) return;
     const rise = cardEls().map((el, i) => tagged(el.animate([{ translate: sunk(i) }, { translate: '0 0' }], { duration: ms.oracleRise, delay: i * ms.oracleRise * 0.6, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'backwards' }), RISE));
-    for (const a of hold) a.cancel();
     await done(rise);
-    if (!stale()) running = 0;
+    finish();
   }
 
   $effect(() => session.onEvents((events) => {
-    let last: OracleDraw[] | null = null;
-    for (const e of events) if (e.type === 'oracleDrawn') last = e.oracle as OracleDraw[];
-    if (last) {
-      const next = oracleCards(last);
-      untrack(() => void draw(next));
+    let last: OracleDraw[] | null | undefined;
+    for (const e of events) {
+      if (e.type === 'oracleDrawn') last = e.oracle as OracleDraw[];
+      else if (e.type === 'oracleClosed') last = null;
+    }
+    if (last !== undefined) {
+      const next = last && oracleCards(last);
+      untrack(() => void play(next));
     }
   }));
 
@@ -118,14 +148,14 @@
     // zweiter Klick eines Doppelklicks oder Befehl unterwegs: nicht noch einmal ziehen
     if (e.detail > 1 || sending) return;
     sending = true;
-    await submitOrSay({ type: 'gm.oracle' });
+    await submitOrSay({ type: open ? 'gm.oracleClose' : 'gm.oracle' });
     sending = false;
   }
 </script>
 
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein Bild mit Beschriftung -->
 <svelte:element this={may ? 'button' : 'div'} class="oracle" class:control={may} role={may ? undefined : 'img'} aria-label={label} title={may ? label : undefined}
-  onclick={may ? shake : undefined} data-oracle-box
+  onclick={may ? shake : undefined} data-oracle-box data-oracle-open={shownOpen}
   style:left="{rect.x}px" style:top="{rect.y}px" style:width="{rect.w}px" style:height="{rect.h}px"
   style:rotate="{O.tilt}deg" style:transform-origin="50% {layout.oracle.bottom - rect.y}px">
   <div class="inner" style:width="{W}px" style:height="{H}px" style:scale={scale}>
@@ -135,11 +165,15 @@
       <div class="shadow" style:top="{O.opening}px" style:box-shadow={shadow}></div>
       <img class="box" src={boxImage} alt="" draggable="false" />
       <div class="cards" bind:this={cardsEl} style:top="{-ABOVE}px" style:width="{W}px" style:height="{H + ABOVE}px" style:clip-path={clip}>
-        {#each shown as { word, card }, i (i)}
-          <div class="card" data-oracle-card={i} style:left="{(W - CW) / 2}px" style:top="{cardTop(O.out[i]!)}px" style:width="{CW}px" style:height="{CH}px" style:background-image="url({cardImage})">
-            <span class="word" style:left="{bx}px" style:top="{by}px" style:width="{bw}px" style:height="{bh}px" style:font-size="{O.word}px" style:font-family={HAND_FONT}>{word}</span>
-            <!-- Wert und Symbol wie die Ecke der Karten des Decks; die Beschriftung der Schachtel nennt die Karte -->
-            <span class="index" class:red={isRed(card)} aria-hidden="true" data-oracle-index style:left="{ix}px" style:top="{iy}px" style:width="{iw}px" style:height="{ih}px" style:font-size="{O.indexSize}px">{rankLabel(card)}<br />{SUIT_SYMBOL[suitOf(card)]}</span>
+        <!-- immer zwei Karten; zu stecken sie bis auf die Oberkante drin, ohne Wort und Zeichen -->
+        {#each [0, 1] as i (i)}
+          {@const drawn = shownOpen ? shown[i] : undefined}
+          <div class="card" data-oracle-card={i} style:left="{(W - CW) / 2}px" style:top="{cardTop(O.out[i]!)}px" style:width="{CW}px" style:height="{CH}px" style:background-image="url({cardImage})" style:translate={shownOpen ? undefined : sunk(i)}>
+            {#if drawn}
+              <span class="word" style:left="{bx}px" style:top="{by}px" style:width="{bw}px" style:height="{bh}px" style:font-size="{O.word}px" style:font-family={HAND_FONT}>{drawn.word}</span>
+              <!-- Wert und Symbol wie die Ecke der Karten des Decks; die Beschriftung der Schachtel nennt die Karte -->
+              <span class="index" class:red={isRed(drawn.card)} aria-hidden="true" data-oracle-index style:left="{ix}px" style:top="{iy}px" style:width="{iw}px" style:height="{ih}px" style:font-size="{O.indexSize}px">{rankLabel(drawn.card)}<br />{SUIT_SYMBOL[suitOf(drawn.card)]}</span>
+            {/if}
           </div>
         {/each}
       </div>

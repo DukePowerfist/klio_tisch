@@ -266,3 +266,21 @@ export const oracleCardName = (index: string): string => {
   if (!suit) throw new Error(`kein Orakelzeichen: ${index}`);
   return `${suit} ${index.slice(0, -1)}`;
 };
+
+/** Ablauf der Kartenschachtel zu Ende (keine laufende Animation darin) */
+export const oracleSettled = (page: Page) =>
+  expect.poll(() => page.locator('[data-oracle-box]').evaluate((el) => el.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length)).toBe(0);
+
+/** Orakel ziehen (5zh): offene Schachtel erst schließen, dann öffnen; wartet, bis die Karten ganz heraus sind.
+ *  Zu sind immer zwei Karten da, `toHaveCount(2)` wartet also nicht aufs Ziehen. */
+export async function drawOracle(page: Page, position?: { x: number; y: number }): Promise<void> {
+  const box = page.locator('[data-oracle-box]');
+  const click = () => box.click(position ? { position } : {});
+  if ((await box.getAttribute('data-oracle-open')) === 'true') {
+    await click();
+    await expect(box).toHaveAttribute('data-oracle-open', 'false');
+  }
+  await click();
+  await expect(box).toHaveAttribute('data-oracle-open', 'true');
+  await oracleSettled(page);
+}

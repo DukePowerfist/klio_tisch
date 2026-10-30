@@ -20,7 +20,7 @@ const FLYING_Z = 300000;
  *  Blatt und Schachtel (5zb) */
 type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; arriveLift: number; arriveEase: string; ping: number; pointerOut: number; pop: number;
   /** Expedition und Orakel am Tisch (5zb) */
-  sheetGlide: number; nudge: number; oracleSink: number; oracleShake: number; oracleRise: number;
+  sheetGlide: number; nudge: number; oracleSink: number; oracleShake: number; oracleRise: number; oracleClose: number;
   /** Karte in der Hand (11.10) */
   handResize: number };
 let cached: AllTiming | null = null;
@@ -50,6 +50,7 @@ function readTiming(): AllTiming {
     ping: cssMs(v('--ping')), pointerOut: cssMs(v('--pointer-out')), pop: cssMs(v('--pop')),
     sheetGlide: cssMs(v('--sheet-glide')), nudge: cssMs(v('--nudge')),
     oracleSink: cssMs(v('--oracle-sink')), oracleShake: cssMs(v('--oracle-shake')), oracleRise: cssMs(v('--oracle-rise')),
+    oracleClose: cssMs(v('--oracle-close')),
     handResize: cssMs(v('--hand-resize')),
   };
 }

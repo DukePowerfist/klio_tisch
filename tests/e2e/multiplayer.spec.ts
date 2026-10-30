@@ -127,7 +127,12 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(box.locator('.word')).toHaveText(await gm.locator('[data-oracle-box] .word').allTextContents());
   await expect(player.getByRole('dialog')).toHaveCount(0);
   await expect(box).toHaveAttribute('role', 'img');
-  await expect(player.getByRole('button', { name: /^Orakel ziehen/ })).toHaveCount(0);
+  await expect(player.locator('button[data-oracle-box]')).toHaveCount(0);
+  // SL schließt die Schachtel (5zh): beim Spieler sinken die Karten, die Wörter verschwinden
+  await gm.locator('[data-oracle-box]').click({ position: { x: 20, y: 5 } });
+  await expect(box).toHaveAttribute('data-oracle-open', 'false');
+  await expect(box.locator('.word')).toHaveCount(0);
+  await expect(box).toHaveAccessibleName('Orakelschachtel, geschlossen');
 
   // Neu laden: derselbe Platz kommt von selbst zurück
   await player.reload();
@@ -289,13 +294,13 @@ test('Kartenschachtel und Seite „Tisch“ mit Mitspieler (5s, 5zb): Schachtel 
   // ohne Recht ist die Schachtel ein Bild mit Beschriftung, kein Knopf; keine SL-Leiste mehr
   const box = player.locator('[data-oracle-box]');
   await expect(box).toHaveAttribute('role', 'img');
-  await expect(box).toHaveAccessibleName('Orakel: noch keins');
+  await expect(box).toHaveAccessibleName('Orakelschachtel, geschlossen');
   await expect(player.locator('[data-gm-bar]')).toHaveCount(0);
   let rights = await openSettings(gm, 'Rechte der Spieler');
   await rights.getByRole('combobox', { name: 'Orakel ziehen' }).selectOption('allow');
   await gm.keyboard.press('Escape');
-  await expect(player.getByRole('button', { name: 'Orakel ziehen: noch keins' })).toBeVisible();
-  await player.getByRole('button', { name: 'Orakel ziehen: noch keins' }).click();
+  await expect(player.getByRole('button', { name: 'Orakel ziehen' })).toBeVisible();
+  await player.getByRole('button', { name: 'Orakel ziehen' }).click();
   await expect(gm.locator('[data-oracle-box] .word')).toHaveCount(2);
   // Spielerzahl ohne die übrigen Einstellungen: Seiten „Tisch“ und „Darstellung“
   rights = await openSettings(gm, 'Rechte der Spieler');

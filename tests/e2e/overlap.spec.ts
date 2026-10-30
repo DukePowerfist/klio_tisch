@@ -2,7 +2,7 @@
 // der SL-Leiste), „DECK“, Kartenvorschau.
 
 import { expect, test, type Page } from '@playwright/test';
-import { box, expectCount, fromMenu, openMenuAndClick, ready, type Box } from './helpers';
+import { box, drawOracle, expectCount, fromMenu, openMenuAndClick, ready, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -13,8 +13,7 @@ const settled = (page: Page) => page.waitForTimeout(200);
 
 test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „DECK“ ganz lesbar: beide Fenstergrößen, beide Ansichten, Protokoll offen und zu (5zb)', async ({ page }) => {
   // mit gezogenem Orakel, damit die herausragenden Karten mitzählen
-  await page.locator('[data-oracle-box]').click();
-  await expect(page.locator('[data-oracle-card]')).toHaveCount(2);
+  await drawOracle(page);
   for (const [width, height] of [[1600, 900], [1024, 640]] as const) {
     await page.setViewportSize({ width, height });
     for (const log of [false, true]) {
@@ -39,8 +38,7 @@ test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „
 
 test('Meldung nach dem Ziehen verdeckt Blatt und Schachtel nicht und steht sonst unten (5v, 5zb)', async ({ page }) => {
   // mit gezogenem Orakel: die Karten ragen über die Schachtel hinaus und zählen mit
-  await page.locator('[data-oracle-box]').click();
-  await expect(page.locator('[data-oracle-card]')).toHaveCount(2);
+  await drawOracle(page);
   // jede Karte bringt eine neue Meldung, die beim Erscheinen misst
   for (const [i, [width, height]] of ([[1600, 900], [1024, 640], [2400, 900]] as const).entries()) {
     await page.setViewportSize({ width, height });

@@ -2,7 +2,7 @@
 
 import { expect, test, type Page } from '@playwright/test';
 import { readContent } from '../content/read';
-import { dragFromTo, expectCount, fixRolls, ready, zoneCenter } from './helpers';
+import { dragFromTo, drawOracle, expectCount, fixRolls, ready, zoneCenter } from './helpers';
 
 const raw = readContent() as unknown as {
   expedition: { expedition: { prompt: string; entries: string[] }[]; oracle: Record<string, Record<string, string>> };
@@ -191,8 +191,7 @@ test('Leselage am Kopf herunterziehen schließt, kurz gleitet sie zurück; Ziehe
 test('in einem hohen Fenster enden Blatt und Schachtel an der Tischkante, darunter ist nichts von ihnen zu sehen', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 800 });
   // oben klicken: die Mitte des Knopfs liegt im hohen Fenster unter der Tischkante, also abgeschnitten
-  await page.locator('[data-oracle-box]').click({ position: { x: 30, y: 30 } });
-  await expect(page.locator('[data-oracle-card]')).toHaveCount(2);
+  await drawOracle(page, { x: 30, y: 30 });
   const board = (await page.locator('.board').boundingBox())!;
   const edge = board.y + board.height;
   expect(edge).toBeLessThan(790);

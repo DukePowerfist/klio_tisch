@@ -120,9 +120,10 @@ trumpDialog:
 gm:
   expeditionShort: Expedition             # Beschriftung der Leselage am Blatt (5zb, 10.12)
   expeditionOpen: Expedition ansehen      # Blatt am unteren Rand (5zb, 10.12), für alle
-  oracleDraw: "Orakel ziehen: {words}"    # Kartenschachtel mit Recht (5zb)
-  oracleShows: "Orakel: {words}"          # Kartenschachtel ohne Recht (5zb)
-  oracleNone: noch keins                  # dazu, bevor das erste Orakel gezogen ist
+  oracleDraw: Orakel ziehen               # Kartenschachtel zu, mit Recht (5zb, 5zh)
+  oracleClosed: Orakelschachtel, geschlossen  # Kartenschachtel zu, ohne Recht (5zh)
+  oracleClose: "Orakel: {words}. Klicken schließt die Schachtel"  # Kartenschachtel offen, mit Recht (5zh)
+  oracleShows: "Orakel: {words}"          # Kartenschachtel offen, ohne Recht (5zb)
   oracleWord: "{word} ({card})"           # je Orakelkarte in Beschriftung und Protokoll (5ze)
   expeditionEntry: "{entry} ({card})"     # je Tabelle der Expedition im Protokoll (5zf); {card} ohne Farbe nur der Wert
   reroll: Neu                             # je Abschnitt in der Leselage der Expedition (5zb, vorher Ergebnisfenster 5t)
@@ -328,7 +329,7 @@ permissionHelp:
   table.setSettings: Diese Einstellungen ändern. Wer das darf, kann sich auch selbst weitere Rechte geben.
   table.setLamp: Die Laterne in der Tischmitte für alle anzünden oder löschen.
   gm.expedition: Ein Ergebnis aus der Expeditionstabelle ziehen.
-  gm.oracle: Zwei Begriffe aus dem Orakel ziehen.
+  gm.oracle: Zwei Begriffe aus dem Orakel ziehen und die Schachtel wieder schließen.
 
 menu:                                     # Menü oben rechts (neu, Schritt 5b)
   title: Menü

@@ -47,6 +47,8 @@ describe('Orakel im Protokoll (5ze, F1 a)', () => {
     const o = content.expedition.oracle;
     expect(describeEvent({ type: 'oracleDrawn', oracle: [{ suit: 'H', rank: '7' }, { suit: 'S', rank: 'Q' }] })).toEqual({ text: `Orakel: ${o.H['7']} (Herz 7), ${o.S.Q} (Pik D)`, level: 'log' });
     expect(describeEvent({ type: 'oracleDrawn', oracle: [{ suit: 'C', rank: '10' }, { suit: 'H', rank: 'A' }] })?.text).toBe(`Orakel: ${o.C['10']} (Kreuz 10), ${o.H.A} (Herz A)`);
+    // Schachtel schließen (5zh): kein Eintrag, keine Meldung
+    expect(describeEvent({ type: 'oracleClosed' })).toBeNull();
   });
 });
 

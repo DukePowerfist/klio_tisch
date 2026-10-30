@@ -1,8 +1,9 @@
 // Kartenschachtel des Orakels (Schritt 5zb, Teil 3, ARCHITEKTUR.md 10.12): Wörter lesbar, Maske, Größe. Eckzeichen (5ze, 11.13).
+// Auf- und zuklappen (5zh, 11.14).
 
 import { expect, test, type Page } from '@playwright/test';
 import { readContent } from '../content/read';
-import { dragFromTo, expectCount, ready, zoneCenter } from './helpers';
+import { dragFromTo, drawOracle, expectCount, ready, zoneCenter } from './helpers';
 
 const raw = readContent() as unknown as { expedition: { oracle: Record<string, Record<string, string>> } };
 const words = Object.values(raw.expedition.oracle).flatMap((byRank) => Object.values(byRank));
@@ -11,8 +12,7 @@ const box = (page: Page) => page.locator('[data-oracle-box]');
 
 test.beforeEach(async ({ page }) => {
   await ready(page);
-  await box(page).click();
-  await expect(box(page).locator('[data-oracle-card]')).toHaveCount(2);
+  await drawOracle(page);
   await page.evaluate(() => document.fonts.ready);
 });
 
@@ -64,8 +64,8 @@ test('Wort und Eckzeichen: der Text jedes Wortes liegt rechts vom linken Nagel u
 test('Eckzeichen: Wert und Symbol wie in der Beschriftung, Herz rot, Pik und Kreuz dunkel, blass, für Bildschirmleser versteckt (5ze)', async ({ page }) => {
   // mehrmals ziehen, damit meist beide Farben vorkommen
   for (let i = 0; i < 4; i++) {
-    if (i) await box(page).click({ position: { x: 20, y: 5 } });
-    await expect.poll(() => box(page).locator('[data-oracle-index]').count()).toBe(2);
+    if (i) await drawOracle(page, { x: 20, y: 5 });
+    await expect(box(page).locator('[data-oracle-index]')).toHaveCount(2);
     const signs = await box(page).locator('[data-oracle-index]').evaluateAll((els) => els.map((el) => {
       const css = getComputedStyle(el);
       return { text: el.textContent!, color: css.color, opacity: css.opacity, hidden: el.getAttribute('aria-hidden'), inWord: !!el.closest('.word') };
@@ -120,4 +120,46 @@ test('Karte neben die Schachtel fallen lassen: landet nicht auf ihr, auch nicht 
     const c = (await free.boundingBox())!;
     return c.x + c.width <= reach.x || c.x >= reach.x + reach.width || c.y + c.height <= reach.y;
   }).toBe(true);
+});
+
+/** Oberkante jeder Karte über der Öffnung in TP der Schachtel, ohne Neigung; dazu, welche Karte an Punkten des Bildes liegt.
+ *  Gemessen an der Lage, nicht an der Größe: die Box im Browser ist nicht von der Maske beschnitten. */
+const measure = (page: Page) => box(page).evaluate((el) => {
+  el.style.rotate = '0deg';
+  const inner = el.querySelector<HTMLElement>('.inner')!;
+  const r = inner.getBoundingClientRect();
+  const k = r.width / inner.offsetWidth;
+  const at = (x: number, y: number) => document.elementFromPoint(r.left + x * k, r.top + y * k)?.closest('[data-oracle-card]')?.getAttribute('data-oracle-card') ?? null;
+  const out = [...el.querySelectorAll<HTMLElement>('[data-oracle-card]')].map((c) => 36 - (c.getBoundingClientRect().top - r.top) / k);
+  const res = { out, aboveEdge: at(48, 26), inNotch: at(48, 40), words: el.querySelectorAll('.word, [data-oracle-index]').length };
+  el.style.rotate = '';
+  return res;
+});
+
+test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 TP; ohne Wort und Zeichen, auch in der Kerbe', async ({ page }) => {
+  await box(page).click({ position: { x: 20, y: 5 } });
+  await expect(box(page)).toHaveAttribute('data-oracle-open', 'false');
+  const m = await measure(page);
+  expect(m.out[0]).toBeCloseTo(5.5, 0);
+  expect(m.out[1]).toBeCloseTo(3.5, 0);
+  // 26 TP liegt klar über beiden Kanten (Öffnung bei 36): leer; in der Kerbe sieht man die vordere Karte, aber ohne Wort
+  expect(m).toMatchObject({ aboveEdge: null, inNotch: '1', words: 0 });
+  await drawOracle(page, { x: 20, y: 5 });
+  const open = await measure(page);
+  expect(open.out[0]).toBeCloseTo(60, 0);
+  expect(open.out[1]).toBeCloseTo(30, 0);
+  expect(open.words).toBe(4);
+});
+
+test('Neuladen behält offen und zu, ohne Ablauf (5zh)', async ({ page }) => {
+  const words = await box(page).locator('.word').allTextContents();
+  await ready(page, true);
+  await expect(box(page)).toHaveAttribute('data-oracle-open', 'true');
+  await expect(box(page).locator('.word')).toHaveText(words);
+  await box(page).click({ position: { x: 20, y: 5 } });
+  await expect(box(page)).toHaveAttribute('data-oracle-open', 'false');
+  await ready(page, true);
+  await expect(box(page)).toHaveAttribute('data-oracle-open', 'false');
+  await expect(box(page).locator('[data-oracle-card]')).toHaveCount(2);
+  await expect(box(page).locator('.word')).toHaveCount(0);
 });
