@@ -96,6 +96,27 @@ test('Überfahren: die oberste Karte hebt sich leicht und wackelt einmal, auch n
   expect(await wiggles(page)).toBe(1);
 });
 
+/** Versatz der ersten Lage von `--lift-shadow` am Bildschirm (die Karte ist mit ihrem Maßstab verkleinert) */
+const liftOffset = (page: Page) =>
+  page.locator('.card.hover, .card.dragging').first().evaluate((e) => {
+    const [x, y] = (e as HTMLElement).style.getPropertyValue('--lift-shadow').match(/-?[\d.]+px/g)!.map(parseFloat);
+    return Math.hypot(x!, y!) * new DOMMatrix(getComputedStyle(e).transform).a;
+  });
+
+test('Überfahren (5zj): fern der Laterne liegt der Schatten knapp an der Karte, beim Greifen wieder lang', async ({ page }) => {
+  const z = await zoneCenter(page, 'SCHWIERIG');
+  await page.mouse.move(z.x - 200, z.y + 150);
+  await page.mouse.move(z.x, z.y, { steps: 5 });
+  await expect(page.locator('.card.hover')).toHaveCount(1);
+  const hover = await liftOffset(page);
+  expect(hover).toBeLessThan(z.box.width / 4);
+  await page.mouse.down();
+  await page.mouse.move(z.x + 40, z.y + 120, { steps: 5 });
+  await expect(page.locator('.card.dragging')).toHaveCount(1);
+  expect(await liftOffset(page)).toBeGreaterThan(hover * 3);
+  await page.mouse.up();
+});
+
 test('Überfahren: kein Wackeln direkt nach dem Ablegen, die Karte lag die ganze Zeit unter dem Zeiger', async ({ page }) => {
   const from = await zoneCenter(page, 'DECK');
   const to = await zoneCenter(page, 'ABLAGE');

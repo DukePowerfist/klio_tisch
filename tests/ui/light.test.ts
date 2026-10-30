@@ -30,6 +30,14 @@ describe('Schatten der Laterne', () => {
     expect(Math.hypot(far.x, far.y)).toBeCloseTo(MAX_OFFSET);
   });
 
+  it('Überfahren (5zj): so weit von der Flamme wie „Schwierig“ (etwa 550 TP) kurz und knapp; Ziehen lang', () => {
+    const len = (s: { x: number; y: number }) => Math.hypot(s.x, s.y);
+    const hover = shadowAt(flame, 880 + 550, 70, HEIGHT.hover);
+    expect(len(hover)).toBeLessThan(10);
+    expect(hover.blur).toBeLessThan(8);
+    expect(len(shadowAt(flame, 880 + 550, 70, HEIGHT.lifted))).toBeCloseTo(MAX_OFFSET);
+  });
+
   it('Stapel: 2 + Zahl der Kanten', () => {
     expect(stackHeight(1)).toBe(3);
     expect(stackHeight(3)).toBe(5);
