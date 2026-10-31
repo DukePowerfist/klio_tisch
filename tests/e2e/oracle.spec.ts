@@ -136,7 +136,7 @@ const measure = (page: Page) => box(page).evaluate((el) => {
   return res;
 });
 
-test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 TP; ohne Wort und Zeichen, auch in der Kerbe; die Schachtel 40 TP tiefer', async ({ page }) => {
+test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 TP; ohne Wort und Zeichen, auch in der Kerbe; die Schachtel 32 TP tiefer', async ({ page }) => {
   await box(page).click({ position: { x: 20, y: 5 } });
   await expect(box(page)).toHaveAttribute('data-oracle-open', 'false');
   await page.mouse.move(0, 0); // ohne das Anheben beim Überfahren
@@ -149,7 +149,7 @@ test('zu (5zh): nur die Oberkanten über der Öffnung, hintere 5,5, vordere 3,5 
   await page.mouse.move(0, 0);
   const open = await measure(page);
   // senkrecht am Bildschirm, mal Maßstab; gemessen ohne Neigung
-  expect((m.top - open.top) / m.k).toBeCloseTo(40, 0);
+  expect((m.top - open.top) / m.k).toBeCloseTo(32, 0);
   expect(open.out[0]).toBeCloseTo(60, 0);
   expect(open.out[1]).toBeCloseTo(30, 0);
   expect(open.words).toBe(4);

@@ -62,7 +62,7 @@ middle:
 # rechte Nagel scheint zwischen Wert und Symbol durch (Nutzer 2026-10-30); indexSize = deren Schrift;
   # maxScale = größter Maßstab auf kleinen Bildschirmen, mit ihm weichen freie Karten immer aus; tilt = Neigung in Grad
   # um die Mitte an der Brettkante (zur anderen Seite als das Blatt).
-  oracle: { cx: 576, size: [ 96, 160 ], rest: 112, out: [ 60, 30 ], closed: [ 5.5, 3.5 ], drop: 40, opening: 40, notch: [ 33, 63, 9 ],
+  oracle: { cx: 576, size: [ 96, 160 ], rest: 112, out: [ 60, 30 ], closed: [ 5.5, 3.5 ], drop: 32, opening: 40, notch: [ 33, 63, 9 ],
     band: [ 8, 6, 56, 19 ], word: 12, index: [ 64.65, 7.75, 10, 15.2 ], indexSize: 8, maxScale: 1.9, tilt: 3 }
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)

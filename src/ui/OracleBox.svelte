@@ -192,6 +192,8 @@
     <div class="shake" bind:this={shakeEl} style:transform-origin="50% {H}px">
       <div class="shadow" style:top="{O.opening}px" style:box-shadow={shadow}></div>
       <img class="box" src={boxImage} alt="" draggable="false" />
+      <!-- Trefferfläche: nur die Schachtel ab der Öffnung, über ihr ist das Bild leer -->
+      <div class="hit" style:top="{O.opening}px"></div>
       <div class="cards" bind:this={cardsEl} style:top="{-ABOVE}px" style:width="{W}px" style:height="{H + ABOVE}px" style:clip-path={clip}>
         <!-- immer zwei Karten; zu stecken sie bis auf die Oberkante drin, ohne Wort und Zeichen -->
         {#each [0, 1] as i (i)}
@@ -213,7 +215,8 @@
   /* über den Zonen und ihren Karten, knapp unter frei liegenden Karten und dem Licht, wie das Blatt */
   .oracle { position: absolute; z-index: 19990; padding: 0; border: 0; background: none; display: block; }
   div.oracle { pointer-events: none; }
-  button.oracle { cursor: pointer; }
+  /* der Knopf selbst ist so groß wie das Bild; treffen lassen nur Schachtel und herausragende Karten */
+  button.oracle { cursor: pointer; pointer-events: none; }
   button.oracle:focus:not(:focus-visible) { outline: none; }
   /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach, sie wackelt ja ohnehin (wie die Laterne) */
   button.oracle:active { scale: none; }
@@ -226,6 +229,8 @@
   }
   .shadow { position: absolute; left: 3px; right: 3px; bottom: 0; border-radius: 6px; }
   .box { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; pointer-events: none; }
+  .hit { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; }
+  button.oracle .hit { pointer-events: auto; }
   .cards { position: absolute; left: 0; pointer-events: none; }
   /* mit Recht zählen auch die herausragenden Karten zum Knopf (die Maske schneidet auch die Trefferfläche zu) */
   button.oracle .cards { pointer-events: auto; }
