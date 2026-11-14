@@ -6,7 +6,7 @@
   import type { SeatId, TextRef } from '../engine/types';
   import { seatNo, seatVisibleFor } from '../engine/zones';
   import { sheetOf } from '../rules/klio/events';
-  import { getField, SHEET_TEXT_MAX } from '../rules/klio/fields';
+  import { fieldParts, getField, SHEET_TEXT_MAX } from '../rules/klio/fields';
   import DialogHead from './DialogHead.svelte';
   import Modal from './Modal.svelte';
   import { session } from './session.svelte';
@@ -25,8 +25,9 @@
   const close = () => (view.fieldDialog = null);
 
   // Name des Felds: „Stärke III“ (Nummern der Stärken wie im Trumpf-Dialog), „Rüstzeug 4“ usw.
-  const group = $derived(field.split('.')[0]);
-  const index = $derived(Number(field.split('.').at(-1)));
+  const parts = $derived(fieldParts(field));
+  const group = $derived(parts.section);
+  const index = $derived(parts.index ?? 0); // nur „name“ hat keine Nummer, braucht sie aber auch nicht
   const label = $derived(group === 'name' ? t('sheet.field.name') : t(`sheet.field.${group}`, { n: group === 'strengths' ? t(`numerals.${index + 1}`) : index + 1 }));
   const title = $derived(t('sheet.field.title', { field: label, seat: seatNo(seat) }));
   const struck = $derived(group === 'gear' && getField(sheet, `gear.struck.${index}`) === true);

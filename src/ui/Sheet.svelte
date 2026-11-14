@@ -5,7 +5,7 @@
   import content from 'virtual:klio-content';
   import type { SeatId } from '../engine/types';
   import { sheetFields, type SkinBox, type SkinCheck } from '../rules/klio/content/schema';
-  import { getField } from '../rules/klio/fields';
+  import { fieldParts, getField } from '../rules/klio/fields';
   import type { KlioSheet } from '../rules/klio/state';
   import { contextFor, isFull, trumpById } from '../rules/klio/trumps';
   import SheetField from './SheetField.svelte';
@@ -67,7 +67,7 @@
   const inputs = all.filter((f) => f.kind === 'text' || f.kind === 'number').map((f) => ({ ...f, kind: f.kind as 'text' | 'number', pos: skin.fields[f.id] as SkinBox }));
   const checks = all.filter((f) => f.kind === 'check').map((f) => ({ ...f, pos: skin.fields[f.id] as SkinCheck }));
   // Zähler „neue Narben“ (kind: counter) zeigt der Bogen seit 5k nicht mehr: ob „Neue Narbe“ offen ist, steht im Trumpfdialog
-  const slots = all.filter((f) => f.kind === 'trumpSlot').map((f) => ({ index: Number(f.id.split('.').pop()), pos: skin.fields[f.id] as SkinBox }));
+  const slots = all.filter((f) => f.kind === 'trumpSlot').map((f) => ({ index: fieldParts(f.id).index!, pos: skin.fields[f.id] as SkinBox }));
   const photoField = all.find((f) => f.kind === 'photo');
   const photoBox = photoField && (skin.fields[photoField.id] as SkinBox);
   /** Textfeld → Kästchen, das es durchstreicht bzw. hervorhebt */

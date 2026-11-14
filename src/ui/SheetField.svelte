@@ -5,7 +5,7 @@
   // Tasten (5z): Enter springt ins nächste Feld derselben Gruppe (Umschalt+Enter zurück), am Ende der Gruppe und mit
   // Esc verlässt man das Feld; Pfeil hoch/runter zählt an Attributen 0 bis 9.
   import type { SeatId } from '../engine/types';
-  import { SHEET_TEXT_MAX } from '../rules/klio/fields';
+  import { fieldParts, SHEET_TEXT_MAX } from '../rules/klio/fields';
   import { submitOrSay } from './commands';
   import { effects } from './effects.svelte';
   import { shouldSend } from './fieldSend';
@@ -80,12 +80,12 @@
     change(v);
   }
 
-  /** Gruppe: Name ohne die letzte Stelle (`strengths.text.2` → `strengths.text`, `attributes.K` → `attributes`) */
-  const group = $derived(field.includes('.') ? field.slice(0, field.lastIndexOf('.') + 1) : null);
+  /** Gruppe: Name ohne die letzte Stelle, mit Punkt (`strengths.text.2` → `strengths.text.`, `attributes.K` → `attributes.`) */
+  const prefix = $derived(fieldParts(field).prefix);
   /** Nachbarfeld derselben Gruppe auf diesem Bogen, in der Reihenfolge der Seite; null am Ende oder ohne Gruppe */
   function neighbour(step: 1 | -1): HTMLInputElement | null {
-    if (!group) return null;
-    const all = [...el.closest('.paper')!.querySelectorAll<HTMLInputElement>('input[data-field]')].filter((i) => i.dataset.field!.startsWith(group) && !i.dataset.field!.slice(group.length).includes('.'));
+    if (!prefix) return null;
+    const all = [...el.closest('.paper')!.querySelectorAll<HTMLInputElement>('input[data-field]')].filter((i) => i.dataset.field!.startsWith(prefix) && !i.dataset.field!.slice(prefix.length).includes('.'));
     return all[all.indexOf(el) + step] ?? null;
   }
 

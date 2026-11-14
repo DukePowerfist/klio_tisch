@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../src/engine/rng';
-import { fieldKind } from '../../src/rules/klio/fields';
+import { fieldKind, fieldParts } from '../../src/rules/klio/fields';
 import { rollAttributes } from '../../src/rules/klio/generators/rollSheet';
 import { sheetFieldInstances } from '../../src/rules/klio/content/schema';
 import { emptySheet } from '../../src/rules/klio/state';
@@ -160,5 +160,15 @@ describe('Ganzer Bogen (5j)', () => {
     const two = run(fresh(), { type: 'table.setPlayers', players: 2 }).state;
     expectRejected(two, { type: 'sheet.reset', seat: 'seat3' }, 'reject.hiddenSeat');
     expectRejected(two, { type: 'sheet.import', seat: 'seat3', sheet: emptySheet() }, 'reject.hiddenSeat');
+  });
+});
+
+describe('fieldParts', () => {
+  it('zerlegt Namen in Abschnitt, Gruppe mit Punkt und Nummer', () => {
+    expect(fieldParts('strengths.text.2')).toEqual({ section: 'strengths', prefix: 'strengths.text.', index: 2 });
+    expect(fieldParts('weaknesses.1')).toEqual({ section: 'weaknesses', prefix: 'weaknesses.', index: 1 });
+    expect(fieldParts('trumps.3')).toEqual({ section: 'trumps', prefix: 'trumps.', index: 3 });
+    expect(fieldParts('attributes.K')).toEqual({ section: 'attributes', prefix: 'attributes.', index: null });
+    expect(fieldParts('name')).toEqual({ section: 'name', prefix: null, index: null });
   });
 });

@@ -47,6 +47,19 @@ function pathOf(field: string): { path: (string | number)[]; kind: FieldKind } |
   return null;
 }
 
+/** Teile eines Feldnamens für die Oberfläche, ohne ihn zu prüfen (gilt auch für Plätze wie `trumps.2`, die kein Feld
+ *  mit Wert sind): `strengths.text.2` → section `strengths`, prefix `strengths.text.`, index 2; `attributes.K` → index
+ *  null; `name` → prefix und index null. Der prefix fasst Nachbarfelder zusammen (dieselbe Gruppe auf dem Bogen). */
+export function fieldParts(field: string): { section: string; prefix: string | null; index: number | null } {
+  const dot = field.lastIndexOf('.');
+  const last = field.slice(dot + 1);
+  return {
+    section: field.split('.', 1)[0]!,
+    prefix: dot < 0 ? null : field.slice(0, dot + 1),
+    index: dot >= 0 && /^\d+$/.test(last) ? Number(last) : null,
+  };
+}
+
 export function fieldKind(field: string): FieldKind | null {
   return pathOf(field)?.kind ?? null;
 }
