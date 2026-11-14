@@ -1,13 +1,8 @@
 {
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "types": ["node"],
-    "strict": true,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true
+    "lib": ["ES2022"],
+    "types": ["node"]
   },
   "include": ["vite.config.ts", "content-plugin.ts"]
 }

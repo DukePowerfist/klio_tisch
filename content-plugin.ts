@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { parse } from 'yaml';
+// Endung .ts hier und in allem, was diese Dateien importieren (tests/architecture/configImports.test.ts)
 import { CONTENT_PATHS } from './src/rules/klio/content/files.ts';
 import { validateContent, type RawContent } from './src/rules/klio/content/validate.ts';
 

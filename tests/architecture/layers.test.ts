@@ -4,6 +4,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { relativeImports } from './imports';
 
 const SRC = resolve(import.meta.dirname, '../../src');
 
@@ -24,11 +25,6 @@ function files(dir: string): string[] {
   return readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => /\.(ts|svelte)$/.test(f)).map((f) => join(dir, f));
 }
 
-function relativeImports(source: string): string[] {
-  const re = /(?:import|export)\s[^'"]*?from\s*['"](\.[^'"]+)['"]|import\(\s*['"](\.[^'"]+)['"]\s*\)/g;
-  return [...source.matchAll(re)].map((m) => m[1] ?? m[2]!);
-}
-
 describe('Schichtgrenzen', () => {
   const violations: string[] = [];
   for (const file of files(SRC)) {
@@ -46,7 +42,7 @@ describe('Schichtgrenzen', () => {
   });
 
   it('die Prüfung erkennt Importe', () => {
-    expect(relativeImports(`import { a } from '../engine/types';\nimport type { B } from "./x";\nconst c = import('../ui/y');`))
-      .toEqual(['../engine/types', './x', '../ui/y']);
+    expect(relativeImports(`import { a } from '../engine/types';\nimport type { B } from "./x";\nconst c = import('../ui/y');\nimport './z.css';`))
+      .toEqual(['../engine/types', './x', '../ui/y', './z.css']);
   });
 });
