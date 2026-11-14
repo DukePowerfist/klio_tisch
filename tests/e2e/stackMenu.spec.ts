@@ -10,7 +10,7 @@ const overlaps = (a: Box, b: Box) => a.x < b.x + b.width && b.x < a.x + a.width 
 
 const STACKS = [
   { label: 'DECK', zone: 'deck', target: 'discard', side: 'left' },
-  { label: 'LEICHT', zone: 'diamonds_easy', target: 'display', side: 'left' },
+  { label: 'EINFACH', zone: 'diamonds_easy', target: 'display', side: 'left' },
   { label: 'MITTEL', zone: 'diamonds_medium', target: 'display', side: 'right' },
   { label: 'SCHWIERIG', zone: 'diamonds_hard', target: 'display', side: 'right' },
   { label: 'KREUZ', zone: 'clubs', target: 'discard', side: 'right' },
@@ -93,9 +93,9 @@ test('kleines Fenster mit offenem Protokoll: Men체 vollst채ndig sichtbar, an jed
 });
 
 test('letzte Karte ziehen: Ziehen und Umdrehen werden ausgegraut mit Grund, Men체 bleibt offen', async ({ page }) => {
-  await openMenuAndClick(page, 'LEICHT', 'Ziehen');
+  await openMenuAndClick(page, 'EINFACH', 'Ziehen');
   for (let i = 0; i < 4; i++) await stackItem(page, 'Ziehen').click();
-  await expectCount(page, 'LEICHT', 0);
+  await expectCount(page, 'EINFACH', 0);
   for (const a of ['Ziehen', 'Umdrehen'] as const) {
     await expect(stackItem(page, a)).toHaveAttribute('aria-disabled', 'true');
     await expect(stackItem(page, a)).toHaveAttribute('title', 'Stapel leer');
@@ -106,9 +106,9 @@ test('letzte Karte ziehen: Ziehen und Umdrehen werden ausgegraut mit Grund, Men�
   // ausgegraut: ein Klick tut nichts, der Eintrag bleibt fokussierbar (force: Playwright klickt sonst nicht auf aria-disabled)
   await stackItem(page, 'Ziehen').click({ force: true });
   await expect(stackItem(page, 'Ziehen')).toBeFocused();
-  await expectCount(page, 'LEICHT', 0);
+  await expectCount(page, 'EINFACH', 0);
   await stackItem(page, 'Mischen').click();
-  await expectCount(page, 'LEICHT', 5);
+  await expectCount(page, 'EINFACH', 5);
   await expect(stackItem(page, 'Ziehen')).not.toHaveAttribute('aria-disabled', 'true');
 });
 
@@ -196,19 +196,19 @@ const count = (page: Page) => page.locator('.zone').filter({ hasText: /^DECK/ })
 
 test('leeres Deck mit Karten in der Ablage: nur Mischen, ein Klick mischt sofort, danach liegen die Karo in ihren Stapeln', async ({ page }) => {
   // eine Karo-Karte auf die Ablage, dann das Deck mit Z leer ziehen
-  await dragFromTo(page, await zoneCenter(page, 'LEICHT'), await zoneCenter(page, 'ABLAGE'));
-  await expectCount(page, 'LEICHT', 4);
+  await dragFromTo(page, await zoneCenter(page, 'EINFACH'), await zoneCenter(page, 'ABLAGE'));
+  await expectCount(page, 'EINFACH', 4);
   await open(page, STACKS[0]);
   for (let i = 0; i < 27; i++) await page.keyboard.press('z');
   await expect(count(page)).toHaveText('0');
   await expect(stackItem(page, 'Ziehen')).toHaveAttribute('aria-disabled', 'true');
   await expect(stackItem(page, 'Umdrehen')).toHaveAttribute('aria-disabled', 'true');
   const shuffle = menu(page).getByRole('menuitem').nth(2);
-  await expect(shuffle).toHaveAttribute('title', 'Stapel mischen; holt 28 Karten aus der Ablage zur체ck (1 davon nach Leicht) (M)');
+  await expect(shuffle).toHaveAttribute('title', 'Stapel mischen; holt 28 Karten aus der Ablage zur체ck (1 davon nach Einfach) (M)');
   await shuffle.click();
   await expect(count(page)).toHaveText('27');
   await expectCount(page, 'ABLAGE', 0);
-  await expectCount(page, 'LEICHT', 5);
+  await expectCount(page, 'EINFACH', 5);
   await expect(shuffle).toHaveText('Mischen');
 });
 

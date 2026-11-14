@@ -68,7 +68,7 @@ export const NamesFile = z.object({
 //   diamonds_hard:   [DJ, DQ, DK, DA]
 //   clubs:           [C2, …, CK]
 //   deck:            [HA, SA, CA, H2, …, HK, S2, …, SK]
-// Heimatstapel einer Karte = ihre Startzone (Karo 2–6 → LEICHT usw., wie bisher).
+// Heimatstapel einer Karte = ihre Startzone (Karo 2–6 → EINFACH usw., wie bisher).
 // Karten ohne Startzone sind ein Build-Fehler; jede Karte kommt genau einmal vor.
 export const DeckFile = z.object({
   start: z.record(z.string(), z.array(CardIdSchema)),

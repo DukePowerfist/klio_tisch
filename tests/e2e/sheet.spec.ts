@@ -237,7 +237,7 @@ test('Kästchen, Narbe ohne Zähler (5k), Rüstzeug streichen', async ({ page })
 test('Schaden: niedrigere Karo-Karte tötet; Wiederbeleben über das Schild', async ({ page }) => {
   // Karo B–A, dann Karo 2–6: immer niedriger, Karo als Treffer → tot (A3)
   const hard = await zoneCenter(page, 'SCHWIERIG');
-  const easy = await zoneCenter(page, 'LEICHT');
+  const easy = await zoneCenter(page, 'EINFACH');
   const dmg = await zoneCenter(page, 'SCHADEN');
   await dragFromTo(page, hard, dmg);
   await expect(sheet1(page).locator('.dead-cross')).toHaveCount(0);

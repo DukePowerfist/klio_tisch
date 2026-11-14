@@ -13,7 +13,7 @@ zones:
   displayTitle: Schwierigkeitsgrad der Aktion · aus einem der drei Karo-Stapel
   feltDifficulty: SCHWIERIGKEIT
   feltTable: EXPEDITIONSTISCH
-  diamonds_easy: LEICHT (2-6)
+  diamonds_easy: EINFACH (2-6)
   diamonds_medium: MITTEL (7-10)
   diamonds_hard: SCHWIERIG (11-14)
   clubs: KREUZ
@@ -35,7 +35,7 @@ stack:                                    # Stapelmenü (neu, Schritt 5o, ARCHIT
   gatherTitle: "Stapel mischen; holt {cards} {from} zurück{others} ({key})"
   gatherFrom: { discard: aus der Ablage, display: aus der Auslage }
   others: " ({n} davon nach {names})"
-  names: { deck: Deck, diamonds_easy: Leicht, diamonds_medium: Mittel, diamonds_hard: Schwierig, clubs: Kreuz }
+  names: { deck: Deck, diamonds_easy: Einfach, diamonds_medium: Mittel, diamonds_hard: Schwierig, clubs: Kreuz }
   and: und
   cardsOne: 1 Karte
   cardsMany: "{n} Karten"

@@ -55,7 +55,7 @@ describe('Stapelmenü: Einträge (10.2)', () => {
 
   it('Mischen am Deck nennt, was zurückkommt und wohin die Karo gehen', () => {
     const e = byAction(deckWithDiamonds, 'deck').shuffle!;
-    expect(e.title).toBe('Stapel mischen; holt 7 Karten aus der Ablage zurück (2 davon nach Leicht und Schwierig) (M)');
+    expect(e.title).toBe('Stapel mischen; holt 7 Karten aus der Ablage zurück (2 davon nach Einfach und Schwierig) (M)');
   });
 
   it('Mischen an einem Karo-Stapel holt die Karo aller Stufen aus der Auslage; eine einzelne Karte in der Einzahl', () => {
@@ -63,7 +63,7 @@ describe('Stapelmenü: Einträge (10.2)', () => {
       'Stapel mischen; holt 3 Karten aus der Auslage zurück (2 davon nach Mittel und Schwierig) (M)',
     );
     const one = place(s0, 'display', [easy1!], true);
-    expect(byAction(one, 'diamonds_hard').shuffle).toMatchObject({ title: 'Stapel mischen; holt 1 Karte aus der Auslage zurück (1 davon nach Leicht) (M)' });
+    expect(byAction(one, 'diamonds_hard').shuffle).toMatchObject({ title: 'Stapel mischen; holt 1 Karte aus der Auslage zurück (1 davon nach Einfach) (M)' });
   });
 
   it('ohne Recht ausgegraut mit dem Text der Ablehnung; ohne ein einziges Recht nichts erlaubt', () => {
@@ -103,7 +103,7 @@ describe('Stapelmenü: Wirkung des Mischens aus dem Probelauf (N1)', () => {
 
 /** Panel seit 5zi (10.15): 120 px breit, ohne Kopf, gemessen 133 px hoch */
 const PANEL = { w: 120, h: 133 };
-/** Panel bis 5zi (208 px breit): Auf diese Größe sind die Sonderfälle und die Begründung für „Leicht“ links ausgelegt;
+/** Panel bis 5zi (208 px breit): Auf diese Größe sind die Sonderfälle und die Begründung für „Einfach“ links ausgelegt;
  *  die Regeln von placeMenu hängen nicht von der Größe ab */
 const WIDE = { w: 208, h: 160 };
 const LOG_W = 300;
@@ -125,7 +125,7 @@ function scene(W: number, H: number, role: SeatId | null, zone: ZoneId, log = fa
 }
 
 const TARGET: Record<string, ZoneId> = { deck: 'discard', diamonds_easy: 'display', diamonds_medium: 'display', diamonds_hard: 'display', clubs: 'discard' };
-/** bevorzugte Seite aus layouts.yaml (N2): Deck und Leicht links, sonst rechts */
+/** bevorzugte Seite aus layouts.yaml (N2): Deck und Einfach links, sonst rechts */
 const PREFERRED: Record<string, Side> = { deck: 'left', diamonds_easy: 'left', diamonds_medium: 'right', diamonds_hard: 'right', clubs: 'right' };
 const sidesFor = (side: Side): Side[] => (side === 'left' ? ['left', 'right'] : ['right', 'left']);
 
@@ -158,7 +158,7 @@ describe('Stapelmenü: Lage am Stapel mit den echten Maßen (10.2)', () => {
     });
   }
 
-  it('aufgeklapptes „Leicht“ (Endmaß), mit dem breiten Panel bis 5zi: rechts müsste das Menü über die Auslage ausweichen, deshalb links (N9)', () => {
+  it('aufgeklapptes „Einfach“ (Endmaß), mit dem breiten Panel bis 5zi: rechts müsste das Menü über die Auslage ausweichen, deshalb links (N9)', () => {
     const { L, toScreen, area } = scene(1280, 720, null, 'diamonds_easy');
     const anchor = toScreen(L.zones['diamonds_easy']!);
     const target = toScreen(L.zones['display']!);

@@ -13,11 +13,11 @@ test('Deck ziehen: Karte offen auf die Ablage, Meldung mit Kartenname', async ({
 });
 
 test('Karo ziehen: offen in die Auslage; Karo mischen holt sie zurück', async ({ page }) => {
-  await openMenuAndClick(page, 'LEICHT', 'Ziehen');
+  await openMenuAndClick(page, 'EINFACH', 'Ziehen');
   await expect(page.getByRole('status')).toHaveText(/^Ausliegend: Karo [2-6]$/);
-  await expectCount(page, 'LEICHT', 4);
+  await expectCount(page, 'EINFACH', 4);
   await shuffleBack(page, 1);
-  await expectCount(page, 'LEICHT', 5);
+  await expectCount(page, 'EINFACH', 5);
 });
 
 test('Deck mischen nimmt die Ablage auf', async ({ page }) => {

@@ -454,7 +454,7 @@ test('Spielerzahl: Sprung an die neue Anordnung, dann Aufblenden, ohne Abblenden
 });
 
 test('Öffnen eines Stapels wächst weiter mit --shift (Gegenprobe zu 5m)', async ({ page }) => {
-  const easy = await zoneCenter(page, 'LEICHT');
+  const easy = await zoneCenter(page, 'EINFACH');
   await page.mouse.click(easy.x, easy.y);
   const seen = await page.evaluate(() => document.getAnimations().map((a) =>
     `${a.constructor.name} ${(a as CSSTransition).transitionProperty ?? ''} ${((a.effect as KeyframeEffect).target as HTMLElement).className.toString().split(' ')[0]} ${(a.effect as KeyframeEffect).getTiming().duration}`));
