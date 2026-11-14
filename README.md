@@ -15,6 +15,8 @@ Der Filz folgt dem Spielablauf: oben die drei Schwierigkeitsstapel, mittig Zielw
 
 Lizenz: MIT für den Programmcode (siehe `LICENSE`). Spielinhalte sind davon ausgenommen.
 
+Bildquellen: Das Bild auf der Kartenschachtel und der Rückseite der Spielkarten (`public/assets/cards/oracle-box.webp`, `public/assets/cards/back.webp`) stammt von der folgenden Quelle und wurde im Sinne der CC0 (Creative Commons Zero) adaptiert: Renshawe. *Panoramic View of the Crater Lake National Park, Oregon*, ca. 1914, topographische Lithographie, Washington D.C., Department of the Interior. Die Adaption (Reiseweg, Flugzeug, Schriftzug „K.L.I.O.“) fällt nicht unter die MIT-Lizenz.
+
 Bilder des Tisches (`public/assets/table/`: Holz und Laterne) sind mit ChatGPT erzeugt und bearbeitet (Freistellen, Vergrößern mit Real-ESRGAN, Leuchtmaske; `scripts/table-assets.py`). Auch sie fallen nicht unter die MIT-Lizenz.
 
-Expeditionsblatt und Kartenschachtel des Orakels (`public/assets/sheet/expedition.webp`, `public/assets/cards/oracle-box.webp`, `public/assets/cards/oracle.webp`) sind mit einem Bildgenerator erzeugt (Expeditionsblatt und Schachtel danach retuschiert) und fallen ebenfalls nicht unter die MIT-Lizenz. Die Handschrift darauf ist „Patrick Hand“ von Patrick Wagesreiter unter der SIL Open Font License 1.1 (`public/assets/fonts/patrick-hand-OFL.txt`).
+Expeditionsblatt und Orakelkarten (`public/assets/sheet/expedition.webp`, `public/assets/cards/oracle.webp`) sind mit einem Bildgenerator erzeugt (Expeditionsblatt danach retuschiert) und fallen ebenfalls nicht unter die MIT-Lizenz. Die Handschrift darauf ist „Patrick Hand“ von Patrick Wagesreiter unter der SIL Open Font License 1.1 (`public/assets/fonts/patrick-hand-OFL.txt`).
