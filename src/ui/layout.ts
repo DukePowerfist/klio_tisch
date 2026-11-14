@@ -214,11 +214,12 @@ function oracleReach(c: KlioContent, at: { cx: number; bottom: number }, s: numb
   return rotatedBounds(r, o.tilt, { x: at.cx, y: at.bottom });
 }
 
-/** Maßstab der Schachtel (S3, T7): die Wörter (`word` TP) mindestens `minPx` groß auf dem Bildschirm bei Zoom 1, also
- *  bei Tischmaßstab `fitScale`; zwischen 1 und `maxScale`. Beim Hineinzoomen wächst sie nicht weiter. */
-export function oracleScale(o: Pick<OracleSpec, 'word' | 'maxScale'>, fitScale: number, minPx = 12): number {
-  if (!(fitScale > 0)) return 1;
-  return clamp(minPx / (o.word * fitScale), 1, o.maxScale);
+/** Maßstab der Schachtel (S3, T7): die Wörter (`word` TP) mindestens `minPx · minScale` groß auf dem Bildschirm bei
+ *  Zoom 1, also bei Tischmaßstab `fitScale`; zwischen `minScale` und `maxScale`. Beim Hineinzoomen wächst sie nicht
+ *  weiter. */
+export function oracleScale(o: Pick<OracleSpec, 'word' | 'minScale' | 'maxScale'>, fitScale: number, minPx = 12): number {
+  if (!(fitScale > 0)) return o.minScale;
+  return clamp((o.minScale * minPx) / (o.word * fitScale), o.minScale, o.maxScale);
 }
 
 function lampBox(c: { x: number; y: number }, l: KlioContent['layouts']['middle']['lamp']): LampBox {

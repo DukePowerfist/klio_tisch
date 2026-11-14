@@ -74,15 +74,16 @@ describe('Expeditionsblatt in Ruhe (5zb)', () => {
 });
 
 describe('Kartenschachtel (5zb)', () => {
-  it('Maßstab: Wörter mindestens 12 px bei Zoom 1, zwischen 1 und maxScale (S3, T7)', () => {
+  it('Maßstab: Wörter mindestens 12 px · minScale bei Zoom 1, zwischen minScale und maxScale (S3, T7)', () => {
     const fit = (w: number, h: number) => Math.min(w / 1760, h / 990);
-    expect(oracleScale(O, fit(1920, 1080))).toBe(1);
-    const small = oracleScale(O, fit(1024, 600));
-    expect(small).toBeGreaterThan(1.5);
+    expect(O.minScale).toBeGreaterThan(1);
+    expect(oracleScale(O, fit(1920, 1080))).toBe(O.minScale);
+    const small = oracleScale(O, fit(1280, 720));
+    expect(small).toBeGreaterThan(1.3 * O.minScale);
     expect(small).toBeLessThan(O.maxScale);
-    expect(small * O.word * fit(1024, 600)).toBeCloseTo(12);
+    expect(small * O.word * fit(1280, 720)).toBeCloseTo(12 * O.minScale);
     expect(oracleScale(O, fit(800, 450))).toBe(O.maxScale);
-    expect(oracleScale(O, 0)).toBe(1);
+    expect(oracleScale(O, 0)).toBe(O.minScale);
   });
 
   it('steht unter Kreuz, auch mit maxScale unter dessen Beschriftung, rechts vom Blatt und im Filz', () => {
