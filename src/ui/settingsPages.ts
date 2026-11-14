@@ -17,7 +17,7 @@ export const openPage = (last: SettingsPage, pages: readonly SettingsPage[]): Se
 // steht unter „Weitere“, damit ein neues Recht nie verschwindet.
 
 export const PERMISSION_GROUPS = {
-  cards: ['cards.move', 'card.flip', 'zone.shuffle', 'zone.draw'],
+  cards: ['cards.move', 'card.flip', 'zone.shuffle', 'zone.draw', 'budget.start', 'budget.edit'],
   sheet: ['sheet.edit', 'sheet.photo', 'sheet.roll', 'sheet.replace'],
   trumps: ['trump.choose', 'trump.chooseFree', 'trump.remove', 'character.revive'],
   gm: ['table.reset', 'table.setPlayers', 'table.setSeat', 'table.setSettings', 'table.setLamp', 'gm.expedition', 'gm.oracle'],

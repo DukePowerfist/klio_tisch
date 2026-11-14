@@ -2,7 +2,7 @@
 // Listenlängen kommen aus sheet.yaml und werden beim Build gegen dieses Schema geprüft.
 
 import { z } from 'zod';
-import { PhotoHashSchema, RankSchema } from '../../engine/schemas';
+import { PhotoHashSchema, RankSchema, SeatSchema } from '../../engine/schemas';
 
 export const TrumpId = z.string().regex(/^[a-z0-9-]+$/);
 
@@ -45,6 +45,26 @@ export type KlioSheet = z.infer<typeof KlioSheet>;
 export const OracleDraw = z.object({ suit: z.enum(ORACLE_SUITS), rank: RankSchema }).strict();
 export const Oracle = z.tuple([OracleDraw, OracleDraw]);
 
+/** Höchstes einstellbares Kartenbudget */
+export const BUDGET_MAX = 20;
+
+/** Zähler für das Kartenbudget einer Aktion (Schritt 6a). `seat` = handelnde Person, solange `active`; `left` = noch
+ *  vom Deck zu ziehen, `drawn` = schon gezogen; `club`: ♣ vom Deck gezogen; `last` = Vorschlag beim nächsten Start
+ *  (Budget der letzten Aktion). Vorteil und Nachteil wirken auf die Sperren (Regelwerk 2.2, S. 13). */
+export const Budget = z.object({
+  active: z.boolean(),
+  seat: SeatSchema.nullable(),
+  left: z.number().int().min(0).max(BUDGET_MAX),
+  drawn: z.number().int().min(0),
+  club: z.boolean(),
+  advantage: z.boolean(),
+  disadvantage: z.boolean(),
+  last: z.number().int().min(0).max(BUDGET_MAX),
+}).strict();
+export type Budget = z.infer<typeof Budget>;
+
+export const initialBudget = (): Budget => ({ active: false, seat: null, left: 0, drawn: 0, club: false, advantage: false, disadvantage: false, last: 3 });
+
 export const KlioState = z.object({
   /** ein Bogen je Sitzplatz, Index 0 = seat1 */
   sheets: z.array(KlioSheet).length(4),
@@ -52,6 +72,7 @@ export const KlioState = z.object({
   oracle: Oracle.nullable(),
   /** Kartenschachtel offen: die Karten des Orakels ragen heraus (5zh); zu nur ihre Oberkanten */
   oracleOpen: z.boolean(),
+  budget: Budget,
 }).strict();
 export type KlioState = z.infer<typeof KlioState>;
 
@@ -75,5 +96,5 @@ export function emptySheet(): KlioSheet {
 }
 
 export function initialKlioState(): KlioState {
-  return { sheets: [emptySheet(), emptySheet(), emptySheet(), emptySheet()], expedition: null, oracle: null, oracleOpen: false };
+  return { sheets: [emptySheet(), emptySheet(), emptySheet(), emptySheet()], expedition: null, oracle: null, oracleOpen: false, budget: initialBudget() };
 }

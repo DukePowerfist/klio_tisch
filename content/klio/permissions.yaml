@@ -24,5 +24,7 @@ player:
   table.setLamp: deny       # Laterne für alle anzünden und löschen (5n, A38)
   gm.expedition: deny
   gm.oracle: deny
+  budget.start: own         # Zähler für das Kartenbudget einschalten, als handelnde Person (6a)
+  budget.edit: own          # Budget, Vorteil, Nachteil ändern und ausschalten: handelnde Person (und SL)
 
 spectator: none

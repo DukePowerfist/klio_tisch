@@ -7,6 +7,7 @@
   import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
   import type { PointerPos } from '../net/presence';
   import { sheetOf } from '../rules/klio/events';
+  import BudgetCounter from './BudgetCounter.svelte';
   import Card from './Card.svelte';
   import Cursors from './Cursors.svelte';
   import ExpeditionSheet from './ExpeditionSheet.svelte';
@@ -25,7 +26,7 @@
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
   import { previewPlace } from './overlap';
-  import { t } from './texts';
+  import { t, text } from './texts';
   import type { Area } from './stackMenu';
   import { view, type PlateMenuAt, type StackMenuAt } from './view.svelte';
 
@@ -149,6 +150,8 @@
     if (!drag || !to) return [];
     return dropHints(layout, places, session.predict({ type: 'cards.move', cards: drag.cards, from: drag.from, to }), drag.cards);
   });
+  /** Deck vom Kartenbudget gesperrt (6a): Grund oder null */
+  const deckBlocked = $derived(table.game.budget.active ? session.blocked({ type: 'zone.draw', zone: 'deck' }) : null);
   /** Zone unter dem Zeiger beim Ziehen (hervorgehoben, Ziel beim Loslassen, F1) */
   const hot = $derived(drag?.moved ? (zoneAt(layout, drag.ax, drag.ay)?.id ?? null) : null);
 
@@ -280,6 +283,8 @@
     if (!where) return false;
     if ('zone' in where) {
       if (!topOrFanned(where)) return false;
+      // vom Regelwerk gesperrt (Kartenbudget, 6a): Probe mit der Ablage als Ziel, wie beim Ziehen
+      if (session.blocked({ type: 'cards.move', cards: [card], from: { zone: where.zone }, to: { zone: 'discard' } })) return false;
       return session.can({ type: 'cards.move', cards: [card], from: { zone: where.zone }, to: { zone: where.zone } });
     }
     const pos = table.freePos[card];
@@ -400,7 +405,8 @@
     return {
       zone,
       anchor: toScreen(stage, box),
-      avoid: target ? [toScreen(stage, target)] : [],
+      // nicht über das Ziel von „Ziehen“; am Deck auch nicht über den Zähler für das Kartenbudget (6a)
+      avoid: [...(target ? [toScreen(stage, target)] : []), ...(zone === 'deck' ? [toScreen(stage, budgetReach(L.budget))] : [])],
       area: menuArea(stage),
       sides: box.menu === 'left' ? ['left', 'right'] : ['right', 'left'],
     };
@@ -414,6 +420,8 @@
     const stage = stageEl!.getBoundingClientRect();
     return { seat, anchor: toScreen(stage, { x: box.x + plate.x * k, y: box.y + plate.y * k, w: width * k, h: plate.h * k }), area: menuArea(stage) };
   }
+  /** Scheibe des Zählers samt Pfeilen und Namen darunter (BudgetCounter.svelte), in TP */
+  const budgetReach = (r: Rect): Rect => ({ x: r.x - 20, y: r.y - 18, w: r.w + 40, h: r.h + 18 + 46 });
   /** Lage des Ankers am Bildschirm: Maßstab, Verschiebung, Fenstergröße, Ansicht, Lage im Layout (N4); beim Schild
    *  die Lage des Bogens samt `visible`, so schließt das Menü auch, wenn der Platz verschwindet */
   const menuWhere = $derived.by(() => {
@@ -509,6 +517,14 @@
         <ZoneView {zone} {flame} count={table.zones[zone.id]?.length ?? 0} card={layout.card} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} onToggle={() => toggleMenu(zone.id)} />
       {/each}
 
+      <BudgetCounter at={layout.budget} />
+      {#if deckBlocked && layout.zones['deck']}
+        {@const d = layout.zones['deck']}
+        <div class="deck-lock" style:left="{d.x}px" style:top="{d.y}px" style:width="{d.w}px" style:height="{d.h}px" data-deck-lock title={text(deckBlocked)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" /></svg>
+        </div>
+      {/if}
+
       {#each cards as [card, p] (card)}
         {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
         {@const at = off ? inHand(layout, p, off, [off.ax, off.ay]) : p}
@@ -561,6 +577,9 @@
   /* Vorschau der Ablegestelle: über den gezogenen Karten (400000 + z, 11.10), unter dem Licht (450000); blendet ein */
   .table-edge { position: absolute; left: 0; top: 0; overflow: clip; pointer-events: none; }
   .table-edge > :global(*) { pointer-events: auto; }
+  /* gesperrtes Deck (6a): abgedunkelt mit Schloss, über den Karten des Decks, unter gezogenen Karten; Klicks gehen durch */
+  .deck-lock { position: absolute; z-index: 300000; box-sizing: border-box; display: grid; place-items: center; border-radius: var(--radius-card); background: rgba(0, 0, 0, 0.45); pointer-events: none; animation: fade-in var(--pop) ease-out; }
+  .deck-lock svg { width: 28px; height: 28px; fill: var(--felt-print); opacity: 0.9; filter: drop-shadow(0 1px 2px #000); }
   .drop-hint { position: absolute; z-index: 440000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */
   .preview { position: absolute; pointer-events: none; z-index: 99; border-radius: calc(var(--radius-card) * 3); box-shadow: 0 0 0 1px var(--menu-rim), var(--menu-shadow); }

@@ -233,6 +233,7 @@ settings:                                 # Einstellungen (neu; seit 5g für all
   automation: Automatik                   # Gruppe auf der Seite „Tisch“ (seit 5u, vorher eigene Seite)
   automationIds:
     damage: Schaden automatisch auswerten (Narbe, Tod)
+    budget: Kartenbudget zählen und Deck sperren
   permissions: Rechte der Spieler
   values: { allow: erlaubt, own: nur eigener Bogen, deny: verboten }
   defaults: Voreinstellung wiederherstellen
@@ -263,6 +264,7 @@ settings:                                 # Einstellungen (neu; seit 5g für all
   noticeArrivalsHelp: Zeigt allen eine Meldung, wenn jemand einen Platz einnimmt, die Verbindung verliert oder wiederkommt. Das Protokoll trägt es immer ein.
   automationHelp:
     damage: "Landet eine niedrigere Karte auf dem Schadensfeld, markiert der Tisch die passende Narbe; ist sie schon markiert oder ist es Kreuz, ist der Charakter tot. Aus: Die Karten bleiben liegen, ausgewertet wird von Hand."
+    budget: "Läuft der Zähler links neben dem Deck, zählt jede Karte vom Deck herunter; ist das Budget aufgebraucht oder ♣ gezogen, ist das Deck gesperrt. Aus: Der Zähler zeigt nur an, gesperrt wird nichts."
   groups:                                 # Zwischenüberschriften auf der Seite „Rechte der Spieler“
     cards: Karten
     sheet: Bogen
@@ -308,6 +310,8 @@ permissions:
   table.setLamp: Laterne anzünden und löschen
   gm.expedition: Expedition starten
   gm.oracle: Orakel ziehen
+  budget.start: Kartenbudget-Zähler einschalten
+  budget.edit: Kartenbudget ändern und beenden
 
 # Beschreibung je Recht (Schritt 5f); „nur eigener Bogen“ wird nur erklärt, wo es nicht selbstverständlich ist
 permissionHelp:
@@ -330,6 +334,8 @@ permissionHelp:
   table.setLamp: Die Laterne in der Tischmitte für alle anzünden oder löschen.
   gm.expedition: Ein Ergebnis aus der Expeditionstabelle ziehen.
   gm.oracle: Zwei Begriffe aus dem Orakel ziehen und die Schachtel wieder schließen.
+  budget.start: Den Zähler für das Kartenbudget einschalten. Bei „nur eigener Bogen“ nur als handelnde Person für den eigenen Platz.
+  budget.edit: Kartenbudget, Vorteil und Nachteil ändern und den Zähler ausschalten. Bei „nur eigener Bogen“ nur als handelnde Person.
 
 menu:                                     # Menü oben rechts (neu, Schritt 5b)
   title: Menü
@@ -392,6 +398,17 @@ dock:
   key: "Taste {n}"
 
 # Gründe für abgelehnte Befehle. Neu (gab es in der alten Datei nicht), außer wo vermerkt.
+budget:                                   # Zähler für das Kartenbudget links neben dem Deck (6a)
+  startHint: "Kartenbudget: Klicken startet eine Aktion"
+  off: Kartenbudget (aus)
+  left: "Kartenbudget: noch {n} vom Deck · {who}"
+  editHint: "▲/▼, Mausrad oder Pfeiltasten ändern das Budget; Klicken beendet die Aktion."
+  up: Budget erhöhen
+  down: Budget senken
+  chooseSeat: Wer handelt?
+  changeSeat: Handelnde Person wechseln
+  deckLocked: Deck gesperrt
+
 reject:
   unknownCommand: Unbekannte Aktion.
   invalid: Ungültige Angaben.
@@ -421,3 +438,10 @@ reject:
   backupFailed: Die automatische Sicherung ist fehlgeschlagen, die Aktion wurde verworfen.
   importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.
   importNewer: Diese Datei stammt aus einer neueren Fassung des Kartentischs. Bitte die Seite neu laden.
+  budget:                                 # Zähler für das Kartenbudget (6a)
+    empty: Das Kartenbudget ist aufgebraucht.
+    club: ♣ gezogen – weiter nur mit den Forschungsnotizen.
+    tooMany: "Im Kartenbudget sind nur noch {n} Karten."
+    notes: Mit Nachteil sind die Forschungsnotizen gesperrt.
+    active: Der Zähler läuft schon.
+    inactive: Der Zähler ist aus.

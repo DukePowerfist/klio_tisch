@@ -2,12 +2,14 @@
 // Ereignisse enthalten alle Zufallsergebnisse, damit Clients nie selbst würfeln.
 
 import { z } from 'zod';
-import { CardIdSchema, RankSchema, SeatSchema as Seat } from '../../engine/schemas';
+import { CardIdSchema, RankSchema, SeatSchema as Seat, suitOf } from '../../engine/schemas';
 import { SEATS, type EventDef, type SeatId, type TableState } from '../../engine/types';
 import { setField } from './fields';
-import { emptySheet, Expedition, KlioSheet, Oracle, PhotoRef, RolledAttributes, ScarSchema, Slot, TrumpId, type KlioState } from './state';
+import { BUDGET_MAX, emptySheet, Expedition, KlioSheet, Oracle, PhotoRef, RolledAttributes, ScarSchema, Slot, TrumpId, type KlioState } from './state';
 
 export type KlioTable = TableState<KlioState>;
+
+const BudgetValue = z.number().int().min(0).max(BUDGET_MAX);
 
 const FieldValue = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
@@ -45,6 +47,17 @@ const E = {
   oracleDrawn: z.object({ type: z.literal('oracleDrawn'), oracle: Oracle }).strict(),
   /** Kartenschachtel geschlossen (5zh); das Orakel bleibt im Stand */
   oracleClosed: z.object({ type: z.literal('oracleClosed') }).strict(),
+  /** Zähler für das Kartenbudget (6a): an, geändert, aus; `budgetSpent` = Karten für die Aktion vom Deck gezogen */
+  budgetStarted: z.object({ type: z.literal('budgetStarted'), seat: Seat, left: BudgetValue }).strict(),
+  budgetChanged: z.object({
+    type: z.literal('budgetChanged'),
+    seat: Seat.optional(),
+    left: BudgetValue.optional(),
+    advantage: z.boolean().optional(),
+    disadvantage: z.boolean().optional(),
+  }).strict(),
+  budgetStopped: z.object({ type: z.literal('budgetStopped') }).strict(),
+  budgetSpent: z.object({ type: z.literal('budgetSpent'), cards: z.array(CardIdSchema).min(1) }).strict(),
 };
 
 export type KlioEvent = { [K in keyof typeof E]: z.infer<(typeof E)[K]> }[keyof typeof E];
@@ -113,5 +126,22 @@ export const klioEvents = {
   }),
   oracleClosed: def('oracleClosed', (s) => {
     s.game.oracleOpen = false;
+  }),
+  budgetStarted: def('budgetStarted', (s, e) => {
+    s.game.budget = { ...s.game.budget, active: true, seat: e.seat, left: e.left, drawn: 0, club: false, advantage: false, disadvantage: false };
+  }),
+  budgetChanged: def('budgetChanged', (s, e) => {
+    const { type: _, ...changes } = e;
+    Object.assign(s.game.budget, changes);
+  }),
+  budgetStopped: def('budgetStopped', (s) => {
+    const b = s.game.budget;
+    s.game.budget = { ...b, active: false, seat: null, last: Math.min(b.drawn + b.left, BUDGET_MAX) };
+  }),
+  budgetSpent: def('budgetSpent', (s, e) => {
+    const b = s.game.budget;
+    b.left = Math.max(0, b.left - e.cards.length);
+    b.drawn += e.cards.length;
+    if (e.cards.some((c) => suitOf(c) === 'C')) b.club = true;
   }),
 } satisfies { [K in keyof typeof E]: EventDef<KlioState, KlioEventOf<K>> };

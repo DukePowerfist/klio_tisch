@@ -45,6 +45,8 @@ export type Layout = {
   resistTitle: { x: number; y: number };
   freeCardScale: number;
   lamp: LampBox;
+  /** Scheibe des Zählers für das Kartenbudget (6a) */
+  budget: Rect;
   /** Licht der Laterne in dieser Ansicht: Reichweite in TP, Grundlicht am Rand */
   light: { reach: number; ambient: number };
   /** Expeditionsblatt in Ruhe (5zb, 10.12): ganzes Bild und Papier darin, über der unteren Brettkante */
@@ -175,6 +177,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
     resistTitle: at(M.resistTitle),
     freeCardScale: L.freeCardScale,
     lamp: lampBox(at(M.lamp.at), M.lamp),
+    budget: (({ x, y }) => ({ x: x - M.budget.size / 2, y: y - M.budget.size / 2, w: M.budget.size, h: M.budget.size }))(at(M.budget.at)),
     light: role ? L.role.light : L.overview.light,
     expedition: { img, paper },
     oracle,

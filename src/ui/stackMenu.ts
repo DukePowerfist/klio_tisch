@@ -35,6 +35,8 @@ export type StackContext = {
   zone: ZoneId;
   /** darf der Nutzer diesen Befehl an diesem Stapel? (session.can) */
   can: (type: string) => boolean;
+  /** vom Regelwerk gerade gesperrt (Kartenbudget, 6a): Grund als Text, sonst null (session.blocked) */
+  blocked?: (type: string) => string | null;
   /** Stand nach dem Befehl, ohne Senden; null bei Ablehnung (session.predict, N1) */
   predict: (cmd: { type: string; zone: ZoneId }) => TableState<unknown> | null;
 };
@@ -55,6 +57,8 @@ export function stackEntries(c: StackContext): StackEntry[] {
     if (!allowed) return off('reject.notAllowed');
     if (action !== 'shuffle') {
       if (empty) return off('stack.empty');
+      const why = c.blocked?.(`zone.${action}`);
+      if (why) return { ...base, allowed, enabled: false, title: why };
       const title = action === 'draw' ? t('stack.drawTitle', { to: t(`stack.drawTo.${actions.draw!.to}`), key }) : t('stack.flipTitle', { key });
       return { ...base, allowed, enabled: true, title };
     }

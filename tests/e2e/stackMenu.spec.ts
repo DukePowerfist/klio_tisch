@@ -33,13 +33,15 @@ async function expectUsable(page: Page, m: Box, label: string) {
 }
 
 for (const role of [null, '1'] as const) {
-  test(`${role ? 'Rollenansicht' : 'Übersicht'}: Menü an jedem Stapel auf der bevorzugten Seite, oben bündig, Stapel und Ziel frei`, async ({ page }) => {
+  test(`${role ? 'Rollenansicht' : 'Übersicht'}: Menü an jedem Stapel auf der bevorzugten Seite, oben bündig (Deck: unter dem Zähler), Stapel und Ziel frei`, async ({ page }) => {
     if (role) await page.keyboard.press(role);
     for (const s of STACKS) {
       const { m, stack, target } = await open(page, s);
       await expectUsable(page, m, s.label);
       expect(s.side === 'left' ? m.x + m.width <= stack.x : m.x >= stack.x + stack.width, s.label).toBe(true);
-      expect(m.y, s.label).toBeCloseTo(stack.y, 0);
+      // am Deck weicht es dem Zähler für das Kartenbudget aus (6a) und liegt deshalb tiefer
+      if (s.zone === 'deck') expect(overlaps(m, await box(page.locator('[data-budget]'))), s.label).toBe(false);
+      else expect(m.y, s.label).toBeCloseTo(stack.y, 0);
       expect(overlaps(m, stack), s.label).toBe(false);
       expect(overlaps(m, target), s.label).toBe(false);
       await page.keyboard.press('Escape');

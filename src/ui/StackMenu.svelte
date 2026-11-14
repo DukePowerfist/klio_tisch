@@ -9,7 +9,7 @@
   import { submitOrSay } from './commands';
   import { session } from './session.svelte';
   import { placeMenu, stackEntries, type StackEntry } from './stackMenu';
-  import { t } from './texts';
+  import { t, text } from './texts';
   import { view } from './view.svelte';
 
   /** Geometrie beim Öffnen; jedes Öffnen bringt ein neues Menü ({#key} in App.svelte) */
@@ -19,7 +19,7 @@
 
   const entries = $derived(
     session.state
-      ? stackEntries({ content, table: session.state, zone, can: (type) => session.can({ type, zone }), predict: (cmd) => session.predict(cmd) })
+      ? stackEntries({ content, table: session.state, zone, can: (type) => session.can({ type, zone }), blocked: (type) => { const r = session.blocked({ type, zone }); return r ? text(r) : null; }, predict: (cmd) => session.predict(cmd) })
       : [],
   );
 

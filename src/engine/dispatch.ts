@@ -1,4 +1,4 @@
-// Ablauf eines Befehls (ARCHITEKTUR.md 6.3): Rechte → Prüfen/Übersetzen → Anwenden → Reaktionen.
+// Ablauf eines Befehls (ARCHITEKTUR.md 6.3): Rechte → Sperren des Regelwerks → Prüfen/Übersetzen → Anwenden → Reaktionen.
 // Alles oder nichts: gearbeitet wird auf einer Kopie, übernommen wird nur das fertige Ergebnis.
 
 import { applyEngineEvent, isEngineEvent } from './apply';
@@ -69,6 +69,8 @@ export function createEngine<G>(ruleset: Ruleset<G>): Engine<G> {
       return reject('reject.invalid');
     }
     if (!can(actor, def, cmd, state as TableState<unknown>, ruleset.permissions)) return reject('reject.notAllowed');
+    const blocked = ruleset.guard?.(cmd, state, actor);
+    if (blocked) return blocked;
 
     const first = def.handle(cmd, state, actor, rng);
     if (isRejection(first)) return first;

@@ -188,6 +188,8 @@ export const LayoutsFile = z.object({
   middle: z.object({
     size: Point, zones: z.record(z.string(), Point), resistTitle: Point,
     lamp: z.object({ at: Point, size: z.number().positive(), flame: Point, height: z.number().positive() }).strict(),
+    /** Zähler für das Kartenbudget (6a): Mitte der Scheibe, Durchmesser */
+    budget: z.object({ at: Point, size: z.number().positive() }).strict(),
     /** Expeditionsblatt (5zb, 10.12) */
     expedition: z.object({
       cx: z.number(), restScale: z.number().positive().max(1), size: Point, rest: z.number().positive(), lift: z.number().nonnegative(), tilt: z.number(),

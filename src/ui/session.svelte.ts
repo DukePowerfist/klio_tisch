@@ -484,6 +484,13 @@ class Session {
     return can(this.actor, def, cmd, this.state as TableState<unknown>, ruleset.permissions);
   }
 
+  /** Sperrt das Regelwerk diesen Befehl gerade (Kartenbudget, 6a)? Grund oder null; verbindlich prüft der Host. */
+  blocked(cmd: { type: string; [key: string]: unknown }): TextRef | null {
+    if (!this.state) return null;
+    const r = ruleset.guard?.(cmd, this.state, this.actor);
+    return r ? r.reason : null;
+  }
+
   /** Darf der aktuelle Nutzer diesen Befehl für irgendetwas? Wenn Angaben noch fehlen (z. B. das Ziel beim Greifen). */
   canSome(type: string): boolean {
     const def = engine.commands[type];

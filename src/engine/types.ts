@@ -192,6 +192,8 @@ export interface Ruleset<G> {
   commands: Record<string, CommandDef<G, any>>;
   events: Record<string, EventDef<G, any>>;
   reactions: Reaction<G>[];
+  /** sperrt einen erlaubten Befehl je nach Spielstand (Klio: Kartenbudget, 6a); nach der Rechteprüfung, vor `handle` */
+  guard?(cmd: Command, state: TableState<G>, actor: Actor): Rejection | undefined;
   permissions: PermissionTable;
   migrations: Migration[];
   /** wählbare Farben der Plätze (Kennungen); die ersten vier sind die Voreinstellung von Platz 1–4 */
