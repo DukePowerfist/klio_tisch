@@ -260,3 +260,17 @@ test('Kürzel wirken nur bei offenem Menü und nicht in Textfeldern', async ({ p
   await name.press('z');
   await expectCount(page, 'DECK', 27);
 });
+
+test('Tastatur: Enter oder Leertaste am Stapel öffnen und schließen das Menü', async ({ page }) => {
+  const deck = page.locator('[data-zone=deck]');
+  await deck.focus();
+  await page.keyboard.press('Enter');
+  await expect(menu(page)).toBeVisible();
+  await expect(deck).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(menu(page)).toHaveCount(0);
+  await page.keyboard.press(' ');
+  await expect(menu(page)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu(page)).toHaveCount(0);
+});

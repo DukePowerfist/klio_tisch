@@ -52,10 +52,16 @@
     parts.push(`font-size:${f.size}px`, `line-height:${f.line}px`, `margin-top:${LABEL.gap + (edges.length ? edges.length * step : 0)}px`);
     return parts.join(';');
   });
+  /** Tastatur wie Klick: Enter oder Leertaste öffnen bzw. schließen das Menü (nur am Stapel selbst, ohne Wiederholung) */
+  function onKey(e: KeyboardEvent) {
+    if (!actions.length || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+    e.preventDefault();
+    if (!e.repeat) onToggle();
+  }
 </script>
 
 <!-- Rolle und tabindex nur zusammen (Stapel mit Aktionen); Svelte sieht das bei bedingten Werten nicht -->
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_tabindex -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
   class="zone"
   class:sheet={onSheet}
@@ -74,6 +80,7 @@
   tabindex={actions.length ? 0 : undefined}
   data-zone={zone.id}
   onclick={() => { if (actions.length) onToggle(); }}
+  onkeydown={onKey}
 >
   {#if label}
     <div class="label" style={labelStyle}>{label}{#if !onSheet}<span class="n" bind:this={n}>{count}</span>{/if}</div>

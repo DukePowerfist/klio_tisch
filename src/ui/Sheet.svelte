@@ -137,6 +137,11 @@
     if (id) hoverTimer = setTimeout(() => { if (el?.matches(':hover')) view.bigTrump = { id, pinned: false }; }, 650);
     else if (view.bigTrump && !view.bigTrump.pinned) view.bigTrump = null;
   }
+  /** Klick oder Taste auf einen Trumpfplatz: belegter Platz → Großansicht angeheftet, leerer mit Recht → Auswahl */
+  function activateSlot(trump: { id: string } | undefined) {
+    if (trump) view.bigTrump = { id: trump.id, pinned: true };
+    else if (canChooseTrump) view.trumpDialog = seat;
+  }
   // abgebaut (weniger Spieler): kein Überfahren mehr offen
   $effect(() => () => clearTimeout(hoverTimer));
 </script>
@@ -241,10 +246,15 @@
         onclick={(e) => {
           e.stopPropagation();
           clearTimeout(hoverTimer);
-          if (trump) view.bigTrump = { id: trump.id, pinned: true };
-          else if (canChooseTrump) view.trumpDialog = seat;
+          activateSlot(trump);
         }}
-        onkeydown={(e) => { if (e.key === 'Enter' && !trump && canChooseTrump) view.trumpDialog = seat; }}
+        onkeydown={(e) => {
+          // nur am Platz selbst: Enter auf ✕ darunter entfernt den Trumpf und soll ihn nicht groß anheften
+          if (inert || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+          e.preventDefault();
+          if (!e.repeat) activateSlot(trump);
+        }}
+        onfocusout={(e) => { if (trump && view.bigTrump?.pinned && view.bigTrump.id === trump.id && !e.currentTarget.contains(e.relatedTarget as Node | null)) view.bigTrump = null; }}
       >
         {#if trump}
           <TrumpCard {trump} />

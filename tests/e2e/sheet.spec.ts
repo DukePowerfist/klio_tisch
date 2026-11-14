@@ -278,6 +278,38 @@ test('Trumpf: Großansicht nur, wenn das Feld nach 650 ms noch unter dem Zeiger 
   await expect(page.locator('.big')).toHaveCount(0);
 });
 
+test('Trumpf per Tastatur: Leertaste wählt, Enter heftet die Großansicht an, Esc schließt nur sie, Wegtabben auch', async ({ page }) => {
+  await page.keyboard.press('1');
+  await setField(page, 'attributes.V', '3');
+  await sheet1(page).locator('[data-slot="0"]').focus();
+  await page.keyboard.press(' ');
+  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
+  await page.getByRole('button', { name: /^Verstehen/ }).click();
+  await page.getByRole('button', { name: /Anatomie/ }).click();
+  await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
+  await page.mouse.move(5, 5);
+  const slot = sheet1(page).locator('[data-slot="0"]');
+  await slot.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.big .tcard')).toContainText('Anatomie');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.big')).toHaveCount(0);
+  await expect(page.locator('[data-dock=seat1]')).toHaveClass(/\bon\b/); // Esc galt nur der Großansicht, die Rollenansicht bleibt
+  await slot.focus();
+  await page.keyboard.press(' ');
+  await expect(page.locator('.big .tcard')).toContainText('Anatomie');
+  await slot.blur();
+  await expect(page.locator('.big')).toHaveCount(0);
+});
+
+test('Trumpf per Tastatur: Enter auf ✕ entfernt nur, ohne Großansicht', async ({ page }) => {
+  await chooseAnatomie(page);
+  await sheet1(page).getByTitle('Trumpf entfernen').focus();
+  await page.keyboard.press('Enter');
+  await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toHaveCount(0);
+  await expect(page.locator('.big')).toHaveCount(0);
+});
+
 test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'attributes.V', '3');

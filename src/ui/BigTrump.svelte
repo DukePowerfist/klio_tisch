@@ -6,10 +6,18 @@
   import { view } from './view.svelte';
 
   const trump = $derived(trumpById(content.trumps, view.bigTrump?.id));
+
+  /** Esc schließt die angeheftete Großansicht (auch per Tastatur geöffnet) und geht sonst nirgends hin, etwa nicht an
+   *  das Dock (Esc verlässt dort die Rollenansicht). Die Vorschau beim Überfahren lässt Esc durch. */
+  function onKey(e: KeyboardEvent) {
+    if (e.key !== 'Escape' || !view.bigTrump?.pinned) return;
+    e.stopImmediatePropagation();
+    view.bigTrump = null;
+  }
 </script>
 
 <!-- Jeder Klick irgendwo schließt sie (wie bisher); der Klick auf einen Trumpf öffnet sie danach wieder. -->
-<svelte:window onpointerdown={() => (view.bigTrump = null)} />
+<svelte:window onpointerdown={() => (view.bigTrump = null)} onkeydowncapture={onKey} />
 
 {#if trump}
   <div class="big"><TrumpCard {trump} size="large" /></div>
