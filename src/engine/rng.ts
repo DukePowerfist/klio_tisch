@@ -1,7 +1,7 @@
 // Zufall (ARCHITEKTUR.md 6.3): wird übergeben, nie direkt Math.random().
 // Host: kryptografisch. Tests: feste Startzahl, damit Ergebnisse wiederholbar sind.
 
-import type { Rng } from './types';
+import type { Rng } from './types.ts';
 
 /** Kryptografischer Zufall für den Host, ohne Verzerrung (Verwerfungsverfahren). */
 export function cryptoRng(): Rng {

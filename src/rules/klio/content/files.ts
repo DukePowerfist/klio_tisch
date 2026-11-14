@@ -1,6 +1,6 @@
 // Welche Datei in content/klio/ welchen Inhalt enthält. Gelesen wird nur beim Build und in Tests.
 
-import type { ContentKey } from './validate';
+import type { ContentKey } from './validate.ts';
 
 export const CONTENT_PATHS: Record<ContentKey, string> = {
   trumps: 'trumps.yaml',

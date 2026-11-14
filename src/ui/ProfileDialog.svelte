@@ -3,6 +3,7 @@
   // am Zeiger. Farben aus einer festen Auswahl; was ein anderer Platz trägt, ist nicht wählbar.
   // Seit 5j (10.1) auch für einen anderen Platz (`for`, aus dem Menü am Namensschild): die SL an jedem Platz;
   // an einem freien Platz nur die Farbe. Der Name wird dann nicht als eigener gemerkt.
+  import { untrack } from 'svelte';
   import { PLAYER_NAME_MAX } from '../engine/schemas';
   import type { SeatId, TextRef } from '../engine/types';
   import { colorHolder, seatColor, seatNo } from '../engine/zones';
@@ -23,8 +24,9 @@
   /** Name nur an einem besetzten Platz (seat.edit lehnt ihn sonst ab) */
   const withName = $derived(!other || table.seats[other].occupied);
   const title = $derived(other ? t(withName ? 'profile.titleSeat' : 'profile.titleColor', { n: seatNo(other) }) : seat ? t('profile.title') : t('profile.titleName'));
-  let name = $state(seat ? (session.state!.seats[seat].name ?? '') : session.savedName);
-  let color = $state(seat ? seatColor(session.state!, seat, ruleset.seatColors) : null);
+  // Eingaben: Stand beim Öffnen, danach gehören sie der Person am Fenster
+  let name = $state(untrack(() => (seat ? (session.state!.seats[seat].name ?? '') : session.savedName)));
+  let color = $state(untrack(() => (seat ? seatColor(session.state!, seat, ruleset.seatColors) : null)));
   let refused = $state<TextRef | null>(null);
 
   /** Wer trägt diese Farbe schon (anderer Platz)? */

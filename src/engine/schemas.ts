@@ -1,8 +1,8 @@
 // Zod-Schemas für die Grundbausteine der Engine; Regelwerke bauen darauf auf.
 
 import { z } from 'zod';
-import { FORMAT } from './setup';
-import { RANKS, SEATS, SUITS, type CardId, type EngineEvent, type RankId, type SeatId, type SuitId, type TableState, type TextRef } from './types';
+import { FORMAT } from './setup.ts';
+import { RANKS, SEATS, SUITS, type CardId, type EngineEvent, type RankId, type SeatId, type SuitId, type TableState, type TextRef } from './types.ts';
 
 export const SuitSchema = z.enum(SUITS);
 export const RankSchema = z.enum(RANKS);

@@ -25,9 +25,9 @@
   const close = () => (view.fieldDialog = null);
 
   // Name des Felds: „Stärke III“ (Nummern der Stärken wie im Trumpf-Dialog), „Rüstzeug 4“ usw.
-  const [group, ...rest] = field.split('.');
-  const index = Number(rest.at(-1));
-  const label = group === 'name' ? t('sheet.field.name') : t(`sheet.field.${group}`, { n: group === 'strengths' ? t(`numerals.${index + 1}`) : index + 1 });
+  const group = $derived(field.split('.')[0]);
+  const index = $derived(Number(field.split('.').at(-1)));
+  const label = $derived(group === 'name' ? t('sheet.field.name') : t(`sheet.field.${group}`, { n: group === 'strengths' ? t(`numerals.${index + 1}`) : index + 1 }));
   const title = $derived(t('sheet.field.title', { field: label, seat: seatNo(seat) }));
   const struck = $derived(group === 'gear' && getField(sheet, `gear.struck.${index}`) === true);
 

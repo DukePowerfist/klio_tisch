@@ -224,6 +224,8 @@
       {@const trump = trumpById(content.trumps, sheet.trumps[s.index])}
       <!-- leerer Platz ohne Recht: nur das graue Plus, ohne Hand, Färbung und Tooltip (5z) -->
       {@const inert = !trump && !canChooseTrump}
+      <!-- Rolle und tabindex nur zusammen (nicht bei „inert“); Svelte sieht das bei bedingten Werten nicht -->
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
         class="slot control"
         class:empty={!trump}
@@ -254,6 +256,8 @@
     {/each}
 
     {#if names}
+      <!-- Klick nur als <button> (mit Menü); als <div> ohne Handler -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <svelte:element
         this={menu ? 'button' : 'div'}
         bind:this={plateEl}

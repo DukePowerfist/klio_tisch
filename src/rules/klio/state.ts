@@ -2,7 +2,7 @@
 // Listenlängen kommen aus sheet.yaml und werden beim Build gegen dieses Schema geprüft.
 
 import { z } from 'zod';
-import { PhotoHashSchema, RankSchema, SeatSchema } from '../../engine/schemas';
+import { PhotoHashSchema, RankSchema, SeatSchema } from '../../engine/schemas.ts';
 
 export const TrumpId = z.string().regex(/^[a-z0-9-]+$/);
 

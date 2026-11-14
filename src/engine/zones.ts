@@ -1,6 +1,6 @@
 // Zonen: Vorlagen (perSeat) zu echten Zonen erweitern, Besitzer und Sichtbarkeit.
 
-import { SEATS, type CardId, type SeatId, type TableState, type ZoneConfig, type ZoneId } from './types';
+import { SEATS, type CardId, type SeatId, type TableState, type ZoneConfig, type ZoneId } from './types.ts';
 
 export type ZoneTable = ReadonlyMap<ZoneId, ZoneConfig>;
 

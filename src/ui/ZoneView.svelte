@@ -54,7 +54,8 @@
   });
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- Rolle und tabindex nur zusammen (Stapel mit Aktionen); Svelte sieht das bei bedingten Werten nicht -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_tabindex -->
 <div
   class="zone"
   class:sheet={onSheet}

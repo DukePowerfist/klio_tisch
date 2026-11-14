@@ -25,7 +25,7 @@
   let timer: ReturnType<typeof setTimeout> | undefined;
   const shown = $derived(focused ? draft : value);
   /** Breite des Knopfs „…“ in Bildpunkten */
-  const MORE = Math.round(h * 0.75);
+  const MORE = $derived(Math.round(h * 0.75));
   const weight = $derived(bold ? 600 : 'normal');
   const fit = $derived(kind === 'number' ? { size: font, cut: false } : fitText(shown, w - 6, font, weight));
   /** Text, bei dem das Feld selbst überläuft: Die Messung oben kennt die tatsächlich gezeichnete Schrift nicht genau */
@@ -81,7 +81,7 @@
   }
 
   /** Gruppe: Name ohne die letzte Stelle (`strengths.text.2` → `strengths.text`, `attributes.K` → `attributes`) */
-  const group = field.includes('.') ? field.slice(0, field.lastIndexOf('.') + 1) : null;
+  const group = $derived(field.includes('.') ? field.slice(0, field.lastIndexOf('.') + 1) : null);
   /** Nachbarfeld derselben Gruppe auf diesem Bogen, in der Reihenfolge der Seite; null am Ende oder ohne Gruppe */
   function neighbour(step: 1 | -1): HTMLInputElement | null {
     if (!group) return null;

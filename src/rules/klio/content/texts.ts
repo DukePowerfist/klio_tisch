@@ -1,8 +1,8 @@
 // Texte nachschlagen: Schlüssel in texts.de.yaml oder Texte an den Trumpf-Wegen (`source.<id>.why`).
 // Gemeinsam für Oberfläche und Tests.
 
-import type { TextTree } from './schema';
-import type { KlioContent } from './validate';
+import type { TextTree } from './schema.ts';
+import type { KlioContent } from './validate.ts';
 
 export function resolveText(content: KlioContent, key: string): string | undefined {
   const parts = key.split('.');

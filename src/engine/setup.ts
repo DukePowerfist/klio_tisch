@@ -1,8 +1,8 @@
 // Anfangsstand des Tisches.
 
-import { shuffled } from './rng';
-import { expandZones } from './zones';
-import { SEATS, type CardId, type DeckConfig, type Rng, type Ruleset, type TableState, type ZoneId } from './types';
+import { shuffled } from './rng.ts';
+import { expandZones } from './zones.ts';
+import { SEATS, type CardId, type DeckConfig, type Rng, type Ruleset, type TableState, type ZoneId } from './types.ts';
 
 /** Format des gespeicherten Stands; steigt bei jeder Strukturänderung (7, Versionierung). */
 export const FORMAT = 6;

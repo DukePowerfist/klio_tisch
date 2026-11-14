@@ -5,8 +5,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { parse } from 'yaml';
-import { CONTENT_PATHS } from './src/rules/klio/content/files';
-import { validateContent, type RawContent } from './src/rules/klio/content/validate';
+import { CONTENT_PATHS } from './src/rules/klio/content/files.ts';
+import { validateContent, type RawContent } from './src/rules/klio/content/validate.ts';
 
 const ID = 'virtual:klio-content';
 const RESOLVED = `\0${ID}`;

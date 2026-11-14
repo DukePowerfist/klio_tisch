@@ -2,12 +2,12 @@
 // Bekommt bereits gelesene Daten; das Lesen von YAML passiert nur beim Build und in Tests.
 
 import { z } from 'zod';
-import { RANKS, SUITS } from '../../../engine/types';
-import { resolveText } from './texts';
+import { RANKS, SUITS } from '../../../engine/types.ts';
+import { resolveText } from './texts.ts';
 import {
   DeckFile, ExpeditionFile, LayoutsFile, NamesFile, PermissionsFile, SheetFile, SkinFile,
   TablesFile, TextsFile, TrumpSourcesFile, TrumpsFile, ZonesFile, sheetFieldInstances, sheetFields, type TextTree,
-} from './schema';
+} from './schema.ts';
 
 export const CONTENT_FILES = {
   trumps: TrumpsFile,

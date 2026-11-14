@@ -49,7 +49,7 @@
   let backups = $state<BackupInfo[]>([]);
   let confirm = $state<string | null>(null);
   let problem = $state<TextRef | null>(null);
-  let fileInput: HTMLInputElement | undefined;
+  let fileInput = $state<HTMLInputElement>();
   const refresh = async () => (backups = await session.backups());
   $effect(() => {
     if (isHost) void refresh();

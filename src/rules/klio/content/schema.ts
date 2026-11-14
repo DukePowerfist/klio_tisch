@@ -2,8 +2,8 @@
 // Geprüft beim Build; ausgeliefert wird JSON. Beispiele stehen jeweils darüber.
 
 import { z } from 'zod';
-import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SeatColorSchema, SeatSchema, SuitSchema as Suit } from '../../../engine/schemas';
-import { AttrSchema as Attr, TrumpId } from '../state';
+import { CardIdSchema, PermissionValueSchema, RankSchema as Rank, SeatColorSchema, SeatSchema, SuitSchema as Suit } from '../../../engine/schemas.ts';
+import { AttrSchema as Attr, TrumpId } from '../state.ts';
 
 /** Text mit er/sie-Form oder ein Text für beide. */
 const Gendered = z.union([z.string(), z.object({ m: z.string(), w: z.string() }).strict()]);
