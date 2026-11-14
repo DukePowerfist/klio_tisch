@@ -152,6 +152,18 @@
   });
   /** Deck vom Kartenbudget gesperrt (6a): Grund oder null */
   const deckBlocked = $derived(table.game.budget.active ? session.blocked({ type: 'zone.draw', zone: 'deck' }) : null);
+  /** Forschungsnotizen der handelnden Person (6a): mit Nachteil gesperrt (Schloss), sonst leuchten sie, sobald das Deck
+   *  gesperrt ist – mit ihnen darf man trotz ♣ und über das Budget hinaus weiterziehen (Regelwerk S. 8) */
+  const notesMark = $derived.by(() => {
+    const b = table.game.budget;
+    if (!b.active || !b.seat || !layout.sheets[b.seat]?.visible) return null;
+    const zone = `${b.seat}.notes`;
+    const box = layout.zones[zone];
+    if (!box || !table.zones[zone]?.length) return null;
+    const locked = session.blocked({ type: 'cards.move', cards: [], from: { zone }, to: { zone: 'discard' } });
+    if (locked) return { box, locked, title: text(locked) };
+    return deckBlocked ? { box, locked: null, title: t('budget.notesHint') } : null;
+  });
   /** Zone unter dem Zeiger beim Ziehen (hervorgehoben, Ziel beim Loslassen, F1) */
   const hot = $derived(drag?.moved ? (zoneAt(layout, drag.ax, drag.ay)?.id ?? null) : null);
 
@@ -524,6 +536,15 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" /></svg>
         </div>
       {/if}
+      {#if notesMark}
+        {@const d = notesMark.box}
+        <div class="notes-mark" class:deck-lock={!!notesMark.locked} class:glow={!notesMark.locked} style:left="{d.x}px" style:top="{d.y}px" style:width="{d.w}px" style:height="{d.h}px"
+          data-notes-mark={notesMark.locked ? 'locked' : 'glow'} title={notesMark.title}>
+          {#if notesMark.locked}
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" /></svg>
+          {/if}
+        </div>
+      {/if}
 
       {#each cards as [card, p] (card)}
         {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
@@ -580,6 +601,12 @@
   /* gesperrtes Deck (6a): abgedunkelt mit Schloss, über den Karten des Decks, unter gezogenen Karten; Klicks gehen durch */
   .deck-lock { position: absolute; z-index: 300000; box-sizing: border-box; display: grid; place-items: center; border-radius: var(--radius-card); background: rgba(0, 0, 0, 0.45); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   .deck-lock svg { width: 28px; height: 28px; fill: var(--felt-print); opacity: 0.9; filter: drop-shadow(0 1px 2px #000); }
+  /* Notizen der handelnden Person: gesperrt wie das Deck, sonst ein pulsierender Rahmen um die Zone */
+  .notes-mark.glow { position: absolute; z-index: 300000; box-sizing: border-box; border-radius: var(--radius-m); pointer-events: none; outline: 3px solid var(--pickable-bright); outline-offset: 4px;
+    animation: notes-glow 1.6s ease-in-out infinite; }
+  @keyframes notes-glow { 0%, 100% { box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pickable-bright) 40%, transparent); outline-color: color-mix(in srgb, var(--pickable-bright) 60%, transparent); }
+    50% { box-shadow: 0 0 18px 6px color-mix(in srgb, var(--pickable-bright) 55%, transparent); outline-color: var(--pickable-bright); } }
+  @media (prefers-reduced-motion: reduce) { .notes-mark.glow { animation: none; } }
   .drop-hint { position: absolute; z-index: 440000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */
   .preview { position: absolute; pointer-events: none; z-index: 99; border-radius: calc(var(--radius-card) * 3); box-shadow: 0 0 0 1px var(--menu-rim), var(--menu-shadow); }

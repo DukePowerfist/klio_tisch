@@ -56,8 +56,10 @@ const E = {
     advantage: z.boolean().optional(),
     disadvantage: z.boolean().optional(),
   }).strict(),
-  budgetStopped: z.object({ type: z.literal('budgetStopped') }).strict(),
-  budgetSpent: z.object({ type: z.literal('budgetSpent'), cards: z.array(CardIdSchema).min(1) }).strict(),
+  /** `drawn`: so viele Karten hat die Aktion vom Deck gezogen (fürs Protokoll; fehlt beim Zurücksetzen des Tisches) */
+  budgetStopped: z.object({ type: z.literal('budgetStopped'), drawn: z.number().int().min(0).optional() }).strict(),
+  /** `lock`: danach ist das Deck gesperrt (fürs Protokoll) */
+  budgetSpent: z.object({ type: z.literal('budgetSpent'), cards: z.array(CardIdSchema).min(1), lock: z.enum(['empty', 'club']).optional() }).strict(),
 };
 
 export type KlioEvent = { [K in keyof typeof E]: z.infer<(typeof E)[K]> }[keyof typeof E];

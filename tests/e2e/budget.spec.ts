@@ -94,3 +94,57 @@ test('♣ vom Deck sperrt trotz Restbudget', async ({ page }) => {
   await expect(lock(page)).toHaveCount(1);
   await expect(stackItem(page, 'Ziehen')).toHaveAttribute('title', '♣ gezogen – weiter nur mit den Forschungsnotizen.');
 });
+
+// ---------- Teil 2: Vorteil, Nachteil, Notizen ----------
+
+const mod = (page: Page, key: 'advantage' | 'disadvantage') => counter(page).locator(`[data-budget-mod=${key}]`);
+const notesMark = (page: Page) => page.locator('[data-notes-mark]');
+
+test('N sperrt die Notizen der handelnden Person (Schloss), V und N zusammen heben sich auf', async ({ page }) => {
+  const notes = await zoneCenter(page, 'NOTIZEN');
+  await dragFromTo(page, await zoneCenter(page, 'DECK'), notes);
+  await expectCount(page, 'DECK', 26);
+  await start(page);
+  await expect(mod(page, 'advantage')).toHaveAttribute('aria-pressed', 'false');
+  await mod(page, 'disadvantage').click();
+  await expect(mod(page, 'disadvantage')).toHaveAttribute('aria-pressed', 'true');
+  await expect(notesMark(page)).toHaveAttribute('data-notes-mark', 'locked');
+  await expect(disc(page)).toHaveAttribute('title', /Mit Nachteil/);
+  // gesperrt: die Notiz springt beim Ablegen auf die Ablage zurück
+  await page.waitForTimeout(400);
+  await dragFromTo(page, notes, await zoneCenter(page, 'ABLAGE'));
+  await expectCount(page, 'ABLAGE', 0);
+
+  await mod(page, 'advantage').click();
+  await expect(notesMark(page)).toHaveCount(0);
+  await expect(disc(page)).toHaveAttribute('title', /heben sich auf/);
+  await mod(page, 'disadvantage').click();
+  await mod(page, 'advantage').click();
+  await expect(mod(page, 'advantage')).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('nach ♣ leuchten die Notizen; mit Vorteil sperrt ♣ nicht', async ({ page }) => {
+  await dragFromTo(page, await zoneCenter(page, 'DECK'), await zoneCenter(page, 'NOTIZEN'));
+  await expectCount(page, 'DECK', 26);
+  for (let i = 0; i < 2; i++) await dragFromTo(page, await zoneCenter(page, 'KREUZ'), await zoneCenter(page, 'DECK'));
+  await expectCount(page, 'DECK', 28);
+  await start(page);
+  await mod(page, 'advantage').click();
+  await expect(mod(page, 'advantage')).toHaveAttribute('aria-pressed', 'true');
+  await openMenuAndClick(page, 'DECK', 'Ziehen');
+  await expect(disc(page)).toHaveText('2');
+  await expect(lock(page)).toHaveCount(0);
+  await expect(notesMark(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  await mod(page, 'advantage').click();
+  await expect(lock(page)).toHaveCount(1);
+  await expect(notesMark(page)).toHaveAttribute('data-notes-mark', 'glow');
+});
+
+test('Budget 0 vor dem ersten Ziehen: Hinweis auf eine Karte mit Nachteil', async ({ page }) => {
+  await start(page);
+  for (let i = 0; i < 3; i++) await counter(page).getByRole('button', { name: 'Budget senken' }).click();
+  await expect(disc(page)).toHaveText('0');
+  await expect(disc(page)).toHaveAttribute('title', /eine einzige Karte mit Nachteil/);
+});

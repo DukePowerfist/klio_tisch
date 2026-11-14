@@ -115,6 +115,20 @@ describe('Kartenbudget (6a)', () => {
     expect(run(fresh(), { type: 'budget.stop' }).events).toEqual([]);
   });
 
+  it('Protokoll: gezogene Karten nennen die Sperre, die sie auslösen; das Ende nennt die gezogenen Karten', () => {
+    const s = deckTop(started(fresh(), 2), 'C3', 'H5', 'H4');
+    const spent = (r: ReturnType<typeof run>) => r.events.find((e) => e.type === 'budgetSpent');
+    const one = drawDeck(s);
+    expect(spent(one)).toEqual({ type: 'budgetSpent', cards: ['H4'] });
+    const two = drawDeck(one.state);
+    expect(spent(two)).toMatchObject({ lock: 'empty' });
+    // ♣ mit Restbudget sperrt, mit Vorteil nicht
+    const more = run(two.state, { type: 'budget.set', left: 3 }).state;
+    expect(spent(drawDeck(more))).toMatchObject({ lock: 'club' });
+    expect(spent(drawDeck(run(more, { type: 'budget.set', advantage: true }).state))).toEqual({ type: 'budgetSpent', cards: ['C3'] });
+    expect(run(two.state, { type: 'budget.stop' }).events).toEqual([{ type: 'budgetStopped', drawn: 2 }]);
+  });
+
   it('Tisch zurücksetzen beendet die Aktion', () => {
     const s = run(started(fresh(), 3), { type: 'table.reset', includeCharacters: false }).state;
     expect(s.game.budget.active).toBe(false);

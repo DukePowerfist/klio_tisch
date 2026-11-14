@@ -221,6 +221,18 @@ log:                                      # Spielprotokoll (neu)
     out: "{who} hat die Laterne gelöscht."
     gm: Die Spielleitung
     spectator: Ein Zuschauer
+  budget:                                 # Kartenbudget (6a)
+    started: "Aktion von {who}: Kartenbudget {n}"
+    changed: "Aktion: {what}"
+    seat: "jetzt {who}"
+    advantageOn: mit Vorteil
+    advantageOff: ohne Vorteil
+    disadvantageOn: mit Nachteil
+    disadvantageOff: ohne Nachteil
+    lock:
+      empty: "Kartenbudget aufgebraucht: Deck gesperrt"
+      club: "♣ gezogen: Deck gesperrt, weiter nur mit den Forschungsnotizen"
+    stopped: "Aktion beendet ({n} vom Deck gezogen)"
 
 presence:                                 # Mauszeiger der anderen (neu)
   gm: Spielleitung
@@ -408,6 +420,16 @@ budget:                                   # Zähler für das Kartenbudget links 
   chooseSeat: Wer handelt?
   changeSeat: Handelnde Person wechseln
   deckLocked: Deck gesperrt
+  zeroHint: "Budget 0: eine einzige Karte mit Nachteil – stell 1 und N ein."
+  advantage: V
+  disadvantage: N
+  advantageTitle: "Vorteil: Bildkarten zählen als ♥, ♣ sperrt das Deck nicht"
+  disadvantageTitle: "Nachteil: ♥-Bildkarten zählen als ♠, die Forschungsnotizen sind gesperrt"
+  both: Vorteil und Nachteil heben sich auf – regulär ziehen.
+  advantageOn: Mit Vorteil
+  disadvantageOn: Mit Nachteil
+  notesHint: Weiter mit den Forschungsnotizen
+  notesLocked: Mit Nachteil sind die Forschungsnotizen gesperrt.
 
 reject:
   unknownCommand: Unbekannte Aktion.

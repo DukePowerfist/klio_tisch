@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import { reject } from '../../engine/commands';
-import { SeatSchema } from '../../engine/schemas';
+import { SeatSchema, suitOf } from '../../engine/schemas';
 import { seatVisible, type ZoneTable } from '../../engine/zones';
 import type { CardId, CardSource, CardTarget, Command, CommandDef, EngineEventOf, Event, Reaction, Rejection, SeatId, TableState, ZoneId } from '../../engine/types';
 import type { KlioEvent } from './events';
@@ -65,6 +65,14 @@ export function budgetGuard(zones: ZoneTable) {
   };
 }
 
+/** Ereignis für gezogene Karten; sperren sie das Deck (aufgebraucht oder ♣ ohne Vorteil), steht der Grund dabei */
+function spent(b: Budget, cards: CardId[]): KlioEvent {
+  const after: Budget = { ...b, left: Math.max(0, b.left - cards.length), club: b.club || cards.some((c) => suitOf(c) === 'C') };
+  const code = deckBlock(after)?.reason.key;
+  const lock = code === 'reject.budget.empty' ? 'empty' : code === 'reject.budget.club' ? 'club' : undefined;
+  return lock ? { type: 'budgetSpent', cards, lock } : { type: 'budgetSpent', cards };
+}
+
 /** Zählt Karten, die für die Aktion vom Deck gezogen werden; beim Zurücksetzen des Tisches endet die Aktion. */
 export function budgetReaction(zones: ZoneTable): Reaction<KlioState> {
   return {
@@ -74,11 +82,11 @@ export function budgetReaction(zones: ZoneTable): Reaction<KlioState> {
       if (event.type === 'cardsReset') return [{ type: 'budgetStopped' }];
       if (event.type === 'cardDrawn') {
         const e = event as EngineEventOf<'cardDrawn'>;
-        return isActionDraw(zones, e.from, e.to) ? [{ type: 'budgetSpent', cards: [e.card] }] : [];
+        return isActionDraw(zones, e.from, e.to) ? [spent(state.game.budget, [e.card])] : [];
       }
       if (event.type === 'cardsMoved') {
         const e = event as EngineEventOf<'cardsMoved'>;
-        return isActionDraw(zones, e.from, e.to) ? [{ type: 'budgetSpent', cards: e.cards }] : [];
+        return isActionDraw(zones, e.from, e.to) ? [spent(state.game.budget, e.cards)] : [];
       }
       return [];
     },
@@ -136,7 +144,7 @@ export function budgetCommands(): Record<string, CommandDef<KlioState, any>> {
     parse: (x) => StopCmd.parse(x),
     permission: 'budget.edit',
     owners: (_cmd, state) => acting(state),
-    handle: (_cmd, state) => (state.game.budget.active ? [{ type: 'budgetStopped' }] : []),
+    handle: (_cmd, state) => (state.game.budget.active ? [{ type: 'budgetStopped', drawn: state.game.budget.drawn }] : []),
   };
 
   return { 'budget.start': start, 'budget.set': set, 'budget.stop': stop };

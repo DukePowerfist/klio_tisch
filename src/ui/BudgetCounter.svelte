@@ -3,7 +3,8 @@
   // handelnde Person noch vom Deck ziehen darf. Grau = aus; ein Klick schaltet ein (Spieler für sich, die SL wählt die
   // Person) und wieder aus. ▲/▼, Mausrad und Pfeiltasten ändern das Budget jederzeit. Darunter der Name der handelnden
   // Person in ihrer Farbe; die SL wechselt sie mit einem Klick darauf. Ist das Deck gesperrt, wird die Zahl rot und der
-  // Tooltip nennt den Grund. Zählen und Sperren macht das Regelwerk (src/rules/klio/budget.ts).
+  // Tooltip nennt den Grund. Links die Schalter V (Vorteil) und N (Nachteil); wer nicht ändern darf, sieht nur die
+  // gesetzten. Zählen und Sperren macht das Regelwerk (src/rules/klio/budget.ts).
   import { SEATS, type SeatId } from '../engine/types';
   import { seatVisible } from '../engine/zones';
   import { BUDGET_MAX } from '../rules/klio/state';
@@ -34,7 +35,12 @@
   const title = $derived.by(() => {
     if (!b.active) return t(mayStart ? 'budget.startHint' : 'budget.off');
     const parts = [t('budget.left', { n: b.left, who: who?.label ?? '' })];
-    if (blocked) parts.push(text(blocked));
+    if (b.advantage && b.disadvantage) parts.push(t('budget.both'));
+    else if (b.advantage) parts.push(t('budget.advantageOn'));
+    else if (b.disadvantage) parts.push(t('budget.disadvantageOn'));
+    // Budget 0 vor dem ersten Ziehen: Regelwerk S. 6, eine einzige Karte mit Nachteil (von Hand einstellen)
+    if (b.left === 0 && b.drawn === 0) parts.push(t('budget.zeroHint'));
+    else if (blocked) parts.push(text(blocked));
     if (mayEdit) parts.push(t('budget.editHint'));
     return parts.join('\n');
   });
@@ -58,6 +64,10 @@
     if (!mayEdit) return;
     const left = Math.max(0, Math.min(BUDGET_MAX, b.left + d));
     if (left !== b.left) void submit({ type: 'budget.set', left });
+  }
+
+  function flip(key: 'advantage' | 'disadvantage') {
+    if (mayEdit) void submit({ type: 'budget.set', [key]: !b[key] });
   }
 
   function onWheel(e: WheelEvent) {
@@ -96,6 +106,14 @@
   {#if b.active && mayEdit}
     <button class="arrow down" aria-label={t('budget.down')} title={t('budget.down')} disabled={b.left <= 0} onclick={() => step(-1)}><i></i></button>
   {/if}
+  {#if b.active}
+    {#each [['advantage', 'V'], ['disadvantage', 'N']] as const as [key, letter] (key)}
+      {#if mayEdit || b[key]}
+        <button class="mod {key}" class:set={b[key]} class:void={b.advantage && b.disadvantage} title={t(`budget.${key}Title`)} aria-label={t(`budget.${key}Title`)}
+          aria-pressed={b[key]} disabled={!mayEdit} onclick={() => flip(key)} data-budget-mod={key}>{letter}</button>
+      {/if}
+    {/each}
+  {/if}
   {#if b.active && who}
     {#if gm}
       <button class="who" title={t('budget.changeSeat')} onclick={() => (choosing = choosing ? null : 'change')} data-budget-who>{who.plate}</button>
@@ -131,6 +149,17 @@
   .arrow:disabled { opacity: 0.25; }
   .arrow.up { bottom: 100%; margin-bottom: 1px; }
   .arrow.down { top: 100%; margin-top: 1px; }
+  /* Vorteil oben links, Nachteil unten links neben der Scheibe; gesetzt: gefüllt (V grün, N rot), beide: blass */
+  .mod { position: absolute; right: 100%; margin-right: 6px; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--felt-print) 45%, transparent);
+    background: rgba(0, 0, 0, 0.2); color: color-mix(in srgb, var(--felt-print) 55%, transparent); font-size: 12px !important; font-weight: 700; line-height: 1; }
+  .mod.advantage { top: -3px; }
+  .mod.disadvantage { bottom: -3px; }
+  .mod:not(:disabled):hover { color: var(--felt-print); border-color: var(--felt-print); }
+  .mod.set { color: #fff; border-color: transparent; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+  .mod.advantage.set { background: #4f9a5b; }
+  .mod.disadvantage.set { background: #c0503a; }
+  .mod.set.void { opacity: 0.55; }
+  .mod:disabled { cursor: default; }
   .who { position: absolute; left: 50%; top: 100%; translate: -50% 0; margin-top: 19px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 7px; border: 0;
     border-radius: var(--radius-pill); background: var(--who); color: #1b1b1b; font-size: 11px; font-weight: 600; line-height: 15px; }
   .choose { position: absolute; left: 100%; top: 50%; translate: 8px -50%; display: flex; flex-direction: column; gap: 3px; min-width: 110px; padding: 6px; border-radius: var(--radius-m);

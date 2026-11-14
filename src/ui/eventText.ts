@@ -2,7 +2,7 @@
 // Stufe: `log` nur im Protokoll, `toast` auch als Meldung, `warn` als rote Meldung.
 
 import content from 'virtual:klio-content';
-import type { EngineEvent, TableState, ZoneId } from '../engine/types';
+import type { EngineEvent, SeatId, TableState, ZoneId } from '../engine/types';
 import { seatNo } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
 import { trumpById } from '../rules/klio/trumps';
@@ -26,9 +26,24 @@ export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>
       return say(t('log.reset'));
     case 'lampChanged': {
       // Person am Platz wie bei Schild und Zeiger (seatNames): ihr Name, sonst „Spieler n“
-      const who = e.by === 'gm' || e.by === 'spectator' ? t(`log.lamp.${e.by}`) : (seats?.[e.by].name ?? '').trim() || t('room.player', { n: seatNo(e.by) });
+      const who = e.by === 'gm' || e.by === 'spectator' ? t(`log.lamp.${e.by}`) : person(e.by, seats);
       return say(t(e.lit ? 'log.lamp.lit' : 'log.lamp.out', { who }));
     }
+    // Kartenbudget (6a): Beginn, Wechsel der Person, Vorteil/Nachteil, Sperre, Ende; das Budget selbst (▲/▼) nicht
+    case 'budgetStarted':
+      return say(t('log.budget.started', { who: person(e.seat, seats), n: e.left }));
+    case 'budgetChanged': {
+      const parts = [
+        ...(e.seat ? [t('log.budget.seat', { who: person(e.seat, seats) })] : []),
+        ...(e.advantage === undefined ? [] : [t(e.advantage ? 'log.budget.advantageOn' : 'log.budget.advantageOff')]),
+        ...(e.disadvantage === undefined ? [] : [t(e.disadvantage ? 'log.budget.disadvantageOn' : 'log.budget.disadvantageOff')]),
+      ];
+      return parts.length ? say(t('log.budget.changed', { what: parts.join(', ') })) : null;
+    }
+    case 'budgetSpent':
+      return e.lock ? say(t(`log.budget.lock.${e.lock}`)) : null;
+    case 'budgetStopped':
+      return e.drawn === undefined ? null : say(t('log.budget.stopped', { n: e.drawn }));
     case 'charactersReset':
       return say(t('log.charactersReset'));
     case 'characterReset':
@@ -57,6 +72,9 @@ export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>
       return null;
   }
 }
+
+/** Person am Platz wie bei Schild und Zeiger (seatNames): ihr Name, sonst „Spieler n“ */
+const person = (seat: SeatId, seats?: TableState<unknown>['seats']): string => (seats?.[seat].name ?? '').trim() || t('room.player', { n: seatNo(seat) });
 
 /** Kommen und Gehen (11.7) → Text für Protokoll und Meldung; null, wenn es nichts zu sagen gibt (neu angekommen:
  *  steht schon mit dem Belegen im Protokoll). Namen aus dem Stand: die Person am Platz, nicht der Charakter. */

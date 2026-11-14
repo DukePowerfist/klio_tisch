@@ -58,3 +58,18 @@ describe('Expedition im Protokoll (5zf, F1 a)', () => {
     expect(describeEvent({ type: 'expeditionRolled', expedition: [0, 10, 12, 3] })).toEqual({ text: `Expedition: ${e[0]!.entries[0]} (2) · ${e[1]!.entries[10]} (D) · ${e[2]!.entries[12]} (A) · ${e[3]!.entries[3]} (5)`, level: 'log' });
   });
 });
+
+describe('Kartenbudget (6a) im Protokoll', () => {
+  const text = (e: object) => describeEvent(e as Parameters<typeof describeEvent>[0], seats)?.text ?? null;
+  it('Beginn, Wechsel, Vorteil/Nachteil, Sperre, Ende; das Budget selbst und Ziehen ohne Sperre nicht', () => {
+    expect(text({ type: 'budgetStarted', seat: 'seat2', left: 4 })).toBe('Aktion von Ida: Kartenbudget 4');
+    expect(text({ type: 'budgetChanged', seat: 'seat3', advantage: true })).toBe('Aktion: jetzt Spieler 3, mit Vorteil');
+    expect(text({ type: 'budgetChanged', disadvantage: false })).toBe('Aktion: ohne Nachteil');
+    expect(text({ type: 'budgetChanged', left: 5 })).toBeNull();
+    expect(text({ type: 'budgetSpent', cards: ['H4'] })).toBeNull();
+    expect(text({ type: 'budgetSpent', cards: ['H4'], lock: 'empty' })).toBe('Kartenbudget aufgebraucht: Deck gesperrt');
+    expect(text({ type: 'budgetSpent', cards: ['C4'], lock: 'club' })).toMatch(/^♣ gezogen: Deck gesperrt/);
+    expect(text({ type: 'budgetStopped', drawn: 2 })).toBe('Aktion beendet (2 vom Deck gezogen)');
+    expect(text({ type: 'budgetStopped' })).toBeNull();
+  });
+});
