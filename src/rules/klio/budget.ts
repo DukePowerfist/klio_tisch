@@ -1,6 +1,6 @@
 // Zähler für das Kartenbudget einer Aktion (Schritt 6a; Regelwerk 2.2, S. 6 f., 8, 13).
 // Zählt die Karten, die für die Aktion vom Deck gezogen werden, und sperrt hart:
-//   Deck: Budget aufgebraucht oder ♣ vom Deck gezogen (außer mit Vorteil); danach geht es nur über die Notizen weiter.
+//   Deck: Budget noch nicht eingestellt (jede Aktion beginnt bei 0), aufgebraucht oder ♣ vom Deck gezogen (außer mit Vorteil); danach geht es nur über die Notizen weiter.
 //   Forschungsnotizen der handelnden Person: bei Nachteil.
 // Vorteil und Nachteil zusammen heben sich auf. Ist die Automatik „budget“ aus, zählt und sperrt nichts.
 
@@ -21,6 +21,9 @@ type S = TableState<KlioState>;
 /** Vorteil oder Nachteil wirkt nur allein (beides zusammen: regulär) */
 export const hasAdvantage = (b: Budget): boolean => b.advantage && !b.disadvantage;
 export const hasDisadvantage = (b: Budget): boolean => b.disadvantage && !b.advantage;
+/** Budget noch nicht eingestellt: Jede Aktion beginnt bei 0, man zählt hoch. Bis dahin ist das Deck gesperrt. (Budget 0
+ *  nach dem Regelwerk, S. 6 – eine einzige Karte mit Nachteil – stellt man als 1 mit N ein.) */
+export const budgetUnset = (b: Budget): boolean => b.left === 0 && b.drawn === 0;
 
 const counting = (s: S): boolean => s.game.budget.active && s.settings.automation[BUDGET_REACTION] !== false;
 
@@ -36,6 +39,7 @@ export function isActionDraw(zones: ZoneTable, from: CardSource | ZoneId, to: Ca
 
 /** Grund, warum das Deck gerade gesperrt ist; `k` Karten sollen gezogen werden */
 export function deckBlock(b: Budget, k = 1): Rejection | undefined {
+  if (budgetUnset(b)) return reject('reject.budget.unset');
   if (b.left <= 0) return reject('reject.budget.empty');
   if (b.club && !hasAdvantage(b)) return reject('reject.budget.club');
   if (k > b.left) return reject('reject.budget.tooMany', { n: b.left });
@@ -67,7 +71,7 @@ export function budgetGuard(zones: ZoneTable) {
 
 /** Ereignis für gezogene Karten; sperren sie das Deck (aufgebraucht oder ♣ ohne Vorteil), steht der Grund dabei */
 function spent(b: Budget, cards: CardId[]): KlioEvent {
-  const after: Budget = { ...b, left: Math.max(0, b.left - cards.length), club: b.club || cards.some((c) => suitOf(c) === 'C') };
+  const after: Budget = { ...b, left: Math.max(0, b.left - cards.length), drawn: b.drawn + cards.length, club: b.club || cards.some((c) => suitOf(c) === 'C') };
   const code = deckBlock(after)?.reason.key;
   const lock = code === 'reject.budget.empty' ? 'empty' : code === 'reject.budget.club' ? 'club' : undefined;
   return lock ? { type: 'budgetSpent', cards, lock } : { type: 'budgetSpent', cards };
@@ -118,7 +122,7 @@ export function budgetCommands(): Record<string, CommandDef<KlioState, any>> {
     handle(cmd, state) {
       if (!seatVisible(cmd.seat, state)) return reject('reject.hiddenSeat');
       if (state.game.budget.active) return reject('reject.budget.active');
-      return [{ type: 'budgetStarted', seat: cmd.seat, left: cmd.left ?? state.game.budget.last }];
+      return [{ type: 'budgetStarted', seat: cmd.seat, left: cmd.left ?? 0 }];
     },
   };
 

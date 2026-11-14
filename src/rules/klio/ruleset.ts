@@ -11,6 +11,7 @@ import { oracleOpen } from './migrations/oracleOpen';
 import { tischmitte } from './migrations/tischmitte';
 import { budgetCommands, budgetGuard, budgetReaction } from './budget';
 import { budget } from './migrations/budget';
+import { budgetLast } from './migrations/budgetLast';
 import { damageReaction } from './reactions/damage';
 import { initialKlioState, KlioState } from './state';
 
@@ -37,7 +38,7 @@ export function createKlioRuleset(content: KlioContent): Ruleset<KlioState> {
     reactions: [damageReaction(table), budgetReaction(table)],
     guard: budgetGuard(table),
     permissions: content.permissions,
-    migrations: [tischmitte, oracleOpen, budget],
+    migrations: [tischmitte, oracleOpen, budget, budgetLast],
     seatColors: content.layouts.seatColors,
   };
 }

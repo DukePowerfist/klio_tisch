@@ -12,18 +12,21 @@ const moveTop = (s: K, to: object, k = 1, actor = player('seat1')) =>
   run(s, { type: 'cards.move', cards: s.zones['deck']!.slice(-k), from: { zone: 'deck' }, to }, actor);
 
 describe('Kartenbudget (6a)', () => {
-  it('aus am Anfang, Vorschlag 3; Start übernimmt den Vorschlag, Ende merkt sich das Budget der Aktion', () => {
+  it('aus am Anfang; jede Aktion beginnt bei 0 (noch nicht eingestellt, Deck gesperrt), man zählt hoch', () => {
     const s = fresh();
-    expect(s.game.budget).toMatchObject({ active: false, seat: null, last: 3 });
-    const on = run(s, { type: 'budget.start', seat: 'seat2' }).state;
-    expect(on.game.budget).toMatchObject({ active: true, seat: 'seat2', left: 3, drawn: 0 });
-    // zwei gezogen, eins dazu (Kraftakt …): beim nächsten Mal 4
-    let t = drawDeck(deckTop(on, 'H5', 'H6'), player('seat1')).state;
-    t = drawDeck(t).state;
-    t = run(t, { type: 'budget.set', left: 2 }).state;
-    const off = run(t, { type: 'budget.stop' }).state;
-    expect(off.game.budget).toMatchObject({ active: false, seat: null, last: 4 });
-    expect(run(off, { type: 'budget.start', seat: 'seat1' }).state.game.budget.left).toBe(4);
+    expect(s.game.budget).toMatchObject({ active: false, seat: null });
+    const on = deckTop(run(s, { type: 'budget.start', seat: 'seat2' }).state, 'H5', 'H6');
+    expect(on.game.budget).toMatchObject({ active: true, seat: 'seat2', left: 0, drawn: 0 });
+    expectRejected(on, { type: 'zone.draw', zone: 'deck' }, 'reject.budget.unset', player('seat2'));
+    // Notizen bleiben frei (kein Nachteil)
+    expect(moveTop(on, { zone: 'seat2.notes' }, 1, player('seat2')).state.zones['seat2.notes']).toEqual(['H6']);
+    // hochgezählt: 1 Karte, danach aufgebraucht (nicht mehr „nicht eingestellt“)
+    const one = drawDeck(run(on, { type: 'budget.set', left: 1 }).state, player('seat2'));
+    expect(one.events.find((e) => e.type === 'budgetSpent')).toMatchObject({ lock: 'empty' });
+    expectRejected(one.state, { type: 'zone.draw', zone: 'deck' }, 'reject.budget.empty', player('seat2'));
+    // die nächste Aktion beginnt wieder bei 0
+    const again = run(run(one.state, { type: 'budget.stop' }).state, { type: 'budget.start', seat: 'seat1' }).state;
+    expect(again.game.budget).toMatchObject({ left: 0, drawn: 0 });
   });
 
   it('zählt jede Karte vom Deck: Ziehen, Ziehen per Maus auf Ablage und freien Tisch, mehrere auf einmal', () => {
@@ -139,5 +142,12 @@ describe('Kartenbudget (6a)', () => {
     const s = engine.parseState({ ...fresh(), format: 5, game });
     expect(s.format).toBe(FORMAT);
     expect(s.game.budget).toEqual(fresh().game.budget);
+  });
+
+  it('Format 6 → 7: der Vorschlag aus der letzten Aktion (`last`) entfällt', () => {
+    const now = fresh();
+    const s = engine.parseState({ ...now, format: 6, game: { ...now.game, budget: { ...now.game.budget, last: 4 } } });
+    expect(s.format).toBe(FORMAT);
+    expect(s.game.budget).toEqual(now.game.budget);
   });
 });

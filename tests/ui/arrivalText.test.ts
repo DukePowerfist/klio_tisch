@@ -63,6 +63,7 @@ describe('Kartenbudget (6a) im Protokoll', () => {
   const text = (e: object) => describeEvent(e as Parameters<typeof describeEvent>[0], seats)?.text ?? null;
   it('Beginn, Wechsel, Vorteil/Nachteil, Sperre, Ende; das Budget selbst und Ziehen ohne Sperre nicht', () => {
     expect(text({ type: 'budgetStarted', seat: 'seat2', left: 4 })).toBe('Aktion von Ida: Kartenbudget 4');
+    expect(text({ type: 'budgetStarted', seat: 'seat2', left: 0 })).toBe('Aktion von Ida');
     expect(text({ type: 'budgetChanged', seat: 'seat3', advantage: true })).toBe('Aktion: jetzt Spieler 3, mit Vorteil');
     expect(text({ type: 'budgetChanged', disadvantage: false })).toBe('Aktion: ohne Nachteil');
     expect(text({ type: 'budgetChanged', left: 5 })).toBeNull();

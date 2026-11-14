@@ -6,6 +6,7 @@
   import { locate } from '../engine/zones';
   import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
   import type { PointerPos } from '../net/presence';
+  import { budgetUnset } from '../rules/klio/budget';
   import { sheetOf } from '../rules/klio/events';
   import BudgetCounter from './BudgetCounter.svelte';
   import Card from './Card.svelte';
@@ -162,7 +163,8 @@
     if (!box || !table.zones[zone]?.length) return null;
     const locked = session.blocked({ type: 'cards.move', cards: [], from: { zone }, to: { zone: 'discard' } });
     if (locked) return { box, locked, title: text(locked) };
-    return deckBlocked ? { box, locked: null, title: t('budget.notesHint') } : null;
+    // noch kein Budget eingestellt: nicht auf die Notizen verweisen
+    return deckBlocked && !budgetUnset(b) ? { box, locked: null, title: t('budget.notesHint') } : null;
   });
   /** Zone unter dem Zeiger beim Ziehen (hervorgehoben, Ziel beim Loslassen, F1) */
   const hot = $derived(drag?.moved ? (zoneAt(layout, drag.ax, drag.ay)?.id ?? null) : null);

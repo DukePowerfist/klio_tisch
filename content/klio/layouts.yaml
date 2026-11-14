@@ -68,9 +68,9 @@ middle:
   # Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Mitte relativ zur Tischmitte, Kantenlänge, Lage der Flamme im Bild
   # (Anteil, public/assets/table/laterne.webp), Höhe der Flamme über dem Tisch (Länge der Schatten)
   lamp: { at: [ 120, 354 ], size: 128, flame: [ 0.5024, 0.4561 ], height: 260 }
-  # Zähler für das Kartenbudget (Schritt 6a): Mitte der Scheibe links neben dem Deck, Durchmesser; darüber und darunter
+  # Zähler für das Kartenbudget (Schritt 6a): Mitte der Scheibe links neben dem Deck (auf halber Höhe des Decks), Durchmesser; darüber und darunter
   # die Pfeile, darunter der Name der handelnden Person (BudgetCounter.svelte)
-  budget: { at: [ 136, 522 ], size: 52 }
+  budget: { at: [ 136, 540 ], size: 52 }
 # Bögen (Schritt 5q, ARCHITEKTUR.md 10.3): ein Abstand ab der sichtbaren Kante des Lederrands, zur Tischkante, zum Filz und
 # zwischen zwei Bögen. Jede Gruppe von Bögen so groß, wie sie mit diesem Abstand neben den Filz passt (Gruppe = Bögen
 # mit einem Maßstab: in der Draufsicht beide Spalten zusammen, in der Rollenansicht jede Spalte für sich). Der Rest liegt

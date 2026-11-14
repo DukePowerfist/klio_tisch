@@ -1,12 +1,14 @@
 <script lang="ts">
   // Zähler für das Kartenbudget (Schritt 6a) links neben dem Deck: eine Scheibe mit der Zahl der Karten, die die
-  // handelnde Person noch vom Deck ziehen darf. Grau = aus; ein Klick schaltet ein (Spieler für sich, die SL wählt die
+  // handelnde Person noch vom Deck ziehen darf. Jede Aktion beginnt bei 0 (noch nicht eingestellt), man zählt hoch.
+  // Grau = aus; ein Klick schaltet ein (Spieler für sich, die SL wählt die
   // Person) und wieder aus. ▲/▼, Mausrad und Pfeiltasten ändern das Budget jederzeit. Darunter der Name der handelnden
   // Person in ihrer Farbe; die SL wechselt sie mit einem Klick darauf. Ist das Deck gesperrt, wird die Zahl rot und der
   // Tooltip nennt den Grund. Links die Schalter V (Vorteil) und N (Nachteil); wer nicht ändern darf, sieht nur die
   // gesetzten. Zählen und Sperren macht das Regelwerk (src/rules/klio/budget.ts).
   import { SEATS, type SeatId } from '../engine/types';
   import { seatVisible } from '../engine/zones';
+  import { budgetUnset } from '../rules/klio/budget';
   import { BUDGET_MAX } from '../rules/klio/state';
   import { submitOrSay as submit } from './commands';
   import { whoColor } from './colors';
@@ -25,7 +27,9 @@
   const own = $derived(actor.role === 'player' ? actor.seat : null);
   const mayStart = $derived(gm || (own !== null && session.can({ type: 'budget.start', seat: own })));
   const mayEdit = $derived(b.active && session.can({ type: 'budget.set' }));
-  const blocked = $derived(b.active ? session.blocked({ type: 'zone.draw', zone: 'deck' }) : null);
+  /** noch nicht eingestellt: neutral statt rot, das Deck ist trotzdem gesperrt */
+  const unset = $derived(b.active && budgetUnset(b));
+  const blocked = $derived(b.active && !unset ? session.blocked({ type: 'zone.draw', zone: 'deck' }) : null);
   const who = $derived(b.seat ? seatNames(table, b.seat) : null);
   const seats = $derived(SEATS.filter((s) => seatVisible(s, table)));
 
@@ -38,8 +42,7 @@
     if (b.advantage && b.disadvantage) parts.push(t('budget.both'));
     else if (b.advantage) parts.push(t('budget.advantageOn'));
     else if (b.disadvantage) parts.push(t('budget.disadvantageOn'));
-    // Budget 0 vor dem ersten Ziehen: Regelwerk S. 6, eine einzige Karte mit Nachteil (von Hand einstellen)
-    if (b.left === 0 && b.drawn === 0) parts.push(t('budget.zeroHint'));
+    if (unset) parts.push(t('budget.unsetHint'));
     else if (blocked) parts.push(text(blocked));
     if (mayEdit) parts.push(t('budget.editHint'));
     return parts.join('\n');
@@ -95,6 +98,7 @@
     class="disc"
     class:on={b.active}
     class:blocked={!!blocked}
+    class:unset
     {title}
     aria-label={title}
     aria-pressed={b.active}
@@ -102,7 +106,7 @@
     onclick={toggle}
     onkeydown={onKey}
     data-budget-left={b.active ? b.left : undefined}
-  >{b.active ? b.left : b.last}</button>
+  >{b.active ? b.left : '–'}</button>
   {#if b.active && mayEdit}
     <button class="arrow down" aria-label={t('budget.down')} title={t('budget.down')} disabled={b.left <= 0} onclick={() => step(-1)}><i></i></button>
   {/if}
@@ -141,6 +145,8 @@
   .disc:not(:disabled):not(.on):hover { color: var(--felt-print); border-color: var(--felt-print); }
   .disc.on { border: 3px solid var(--who, var(--felt-print)); background: rgba(0, 0, 0, 0.35); color: var(--felt-print); font-size: 28px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 3px rgba(0, 0, 0, 0.4); }
   .disc.blocked { color: #e8735a; }
+  /* noch nicht eingestellt: Zahl blass, der Pfeil nach oben lädt zum Hochzählen ein */
+  .disc.unset { color: color-mix(in srgb, var(--felt-print) 55%, transparent); }
   .arrow { position: absolute; left: 50%; translate: -50% 0; display: grid; place-items: center; width: 34px; height: 17px; padding: 0; border: 0; background: none; opacity: 0.8; }
   /* Dreieck statt Zeichen: in der Tischschrift sind ▲/▼ zu klein */
   .arrow i { width: 16px; height: 9px; background: var(--felt-print); clip-path: polygon(50% 0, 100% 100%, 0 100%); }

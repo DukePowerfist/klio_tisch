@@ -223,6 +223,7 @@ log:                                      # Spielprotokoll (neu)
     spectator: Ein Zuschauer
   budget:                                 # Kartenbudget (6a)
     started: "Aktion von {who}: Kartenbudget {n}"
+    startedUnset: "Aktion von {who}"
     changed: "Aktion: {what}"
     seat: "jetzt {who}"
     advantageOn: mit Vorteil
@@ -420,7 +421,7 @@ budget:                                   # Zähler für das Kartenbudget links 
   chooseSeat: Wer handelt?
   changeSeat: Handelnde Person wechseln
   deckLocked: Deck gesperrt
-  zeroHint: "Budget 0: eine einzige Karte mit Nachteil – stell 1 und N ein."
+  unsetHint: "Erst das Budget einstellen: ▲, Mausrad oder Pfeiltasten. (Budget 0 nach den Regeln, eine einzige Karte mit Nachteil: 1 und N.)"
   advantage: V
   disadvantage: N
   advantageTitle: "Vorteil: Bildkarten zählen als ♥, ♣ sperrt das Deck nicht"
@@ -461,6 +462,7 @@ reject:
   importInvalid: Diese Datei ist kein gültiger Spielstand des Kartentischs.
   importNewer: Diese Datei stammt aus einer neueren Fassung des Kartentischs. Bitte die Seite neu laden.
   budget:                                 # Zähler für das Kartenbudget (6a)
+    unset: Erst das Kartenbudget einstellen.
     empty: Das Kartenbudget ist aufgebraucht.
     club: ♣ gezogen – weiter nur mit den Forschungsnotizen.
     tooMany: "Im Kartenbudget sind nur noch {n} Karten."

@@ -31,7 +31,7 @@ export function describe(e: EngineEvent | KlioEvent, seats?: TableState<unknown>
     }
     // Kartenbudget (6a): Beginn, Wechsel der Person, Vorteil/Nachteil, Sperre, Ende; das Budget selbst (▲/▼) nicht
     case 'budgetStarted':
-      return say(t('log.budget.started', { who: person(e.seat, seats), n: e.left }));
+      return say(e.left ? t('log.budget.started', { who: person(e.seat, seats), n: e.left }) : t('log.budget.startedUnset', { who: person(e.seat, seats) }));
     case 'budgetChanged': {
       const parts = [
         ...(e.seat ? [t('log.budget.seat', { who: person(e.seat, seats) })] : []),

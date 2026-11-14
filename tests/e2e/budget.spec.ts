@@ -8,11 +8,13 @@ const counter = (page: Page) => page.locator('[data-budget]');
 const disc = (page: Page) => counter(page).locator('.disc');
 const lock = (page: Page) => page.locator('[data-deck-lock]');
 
-/** SL schaltet ein und wählt die Person */
-async function start(page: Page, who = 'Spieler 1') {
+/** SL schaltet ein, wählt die Person und zählt das Budget hoch (jede Aktion beginnt bei 0) */
+async function start(page: Page, who = 'Spieler 1', budget = 3) {
   await disc(page).click();
   await counter(page).locator('[data-budget-choose]').getByRole('menuitem', { name: who }).click();
   await expect(counter(page)).toHaveAttribute('data-budget-active', 'true');
+  for (let i = 0; i < budget; i++) await counter(page).getByRole('button', { name: 'Budget erhöhen' }).click();
+  await expect(disc(page)).toHaveText(String(budget));
 }
 
 /** Das Deck ist gemischt und enthält ♣ Ass, das sperrt (gewollt). Damit das Herunterzählen nicht vom Zufall abhängt:
@@ -62,7 +64,7 @@ test('SL schaltet ein, wählt die Person; jede Karte vom Deck zählt herunter, b
   await expectCount(page, 'ABLAGE', 3);
 });
 
-test('▲ und Mausrad erhöhen und heben die Sperre auf; Klick schaltet aus, das Budget der Aktion bleibt als Vorschlag', async ({ page }) => {
+test('▲ und Mausrad erhöhen und heben die Sperre auf; Klick schaltet aus', async ({ page }) => {
   await clubAceToBottom(page);
   await start(page);
   for (let i = 0; i < 3; i++) await openMenuAndClick(page, 'DECK', 'Ziehen').then(() => page.keyboard.press('Escape')).then(() => page.waitForTimeout(400));
@@ -81,7 +83,7 @@ test('▲ und Mausrad erhöhen und heben die Sperre auf; Klick schaltet aus, das
 
   await disc(page).click();
   await expect(counter(page)).toHaveAttribute('data-budget-active', 'false');
-  await expect(disc(page)).toHaveText('4');
+  await expect(disc(page)).toHaveText('–');
 });
 
 test('♣ vom Deck sperrt trotz Restbudget', async ({ page }) => {
@@ -142,9 +144,23 @@ test('nach ♣ leuchten die Notizen; mit Vorteil sperrt ♣ nicht', async ({ pag
   await expect(notesMark(page)).toHaveAttribute('data-notes-mark', 'glow');
 });
 
-test('Budget 0 vor dem ersten Ziehen: Hinweis auf eine Karte mit Nachteil', async ({ page }) => {
-  await start(page);
-  for (let i = 0; i < 3; i++) await counter(page).getByRole('button', { name: 'Budget senken' }).click();
-  await expect(disc(page)).toHaveText('0');
-  await expect(disc(page)).toHaveAttribute('title', /eine einzige Karte mit Nachteil/);
+test('jede Aktion beginnt bei 0: noch nicht eingestellt, Deck gesperrt, nicht rot, Notizen leuchten nicht', async ({ page }) => {
+  await dragFromTo(page, await zoneCenter(page, 'DECK'), await zoneCenter(page, 'NOTIZEN'));
+  await expectCount(page, 'DECK', 26);
+  await expect(disc(page)).toHaveText('–');
+  await start(page, 'Spieler 1', 0);
+  await expect(disc(page)).toHaveClass(/unset/);
+  await expect(disc(page)).not.toHaveClass(/blocked/);
+  await expect(disc(page)).toHaveAttribute('title', /Erst das Budget einstellen.*eine einzige Karte mit Nachteil/s);
+  await expect(lock(page)).toHaveCount(1);
+  await expect(notesMark(page)).toHaveCount(0);
+  await page.waitForTimeout(400);
+  const deck = await zoneCenter(page, 'DECK');
+  await page.mouse.click(deck.x, deck.y);
+  await expect(stackItem(page, 'Ziehen')).toHaveAttribute('aria-disabled', 'true');
+  await expect(stackItem(page, 'Ziehen')).toHaveAttribute('title', 'Erst das Kartenbudget einstellen.');
+  await page.keyboard.press('Escape');
+  await counter(page).getByRole('button', { name: 'Budget erhöhen' }).click();
+  await expect(disc(page)).not.toHaveClass(/unset/);
+  await expect(lock(page)).toHaveCount(0);
 });

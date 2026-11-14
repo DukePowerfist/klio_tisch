@@ -49,8 +49,8 @@ export const Oracle = z.tuple([OracleDraw, OracleDraw]);
 export const BUDGET_MAX = 20;
 
 /** Zähler für das Kartenbudget einer Aktion (Schritt 6a). `seat` = handelnde Person, solange `active`; `left` = noch
- *  vom Deck zu ziehen, `drawn` = schon gezogen; `club`: ♣ vom Deck gezogen; `last` = Vorschlag beim nächsten Start
- *  (Budget der letzten Aktion). Vorteil und Nachteil wirken auf die Sperren (Regelwerk 2.2, S. 13). */
+ *  vom Deck zu ziehen, `drawn` = schon gezogen; `club`: ♣ vom Deck gezogen. Jede Aktion beginnt mit
+ *  Budget 0 (noch nicht eingestellt, `budgetUnset`); man zählt hoch. Vorteil und Nachteil wirken auf die Sperren (Regelwerk 2.2, S. 13). */
 export const Budget = z.object({
   active: z.boolean(),
   seat: SeatSchema.nullable(),
@@ -59,11 +59,10 @@ export const Budget = z.object({
   club: z.boolean(),
   advantage: z.boolean(),
   disadvantage: z.boolean(),
-  last: z.number().int().min(0).max(BUDGET_MAX),
 }).strict();
 export type Budget = z.infer<typeof Budget>;
 
-export const initialBudget = (): Budget => ({ active: false, seat: null, left: 0, drawn: 0, club: false, advantage: false, disadvantage: false, last: 3 });
+export const initialBudget = (): Budget => ({ active: false, seat: null, left: 0, drawn: 0, club: false, advantage: false, disadvantage: false });
 
 export const KlioState = z.object({
   /** ein Bogen je Sitzplatz, Index 0 = seat1 */

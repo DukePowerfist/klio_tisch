@@ -137,8 +137,7 @@ export const klioEvents = {
     Object.assign(s.game.budget, changes);
   }),
   budgetStopped: def('budgetStopped', (s) => {
-    const b = s.game.budget;
-    s.game.budget = { ...b, active: false, seat: null, last: Math.min(b.drawn + b.left, BUDGET_MAX) };
+    s.game.budget = { ...s.game.budget, active: false, seat: null };
   }),
   budgetSpent: def('budgetSpent', (s, e) => {
     const b = s.game.budget;

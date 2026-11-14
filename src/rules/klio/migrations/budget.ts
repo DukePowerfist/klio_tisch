@@ -1,4 +1,4 @@
-// Format 5 → 6 (Schritt 6a): Zähler für das Kartenbudget (`game.budget`), aus, Vorschlag 3.
+// Format 5 → 6 (Schritt 6a): Zähler für das Kartenbudget (`game.budget`), aus.
 
 import type { Migration } from '../../../engine/types';
 import { initialBudget } from '../state';
