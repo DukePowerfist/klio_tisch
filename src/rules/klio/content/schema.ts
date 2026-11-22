@@ -192,6 +192,8 @@ export const LayoutsFile = z.object({
   book: z.object({
     size: Point, cover: RectTuple, spine: z.number().positive(), read: z.number().positive().max(1), readBelow: z.number().positive().max(1),
     toc: z.object({ w: z.number().positive(), gap: z.number().nonnegative() }).strict(),
+    /** klappendes Blatt: Pergament der linken und rechten Seite im Bild */
+    pages: z.object({ left: RectTuple, right: RectTuple }).strict(),
   }).strict(),
   seatColors: z.array(SeatColorSchema).min(4).refine((c) => new Set(c).size === c.length, 'Farbe doppelt'),
   card: Point,

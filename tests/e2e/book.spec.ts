@@ -14,6 +14,7 @@ async function expectSpread(page: Page, id: string) {
   await expect(book(page)).toHaveAttribute('data-spread', id);
   await expect(page.locator(`[data-book-shown="${id}"]`)).toBeVisible();
   await expect(page.locator('[data-book-under]')).toHaveCount(0);
+  await expect(page.locator('[data-book-leaf]')).toHaveCount(0);
 }
 const open = (page: Page) => fromMenu(page, 'Regeln');
 
@@ -63,6 +64,20 @@ test('Tasten: Pfeile, Bild auf und ab, Pos1, Ende; kein Umlauf', async ({ page }
   await expectSpread(page, 'p13');
   await page.keyboard.press('Home');
   await expectSpread(page, 'intro');
+});
+
+test('Stufe „Aus“: kein Blatt klappt, die Doppelseite blendet über', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => {
+    const w = window as unknown as { leaves: number };
+    w.leaves = 0;
+    new MutationObserver(() => (w.leaves += document.querySelectorAll('[data-book-leaf]').length)).observe(document.body, { childList: true, subtree: true });
+  });
+  await page.keyboard.press('ArrowRight');
+  await expectSpread(page, 'p01');
+  await page.keyboard.press('ArrowLeft');
+  await expectSpread(page, 'intro');
+  expect(await page.evaluate(() => (window as unknown as { leaves: number }).leaves)).toBe(0);
 });
 
 test('mehrmals schnell: so viele Doppelseiten weiter, wie gedrückt wurde', async ({ page }) => {

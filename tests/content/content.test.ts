@@ -52,6 +52,9 @@ describe('Prüfungen schlagen an', () => {
   it.each<[string, (raw: any) => void, RegExp]>([
     ['vertippter Baustein', (r) => (r.trumpSources.trumpSources[0].requires = ['noTrumpYt']), /trumpSources/],
     ['Karte doppelt', (r) => r.deck.start.deck.push('D2'), /D2 kommt doppelt/],
+    ['Regelbuch: Doppelseite doppelt', (r) => (r.book.spreads[2].id = 'p01'), /Doppelseite doppelt: p01/],
+    ['Regelbuch: Blatt nicht spiegelbildlich', (r) => (r.layouts.book.pages.right[0] += 4), /nicht spiegelbildlich zur Buchmitte/],
+    ['Regelbuch: Seiten ungleich groß', (r) => (r.layouts.book.pages.left[3] -= 10), /nicht gleich groß/],
     ['Karte fehlt', (r) => r.deck.start.clubs.pop(), /CK hat keine Startzone/],
     ['Ziehen in unbekannte Zone', (r) => (r.zones.deck.actions.draw.to = 'ablage'), /unbekannter Zone ablage/],
     ['Trumpf-ID doppelt', (r) => (r.trumps[1].id = r.trumps[0].id), /ID doppelt/],

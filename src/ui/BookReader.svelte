@@ -4,11 +4,13 @@
   // Jede Doppelseite ist ein Bild im selben Maß (scripts/book-assets.py); das Fenster hat die Größe des Einbands, der
   // Rand des Bilds (Bändchen, Figuren der Einleitung) ragt darüber hinaus.
   // Blättern: Klick auf die rechte bzw. linke Buchhälfte, Pfeile, Bild auf/ab, Pos1, Ende, Wischen, Verzeichnis.
-  // Teil 1: die neue Doppelseite blendet über die alte; was nur die alte zeigt (Figuren), blendet danach aus.
+  // Zur Nachbarseite klappt ein Blatt um die Buchmitte (Teil 2): Vorderseite die alte Seite, Rückseite die neue, darunter
+  // liegt schon die neue Seite; ein weicher Schatten läuft mit. Sprünge, gehaltene Taste und Stufe „Aus“: die neue
+  // Doppelseite blendet über die alte. Was nur die alte zeigt (Figuren der Einleitung), blendet danach aus.
   import content from 'virtual:klio-content';
   import Modal from './Modal.svelte';
   import { timing } from './animator.svelte';
-  import { bookSize, chapters, keyTurn, storedSpread, swipeTurn, turned, type Spread, type Turn } from './book';
+  import { bookSize, chapters, keyTurn, storedSpread, swipeTurn, turned, turnPlan, type Spread, type Turn } from './book';
   import { t } from './texts';
   import { view } from './view.svelte';
 
@@ -60,6 +62,18 @@
   let under = $state<number | null>(null);
   let underEl = $state<HTMLImageElement>();
   let change = 0;
+  /** laufendes Umblättern: Blatt und neue Seite liegen über dem Bild von `from`; `landed` = Blatt liegt, das Bild darunter wechselt */
+  let flip = $state<{ from: number; to: number; dir: 'next' | 'prev'; landed: boolean } | null>(null);
+
+  // Rechtecke im Bild als Anteile des Einbands (das Fenster hat seine Größe)
+  type R = readonly [number, number, number, number];
+  const place = ([x, y, w, h]: R) => `left: ${((x - cx) / cw) * 100}%; top: ${((y - cy) / ch) * 100}%; width: ${(w / cw) * 100}%; height: ${(h / ch) * 100}%;`;
+  /** das ganze Bild in einem Ausschnitt `r`, so dass genau `r` zu sehen ist */
+  const within = ([x, y, w, h]: R) => `left: ${(-x / w) * 100}%; top: ${(-y / h) * 100}%; width: ${(B.size[0] / w) * 100}%; height: ${(B.size[1] / h) * 100}%;`;
+  /** Seite, von der das Blatt abhebt, und Seite, auf der es landet */
+  const sides = (dir: 'next' | 'prev') => (dir === 'next' ? { lift: B.pages.right, land: B.pages.left } : { lift: B.pages.left, land: B.pages.right });
+  /** Buchmitte als Drehachse, in Anteilen des Blatts */
+  const axis = (r: R) => `${((B.spine - r[0]) / r[2]) * 100}% 50%`;
 
   const loading = new Map<number, Promise<void>>();
   /** Bild laden und entpacken, damit beim Wechsel nichts aufblitzt; jedes nur einmal */
@@ -78,18 +92,52 @@
     for (const n of [i + 1, i - 1]) if (n >= 0 && n < count) void loaded(n);
   }
 
-  async function go(to: number) {
+  /** laufendes Umblättern sofort fertigstellen */
+  function finish() {
+    if (!flip) return;
+    shown = flip.to;
+    under = null;
+    flip = null;
+  }
+
+  async function go(to: number, repeat = false) {
     if (to === index) return;
+    finish();
     index = to;
     localStorage.setItem(KEY, book.spreads[to]!.id);
     const mine = ++change;
     await loaded(to);
     if (mine !== change) return;
-    under = shown;
-    shown = to;
+    const plan = turnPlan(shown, to, timing().bookTurn, repeat);
+    if (plan.kind === 'turn') flip = { from: shown, to, dir: plan.dir, landed: false };
+    else {
+      under = shown;
+      shown = to;
+    }
     preload(to);
   }
-  const turn = (how: Turn) => go(turned(index, how, count));
+  const turn = (how: Turn, repeat = false) => go(turned(index, how, count), repeat);
+
+  /** Blatt klappt um die Buchmitte; Schatten: die aufgedeckte Seite wird hell, die Seite, auf die es fällt, dunkel,
+   *  das Blatt selbst ist in der Mitte der Drehung am dunkelsten */
+  function fold(leaf: HTMLElement) {
+    const mine = flip!;
+    const duration = timing().bookTurn;
+    const base = { duration, easing: 'cubic-bezier(0.45, 0, 0.3, 1)', fill: 'forwards' } as const;
+    const part = (sel: string) => leaf.parentElement!.querySelector<HTMLElement>(sel)!;
+    part('.reveal .shade').animate([{ opacity: 0.45 }, { opacity: 0 }], base);
+    part('.cast').animate([{ opacity: 0 }, { opacity: 0.3 }], base);
+    part('.front .shade').animate([{ opacity: 0 }, { opacity: 0.3, offset: 0.5 }, { opacity: 0.3 }], base);
+    part('.back .shade').animate([{ opacity: 0.3 }, { opacity: 0.3, offset: 0.5 }, { opacity: 0 }], base);
+    const land = () => {
+      if (flip !== mine) return;
+      // das Bild darunter wechselt unter dem liegenden Blatt; danach erst verschwinden Blatt und neue Seite (`enter`)
+      mine.landed = true;
+      under = mine.from;
+      shown = mine.to;
+    };
+    leaf.animate([{ transform: 'rotateY(0deg)' }, { transform: `rotateY(${mine.dir === 'next' ? -180 : 180}deg)` }], base).finished.then(land, () => undefined);
+  }
 
   /** neues Bild blendet über das alte; danach blendet aus, was vom alten noch daneben zu sehen ist */
   function enter(node: HTMLImageElement) {
@@ -97,7 +145,9 @@
     const mine = change;
     const ms = timing().fade;
     const drop = () => {
-      if (mine === change) under = null;
+      if (mine !== change) return;
+      under = null;
+      if (flip?.landed) flip = null;
     };
     const leave = () => {
       if (mine !== change) return;
@@ -113,7 +163,7 @@
     const how = keyTurn(e.key);
     if (!how) return;
     e.preventDefault();
-    void turn(how);
+    void turn(how, e.repeat);
   }
 
   // Wischen: nach dem Loslassen entschieden; der Klick, der darauf folgt, blättert nicht noch einmal
@@ -153,13 +203,25 @@
 <Modal label={t('book.title')} onclose={close} size="sheet" {style}>
   <!-- svelte-ignore a11y_no_static_element_interactions (Wischen ist eine Abkürzung; Blättern geht auch über Knöpfe und Tasten) -->
   <div class="book" tabindex="-1" bind:this={bookEl} data-book data-spread={book.spreads[index]!.id} onpointerdown={down} onpointerup={up} onpointercancel={() => (press = null)}
-    style:--img-x="{(-cx / cw) * 100}%" style:--img-y="{(-cy / ch) * 100}%" style:--img-w="{(B.size[0] / cw) * 100}%" style:--img-h="{(B.size[1] / ch) * 100}%">
+    style:--img-x="{(-cx / cw) * 100}%" style:--img-y="{(-cy / ch) * 100}%" style:--img-w="{(B.size[0] / cw) * 100}%" style:--img-h="{(B.size[1] / ch) * 100}%" style:--spine="{leftShare * 100}%">
     {#if under !== null}
       <img class="spread" src={src(under)} alt="" draggable="false" bind:this={underEl} data-book-under />
     {/if}
     {#key shown}
       <img class="spread" src={src(shown)} alt={describe(book.spreads[shown]!)} draggable="false" use:enter data-book-shown={book.spreads[shown]!.id} />
     {/key}
+    {#if flip}
+      {@const s = sides(flip.dir)}
+      <!-- neue Seite unter dem Blatt, Schatten auf der Seite, auf die es fällt, dann das Blatt -->
+      <div class="reveal" style={place(s.lift)}><img src={src(flip.to)} alt="" draggable="false" style={within(s.lift)} /><div class="shade"></div></div>
+      <div class="cast" style={place(s.land)}></div>
+      {#key flip}
+        <div class="leaf" style="{place(s.lift)} transform-origin: {axis(s.lift)};" use:fold data-book-leaf={flip.dir}>
+          <div class="face front"><img src={src(flip.from)} alt="" draggable="false" style={within(s.lift)} /><div class="shade"></div></div>
+          <div class="face back"><img src={src(flip.to)} alt="" draggable="false" style={within(s.land)} /><div class="shade"></div></div>
+        </div>
+      {/key}
+    {/if}
     <button class="half prev" style:width="{leftShare * 100}%" aria-label={t('book.prev')} disabled={index === 0} onclick={click('prev')}></button>
     <button class="half next" style:width="{(1 - leftShare) * 100}%" aria-label={t('book.next')} disabled={index === count - 1} onclick={click('next')}></button>
   </div>
@@ -177,7 +239,17 @@
 </Modal>
 
 <style>
-  .book { position: absolute; inset: 0; outline: none; touch-action: pan-y pinch-zoom; user-select: none; animation: fade-in var(--pop) ease-out; }
+  /* Blick von vorn auf die Buchmitte, aus der Ferne: das Blatt hebt sich beim Klappen nur wenig */
+  .book { position: absolute; inset: 0; outline: none; touch-action: pan-y pinch-zoom; user-select: none; animation: fade-in var(--pop) ease-out;
+    perspective: 400cqw; perspective-origin: var(--spine) 50%; }
+  .reveal, .cast, .face { position: absolute; overflow: hidden; pointer-events: none; }
+  .reveal img, .face img { position: absolute; max-width: none; }
+  .cast, .shade { background: #000; }
+  .cast { opacity: 0; }
+  .shade { position: absolute; inset: 0; opacity: 0; }
+  .leaf { position: absolute; transform-style: preserve-3d; pointer-events: none; will-change: transform; }
+  .face { inset: 0; backface-visibility: hidden; }
+  .face.back { transform: rotateY(180deg); }
   .spread { position: absolute; left: var(--img-x); top: var(--img-y); width: var(--img-w); height: var(--img-h); max-width: none; pointer-events: none;
     filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55)); }
   /* Buchhälften als Klickflächen: unsichtbar, nur der Zeiger zeigt die Richtung */

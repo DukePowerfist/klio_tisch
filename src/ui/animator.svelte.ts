@@ -22,7 +22,9 @@ type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; a
   /** Expedition und Orakel am Tisch (5zb) */
   sheetGlide: number; nudge: number; oracleSink: number; oracleShake: number; oracleRise: number; oracleClose: number; oracleDrop: number;
   /** Karte in der Hand (11.10) */
-  handResize: number };
+  handResize: number;
+  /** Regelbuch (5zk, 10.16) */
+  bookTurn: number };
 let cached: AllTiming | null = null;
 let cachedCut: AllTiming | null = null;
 /** Schnitt beim Ansichtswechsel (11.8, view.svelte.ts): `shift` ist dann 0, wie `--shift` unter `[data-cut]` */
@@ -52,6 +54,7 @@ function readTiming(): AllTiming {
     oracleSink: cssMs(v('--oracle-sink')), oracleShake: cssMs(v('--oracle-shake')), oracleRise: cssMs(v('--oracle-rise')),
     oracleClose: cssMs(v('--oracle-close')), oracleDrop: cssMs(v('--oracle-drop')),
     handResize: cssMs(v('--hand-resize')),
+    bookTurn: cssMs(v('--book-turn')),
   };
 }
 /** Effektstufe gewechselt: Werte neu lesen */

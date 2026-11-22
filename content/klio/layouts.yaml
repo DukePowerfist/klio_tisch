@@ -8,7 +8,10 @@ board: [ 1760, 990 ]
 # Einleitung. spine = Buchmitte (x im Bild, gemessen an Seite 3/4). read = Höhe des Einbands als Anteil der
 # Fensterhöhe, wenn das Verzeichnis neben das Buch passt, sonst readBelow (Verzeichnis darunter).
 # toc = Verzeichnis: Breite und Abstand zum Buch in px am Bildschirm.
-book: { size: [ 2060, 1790 ], cover: [ 30, 90, 2000, 1450 ], spine: 1040, read: 0.8, readBelow: 0.7, toc: { w: 240, gap: 24 } }
+# pages = das Blatt, das beim Umblättern klappt (x, y, w, h im Bild): das Pergament der linken und rechten Seite ohne
+# die gezeichneten Blattkanten, knapp innerhalb des Rands, gleich groß und gleich weit von der Buchmitte.
+book: { size: [ 2060, 1790 ], cover: [ 30, 90, 2000, 1450 ], spine: 1040, read: 0.8, readBelow: 0.7, toc: { w: 240, gap: 24 },
+  pages: { left: [ 168, 135, 866, 1355 ], right: [ 1046, 135, 866, 1355 ] } }
 # wählbare Farben der Plätze (Schritt 5e; Werte in theme.css als --who-c-<Kennung>, Namen in texts.colors);
 # die ersten vier sind die Voreinstellung von Platz 1–4. Keine davon wie Gold (Bedienhinweis), Weiß (SL) oder Grau (Zuschauer).
 seatColors: [ coral, sky, green, violet, teal, pink, indigo, raspberry ]

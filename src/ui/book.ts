@@ -33,6 +33,17 @@ export function swipeTurn(dx: number, dy: number): Turn | null {
   return dx < 0 ? 'next' : 'prev';
 }
 
+/** Wechsel der Doppelseite: ein Blatt klappt um die Buchmitte, oder die neue blendet über die alte */
+export type TurnPlan = { kind: 'fade' } | { kind: 'turn'; dir: 'next' | 'prev' };
+/**
+ * Geklappt wird nur zur Nachbarseite. Sprünge (Verzeichnis, Pos1, Ende) blenden über, ebenso die gehaltene Taste
+ * (`repeat`) und die Effektstufe „Aus“ (`ms` 0, 11.5).
+ */
+export function turnPlan(from: number, to: number, ms: number, repeat: boolean): TurnPlan {
+  if (ms <= 0 || repeat || Math.abs(to - from) !== 1) return { kind: 'fade' };
+  return { kind: 'turn', dir: to > from ? 'next' : 'prev' };
+}
+
 export type Chapter = { title: string; page: number | undefined; spread: number };
 /** Inhaltsverzeichnis: jede Überschrift in Buchreihenfolge mit ihrer Doppelseite */
 export function chapters(book: Book): Chapter[] {

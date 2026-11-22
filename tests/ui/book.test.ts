@@ -1,7 +1,7 @@
 // Regelbuch zum Blättern (5zk, ARCHITEKTUR.md 10.16): Blättern, Verzeichnis, gemerkte Seite, Größe der Leselage.
 
 import { describe, expect, it } from 'vitest';
-import { bookSize, chapters, keyTurn, storedSpread, swipeTurn, turned } from '../../src/ui/book';
+import { bookSize, chapters, keyTurn, storedSpread, swipeTurn, turned, turnPlan } from '../../src/ui/book';
 import { content } from '../helpers';
 
 const book = content.book;
@@ -34,6 +34,27 @@ describe('Regelbuch (5zk)', () => {
     expect(swipeTurn(-39, 0)).toBeNull();
     expect(swipeTurn(-60, 50)).toBeNull();
     expect(swipeTurn(0, 200)).toBeNull();
+  });
+
+  it('Klappen nur zur Nachbarseite; Sprung, gehaltene Taste und Stufe „Aus“ blenden über', () => {
+    expect(turnPlan(2, 3, 400, false)).toEqual({ kind: 'turn', dir: 'next' });
+    expect(turnPlan(3, 2, 400, false)).toEqual({ kind: 'turn', dir: 'prev' });
+    expect(turnPlan(0, 5, 400, false)).toEqual({ kind: 'fade' });
+    expect(turnPlan(7, 0, 400, false)).toEqual({ kind: 'fade' });
+    expect(turnPlan(2, 3, 400, true)).toEqual({ kind: 'fade' });
+    expect(turnPlan(2, 3, 0, false)).toEqual({ kind: 'fade' });
+  });
+
+  it('das Blatt klappt von einer Seite genau auf die andere', () => {
+    const { left, right } = B.pages;
+    // gespiegelt an der Buchmitte liegt die rechte Seite auf der linken
+    expect(2 * B.spine - (right[0] + right[2])).toBe(left[0]);
+    expect([right[1], right[2], right[3]]).toEqual([left[1], left[2], left[3]]);
+    // im Einband
+    expect(left[0]).toBeGreaterThan(B.cover[0]);
+    expect(right[0] + right[2]).toBeLessThan(B.cover[0] + B.cover[2]);
+    expect(left[1]).toBeGreaterThan(B.cover[1]);
+    expect(left[1] + left[3]).toBeLessThan(B.cover[1] + B.cover[3]);
   });
 
   it('Verzeichnis: jede Überschrift mit Seitenzahl und Doppelseite', () => {
