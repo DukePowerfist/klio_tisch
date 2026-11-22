@@ -6,7 +6,7 @@
 #
 # Das Buch ist in jeder Vorlage dieselbe Zeichnung, nur anders groß und anders gelegen. Das Skript sucht den dunklen
 # Einband, bringt jedes Bild auf dasselbe Maß (Einband 2000 px breit, an derselben Stelle der Leinwand), richtet es am
-# Einband der ersten Doppelseite mit Seitenzahlen aus und macht den weißen Hintergrund durchsichtig. Lesebändchen und
+# Einband von Seite 3/4 aus und macht den weißen Hintergrund durchsichtig (ohne hellen Saum, siehe `transparent`). Lesebändchen und
 # die Figuren der Einleitung liegen außerhalb des Einbands und bleiben im Rand der Leinwand erhalten.
 # Braucht Python 3 mit Pillow.
 
@@ -41,6 +41,10 @@ PAD = 320                       # weißer Rand um die Vorlage, damit der Ausschn
 SEARCH = 5                      # Ausrichten: Verschiebung bis +-5 px
 RING = 70                       # dafür zählt nur der Rand des Einbands, nicht der Text
 WHITE = 232                     # Hintergrund: alle Kanäle heller
+BAND = 5                        # Breite des Bands am Hintergrund, in dem Mischfarben mit Weiß liegen
+SOLID = 25                      # dort voll deckend: dunkelster Kanal bis hierher (Umriss, Einband, Bändchen)
+RIM = 24                        # Streifen um den Rand des Einbands, in dem ein grauer Schein zum Hintergrund zählt
+GREY = 24                       # grau heißt: Kanäle höchstens so weit auseinander
 QUALITY = 84
 
 
@@ -100,9 +104,12 @@ def align(canvas, ref_ring):
 
 
 def transparent(canvas):
-    """weißen Hintergrund entfernen: alles Helle außerhalb des Einbands und was von den Ecken aus erreichbar ist"""
+    """weißen Hintergrund entfernen, ohne hellen Saum: Hintergrund ist alles Helle außerhalb des Einbands und was von
+    den Ecken aus erreichbar ist. Am Rand dazu liegt ein schmales Band aus Mischfarben (Umriss über Weiß, im Bild grau
+    bis fast weiß); dort wird das Weiß herausgerechnet: je heller, desto durchsichtiger, die Farbe entsprechend dunkler."""
     r, g, b = canvas.split()
-    light = ImageChops.darker(ImageChops.darker(r, g), b).point(lambda v: 255 if v > WHITE else 0)
+    low = ImageChops.darker(ImageChops.darker(r, g), b)
+    light = low.point(lambda v: 255 if v > WHITE else 0)
     outside = Image.new('L', CANVAS, 255)
     ImageDraw.Draw(outside).rectangle((BOOK[0] + 12, BOOK[1] + 12, BOOK[2] - 12, BOOK[3] - 12), fill=0)
     bg = ImageChops.multiply(light, outside)
@@ -111,9 +118,28 @@ def transparent(canvas):
     for c in [(0, 0), (CANVAS[0] - 1, 0), (0, CANVAS[1] - 1), (CANVAS[0] - 1, CANVAS[1] - 1)]:
         ImageDraw.floodfill(flood, c, 128)
     bg = ImageChops.lighter(bg, flood.point(lambda v: 255 if v == 128 else 0))
-    # Rand des Sichtbaren um 1 px zurücknehmen und weich machen, sonst bleibt ein heller Saum
-    alpha = ImageChops.invert(bg).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.8))
-    out = canvas.convert('RGBA')
+    # Band am Hintergrund: Deckkraft aus dem dunkelsten Kanal (SOLID und dunkler bleibt voll deckend)
+    band = bg.filter(ImageFilter.MaxFilter(2 * BAND + 1))
+    # Um den Einband liegt in manchen Vorlagen ein breiterer grauer Schein (Seite 11/12). Dazu zählt alles Graue ohne
+    # Farbe im Streifen RIM um den Rand des Einbands, das mit dem Hintergrund zusammenhängt. Nur dort: die grauen
+    # Felsen unter den Figuren der Einleitung liegen tiefer und bleiben, wie sie sind.
+    high = ImageChops.lighter(ImageChops.lighter(r, g), b)
+    grey = ImageChops.multiply(ImageChops.subtract(high, low).point(lambda v: 255 if v <= GREY else 0), low.point(lambda v: 255 if v > SOLID else 0))
+    rim = Image.new('L', CANVAS, 0)
+    d = ImageDraw.Draw(rim)
+    d.rectangle((BOOK[0] - RIM, BOOK[1] - RIM, BOOK[2] + RIM, BOOK[3] + RIM), fill=255)
+    d.rectangle((BOOK[0] + 2 * RIM, BOOK[1] + 2 * RIM, BOOK[2] - 2 * RIM, BOOK[3] - 2 * RIM), fill=0)
+    reach = ImageChops.lighter(bg, ImageChops.multiply(grey, rim))
+    ImageDraw.floodfill(reach, (0, 0), 128)
+    band = ImageChops.lighter(band, reach.point(lambda v: 255 if v == 128 else 0))
+    cover = low.point(lambda v: 255 if v <= SOLID else round(255 * (255 - v) / (255 - SOLID)))
+    alpha = Image.composite(cover, Image.new('L', CANVAS, 255), band)
+    alpha = ImageChops.multiply(alpha, ImageChops.invert(bg))
+    # Farbe ohne das Weiß: c' = 255 - (255 - c) / Deckkraft
+    def unmix(ch):
+        px = bytes(max(0, 255 - (255 - c) * 255 // a) if 0 < a < 255 else c for c, a in zip(ch.tobytes(), alpha.tobytes()))
+        return Image.frombytes('L', CANVAS, px)
+    out = Image.merge('RGB', [unmix(ch) for ch in (r, g, b)]).convert('RGBA')
     out.putalpha(alpha)
     return out
 
