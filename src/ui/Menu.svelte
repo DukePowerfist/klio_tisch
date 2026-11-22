@@ -71,6 +71,8 @@
         <button class="menu-item" onclick={pick(() => session.copyInvite())}>{t('room.copy')}</button>
         <button class="menu-item" title={t('room.manageTitle')} onclick={pick(() => (view.gmPanel = 'room'))}>{t('room.manage')}</button>
       {/if}
+      <!-- Regelbuch (5zk, 10.16): für alle, rein lokal -->
+      <button class="menu-item" onclick={pick(() => (view.bookOpen = true))}>{t('book.title')}</button>
       <!-- für alle: wenigstens die eigene Darstellung (5g) -->
       <button class="menu-item" onclick={pick(() => (view.gmPanel = 'settings'))}>{t('gm.settings')}</button>
       <!-- seit 5zb hier statt in der SL-Leiste (10.12): braucht man während des Spiels kaum -->

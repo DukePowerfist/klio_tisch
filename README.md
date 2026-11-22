@@ -19,6 +19,8 @@ Bildquellen: Das Bild auf der Kartenschachtel und der Rückseite der Spielkarten
 
 Der Charakterbogen (`public/assets/sheet/paper-m.jpg`, `public/assets/sheet/paper-w.jpg`) stammt aus „Klio Charakterbogen 2.2“ des Klio-Autors und fällt nicht unter die MIT-Lizenz.
 
+Das Regelbuch (`public/assets/book/`) zeigt die Kurzregeln des Klio-Autors, mit seiner Erlaubnis; aus seinen Vorlagen ausgeschnitten mit `scripts/book-assets.py`. Es fällt nicht unter die MIT-Lizenz.
+
 Bilder des Tisches (`public/assets/table/`: Holz und Laterne) sind mit ChatGPT erzeugt und bearbeitet (Freistellen, Vergrößern mit Real-ESRGAN, Leuchtmaske; `scripts/table-assets.py`). Auch sie fallen nicht unter die MIT-Lizenz.
 
 Expeditionsblatt und Orakelkarten (`public/assets/sheet/expedition.webp`, `public/assets/cards/oracle.webp`) sind mit einem Bildgenerator erzeugt (Expeditionsblatt danach retuschiert) und fallen ebenfalls nicht unter die MIT-Lizenz. Die Handschrift darauf ist „Patrick Hand“ von Patrick Wagesreiter unter der SIL Open Font License 1.1 (`public/assets/fonts/patrick-hand-OFL.txt`).

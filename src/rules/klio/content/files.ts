@@ -6,6 +6,7 @@ export const CONTENT_PATHS: Record<ContentKey, string> = {
   trumps: 'trumps.yaml',
   tables: 'tables.yaml',
   expedition: 'expedition.yaml',
+  book: 'book.yaml',
   names: 'names.yaml',
   deck: 'deck.yaml',
   zones: 'zones.yaml',

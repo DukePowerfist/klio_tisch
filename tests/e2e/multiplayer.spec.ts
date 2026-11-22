@@ -58,12 +58,12 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await seated(player);
   await expect(player.locator('[data-health=ok]')).toBeVisible();
   // Menü je Rolle (10): Spieler nur Protokoll, SL Raum, Einstellungen, Protokoll
-  expect(await menuEntries(player)).toEqual(['Einstellungen', 'Name und Farbe …', 'Protokoll']);
+  expect(await menuEntries(player)).toEqual(['Regeln', 'Einstellungen', 'Name und Farbe …', 'Protokoll']);
   // ohne Recht nur die eigene Darstellung (5g)
   await openSettings(player, 'Darstellung');
   await expect(player.getByRole('dialog', { name: 'Einstellungen' }).getByRole('tab')).toHaveText(['Darstellung']);
   await player.keyboard.press('Escape');
-  expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
+  expect(await menuEntries(gm)).toEqual(['Link kopieren', 'Raum …', 'Regeln', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
   // Kopf mit dem Verbindungszustand (5p): SL „Raum offen“ mit Zahl, Spieler „Verbunden“
   await menuButton(gm).click();
   await expect(gm.locator('[data-top-menu] .menu-head')).toHaveText('Raum offen1');
@@ -238,7 +238,7 @@ test('SL lädt ein, Spieler nimmt Platz 2, beide sehen dieselben Züge', async (
   await expect(room.getByText('zuletzt Ida M.', { exact: true })).toBeVisible();
   await expect(room.locator('.who').nth(1)).toHaveText(/^\s*Ida Weber ·\s+frei zuletzt Ida M\.\s*$/);
   await player.getByRole('button', { name: 'Nur zuschauen' }).click();
-  expect(await menuEntries(player)).toEqual(['Einstellungen', 'Platz wählen', 'Name …', 'Protokoll']);
+  expect(await menuEntries(player)).toEqual(['Regeln', 'Einstellungen', 'Platz wählen', 'Name …', 'Protokoll']);
   // Zuschauer ändern nur den Namen am Zeiger (5e)
   await fromMenu(player, 'Name …');
   const nameDialog = player.getByRole('dialog', { name: 'Name' });

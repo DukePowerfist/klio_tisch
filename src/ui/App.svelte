@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Board from './Board.svelte';
   import BigTrump from './BigTrump.svelte';
+  import BookReader from './BookReader.svelte';
   import Dock from './Dock.svelte';
   import ExpeditionReader from './ExpeditionReader.svelte';
   import FieldDialog from './FieldDialog.svelte';
@@ -62,6 +63,9 @@
   <BigTrump />
   {#if view.expeditionOpen}
     <ExpeditionReader />
+  {/if}
+  {#if view.bookOpen}
+    <BookReader />
   {/if}
   {#if view.confirmReset}
     <ResetDialog />

@@ -32,6 +32,11 @@ describe('Inhalte', () => {
     for (const table of c.expedition.expedition) expect(table.entries).toHaveLength(RANKS.length);
   });
 
+  it('Regelbuch (5zk): zu jeder Doppelseite liegt das Bild in public/assets/book', () => {
+    expect(content.book.spreads).toHaveLength(8);
+    for (const s of content.book.spreads) expect(existsSync(resolve(import.meta.dirname, `../../public/assets/book/${s.id}.webp`)), s.id).toBe(true);
+  });
+
   it('Trümpfe je Kategorie und Stufe wie bisher', () => {
     const count = (cat: string, lvl: number) => content.trumps.filter((t) => t.category === cat && t.level === lvl).length;
     for (const cat of ['K', 'P', 'V', 'X']) expect([1, 2, 3].map((l) => count(cat, l)), cat).toEqual([4, 4, 3]);

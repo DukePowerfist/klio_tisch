@@ -1,0 +1,29 @@
+# Regelbuch zum Blättern (Schritt 5zk, ARCHITEKTUR.md 10.16): die Kurzregeln als Doppelseiten in Buchreihenfolge.
+# id = Name des Bilds in public/assets/book/<id>.webp (aus scripts/book-assets.py). Die Regeln selbst stehen nur im Bild.
+# titles = Überschriften der Seite, wörtlich wie im Buch; sie bilden das Inhaltsverzeichnis. page = gedruckte Seitenzahl.
+# „Einleitung“ steht nicht im Buch (die Seite hat keine Überschrift) und ist nur der Name im Verzeichnis.
+spreads:
+  - id: intro
+    left: { titles: [ Einleitung ] }
+    right: { titles: [] }
+  - id: p01
+    left: { page: 1, titles: [ Vorbereitung ] }
+    right: { page: 2, titles: [ Charaktererstellung ] }
+  - id: p03
+    left: { page: 3, titles: [ Aktionen ] }
+    right: { page: 4, titles: [] }
+  - id: p05
+    left: { page: 5, titles: [ Rüstzeug ] }
+    right: { page: 6, titles: [ Forschungsnotizen ] }
+  - id: p07
+    left: { page: 7, titles: [ Impulse ] }
+    right: { page: 8, titles: [ Vorteil und Nachteil ] }
+  - id: p09
+    left: { page: 9, titles: [ Expeditionen und Gefahren ] }
+    right: { page: 10, titles: [ "Schaden, Narben und Tod" ] }
+  - id: p11
+    left: { page: 11, titles: [ Rasten ] }
+    right: { page: 12, titles: [ Charakterentwicklung ] }
+  - id: p13
+    left: { page: 13, titles: [ SL-Tipps ] }
+    right: { page: 14, titles: [ Mögliche negative Konsequenzen, Mögliche positive Konsequenzen ] }

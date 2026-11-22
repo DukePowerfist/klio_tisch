@@ -159,6 +159,13 @@ export const SkinFile = z.object({
   nameplate: Box,
 }).strict();
 
+// ---------- book.yaml ----------
+// Regelbuch zum Blättern (5zk, ARCHITEKTUR.md 10.16): Doppelseiten in Buchreihenfolge, die Regeln stehen nur im Bild.
+const BookPage = z.object({ page: z.number().int().positive().optional(), titles: z.array(z.string().min(1)) }).strict();
+export const BookFile = z.object({
+  spreads: z.array(z.object({ id: z.string().regex(/^[a-z0-9]+$/), left: BookPage, right: BookPage }).strict()).min(1),
+}).strict();
+
 // ---------- layouts.yaml ----------
 // Siehe Datei. Sitzplatz-Zonen heißen hier `seat.<zone>`. Tischzonen, Überschrift, Blatt und Schachtel liegen
 // relativ zur Tischmitte (`middle`), die beide Ansichten nur verschieben (ARCHITEKTUR.md 10, Schritt 5d).
@@ -181,6 +188,11 @@ const Light = z.object({ reach: z.number().positive(), ambient: z.number().min(0
 
 export const LayoutsFile = z.object({
   board: Point,
+  /** Regelbuch (5zk, 10.16): Bild und Einband darin in px, Buchmitte (x), Größe der Leselage */
+  book: z.object({
+    size: Point, cover: RectTuple, spine: z.number().positive(), read: z.number().positive().max(1), readBelow: z.number().positive().max(1),
+    toc: z.object({ w: z.number().positive(), gap: z.number().nonnegative() }).strict(),
+  }).strict(),
   seatColors: z.array(SeatColorSchema).min(4).refine((c) => new Set(c).size === c.length, 'Farbe doppelt'),
   card: Point,
   freeCardScale: z.number(),

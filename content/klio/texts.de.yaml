@@ -362,6 +362,14 @@ menu:                                     # Menü oben rechts (neu, Schritt 5b)
     connected: Verbunden
     trouble: Störung
 
+book:                                     # Regelbuch zum Blättern (neu, Schritt 5zk, ARCHITEKTUR.md 10.16)
+  title: Regeln                           # Menüeintrag, Name der Leselage, Kopf des Verzeichnisses
+  next: Weiterblättern
+  prev: Zurückblättern
+  position: "{n} von {m}"                 # aufgeschlagene Doppelseite, rechts im Kopf des Verzeichnisses
+  pages: "Seiten {a} und {b}"             # Beschreibung des Bilds, davor „Regeln“, danach die Überschriften
+  toc: Inhalt
+
 plate:                                    # Menü am Namensschild (neu, Schritt 5j); Umsetzen und Zuweisen wie im Raumfenster (room.*)
   title: "Platz {n}"
   open: Menü zu diesem Platz

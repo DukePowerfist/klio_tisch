@@ -365,7 +365,7 @@ test('Menü oben rechts: nur der Knopf, Einträge der SL, Klick daneben schließ
   await expect(page.getByRole('button', { name: 'Einstellungen' })).toHaveCount(0);
   await expect(page.locator('[data-gm-bar]')).toHaveCount(0);
   await button.click();
-  await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
+  await expect(page.locator('[data-top-menu] .menu-item')).toHaveText(['Mitspieler einladen', 'Regeln', 'Einstellungen', 'Zurücksetzen', 'Protokoll']);
   await page.locator('.panel').click({ position: { x: 20, y: 20 } });
   await expect(page.locator('[data-top-menu]')).toHaveCount(0);
 });

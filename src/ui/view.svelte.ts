@@ -52,6 +52,8 @@ class ViewState {
   fieldDialog = $state<{ seat: SeatId; field: string } | null>(null);
   /** Leselage des Expeditionsblatts (5zb, 10.12): nur in dieser Ansicht, jeder öffnet sie selbst (F3) */
   expeditionOpen = $state(false);
+  /** Regelbuch zum Blättern (5zk, 10.16): rein lokal, jeder öffnet und blättert für sich */
+  bookOpen = $state(false);
   /** letzter Wurf von Expedition bzw. Orakel (5t, seit 5zb am Blatt, 10.12): welche Zeilen der Leselage kurz einblenden,
    *  wann das Blatt hochrückt; jeder Wurf ein neues Objekt */
   gmRoll = $state.raw<{ kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
