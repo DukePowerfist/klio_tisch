@@ -20,7 +20,8 @@ function tryGit(): string | undefined {
 }
 
 export default defineConfig({
-  base: '/klio_tisch/',
+  // relativ: läuft unter dukepowerfist.github.io/klio_tisch/ und unter einer eigenen Domain
+  base: './',
   plugins: [svelte(), klioContent(resolve(import.meta.dirname, 'content/klio'))],
   define: {
     __BUILD_ID__: JSON.stringify(buildId()),

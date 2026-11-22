@@ -7,7 +7,7 @@ const executablePath = process.env.CHROMIUM_PATH;
 export default defineConfig({
   timeout: 30_000,
   use: {
-    baseURL: 'http://localhost:5299/klio_tisch/',
+    baseURL: 'http://localhost:5299/',
     viewport: { width: 1600, height: 900 },
     launchOptions: executablePath ? { executablePath } : {},
   },
@@ -20,7 +20,7 @@ export default defineConfig({
   // In CI gegen den fertigen Build (genau das, was veröffentlicht wird), lokal gegen den Entwicklungsserver
   webServer: {
     command: process.env.CI ? 'npx vite preview --port 5299 --strictPort' : 'npx vite --port 5299 --strictPort',
-    url: 'http://localhost:5299/klio_tisch/',
+    url: 'http://localhost:5299/',
     reuseExistingServer: !process.env.CI,
   },
 });
