@@ -39,6 +39,7 @@ describe('Texte', () => {
       ...Object.keys(steps).map((s) => `trumpDialog.steps.${s}`),
       'trumpDialog.progress.lamps', 'trumpDialog.progress.weaknessMarks',
       ...Object.keys(steps).map((s) => `trumpDialog.trail.${s}`),
+      ...['m', 'w'].flatMap((v) => [1, 2, 3, 4, 5].map((n) => `trumpDialog.strengthLine.${v}.${n}`)),
       'trumpDialog.after.lamps', 'trumpDialog.after.weaknessMarks', 'trumpDialog.after.newScars',
       ...[1, 2, 3, 4, 5].map((n) => `numerals.${n}`),
       'scars.heart', 'scars.spade',

@@ -152,7 +152,10 @@ trumpDialog:
   selectable: "({n} wählbar)"
   chooseFromCategory: "{category} · Trumpf wählen"
   empty: (leer)
-  improveHint: Eine der fünf Stärken darf besser werden. Das Kästchen daneben wird markiert.
+  improveHint: Stärken sind die fünf Textfelder oben auf dem Bogen, von der Rolle im Team bis zum Motto. Eine davon darf besser werden; das Kästchen daneben wird markiert.
+  strengthLine:                           # wo die Stärke auf dem Bogen steht, Wortlaut des Bogens (er/sie-Form)
+    m: { 1: "ist der … des Teams", 2: "ist ausgestattet mit …", 3: "und …", 4: "Als …", 5: "lebt er nach dem Motto …" }
+    w: { 1: "ist die … des Teams", 2: "ist ausgestattet mit …", 3: "und …", 4: "Als …", 5: "lebt sie nach dem Motto …" }
   alreadyImproved: bereits verbessert
   skipImprove: Ohne Verbesserung weiter
   newWording: Neue Formulierung

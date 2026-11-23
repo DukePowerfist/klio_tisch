@@ -105,7 +105,7 @@ describe.skipIf(!existsSync(LEGACY))('wortgetreu aus der alten Datei', () => {
 
   // Bewusst geändert (5zu, 10.22 F6): Seit der Erlebnislaterne (5zm) gibt es am Bogen keine Lampenfelder mehr
   const updated = new Set([
-    'Erlebnislaterne voll: eine Stärke verbessern und einen Trumpf der Stufe I oder II wählen.',
+    'Erlebnislaterne voll: erst eine Stärke verbessern, dann einen Trumpf der Stufe I oder II wählen.',
     'Dafür muss die Erlebnislaterne voll sein.',
   ]);
 

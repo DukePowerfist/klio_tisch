@@ -15,7 +15,8 @@
     {#each ctx.sheet.strengths as s, i (i)}
       <button class="dialog-choice" disabled={s.improved} onclick={() => { chosen = i; wording = s.text; }}>
         <b>{t(`numerals.${i + 1}`)} · {s.text || t('trumpDialog.empty')}</b>
-        {#if s.improved}<span class="note">{t('trumpDialog.alreadyImproved')}</span>{/if}
+        <!-- die Zeile des Bogens, in der die Stärke steht: daran erkennt man das Feld wieder -->
+        <span class="note">{t(`trumpDialog.strengthLine.${ctx.sheet.variant}.${i + 1}`)}{#if s.improved} · {t('trumpDialog.alreadyImproved')}{/if}</span>
       </button>
     {/each}
   </div>

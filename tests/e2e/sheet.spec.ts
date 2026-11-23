@@ -650,7 +650,7 @@ test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand a
   await lantern.click();
   await sheet1(page).locator('[data-slot="1"]').click();
   expect(await sources()).toEqual(['+experience', '-start', '-weakness', '-scar']);
-  await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne voll: eine Stärke verbessern');
+  await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne voll: erst eine Stärke verbessern, dann einen Trumpf');
 });
 
 test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Schritt, Gruppenfrage', async ({ page }) => {
@@ -698,6 +698,9 @@ test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Sc
   await dialog.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
   expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Stärke', 'todo:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
   await expect(dialog.getByText('Danach wählst du einen Trumpf der Stufe I oder II.')).toBeVisible();
+  // Stärken erklärt: was sie sind, und je Zeile die Stelle auf dem Bogen
+  await expect(dialog.getByText(/^Stärken sind die fünf Textfelder oben auf dem Bogen/)).toBeVisible();
+  await expect(dialog.locator('.dialog-choice .note')).toHaveText(['ist der … des Teams', 'ist ausgestattet mit …', 'und …', 'Als …', 'lebt er nach dem Motto …']);
   await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
   expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
   await dialog.getByRole('button', { name: '← Zurück' }).click();

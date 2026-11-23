@@ -31,7 +31,7 @@ trumpSources:
   - id: experience
     text:
       name: Erlebnis eingetroffen
-      desc: "Erlebnislaterne voll: eine Stärke verbessern und einen Trumpf der Stufe I oder II wählen."
+      desc: "Erlebnislaterne voll: erst eine Stärke verbessern, dann einen Trumpf der Stufe I oder II wählen."
       why: Dafür muss die Erlebnislaterne voll sein.
       levelWhy: Nur Stufe I oder II.
     requires: [ { allMarked: lamps } ]
