@@ -116,15 +116,18 @@ trumpDialog:
   free: Freie Wahl
   back: "← Zurück"
   next: Weiter
-  chooseGroup: Aus welcher Gruppe?
-  groupHint: Die Trümpfe sind nach Attribut geordnet. Unter „Verschiedene“ stehen die Trümpfe mit zwei oder drei Attributen.
+  # Trumpfliste mit Reitern (5zx, 10.22)
+  chooseTrump: Welchen Trumpf?
+  groups: Gruppen der Trümpfe
+  allSelectable: Alle wählbaren
+  notSelectable: Nicht wählbar
+  noneInGroup: In dieser Gruppe ist gerade kein Trumpf wählbar.
   # Wegleiste und Grund je Schritt (5zv, 10.22)
   trail:
     label: Ablauf
     chooseWeaknessToRemove: Schwäche
     improveStrength: Stärke
     moveAttributePoint: Attributspunkt
-    group: Gruppe
     trump: Trumpf
     confirm: Bestätigen
   # Bestätigen (5zw, 10.22)
@@ -149,8 +152,6 @@ trumpDialog:
   improveThen: Danach wählst du einen Trumpf der Stufe I oder II.
   improveOnlyHint: Du hast schon alle Trümpfe, deshalb bleibt es bei der Verbesserung.
   attributeHint: Mit der neuen Narbe verschiebst du einen Attributspunkt. Der Trumpf, den du danach wählst, muss das erhöhte Attribut benötigen.
-  selectable: "({n} wählbar)"
-  chooseFromCategory: "{category} · Trumpf wählen"
   empty: (leer)
   improveHint: Stärken sind die fünf Textfelder oben auf dem Bogen, von der Rolle im Team bis zum Motto. Eine davon darf besser werden; das Kästchen daneben wird markiert.
   strengthLine:                           # wo die Stärke auf dem Bogen steht, Wortlaut des Bogens (er/sie-Form)

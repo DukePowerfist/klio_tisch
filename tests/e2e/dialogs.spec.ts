@@ -73,16 +73,15 @@ test('Trumpf wählen: beim Durchgehen der Schritte bleibt die Oberkante stehen; 
   const rect = async () => (await dialog.boundingBox())!;
   const first = (await rect()).y;
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
+  await expect(dialog.locator('h2')).toHaveText('Welchen Trumpf?');
   expect((await rect()).y).toBeCloseTo(first, 0);
-  await page.getByRole('button', { name: /^Verstehen/ }).click();
-  await expect(dialog.locator('h2')).toHaveText(/Trumpf wählen$/);
+  await page.getByRole('tab', { name: /^Verstehen/ }).click();
+  await expect(dialog.getByRole('tab', { name: /^Verstehen/ })).toHaveAttribute('aria-selected', 'true');
   // die Liste der Trümpfe ist höher als das Fenster: unten bündig mit dem Rand (12 px), oben so weit wie nötig
   // (die Lage folgt der Höhe einen Frame später, über den ResizeObserver in Modal.svelte)
   await expect.poll(async () => { const r = await rect(); return Math.round(r.y + r.height); }).toBe(900 - 12);
   const tall = await rect();
   expect(tall.y).toBeLessThan(first);
-  await dialog.getByRole('button', { name: '← Zurück' }).click();
   await dialog.getByRole('button', { name: '← Zurück' }).click();
   await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toBeVisible();
   // wieder klein: zurück an die Oberkante vom Öffnen

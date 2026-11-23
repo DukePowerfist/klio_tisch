@@ -1,10 +1,10 @@
 <script lang="ts">
-  // Trumpf wählen (ARCHITEKTUR.md 14): Weg → Schritte → Kategorie → Trumpf, mit begründet ausgegrauten Karten.
+  // Trumpf wählen (ARCHITEKTUR.md 14, 10.22): Anlass → Schritte → Trumpf (Gruppen als Reiter) → Bestätigen.
   // Die Schritte kommen aus trump-sources.yaml, ihre Ansichten aus trumpSteps/. Alle Entscheidungen bleiben lokal;
   // erst am Ende geht ein einziger Befehl an den Host (6.2).
   // Seit 5y (10.10): Knöpfe in einer Reihe am Ende (`footer`, auch an die Schritte gereicht), Ablehnungen im Fenster.
   import content from 'virtual:klio-content';
-  import type { Snippet } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
   import type { SeatId, TextRef } from '../engine/types';
   import { seatNo } from '../engine/zones';
   import type { Choices } from '../rules/klio/blocks';
@@ -17,7 +17,7 @@
   import { session } from './session.svelte';
   import { t, text } from './texts';
   import {
-    CATEGORIES, consequences, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trail, trumpRows, type DialogStep, type Path, type SourcePath, type SourceRow,
+    consequences, finalCommand, intro, nextStep, selectableByCategory, sourceRows, tabRows, trail, TRUMP_TABS, trumpRows, type DialogStep, type Path, type SourcePath, type SourceRow, type TrumpTab,
   } from './trumpDialog';
   import { STEP_VIEWS } from './trumpSteps';
   import { view } from './view.svelte';
@@ -32,11 +32,27 @@
 
   let history = $state<DialogStep[]>([{ at: 'sources' }]);
   const step = $derived(history[history.length - 1]!);
-  const rows = $derived(step.at === 'categories' || step.at === 'trumps' ? trumpRows(content, ctx, step.path, step.choices) : []);
+  const rows = $derived(step.at === 'trumps' ? trumpRows(content, ctx, step.path, step.choices) : []);
+  /** offener Reiter der Trumpfliste; bleibt bei „Zurück“ aus der Bestätigung, beginnt sonst vorn */
+  let tab = $state<TrumpTab>('all');
+  /** Pfeiltasten wechseln den Reiter, Pos1 und Ende springen an die Ränder; der Fokus geht mit */
+  function tabKey(e: KeyboardEvent, c: TrumpTab) {
+    const i = TRUMP_TABS.indexOf(c);
+    const next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? TRUMP_TABS.length - 1 : null;
+    if (next === null) return;
+    e.preventDefault();
+    tab = TRUMP_TABS[(next + TRUMP_TABS.length) % TRUMP_TABS.length]!;
+    const list = (e.currentTarget as HTMLElement).parentElement!;
+    void tick().then(() => list.querySelector<HTMLElement>('[aria-selected=true]')?.focus());
+  }
   /** Grund der letzten Ablehnung, im Fenster über der Reihe am Ende (F3); `id` zeigt eine neue Ablehnung an */
   let problem = $state<{ text: string; id: number } | null>(null);
 
-  const go = (s: DialogStep) => ((problem = null), (history = [...history, s]));
+  const go = (s: DialogStep) => {
+    problem = null;
+    if (s.at === 'trumps') tab = 'all';
+    history = [...history, s];
+  };
   const back = () => ((problem = null), (history = history.slice(0, -1)));
   const close = () => (view.trumpDialog = null);
   const refuse = (why: TextRef) => (problem = { text: text(why), id: (problem?.id ?? 0) + 1 });
@@ -69,15 +85,14 @@
 
   function free() {
     if (isFull(cfg, sheet)) return refuse(fullReason(cfg));
-    go({ at: 'categories', path: { kind: 'free' }, choices: {} });
+    go({ at: 'trumps', path: { kind: 'free' }, choices: {} });
   }
 
   const title = $derived(
     step.at === 'sources' ? t('trumpDialog.title', { seat: seatNo(seat) })
     : step.at === 'step' ? t(`trumpDialog.steps.${step.name}`)
-    : step.at === 'categories' ? t('trumpDialog.chooseGroup')
     : step.at === 'confirm' ? t(step.trump ? 'trumpDialog.confirmTrump' : 'trumpDialog.confirmImprove')
-    : t('trumpDialog.chooseFromCategory', { category: t(`trumps.categories.${step.category}`) }),
+    : t('trumpDialog.chooseTrump'),
   );
 </script>
 
@@ -152,18 +167,6 @@
       <View {ctx} improveOnly={step.path.improveOnly} done={(partial) => advance(step.path, { ...step.choices, ...partial }, step.index + 1)} end={footer} />
     {/key}
 
-  {:else if step.at === 'categories'}
-    {@const counts = selectableByCategory(rows)}
-    <p class="note">{t('trumpDialog.groupHint')}</p>
-    <div class="dialog-choices" style:--cols="2">
-      {#each CATEGORIES as c (c)}
-        <button class="dialog-choice center" disabled={counts[c] === 0} onclick={() => go({ at: 'trumps', path: step.path, choices: step.choices, category: c })}>
-          {t(`trumps.categories.${c}`)} <span class="dialog-aside">{t('trumpDialog.selectable', { n: counts[c] })}</span>
-        </button>
-      {/each}
-    </div>
-    {@render footer()}
-
   {:else if step.at === 'confirm'}
     <!-- Bestätigen (5zw, 10.22): erst hier geht der Befehl hinaus. Die Liste rechnet am aktuellen Bogen. -->
     {@const out = outcome(step.path, step.choices, step.trump?.id)}
@@ -188,13 +191,37 @@
     {@render footer(take)}
 
   {:else}
-    <div class="cards">
-      {#each rows.filter((r) => r.trump.category === step.category) as row (row.trump.id)}
-        <button class="tc" class:off={!!row.why} disabled={!!row.why} onclick={() => confirm(step.path, step.choices, row.trump)}>
-          <TrumpCard trump={row.trump} size="list" />
-          {#if row.why}<div class="why problem">{text(row.why)}</div>{/if}
-        </button>
+    <!-- Trumpfliste mit Reitern (5zx, 10.22): vorn alle wählbaren, dann je Gruppe ein Reiter mit den wählbaren zuerst -->
+    {@const counts = selectableByCategory(rows)}
+    {@const total = rows.filter((r) => !r.why).length}
+    {@const shown = tabRows(rows, tab)}
+    <div class="tabs" role="tablist" aria-label={t('trumpDialog.groups')}>
+      {#each TRUMP_TABS as c (c)}
+        {@const n = c === 'all' ? total : counts[c]}
+        <button
+          type="button" role="tab" class="tab" class:none={n === 0} data-tab={c}
+          aria-selected={c === tab} aria-controls="trump-panel" tabindex={c === tab ? 0 : -1}
+          onclick={() => (tab = c)} onkeydown={(e) => tabKey(e, c)}
+        >{#if c !== 'all' && c !== 'X'}<i style:background="var(--attr-{c})"></i>{/if}{c === 'all' ? t('trumpDialog.allSelectable') : t(`trumps.categories.${c}`)}<span class="dialog-aside">{n}</span></button>
       {/each}
+    </div>
+    <div class="cards" id="trump-panel" role="tabpanel">
+      {#each shown.ok as row (row.trump.id)}
+        <button class="tc" onclick={() => confirm(step.path, step.choices, row.trump)}>
+          <TrumpCard trump={row.trump} size="list" />
+        </button>
+      {:else}
+        <p class="note wide">{t(tab === 'all' ? 'toast.noTrumpLeft' : 'trumpDialog.noneInGroup')}</p>
+      {/each}
+      {#if shown.off.length > 0}
+        <h3 class="dialog-heading wide">{t('trumpDialog.notSelectable')}</h3>
+        {#each shown.off as row (row.trump.id)}
+          <button class="tc off" disabled>
+            <TrumpCard trump={row.trump} size="list" />
+            <div class="why problem">{text(row.why!)}</div>
+          </button>
+        {/each}
+      {/if}
     </div>
     {@render footer()}
   {/if}
@@ -222,5 +249,13 @@
   .cards .tc { padding: 0; background: none; border: 0; border-radius: var(--menu-radius); text-align: left; }
   .cards .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--pickable) 80%, transparent); }
   .cards .tc.off { opacity: 0.5; }
+  .cards .wide { grid-column: 1 / -1; margin: 0; }
+  .cards h3.wide { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--pane-rule); }
+  /* Reiter: der offene in der Farbe der gewählten Wahlfläche, leere blass; die Linie darunter trägt die Liste */
+  .tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; border-bottom: 1px solid var(--pane-rule); }
+  .tabs .tab { display: flex; align-items: baseline; gap: 6px; margin-bottom: -1px; padding: 8px 14px; background: none; border: 1px solid transparent; border-bottom: 0; border-radius: var(--menu-radius) var(--menu-radius) 0 0; opacity: 0.75; scale: none; }
+  .tabs .tab[aria-selected='true'] { background: var(--selected); border-color: var(--selected-rim); opacity: 1; font-weight: 600; }
+  .tabs .tab.none:not([aria-selected='true']) { opacity: 0.4; }
+  .tabs .tab i { align-self: center; width: 9px; height: 9px; border-radius: 2px; }
   .why { margin-top: 4px; }
 </style>

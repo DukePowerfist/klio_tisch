@@ -19,8 +19,8 @@ export type Path = SourcePath | { kind: 'free' };
 export type DialogStep =
   | { at: 'sources' }
   | { at: 'step'; name: StepName; required: boolean; path: SourcePath; choices: Choices; index: number }
-  | { at: 'categories'; path: Path; choices: Choices }
-  | { at: 'trumps'; path: Path; choices: Choices; category: Category }
+  /** Trumpf wählen: alle Gruppen als Reiter über einer Liste (5zx); welcher Reiter offen ist, hält die Ansicht selbst */
+  | { at: 'trumps'; path: Path; choices: Choices }
   /** Bestätigen (5zw): `trump` fehlt bei „nur verbessern“; `shown` hält die Folgen fest, wie sie beim Öffnen dastanden */
   | { at: 'confirm'; path: Path; choices: Choices; trump: Trump | undefined; shown: string };
 
@@ -60,7 +60,7 @@ export function intro(content: KlioContent, ctx: BlockContext): TextRef {
 export const anySourceOpen = (content: KlioContent, ctx: BlockContext): boolean =>
   sourceRows(content, ctx).some((r) => r.ok);
 
-/** Nächster Schritt ab `index`; danach Kategorien, oder null, wenn kein Trumpf folgt (nur verbessern). */
+/** Nächster Schritt ab `index`; danach die Trumpfliste, oder null, wenn kein Trumpf folgt (nur verbessern). */
 export function nextStep(path: SourcePath, choices: Choices, index: number, ctx: BlockContext): DialogStep | null {
   const list = stepsOf(path.source, path.improveOnly);
   for (let i = index; i < list.length; i++) {
@@ -68,7 +68,7 @@ export function nextStep(path: SourcePath, choices: Choices, index: number, ctx:
     if (stepSkipped(s.step, ctx)) continue;
     return { at: 'step', name: s.name, required: s.required, path, choices, index: i };
   }
-  return path.improveOnly ? null : { at: 'categories', path, choices };
+  return path.improveOnly ? null : { at: 'trumps', path, choices };
 }
 
 export type TrumpRow = { trump: Trump; why: TextRef | null };
@@ -76,6 +76,16 @@ export type TrumpRow = { trump: Trump; why: TextRef | null };
 export function trumpRows(content: KlioContent, ctx: BlockContext, path: Path, choices: Choices): TrumpRow[] {
   const src = path.kind === 'free' ? 'free' : path.source;
   return content.trumps.map((trump) => ({ trump, why: trumpProblem(content.trumpSources, src, trump, ctx, choices) }));
+}
+
+/** Reiter der Trumpfliste (5zx, 10.22): vorn alle wählbaren, dann je Gruppe einer. */
+export type TrumpTab = 'all' | Category;
+export const TRUMP_TABS: readonly TrumpTab[] = ['all', ...CATEGORIES];
+
+/** Karten eines Reiters: „alle wählbaren“ ohne die gesperrten, eine Gruppe mit den wählbaren zuerst. */
+export function tabRows(rows: TrumpRow[], tab: TrumpTab): { ok: TrumpRow[]; off: TrumpRow[] } {
+  const mine = tab === 'all' ? rows : rows.filter((r) => r.trump.category === tab);
+  return { ok: mine.filter((r) => !r.why), off: tab === 'all' ? [] : mine.filter((r) => r.why) };
 }
 
 /** Wählbare Trümpfe je Kategorie (in einem Durchgang). */
@@ -88,7 +98,7 @@ export function selectableByCategory(rows: TrumpRow[]): Record<Category, number>
 /** Ein Glied der Wegleiste (5zv, 10.22): Bezeichnung, bei erledigten die getroffene Wahl, Lage zum aktuellen Schritt. */
 export type TrailItem = { id: string; label: TextRef | string; value: TextRef | string | null; state: 'done' | 'now' | 'todo' };
 
-/** Wegleiste: Anlass › Schritte des Wegs › Gruppe › Trumpf. Aus dem Weg und den Wahlen gebaut; Schritte, die der Weg
+/** Wegleiste: Anlass › Schritte des Wegs › Trumpf › Bestätigen. Aus dem Weg und den Wahlen gebaut; Schritte, die der Weg
  *  hier nicht stellt (A29) oder die übergangen wurden (A35), fehlen. Im Einstieg gibt es keine Leiste. */
 export function trail(step: DialogStep, ctx: BlockContext): TrailItem[] {
   if (step.at === 'sources') return [];
@@ -121,12 +131,6 @@ export function trail(step: DialogStep, ctx: BlockContext): TrailItem[] {
   }
   const confirming = step.at === 'confirm';
   if (path.kind === 'free' || !path.improveOnly) {
-    const category = step.at === 'trumps' ? step.category : confirming ? step.trump?.category : undefined;
-    items.push({
-      id: 'group', label: { key: 'trumpDialog.trail.group' },
-      value: category ? { key: `trumps.categories.${category}` } : null,
-      state: category ? 'done' : step.at === 'categories' ? 'now' : 'todo',
-    });
     items.push({
       id: 'trump', label: { key: 'trumpDialog.trail.trump' },
       value: confirming ? (step.trump?.name ?? null) : null,

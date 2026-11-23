@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveText } from '../../src/rules/klio/content/texts';
 import { contextFor } from '../../src/rules/klio/trumps';
-import { anySourceOpen, attributeOptions, consequences, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trail, trumpRows } from '../../src/ui/trumpDialog';
+import { anySourceOpen, attributeOptions, consequences, finalCommand, intro, nextStep, selectableByCategory, sourceRows, tabRows, trail, trumpRows } from '../../src/ui/trumpDialog';
 import { content, fresh, sheet, withSheet } from '../helpers';
 
 const ctxWith = (patch: Parameters<typeof withSheet>[2]) => contextFor(content, sheet(withSheet(fresh(), 'seat1', patch), 'seat1'));
@@ -50,30 +50,30 @@ describe('Trumpf-Dialog', () => {
     expect(trail({ at: 'sources' }, ctx)).toEqual([]);
     // Narbe: Schritt, dann Gruppe, dann Trumpf
     const scar = { kind: 'source' as const, source: source('scar'), improveOnly: false };
-    expect(show(trail({ at: 'step', name: 'moveAttributePoint', required: true, path: scar, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:moveAttributePoint', 'todo:group', 'todo:trump', 'todo:confirm']);
+    expect(show(trail({ at: 'step', name: 'moveAttributePoint', required: true, path: scar, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:moveAttributePoint', 'todo:trump', 'todo:confirm']);
     const moved = { moveAttribute: { lowered: 'K' as const, raised: 'P' as const } };
-    expect(show(trail({ at: 'categories', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:group', 'todo:trump', 'todo:confirm']);
-    expect(show(trail({ at: 'trumps', path: scar, choices: moved, category: 'P' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'done:group=trumps.categories.P', 'now:trump', 'todo:confirm']);
-    expect(trail({ at: 'categories', path: scar, choices: moved }, ctx)[0]!.label).toBe('Neue Narbe');
+    expect(show(trail({ at: 'trumps', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:trump', 'todo:confirm']);
+    expect(show(trail({ at: 'trumps', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:trump', 'todo:confirm']);
+    expect(trail({ at: 'trumps', path: scar, choices: moved }, ctx)[0]!.label).toBe('Neue Narbe');
     // Erlebnis: neue Formulierung, sonst der alte Text; ohne Verbesserung fehlt das Glied
     const exp = { kind: 'source' as const, source: source('experience'), improveOnly: false };
-    expect(show(trail({ at: 'categories', path: exp, choices: { improveStrength: { index: 1, text: ' gute Peitsche ' } } }, ctx))[1]).toBe('done:improveStrength=gute Peitsche');
-    expect(show(trail({ at: 'categories', path: exp, choices: { improveStrength: { index: 1, text: '' } } }, ctx))[1]).toBe('done:improveStrength=Peitsche');
-    expect(show(trail({ at: 'categories', path: exp, choices: {} }, ctx))).toEqual(['done:source', 'now:group', 'todo:trump', 'todo:confirm']);
+    expect(show(trail({ at: 'trumps', path: exp, choices: { improveStrength: { index: 1, text: ' gute Peitsche ' } } }, ctx))[1]).toBe('done:improveStrength=gute Peitsche');
+    expect(show(trail({ at: 'trumps', path: exp, choices: { improveStrength: { index: 1, text: '' } } }, ctx))[1]).toBe('done:improveStrength=Peitsche');
+    expect(show(trail({ at: 'trumps', path: exp, choices: {} }, ctx))).toEqual(['done:source', 'now:trump', 'todo:confirm']);
     // voller Bogen: nach der Stärke ist Schluss
     expect(show(trail({ at: 'step', name: 'improveStrength', required: true, path: { ...exp, improveOnly: true }, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:improveStrength', 'todo:confirm']);
     // Schwäche: gewählte Schwäche mit ihrem Text; sind beide leer, gibt es das Glied nicht
     const weak = { kind: 'source' as const, source: source('weakness'), improveOnly: false };
-    expect(show(trail({ at: 'categories', path: weak, choices: { removeWeakness: 0 } }, ctx))[1]).toBe('done:chooseWeaknessToRemove=Kälte');
+    expect(show(trail({ at: 'trumps', path: weak, choices: { removeWeakness: 0 } }, ctx))[1]).toBe('done:chooseWeaknessToRemove=Kälte');
     const none = ctxWith((b) => { b.weaknessMarks = [true, true, true]; });
-    expect(show(trail({ at: 'categories', path: weak, choices: {} }, none))).toEqual(['done:source', 'now:group', 'todo:trump', 'todo:confirm']);
+    expect(show(trail({ at: 'trumps', path: weak, choices: {} }, none))).toEqual(['done:source', 'now:trump', 'todo:confirm']);
     // Bestätigen: Gruppe und Name des Trumpfs stehen in der Leiste
     const stoiker = content.trumps.find((t) => t.id === 'stoiker')!;
-    expect(show(trail({ at: 'confirm', path: scar, choices: moved, trump: stoiker, shown: '' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', `done:group=trumps.categories.${stoiker.category}`, `done:trump=${stoiker.name}`, 'now:confirm']);
+    expect(show(trail({ at: 'confirm', path: scar, choices: moved, trump: stoiker, shown: '' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', `done:trump=${stoiker.name}`, 'now:confirm']);
     expect(show(trail({ at: 'confirm', path: { ...exp, improveOnly: true }, choices: { improveStrength: { index: 1, text: '' } }, trump: undefined, shown: '' }, ctx))).toEqual(['done:source', 'done:improveStrength=Peitsche', 'now:confirm']);
     // freie Wahl
-    expect(show(trail({ at: 'categories', path: { kind: 'free' }, choices: {} }, ctx))).toEqual(['done:source', 'now:group', 'todo:trump', 'todo:confirm']);
-    expect(trail({ at: 'categories', path: { kind: 'free' }, choices: {} }, ctx)[0]!.label).toEqual({ key: 'trumpDialog.free' });
+    expect(show(trail({ at: 'trumps', path: { kind: 'free' }, choices: {} }, ctx))).toEqual(['done:source', 'now:trump', 'todo:confirm']);
+    expect(trail({ at: 'trumps', path: { kind: 'free' }, choices: {} }, ctx)[0]!.label).toEqual({ key: 'trumpDialog.free' });
   });
 
   it('Bestätigen (5zw): Folgen je Weg aus demselben Plan wie der Befehl, am aktuellen Bogen', () => {
@@ -128,7 +128,7 @@ describe('Trumpf-Dialog', () => {
     const marks = (w: [string, string]) => ctxWith((b) => { b.trumps[0] = 'anatomie'; b.weaknessMarks = [true, true, true]; b.weaknesses = w; });
     const path = { kind: 'source' as const, source: source('weakness'), improveOnly: false };
     expect(nextStep(path, {}, 0, marks(['Kälte', '']))).toMatchObject({ at: 'step', name: 'chooseWeaknessToRemove', required: true });
-    expect(nextStep(path, {}, 0, marks(['', '']))).toMatchObject({ at: 'categories' });
+    expect(nextStep(path, {}, 0, marks(['', '']))).toMatchObject({ at: 'trumps' });
   });
 
   it('Erlebnis bei 4 Trümpfen: Verbessern ist Pflicht, danach fertig ohne Trumpf', () => {
@@ -148,6 +148,14 @@ describe('Trumpf-Dialog', () => {
     expect(selectableByCategory(rows)).toMatchObject({ K: 4, V: 0 });
     expect(rows.find((r) => r.trump.id === 'stoiker')!.why).toEqual({ key: 'source.start.levelWhy' });
     expect(selectableByCategory(trumpRows(content, ctx, { kind: 'free' }, {})).V).toBe(11);
+    // Reiter (5zx): „alle wählbaren“ ohne gesperrte; eine Gruppe mit den wählbaren zuerst und den gesperrten samt Grund
+    const all = tabRows(rows, 'all');
+    expect(all.ok.length).toBe(Object.values(selectableByCategory(rows)).reduce((a, b) => a + b));
+    expect(all.off).toEqual([]);
+    const k = tabRows(rows, 'K');
+    expect([k.ok.length, k.off.length]).toEqual([4, 7]);
+    expect(k.ok.every((r) => r.trump.category === 'K' && !r.why) && k.off.every((r) => r.trump.category === 'K' && r.why)).toBe(true);
+    expect(tabRows(rows, 'V')).toMatchObject({ ok: [] });
   });
 
   it('Attribut-Knöpfe aus den gültigen Möglichkeiten: 0 nicht verringern, nicht auf dasselbe erhöhen', () => {

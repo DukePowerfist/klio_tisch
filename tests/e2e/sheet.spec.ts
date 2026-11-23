@@ -358,7 +358,7 @@ async function chooseAnatomie(page: Page) {
   await setField(page, 'attributes.V', '3');
   await sheet1(page).locator('[data-slot="0"]').click();
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('button', { name: /^Verstehen/ }).click();
+  await page.getByRole('tab', { name: /^Verstehen/ }).click();
   await page.getByRole('button', { name: /Anatomie/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
@@ -388,7 +388,7 @@ test('Trumpf per Tastatur: Leertaste wählt, Enter heftet die Großansicht an, E
   await sheet1(page).locator('[data-slot="0"]').focus();
   await page.keyboard.press(' ');
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('button', { name: /^Verstehen/ }).click();
+  await page.getByRole('tab', { name: /^Verstehen/ }).click();
   await page.getByRole('button', { name: /Anatomie/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
@@ -420,7 +420,7 @@ test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) =>
   await setField(page, 'attributes.V', '3');
   await sheet1(page).locator('[data-slot="0"]').click();
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('button', { name: /^Verstehen/ }).click();
+  await page.getByRole('tab', { name: /^Verstehen/ }).click();
   await page.getByRole('button', { name: /Anatomie/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(page.getByRole('status')).toHaveText('Bogen 1: Trumpf „Anatomie“ gewählt');
@@ -500,7 +500,7 @@ test('Leeres Trumpffeld (5zn): Geisterkarte statt gelbem Kasten, nur beim Überf
   // Starttrumpf nehmen: keine Quelle mehr offen. Kein Feld hat eine Karte, die Zeile steht unter dem Plus
   await slot(0).click();
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('button', { name: /^Körper/ }).click();
+  await page.getByRole('tab', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(slot(0).locator('.tcard')).toHaveCount(1);
@@ -533,7 +533,7 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   // erst einen Starttrumpf, dann Lampen markieren
   await sheet1(page).locator('[data-slot="0"]').click();
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('button', { name: /^Körper/ }).click();
+  await page.getByRole('tab', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
@@ -543,7 +543,7 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await page.getByRole('button', { name: /^II · Peitsche/ }).click();
   await page.getByRole('dialog').getByRole('textbox').fill('gute Peitsche');
   await page.getByRole('dialog').getByRole('textbox').press('Enter');
-  await page.getByRole('button', { name: /^Körper/ }).click();
+  await page.getByRole('tab', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Stoiker/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-field="strengths.text.1"]')).toHaveValue('gute Peitsche');
@@ -558,7 +558,7 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await setField(page, 'strengths.text.1', 'Peitsche');
   await sheet1(page).locator('[data-slot="0"]').click();
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('button', { name: /^Körper/ }).click();
+  await page.getByRole('tab', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
@@ -582,8 +582,8 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
   await dialog.getByRole('textbox').fill('gute Peitsche');
   await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
-  await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
-  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  await expect(dialog.locator('h2')).toHaveText('Welchen Trumpf?');
+  await dialog.getByRole('tab', { name: /^Körper/ }).click();
   await dialog.getByRole('button', { name: /Stoiker/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Stoiker');
@@ -612,7 +612,7 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText(/^Bogen 1: Trumpf „.+“ gewählt$/);
   await sheet1(page).locator('[data-slot="1"]').click();
   await page.getByRole('button', { name: 'Freie Wahl' }).click();
-  await page.getByRole('button', { name: /^Verschiedene/ }).click();
+  await page.getByRole('tab', { name: /^Verschiedene/ }).click();
   await page.getByRole('button', { name: /Kraftakt/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Kraftakt');
@@ -634,7 +634,7 @@ test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand a
   await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toHaveAccessibleDescription(/nimmt den ersten möglichen Anlass/);
   await expect(dialog.getByRole('button', { name: 'Freie Wahl' })).toHaveAccessibleDescription('Freie Wahl: Wähle einen Trumpf, den du noch nicht hast. Stufe und Attribute sind frei.');
   await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
-  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  await dialog.getByRole('tab', { name: /^Körper/ }).click();
   await dialog.getByRole('button', { name: /Stoiker/ }).click();
   await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await page.mouse.move(5, 5);
@@ -653,7 +653,7 @@ test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand a
   await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne voll: erst eine Stärke verbessern, dann einen Trumpf');
 });
 
-test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Schritt, Gruppenfrage', async ({ page }) => {
+test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Schritt, Reiter statt Gruppenfrage (5zx)', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'attributes.K', '3');
   await setField(page, 'attributes.P', '2');
@@ -663,29 +663,52 @@ test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Sc
   // im Einstieg gibt es keine Leiste
   await expect(dialog.locator('.trail')).toHaveCount(0);
   await dialog.getByRole('button', { name: /^Starttrumpf/ }).click();
-  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
-  await expect(dialog.locator('.trail [aria-current=step]')).toHaveText('Gruppe');
-  await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
-  await expect(dialog.getByText('Unter „Verschiedene“ stehen die Trümpfe mit zwei oder drei Attributen.')).toBeVisible();
-  await dialog.getByRole('button', { name: /^Körper/ }).click();
-  expect(await trail()).toEqual(['done:Starttrumpf', 'done:Gruppe: Körper', 'now:Trumpf', 'todo:Bestätigen']);
-  // Zurück: die Leiste folgt
-  await dialog.getByRole('button', { name: '← Zurück' }).click();
-  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
-  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Trumpf', 'todo:Bestätigen']);
+  await expect(dialog.locator('.trail [aria-current=step]')).toHaveText('Trumpf');
+  await expect(dialog.locator('h2')).toHaveText('Welchen Trumpf?');
+  // Reiter (5zx): vorn „Alle wählbaren“, offen; Zahlen der wählbaren; nur wählbare Karten, keine gesperrten
+  const tabs = dialog.getByRole('tab');
+  await expect(tabs).toHaveText([/^Alle wählbaren\s*\d+$/, /^Körper\s*\d+$/, /^Verstehen\s*0$/, /^Präsenz\s*0$/, /^Verschiedene\s*\d+$/]);
+  await expect(tabs.first()).toHaveAttribute('aria-selected', 'true');
+  const count = async (i: number) => Number((await tabs.nth(i).locator('.dialog-aside').textContent())!);
+  expect(await count(0)).toBe((await count(1)) + (await count(4)));
+  await expect(dialog.locator('.cards .tc')).toHaveCount(await count(0));
+  await expect(dialog.locator('.cards .tc:disabled')).toHaveCount(0);
+  // Gruppe: wählbare zuerst, darunter „Nicht wählbar“ mit Grund; die Leiste ändert sich dabei nicht
+  await tabs.nth(1).click();
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(dialog.locator('.cards .tc')).toHaveCount(11);
+  await expect(dialog.locator('.cards .tc:not(:disabled)')).toHaveCount(await count(1));
+  await expect(dialog.getByRole('heading', { name: 'Nicht wählbar' })).toBeVisible();
+  expect(await dialog.locator('.cards .tc').evaluateAll((els) => els.map((e) => (e as HTMLButtonElement).disabled).join(''))).toMatch(/^(false)+(true)+$/);
+  await expect(dialog.locator('.cards .tc:disabled .why').first()).toHaveText('Starttrumpf: nur Stufe I.');
+  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Trumpf', 'todo:Bestätigen']);
+  // leere Gruppe sagt es; Pfeiltasten wechseln den Reiter und nehmen den Fokus mit
+  await tabs.nth(2).click();
+  await expect(dialog.getByText('In dieser Gruppe ist gerade kein Trumpf wählbar.')).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.nth(1)).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(tabs.first()).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(tabs.nth(4)).toBeFocused();
+  await tabs.nth(1).click();
   // Bestätigen (5zw): Karte, Folgen, Hauptknopf mit Fokus; Zurück führt zur Liste; erst der Hauptknopf schickt ab
   const first = dialog.locator('.cards .tc:not(:disabled)').first();
   const name = (await first.locator('.tn').textContent())!.trim();
   await first.click();
   await expect(dialog.locator('h2')).toHaveText('Diesen Trumpf nehmen?');
-  expect(await trail()).toEqual(['done:Starttrumpf', 'done:Gruppe: Körper', `done:Trumpf: ${name}`, 'now:Bestätigen']);
+  expect(await trail()).toEqual(['done:Starttrumpf', `done:Trumpf: ${name}`, 'now:Bestätigen']);
   await expect(dialog.locator('.chosen .tcard .tn')).toHaveText(name);
   await expect(dialog.locator('.after li')).toHaveText(['Der Trumpf kommt in das 1. Trumpffeld.']);
   await expect(dialog.locator('.changed')).toHaveCount(0);
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toHaveCount(0);
   await expect(dialog.getByRole('button', { name: 'Trumpf nehmen' })).toBeFocused();
   await dialog.getByRole('button', { name: '← Zurück' }).click();
+  // zurück in der Liste: derselbe Reiter ist noch offen
   await expect(dialog.locator('.cards')).toBeVisible();
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
   await first.click();
   await page.keyboard.press('Enter');
   await expect(sheet1(page).locator('[data-slot="0"] .tcard .tn')).toHaveText(name);
@@ -696,19 +719,19 @@ test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Sc
   await sheet1(page).locator('[data-lantern]').click({ clickCount: 3, delay: 0 });
   await sheet1(page).locator('[data-slot="1"]').click();
   await dialog.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
-  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Stärke', 'todo:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Stärke', 'todo:Trumpf', 'todo:Bestätigen']);
   await expect(dialog.getByText('Danach wählst du einen Trumpf der Stufe I oder II.')).toBeVisible();
   // Stärken erklärt: was sie sind, und je Zeile die Stelle auf dem Bogen
   await expect(dialog.getByText(/^Stärken sind die fünf Textfelder oben auf dem Bogen/)).toBeVisible();
   await expect(dialog.locator('.dialog-choice .note')).toHaveText(['ist der … des Teams', 'ist ausgestattet mit …', 'und …', 'Als …', 'lebt er nach dem Motto …']);
   await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
-  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Trumpf', 'todo:Bestätigen']);
   await dialog.getByRole('button', { name: '← Zurück' }).click();
   await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
   await dialog.getByRole('textbox').fill('gute Peitsche');
   await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
-  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'done:Stärke: gute Peitsche', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
-  await dialog.getByRole('button', { name: /^Verstehen/ }).click();
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'done:Stärke: gute Peitsche', 'now:Trumpf', 'todo:Bestätigen']);
+  await dialog.getByRole('tab', { name: /^Verstehen/ }).click();
   await dialog.locator('.cards .tc:not(:disabled)').first().click();
   await expect(dialog.locator('.after li')).toHaveText(['Stärke II heißt jetzt „gute Peitsche“ und wird als verbessert markiert.', 'Die Erlebnislaterne wird geleert.', 'Der Trumpf kommt in das 2. Trumpffeld.']);
   // der Bogen ändert sich, während die Bestätigung offen ist (hier: Laterne von anderswo geleert): gesperrt, mit Grund
@@ -724,7 +747,7 @@ test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der 
   for (const [i, group, name] of [[0, /^Körper/, /./], [1, /^Körper/, /./], [2, /^Verstehen/, /./], [3, /^Präsenz/, /./]] as const) {
     await sheet1(page).locator(`[data-slot="${i}"]`).click();
     await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
-    await dialog.getByRole('button', { name: group }).click();
+    await dialog.getByRole('tab', { name: group }).click();
     await dialog.locator('.cards .tc:not(:disabled)').filter({ hasText: name }).first().click();
     await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
     await expect(sheet1(page).locator(`[data-slot="${i}"] .tcard`)).toBeVisible();
@@ -768,7 +791,7 @@ test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment j
   const free = async (i: number, category: RegExp, name: RegExp) => {
     await slot(i).click();
     await page.getByRole('button', { name: 'Freie Wahl' }).click();
-    await page.getByRole('button', { name: category }).click();
+    await page.getByRole('tab', { name: category }).click();
     // im Auswahlfenster steht der Text immer ganz da, nichts wird ausgeblendet
     const inList = page.getByRole('button', { name }).locator('.tcard .tr');
     expect(await inList.evaluate((el) => !el.classList.contains('cut') && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
@@ -841,7 +864,7 @@ test('Trumpf-Großansicht (5zq): festes Format 5:7, passt ins Fenster, auch der 
   for (const [i, [category, name]] of picks.entries()) {
     await slot(i).click();
     await page.getByRole('button', { name: 'Freie Wahl' }).click();
-    await page.getByRole('button', { name: category }).click();
+    await page.getByRole('tab', { name: category }).click();
     await page.getByRole('button', { name }).click();
     await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
     await expect(slot(i).locator('.tcard')).toHaveCount(1);

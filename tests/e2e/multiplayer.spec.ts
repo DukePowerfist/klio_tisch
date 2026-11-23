@@ -654,7 +654,7 @@ test('Trumpf wählen mit Mitspieler (5y, F2 und F3): „Freie Wahl“ nur mit Re
   const free = rights.getByRole('combobox', { name: 'Trumpf frei wählen (ohne Regelprüfung)' });
   await free.selectOption('allow');
   await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
-  await dialog.getByRole('button', { name: /^Verschiedene/ }).click();
+  await dialog.getByRole('tab', { name: /^Verschiedene/ }).click();
   await free.selectOption('deny');
   await dialog.getByRole('button', { name: /Kraftakt/ }).click();
   await dialog.getByRole('button', { name: 'Trumpf nehmen' }).click();
