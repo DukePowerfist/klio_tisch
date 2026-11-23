@@ -73,7 +73,7 @@ test('Trumpf wählen: beim Durchgehen der Schritte bleibt die Oberkante stehen; 
   const rect = async () => (await dialog.boundingBox())!;
   const first = (await rect()).y;
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await expect(dialog.locator('h2')).toHaveText('Für welches Attribut?');
+  await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
   expect((await rect()).y).toBeCloseTo(first, 0);
   await page.getByRole('button', { name: /^Verstehen/ }).click();
   await expect(dialog.locator('h2')).toHaveText(/Trumpf wählen$/);

@@ -82,6 +82,51 @@ export function selectableByCategory(rows: TrumpRow[]): Record<Category, number>
   return out;
 }
 
+/** Ein Glied der Wegleiste (5zv, 10.22): Bezeichnung, bei erledigten die getroffene Wahl, Lage zum aktuellen Schritt. */
+export type TrailItem = { id: string; label: TextRef | string; value: TextRef | string | null; state: 'done' | 'now' | 'todo' };
+
+/** Wegleiste: Anlass › Schritte des Wegs › Gruppe › Trumpf. Aus dem Weg und den Wahlen gebaut; Schritte, die der Weg
+ *  hier nicht stellt (A29) oder die übergangen wurden (A35), fehlen. Im Einstieg gibt es keine Leiste. */
+export function trail(step: DialogStep, ctx: BlockContext): TrailItem[] {
+  if (step.at === 'sources') return [];
+  const { path, choices } = step;
+  const values: Record<StepName, () => string | null> = {
+    chooseWeaknessToRemove: () => (choices.removeWeakness === undefined ? null : ctx.sheet.weaknesses[choices.removeWeakness] || null),
+    improveStrength: () => {
+      const imp = choices.improveStrength;
+      return imp ? imp.text.trim() || ctx.sheet.strengths[imp.index]?.text || String(imp.index + 1) : null;
+    },
+    moveAttributePoint: () => {
+      const m = choices.moveAttribute;
+      return m ? `${ctx.attrNames[m.lowered]} −1, ${ctx.attrNames[m.raised]} +1` : null;
+    },
+  };
+  const items: TrailItem[] = [{
+    id: 'source', state: 'done', value: null,
+    label: path.kind === 'free' ? { key: 'trumpDialog.free' } : path.source.text.name,
+  }];
+  if (path.kind === 'source') {
+    stepsOf(path.source, path.improveOnly).forEach((s, i) => {
+      const now = step.at === 'step' && step.index === i;
+      const before = step.at !== 'step' || step.index > i;
+      const value = before ? values[s.name]() : null;
+      // übersprungen oder übergangen: liegt hinter uns und hat keine Wahl hinterlassen
+      if (before && value === null) return;
+      if (!before && !now && stepSkipped(s.step, ctx)) return;
+      items.push({ id: s.name, label: { key: `trumpDialog.trail.${s.name}` }, value, state: now ? 'now' : before ? 'done' : 'todo' });
+    });
+    if (path.improveOnly) return items;
+  }
+  const picking = step.at === 'trumps';
+  items.push({
+    id: 'group', label: { key: 'trumpDialog.trail.group' },
+    value: picking ? { key: `trumps.categories.${step.category}` } : null,
+    state: picking ? 'done' : step.at === 'categories' ? 'now' : 'todo',
+  });
+  items.push({ id: 'trump', label: { key: 'trumpDialog.trail.trump' }, value: null, state: picking ? 'now' : 'todo' });
+  return items;
+}
+
 /** Der Befehl am Ende des Dialogs. */
 export function finalCommand(seat: SeatId, path: Path, choices: Choices, trump: string | undefined): { type: string; [key: string]: unknown } {
   if (path.kind === 'free') return { type: 'trump.chooseFree', seat, trump };

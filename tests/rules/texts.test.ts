@@ -38,6 +38,7 @@ describe('Texte', () => {
     const keys = [
       ...Object.keys(steps).map((s) => `trumpDialog.steps.${s}`),
       'trumpDialog.progress.lamps', 'trumpDialog.progress.weaknessMarks',
+      ...Object.keys(steps).map((s) => `trumpDialog.trail.${s}`),
       ...[1, 2, 3, 4, 5].map((n) => `numerals.${n}`),
       'scars.heart', 'scars.spade',
       'zones.actions.shuffle', 'zones.actions.flip', 'zones.actions.draw',

@@ -116,7 +116,20 @@ trumpDialog:
   free: Freie Wahl
   back: "← Zurück"
   next: Weiter
-  chooseAttribute: Für welches Attribut?
+  chooseGroup: Aus welcher Gruppe?
+  groupHint: Die Trümpfe sind nach Attribut geordnet. Unter „Verschiedene“ stehen die Trümpfe mit zwei oder drei Attributen.
+  # Wegleiste und Grund je Schritt (5zv, 10.22)
+  trail:
+    label: Ablauf
+    chooseWeaknessToRemove: Schwäche
+    improveStrength: Stärke
+    moveAttributePoint: Attributspunkt
+    group: Gruppe
+    trump: Trumpf
+  weaknessHint: Du hast eine Schwäche überwunden. Welche wird vom Bogen gestrichen? Danach wählst du einen Trumpf der Stufe I.
+  improveThen: Danach wählst du einen Trumpf der Stufe I oder II.
+  improveOnlyHint: Du hast schon alle Trümpfe, deshalb bleibt es bei der Verbesserung.
+  attributeHint: Mit der neuen Narbe verschiebst du einen Attributspunkt. Der Trumpf, den du danach wählst, muss das erhöhte Attribut benötigen.
   selectable: "({n} wählbar)"
   chooseFromCategory: "{category} · Trumpf wählen"
   empty: (leer)

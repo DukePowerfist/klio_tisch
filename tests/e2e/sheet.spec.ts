@@ -575,7 +575,7 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
   await dialog.getByRole('textbox').fill('gute Peitsche');
   await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
-  await expect(dialog.locator('h2')).toHaveText('Für welches Attribut?');
+  await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
   await dialog.getByRole('button', { name: /^Körper/ }).click();
   await dialog.getByRole('button', { name: /Stoiker/ }).click();
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Stoiker');
@@ -641,6 +641,45 @@ test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand a
   await sheet1(page).locator('[data-slot="1"]').click();
   expect(await sources()).toEqual(['+experience', '-start', '-weakness', '-scar']);
   await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne voll: eine Stärke verbessern');
+});
+
+test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Schritt, Gruppenfrage', async ({ page }) => {
+  await page.keyboard.press('1');
+  await setField(page, 'attributes.K', '3');
+  await setField(page, 'attributes.P', '2');
+  const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
+  const trail = () => dialog.locator('.trail li').evaluateAll((els) => els.map((e) => `${e.className.match(/done|now|todo/)![0]}:${e.textContent!.trim()}`));
+  await sheet1(page).locator('[data-slot="0"]').click();
+  // im Einstieg gibt es keine Leiste
+  await expect(dialog.locator('.trail')).toHaveCount(0);
+  await dialog.getByRole('button', { name: /^Starttrumpf/ }).click();
+  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf']);
+  await expect(dialog.locator('.trail [aria-current=step]')).toHaveText('Gruppe');
+  await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
+  await expect(dialog.getByText('Unter „Verschiedene“ stehen die Trümpfe mit zwei oder drei Attributen.')).toBeVisible();
+  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  expect(await trail()).toEqual(['done:Starttrumpf', 'done:Gruppe: Körper', 'now:Trumpf']);
+  // Zurück: die Leiste folgt
+  await dialog.getByRole('button', { name: '← Zurück' }).click();
+  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf']);
+  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  await dialog.locator('.cards .tc:not(:disabled)').first().click();
+  await page.mouse.move(5, 5);
+
+  // Erlebnis: Grund am Schritt, neue Formulierung in der Leiste; ohne Verbesserung fehlt das Glied
+  await setField(page, 'strengths.text.1', 'Peitsche');
+  await sheet1(page).locator('[data-lantern]').click({ clickCount: 3, delay: 0 });
+  await sheet1(page).locator('[data-slot="1"]').click();
+  await dialog.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Stärke', 'todo:Gruppe', 'todo:Trumpf']);
+  await expect(dialog.getByText('Danach wählst du einen Trumpf der Stufe I oder II.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Gruppe', 'todo:Trumpf']);
+  await dialog.getByRole('button', { name: '← Zurück' }).click();
+  await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
+  await dialog.getByRole('textbox').fill('gute Peitsche');
+  await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'done:Stärke: gute Peitsche', 'now:Gruppe', 'todo:Trumpf']);
 });
 
 test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der Laterne öffnet den Dialog, nur wenn ein Anlass offen ist', async ({ page }) => {
