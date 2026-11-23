@@ -10,23 +10,35 @@
 
   const count = $derived(trump.attributes.length);
 
-  // Im Feld: Text höchstens bis SLOT_MIN verkleinern (in halben Pixeln); passt er dann noch nicht, läuft er unten
-  // weich aus. Der volle Text steht in der Großansicht. In der Liste und der Großansicht bleibt er immer ganz.
-  const SLOT_MAX = 10.5;
-  const SLOT_MIN = 9;
+  // Text einpassen (in halben Pixeln verkleinern, bis er passt):
+  // - im Feld höchstens bis SLOT_MIN; passt er dann noch nicht, läuft er unten weich aus (voller Text in der Großansicht)
+  // - in der Großansicht (5zq, festes Format 5:7) von LARGE_MAX bis LARGE_MIN; reicht auch das nicht, gibt die Karte das
+  //   feste Format auf und wächst in die Höhe (.grow), abgeschnitten wird dort nie
+  // In der Liste bleibt der Text in fester Größe ganz stehen.
+  const FIT = { slot: [10.5, 9], large: [24, 13] } as const;
+  let card = $state<HTMLDivElement>();
   let body = $state<HTMLDivElement>();
   let cut = $state(false);
+  let resized = $state(0); // die Großansicht hängt an der Fenstergröße
   $effect(() => {
-    if (!body || size !== 'slot') return;
+    if (!card || !body || size === 'list') return;
     void trump.text;
-    let f = SLOT_MAX;
+    void trump.name;
+    void resized;
+    const [max, min] = FIT[size];
+    card.classList.remove('grow');
+    let f: number = max;
     body.style.fontSize = `${f}px`;
-    while (body.scrollHeight > body.clientHeight + 1 && f > SLOT_MIN) body.style.fontSize = `${(f -= 0.5)}px`;
-    cut = body.scrollHeight > body.clientHeight + 1;
+    while (body.scrollHeight > body.clientHeight + 1 && f > min) body.style.fontSize = `${(f -= 0.5)}px`;
+    const over = body.scrollHeight > body.clientHeight + 1;
+    cut = over && size === 'slot';
+    card.classList.toggle('grow', over && size === 'large');
   });
 </script>
 
-<div class="tcard {size} l{trump.level} a{count}">
+<svelte:window onresize={() => { if (size === 'large') resized++; }} />
+
+<div class="tcard {size} l{trump.level} a{count}" bind:this={card}>
   <div class="in">
     <div class="tg">
       <div class="segs">
@@ -69,9 +81,13 @@
   .list.a1 .seg { padding: 0 8px; }
   .list .tn { font-size: 16px; padding: 6px 9px 0; }
   .list .tr { font-size: 13px; line-height: 1.22; padding: 4px 9px 8px; overflow: visible; }
-  .large { --bw: calc(var(--trump-line) + 0.5px); --fp: 5px; --hh: 36px; --tab: 44px; --lf: 14px; --nf: 20px; --rad: var(--radius-win); width: min(420px, 90vw); height: auto; min-height: 300px; }
+  /* Großansicht (5zq): festes Format 5:7 wie im Feld; die Breite richtet sich auch nach der Fensterhöhe, damit die Karte in kleine Fenster passt */
+  .large { --bw: calc(var(--trump-line) + 0.5px); --fp: 5px; --hh: 36px; --tab: 44px; --lf: 14px; --nf: 21px; --rad: var(--radius-win); width: min(420px, 90vw, 85vh * 5 / 7); height: auto; aspect-ratio: 5 / 7; }
+  .large:global(.grow) { aspect-ratio: auto; }
+  .large:global(.grow) .tr { overflow: visible; }
   .large.l3 { --bw: calc(var(--trump-line-3) + 1px); }
   .large.a1 .seg { padding: 0 12px; }
-  .large .tn { font-size: 26px; padding: 12px 16px 0; }
-  .large .tr { font-size: 19px; line-height: 1.35; padding: 8px 16px 18px; overflow: visible; }
+  .large .tn { font-size: 27px; padding: 14px 18px 0; }
+  .large .tn::after { content: ''; display: block; height: 1px; margin-top: 10px; background: var(--trump-ink); opacity: 0.45; }
+  .large .tr { line-height: 1.36; padding: 10px 18px 16px; }
 </style>

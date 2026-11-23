@@ -679,6 +679,45 @@ test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment j
   expect(rmv.x).toBeGreaterThanOrEqual(name.right);
 });
 
+test('Trumpf-Großansicht (5zq): festes Format 5:7, passt ins Fenster, auch der längste Text steht ganz da', async ({ page }) => {
+  await page.keyboard.press('1');
+  const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
+  // die drei längsten Texte (316, 259, 258 Zeichen) und der längste Name (zweizeilig)
+  const picks: [RegExp, RegExp][] = [[/^Verstehen/, /Schreib das auf!/], [/^Verstehen/, /Eine Frage der Logik/], [/^Verschiedene/, /Sprechende Tote/], [/^Verschiedene/, /Historischer Positivismus/]];
+  for (const [i, [category, name]] of picks.entries()) {
+    await slot(i).click();
+    await page.getByRole('button', { name: 'Freie Wahl' }).click();
+    await page.getByRole('button', { name: category }).click();
+    await page.getByRole('button', { name }).click();
+    await expect(slot(i).locator('.tcard')).toHaveCount(1);
+  }
+  const big = page.locator('.big .tcard');
+  const sizes: number[] = [];
+  for (const viewport of [{ width: 1600, height: 900 }, { width: 1024, height: 600 }]) {
+    await page.setViewportSize(viewport);
+    for (const i of [0, 1, 2, 3]) {
+      await page.mouse.move(5, 5);
+      await slot(i).click(); // heftet die Großansicht an
+      await expect(big).toHaveCount(1);
+      const b = (await big.boundingBox())!;
+      expect(b.width / b.height).toBeCloseTo(5 / 7, 2);
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.width).toBeLessThanOrEqual(viewport.width);
+      expect(b.y + b.height).toBeLessThanOrEqual(viewport.height);
+      const text = await big.locator('.tr').evaluate((el) => ({ fits: el.scrollHeight <= el.clientHeight + 1, size: parseFloat(getComputedStyle(el).fontSize), grown: el.closest('.tcard')!.classList.contains('grow') }));
+      expect(text.fits).toBe(true);
+      expect(text.grown).toBe(false);
+      expect(text.size).toBeGreaterThanOrEqual(19); // nie kleiner als die alte feste Größe
+      sizes.push(b.width);
+      await page.keyboard.press('Escape');
+      await expect(big).toHaveCount(0);
+    }
+  }
+  expect(sizes[0]).toBe(420);
+  expect(sizes[4]).toBeLessThan(420); // im kleinen Fenster begrenzt die Höhe die Breite
+});
+
 test('Foto wird verkleinert gespeichert und bleibt nach Neuladen', async ({ page }) => {
   await page.keyboard.press('1');
   await sheet1(page).locator('input[type=file]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(page) });
