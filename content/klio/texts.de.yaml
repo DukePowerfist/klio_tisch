@@ -67,6 +67,7 @@ sheet:
   lanternEmpty: Laterne leeren
   trumpChoose: Trumpf wählen
   trumpLocked: Trumpf (noch nicht freigeschaltet)
+  trumpLockedHint: noch nicht freigeschaltet   # sichtbare Zeile im gesperrten Feld (neu, 5zn)
   trumpRemove: Trumpf entfernen
   more: Ganzen Text zeigen                 # „…“ an abgeschnittenen Feldern (neu, 5z)
   field:                                  # Feldfenster (neu, 5z, 10.11)

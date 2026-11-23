@@ -1,6 +1,6 @@
 // Bögen und Trümpfe im lokalen Betrieb (Schritt 3b).
 
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { dragFromTo, makePng, ready, setField as setSeatField, setPlayers, zoneCenter, zoomIn } from './helpers';
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
@@ -428,6 +428,98 @@ test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) =>
   await expect(page.locator('.big')).toHaveCount(0);
   await sheet1(page).getByTitle('Trumpf entfernen').click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toHaveCount(0);
+});
+
+test('Leeres Trumpffeld (5zn): Geisterkarte statt gelbem Kasten, nur beim Überfahren; in Ruhe nichts; gesperrt ohne Karte', async ({ page }) => {
+  await page.keyboard.press('1');
+  const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
+  const opacity = (l: Locator) => l.evaluate((el) => Number(getComputedStyle(el).opacity));
+  const ghost = (i: number) => slot(i).locator('.ghost');
+  const hint = (i: number) => slot(i).locator('.hint');
+  await page.mouse.move(10, 10);
+  // in Ruhe nur das goldene Plus: keine Karte und keine Zeile, in keinem Feld (auch nicht im ersten freien)
+  for (const i of [0, 1, 2, 3]) {
+    expect(await opacity(ghost(i))).toBe(0);
+    expect(await opacity(hint(i))).toBe(0);
+  }
+  await expect(slot(0)).toHaveAttribute('aria-label', 'Trumpf wählen');
+  await expect(slot(0)).not.toHaveAttribute('title');
+
+  // Überfahren: Karte kräftiger, Zeile lesbar, einzeilig und über dem Plus; kein gelber Kasten
+  for (const i of [0, 2]) {
+    await slot(i).hover();
+    await expect.poll(() => opacity(ghost(i))).toBeGreaterThan(0.3);
+    await expect.poll(() => opacity(hint(i))).toBeGreaterThan(0.6);
+    await expect(hint(i)).toHaveText('Trumpf wählen');
+    await expect(slot(i)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    const h = (await hint(i).boundingBox())!;
+    const plus = (await slot(i).locator('svg.plus').boundingBox())!;
+    expect(h.y + h.height).toBeLessThan(plus.y);
+    expect(await hint(i).evaluate((el) => el.scrollWidth <= el.clientWidth && el.getClientRects().length === 1)).toBe(true);
+  }
+  await page.mouse.move(10, 10);
+  await expect.poll(() => opacity(ghost(2))).toBe(0);
+  // Tastaturfokus wie Überfahren
+  await slot(1).focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect.poll(() => opacity(ghost(1))).toBeGreaterThan(0.3);
+  await page.keyboard.press('Shift+Tab');
+  await expect.poll(() => opacity(ghost(1))).toBe(0);
+  // Auswahl öffnen und mit Esc schließen: der Fokus kehrt ins Feld zurück, die Karte bleibt trotzdem nicht stehen
+  await slot(2).click();
+  await expect(page.getByRole('dialog', { name: /^Trumpf wählen/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.mouse.move(10, 10);
+  await expect.poll(() => opacity(ghost(2))).toBe(0);
+  expect(await opacity(hint(2))).toBe(0);
+  // auch kein Fokusrahmen um das Feld, obwohl es den Fokus hat
+  await expect(slot(2)).toBeFocused();
+  await expect(slot(2)).toHaveCSS('outline-style', 'none');
+  // mit der Tastatur geöffnet und geschlossen: Rahmen und Karte sind wieder da
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expect(slot(2)).toHaveCSS('outline-style', 'solid');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog', { name: /^Trumpf wählen/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(slot(2)).toBeFocused();
+  await expect(slot(2)).toHaveCSS('outline-style', 'solid');
+  await expect.poll(() => opacity(ghost(2))).toBeGreaterThan(0.3);
+  await page.locator('body').click({ position: { x: 5, y: 5 } });
+  await slot(0).click();
+  await page.keyboard.press('Escape');
+  await page.mouse.move(10, 10);
+  await expect.poll(() => opacity(ghost(0))).toBe(0);
+  expect(await opacity(hint(0))).toBe(0);
+
+  // Starttrumpf nehmen: keine Quelle mehr offen. Kein Feld hat eine Karte, die Zeile steht unter dem Plus
+  await slot(0).click();
+  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
+  await page.getByRole('button', { name: /^Körper/ }).click();
+  await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
+  await expect(slot(0).locator('.tcard')).toHaveCount(1);
+  await expect(slot(0)).not.toHaveAttribute('aria-label');
+  await slot(1).hover();
+  await expect(slot(1)).toHaveAttribute('aria-label', 'Trumpf (noch nicht freigeschaltet)');
+  await expect(hint(1)).toHaveText('noch nicht freigeschaltet');
+  await expect.poll(() => opacity(hint(1))).toBeGreaterThan(0.5);
+  expect(await opacity(ghost(1))).toBe(0);
+  await expect(slot(1)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const locked = (await hint(1).boundingBox())!;
+  const lockedPlus = (await slot(1).locator('svg.plus').boundingBox())!;
+  const box = (await slot(1).boundingBox())!;
+  expect(locked.y).toBeGreaterThan(lockedPlus.y + lockedPlus.height);
+  expect(locked.y + locked.height).toBeLessThan(box.y + box.height);
+
+  // Laterne füllen: das Plus ist wieder gold, in Ruhe weiter keine Karte; beim Überfahren legt sie sich hin
+  for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
+  await page.mouse.move(10, 10);
+  await expect(slot(1)).toHaveClass(/(^|\s)go(\s|$)/);
+  expect(await opacity(ghost(1))).toBe(0);
+  await slot(1).hover();
+  await expect.poll(() => opacity(ghost(1))).toBeGreaterThan(0.3);
 });
 
 test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }) => {

@@ -97,6 +97,12 @@
   const canPhoto = $derived(may('sheet.setPhoto'));
   const canChooseTrump = $derived(may('trump.choose'));
   const canRemoveTrump = $derived(may('trump.remove'));
+  /** Trumpffeld, das mit Tab erreicht wurde: nur dann zeigt der Fokus die Geisterkarte wie beim Überfahren. Nicht über
+   *  `:focus-visible`: Das träfe auch zu, wenn das Auswahlfenster mit Esc schließt und der Fokus ins Feld zurückkehrt;
+   *  die Karte bliebe dann stehen, obwohl die Maus längst woanders ist. */
+  let tabbedSlot = $state<number | null>(null);
+  /** Feld, dessen Auswahl mit der Tastatur geöffnet wurde: kehrt der Fokus zurück, gilt es wieder als mit Tab erreicht */
+  let keyedSlot: number | null = null;
 
   // Foto: über das Dateifeld, weiter in `setPhoto` (sheetActions.ts)
   let fileInput = $state<HTMLInputElement>();
@@ -242,10 +248,14 @@
         class="slot control"
         class:empty={!trump}
         class:go={!trump && canChoose && canChooseTrump}
+        class:tabbed={s.index === tabbedSlot}
+        onkeyup={(e) => { if (e.key === 'Tab' && e.target === e.currentTarget) tabbedSlot = s.index; }}
+        onfocus={() => { if (keyedSlot === s.index) tabbedSlot = s.index; keyedSlot = null; }}
+        onblur={() => { if (tabbedSlot === s.index) tabbedSlot = null; }}
         class:inert
         data-slot={s.index}
         style:left="{s.pos.x}px" style:top="{s.pos.y}px" style:width="{s.pos.w}px" style:height="{s.pos.h}px"
-        title={trump || inert ? undefined : canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLocked')}
+        aria-label={trump || inert ? undefined : canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLocked')}
         role={inert ? undefined : 'button'}
         tabindex={inert ? undefined : 0}
         onpointerenter={(e) => hoverTrump(trump?.id ?? null, e.currentTarget)}
@@ -253,13 +263,16 @@
         onclick={(e) => {
           e.stopPropagation();
           clearTimeout(hoverTimer);
+          keyedSlot = null;
           activateSlot(trump);
         }}
         onkeydown={(e) => {
           // nur am Platz selbst: Enter auf ✕ darunter entfernt den Trumpf und soll ihn nicht groß anheften
           if (inert || e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
           e.preventDefault();
-          if (!e.repeat) activateSlot(trump);
+          if (e.repeat) return;
+          keyedSlot = s.index;
+          activateSlot(trump);
         }}
         onfocusout={(e) => { if (trump && view.bigTrump?.pinned && view.bigTrump.id === trump.id && !e.currentTarget.contains(e.relatedTarget as Node | null)) view.bigTrump = null; }}
       >
@@ -267,6 +280,11 @@
           <TrumpCard {trump} />
           {#if canRemoveTrump}<button class="rmv" title={t('sheet.trumpRemove')} onclick={(e) => { e.stopPropagation(); void submit({ type: 'trump.remove', seat, slot: s.index }); }}>✕</button>{/if}
         {:else}
+          <!-- Geisterkarte (5zn, 10.19): leerer Umriss einer Trumpfkarte, deutet an, dass hier eine Karte hinkommt -->
+          {#if !inert}
+            <div class="ghost" aria-hidden="true"><i></i></div>
+            <span class="hint" aria-hidden="true">{canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLockedHint')}</span>
+          {/if}
           <svg class="plus" viewBox="0 0 40 40" aria-hidden="true"><path d={PLUS} /></svg>
         {/if}
       </div>
@@ -328,7 +346,30 @@
   .slot.empty { display: flex; align-items: center; justify-content: center; color: rgba(0, 0, 0, 0.25); border-radius: var(--radius-s); }
   .slot.empty.go { color: var(--pickable); }
   .slot.inert { cursor: default; }
-  .slot.empty:not(.inert):hover { background: color-mix(in srgb, var(--pickable) 20%, transparent); color: rgba(0, 0, 0, 0.6); }
+  /* Fokusrahmen nur, wenn das Feld mit der Tastatur erreicht wurde (.tabbed): Nach Klick und Esc im Auswahlfenster
+     kehrt der Fokus hierher zurück und gälte als Tastaturfokus, der Rahmen bliebe um das Feld stehen (5zn) */
+  .slot:focus-visible:not(.tabbed) { outline: none; }
+  /* Geisterkarte (5zn): Rand und Kopfband wie eine Trumpfkarte, leer, mit dem Papier verrechnet (Wasserzeichen und
+     Rahmen scheinen durch). Bewegung und Deckkraft liegen auf .ghost, nicht auf .slot: sonst wirkt multiply nicht mehr
+     gegen das Papier. In Ruhe ist sie unsichtbar und wartet etwas höher und schräg; beim Überfahren
+     legt sie sich ins Feld. Gesperrte Felder (ohne .go) haben keine Karte, nur die Zeile unter dem Plus. */
+  .ghost { position: absolute; inset: 0; box-sizing: border-box; border: 2px solid var(--pickable); border-radius: var(--radius-m); overflow: hidden; mix-blend-mode: multiply; pointer-events: none; opacity: 0; transform: translateY(var(--ghost-shift)) rotate(var(--ghost-tilt)); transition: opacity var(--ghost-out) ease, transform var(--ghost-out) ease; }
+  .ghost i { display: block; height: 20px; background: var(--pickable); }
+  .hint { position: absolute; pointer-events: none; opacity: 0; color: var(--sheet-label); font-family: system-ui, sans-serif; transition: opacity var(--ghost-out) ease; }
+  .slot.go .hint { left: 6px; right: 6px; top: 24px; font-weight: 700; font-size: 13.5px; line-height: 1.15; white-space: nowrap; }
+  .slot:not(.go) .hint { left: 8px; right: 8px; top: 102px; font-size: 11px; line-height: 1.25; text-align: center; }
+  .plus path { transition: stroke-width var(--ghost-in) ease; }
+  .slot.go.tabbed .ghost, .slot.go:active .ghost { opacity: var(--ghost-on); transform: none; transition-duration: var(--ghost-in); transition-timing-function: ease-out; }
+  .slot.go.tabbed .hint { opacity: 0.75; transition-duration: var(--ghost-in); }
+  .slot.empty.tabbed:not(.go, .inert) .hint { opacity: 0.6; }
+  .slot.go.tabbed .plus path { stroke-width: 4.4; }
+  /* Überfahren nur mit Zeiger: auf Touch bliebe die Karte nach dem Antippen stehen */
+  @media (hover: hover) {
+    .slot.go:hover .ghost { opacity: var(--ghost-on); transform: none; transition-duration: var(--ghost-in); transition-timing-function: ease-out; }
+    .slot.go:hover .hint { opacity: 0.75; transition-duration: var(--ghost-in); }
+    .slot.empty:not(.go, .inert):hover .hint { opacity: 0.6; }
+    .slot.go:hover .plus path { stroke-width: 4.4; }
+  }
   .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
   .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }

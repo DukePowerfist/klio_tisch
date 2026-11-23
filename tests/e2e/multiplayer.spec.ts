@@ -388,12 +388,17 @@ test('Menü am Namensschild mit Mitspieler (5j): eigener Bogen, fremde Schilder,
   const foreignSlot = player.locator('[data-sheet=seat1] [data-slot="0"]');
   await foreignSlot.hover();
   await expect(foreignSlot).not.toHaveAttribute('role');
-  await expect(foreignSlot).not.toHaveAttribute('title');
+  await expect(foreignSlot).not.toHaveAttribute('aria-label');
   await expect(foreignSlot).toHaveCSS('cursor', 'default');
-  await expect(foreignSlot).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  // keine Geisterkarte und keine Zeile am fremden Feld (5zn), am eigenen schon
+  await expect(foreignSlot.locator('.ghost, .hint')).toHaveCount(0);
+  await expect(foreignSlot).not.toHaveClass(/(^|\s)go(\s|$)/);
   const ownSlot = player.locator('[data-sheet=seat2] [data-slot="0"]');
   await expect(ownSlot).toHaveAttribute('role', 'button');
+  await expect(ownSlot).toHaveAttribute('aria-label', 'Trumpf wählen');
   await expect(ownSlot).toHaveCSS('cursor', 'pointer');
+  await ownSlot.hover();
+  await expect.poll(() => ownSlot.locator('.ghost').evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.3);
   // Feldfenster (5z): fremdes Feld nur lesen und folgt Änderungen; eigener Entwurf bleibt mit Hinweis (F2 a)
   const long = 'Ein sehr langes Seil aus Hanf, zwanzig Meter, an einem Ende ausgefranst und am anderen Ende mit einem Haken';
   await setField(gm, 'seat1', 'gear.text.0', long);
