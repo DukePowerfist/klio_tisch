@@ -61,6 +61,10 @@
   --trump-ink: #2b2622;    /* Rahmenlinien und Eckmarke der Trumpfkarte (5zo) */
   --trump-line: 1.5px;     /* Außenlinie Stufe I und II; Stufe II hat dazu eine Innenlinie */
   --trump-line-3: 2.5px;   /* Außenlinie Stufe III, dazu Innenlinie und Ecken */
+  --trump-paper-top: #fdf9ee;     /* Kartenkörper (5zp): leichter Papierton, oben heller */
+  --trump-paper-bottom: #f4ecd9;
+  --trump-shadow: 0 1px 2.5px rgba(0, 0, 0, 0.4);   /* die Karte liegt auf dem Bogen */
+  --trump-serif: Georgia, 'Palatino Linotype', 'Book Antiqua', 'DejaVu Serif', serif;   /* Name und Stufe: gedruckt, nicht handgeschrieben; nur Systemschriften */
   /* Mauszeiger und Markierung gezogener Karten je Rolle (8.3) */
   --who-gm: #f2f2f2;      /* weiß: nicht mit Gold (Bedienhinweis) zu verwechseln, 8.3 */
   /* wählbare Farben der Plätze (layouts.yaml seatColors, Schritt 5e); die ersten vier wie bisher Platz 1–4 */

@@ -2,7 +2,7 @@
   // Trumpfkarte (10.20, Schritt 5zo): Kopfband in den Attributfarben, je Attribut ein Segment mit seinem Namen (bei
   // drei Attributen „JEDES ATTRIBUT“ über allen), rechts die Eckmarke mit der Stufe. Dazu je Stufe ein Rahmenbild:
   // I einfache Linie, II Doppellinie, III kräftige Doppellinie mit Ecken. Farben und Linienstärken sind
-  // Gestaltungswerte (theme.css).
+  // Gestaltungswerte (theme.css). Kartenkörper (5zp): leichter Papierton, Name und Stufe in Serifenschrift.
   import type { Trump } from '../rules/klio/blocks';
   import { t } from './texts';
 
@@ -45,7 +45,7 @@
 <style>
   /* Maße je Größe: --bw Außenlinie, --fp Abstand bis zur Innenlinie, --hh Höhe des Kopfbands, --tab Breite der Eckmarke */
   .tcard { --bw: var(--trump-line); --fp: 2px; --hh: 19px; --tab: 21px; --rad: var(--radius-m); --lf: 9.5px; --nf: 11.5px;
-    position: relative; width: 100%; height: 100%; box-sizing: border-box; display: flex; border: var(--bw) solid var(--trump-ink); border-radius: var(--rad); padding: var(--fp); background: var(--paper); overflow: hidden; font-family: system-ui, sans-serif; color: var(--sheet-ink); }
+    position: relative; width: 100%; height: 100%; box-sizing: border-box; display: flex; border: var(--bw) solid var(--trump-ink); border-radius: var(--rad); padding: var(--fp); background: linear-gradient(var(--trump-paper-top), var(--trump-paper-bottom)); overflow: hidden; font-family: system-ui, sans-serif; color: var(--sheet-ink); }
   .in { position: relative; flex: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid transparent; border-radius: calc(var(--rad) - var(--fp) - 1px); overflow: hidden; }
   .l2 .in, .l3 .in { border-color: var(--trump-ink); }
   .l3 { --bw: var(--trump-line-3); }
@@ -58,10 +58,11 @@
   .seg { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
   .a1 .seg { justify-content: flex-start; padding: 0 5px; }
   .all { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
-  .tg b { flex: none; width: var(--tab); display: flex; align-items: center; justify-content: center; background: var(--trump-ink); border-left: 1px solid rgba(255, 255, 255, 0.55); font-size: var(--nf); letter-spacing: 0.02em; text-shadow: none; }
-  .tn { flex: none; font-weight: 700; font-size: 13.5px; line-height: 1.15; padding: 4px 19px 0 5px; }
+  .tg b { flex: none; width: var(--tab); display: flex; align-items: center; justify-content: center; background: var(--trump-ink); border-left: 1px solid rgba(255, 255, 255, 0.55); font-family: var(--trump-serif); font-size: var(--nf); letter-spacing: 0.02em; text-shadow: none; }
+  .tn { flex: none; font-family: var(--trump-serif); font-weight: 700; font-size: 13.5px; line-height: 1.15; padding: 4px 19px 0 5px; }
   .tr { flex: 1; min-height: 0; overflow: hidden; line-height: 1.24; padding: 3px 5px; }
   .tr.cut { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent calc(100% - 2px)); mask-image: linear-gradient(#000 calc(100% - 26px), transparent calc(100% - 2px)); }
+  .slot { box-shadow: var(--trump-shadow); }
   .slot.a2 { --lf: 7.2px; }
   .slot.a3 { --lf: 8.6px; }
   .list { --fp: 3px; --hh: 24px; --tab: 28px; --lf: 11px; --nf: 14px; height: auto; min-height: 150px; }

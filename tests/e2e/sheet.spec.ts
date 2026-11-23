@@ -664,6 +664,12 @@ test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment j
   expect(await text(0)).toEqual({ size: 9, cut: true });
   await expect(slot(0).locator('.tr')).toContainText('zu verwenden.'); // der ganze Text bleibt im Dokument
 
+  // Kartenkörper (5zp): Papierton als Verlauf, Name und Stufe in Serifenschrift, Regeltext in der Systemschrift
+  await expect(slot(3).locator('.tcard')).toHaveCSS('background-image', /^linear-gradient/);
+  await expect(slot(3).locator('.tn')).toHaveCSS('font-family', /serif$/);
+  await expect(slot(3).locator('.tg b')).toHaveCSS('font-family', /serif$/);
+  await expect(slot(3).locator('.tr')).toHaveCSS('font-family', /sans-serif$/);
+
   // ✕ liegt unter dem Kopfband und verdeckt weder die Eckmarke noch den Namen
   await slot(3).hover();
   const rmv = (await slot(3).locator('.rmv').boundingBox())!;

@@ -356,7 +356,7 @@
   .ghost { position: absolute; inset: 0; box-sizing: border-box; border: 2px solid var(--pickable); border-radius: var(--radius-m); overflow: hidden; mix-blend-mode: multiply; pointer-events: none; opacity: 0; transform: translateY(var(--ghost-shift)) rotate(var(--ghost-tilt)); transition: opacity var(--ghost-out) ease, transform var(--ghost-out) ease; }
   .ghost i { display: block; height: 22px; background: var(--pickable); }
   .hint { position: absolute; pointer-events: none; opacity: 0; color: var(--sheet-label); font-family: system-ui, sans-serif; transition: opacity var(--ghost-out) ease; }
-  .slot.go .hint { left: 7px; right: 7px; top: 28px; font-weight: 700; font-size: 13.5px; line-height: 1.15; white-space: nowrap; }
+  .slot.go .hint { left: 7px; right: 7px; top: 28px; font-family: var(--trump-serif); font-weight: 700; font-size: 13.5px; line-height: 1.15; white-space: nowrap; }
   .slot:not(.go) .hint { left: 8px; right: 8px; top: 114px; font-size: 11px; line-height: 1.25; text-align: center; }
   .plus path { transition: stroke-width var(--ghost-in) ease; }
   .slot.go.tabbed .ghost, .slot.go:active .ghost { opacity: var(--ghost-on); transform: none; transition-duration: var(--ghost-in); transition-timing-function: ease-out; }
