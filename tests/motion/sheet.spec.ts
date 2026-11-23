@@ -38,6 +38,7 @@ test('Neuer Trumpf (5zr): dreht sich einmal von der Rückseite um, nicht nach de
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   // unterwegs: Rückseite der Spielkarten im Feld, die Karte steht schräg
   await expect(slot.locator('.turn.dealt')).toHaveCount(1);
   await expect(slot.locator('.tback')).toHaveCSS('background-image', /cards\/back\.webp/);

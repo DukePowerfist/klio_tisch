@@ -360,6 +360,7 @@ async function chooseAnatomie(page: Page) {
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Verstehen/ }).click();
   await page.getByRole('button', { name: /Anatomie/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await page.mouse.move(5, 5);
 }
@@ -389,6 +390,7 @@ test('Trumpf per Tastatur: Leertaste wählt, Enter heftet die Großansicht an, E
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Verstehen/ }).click();
   await page.getByRole('button', { name: /Anatomie/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await page.mouse.move(5, 5);
   const slot = sheet1(page).locator('[data-slot="0"]');
@@ -420,6 +422,7 @@ test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) =>
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Verstehen/ }).click();
   await page.getByRole('button', { name: /Anatomie/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(page.getByRole('status')).toHaveText('Bogen 1: Trumpf „Anatomie“ gewählt');
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await sheet1(page).locator('[data-slot="0"]').click();
@@ -499,6 +502,7 @@ test('Leeres Trumpffeld (5zn): Geisterkarte statt gelbem Kasten, nur beim Überf
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(slot(0).locator('.tcard')).toHaveCount(1);
   await expect(slot(0)).not.toHaveAttribute('aria-label');
   await slot(1).hover();
@@ -531,6 +535,7 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
   await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '3');
   await sheet1(page).locator('[data-slot="1"]').click();
@@ -540,6 +545,7 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await page.getByRole('dialog').getByRole('textbox').press('Enter');
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Stoiker/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-field="strengths.text.1"]')).toHaveValue('gute Peitsche');
   await expect(sheet1(page).locator('[data-check="strengths.improved.1"]')).toHaveAttribute('aria-pressed', 'true');
   // nach dem Trumpf ist die Laterne leer (clear: lamps)
@@ -554,6 +560,7 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
   await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '3');
   await sheet1(page).locator('[data-slot="1"]').click();
@@ -578,6 +585,7 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
   await dialog.getByRole('button', { name: /^Körper/ }).click();
   await dialog.getByRole('button', { name: /Stoiker/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Stoiker');
   await expect(sheet1(page).locator('[data-field="strengths.text.1"]')).toHaveValue('Peitsche');
   await expect(sheet1(page).locator('[data-check="strengths.improved.1"]')).toHaveAttribute('aria-pressed', 'false');
@@ -606,6 +614,7 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await page.getByRole('button', { name: 'Freie Wahl' }).click();
   await page.getByRole('button', { name: /^Verschiedene/ }).click();
   await page.getByRole('button', { name: /Kraftakt/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Kraftakt');
 });
 
@@ -627,6 +636,7 @@ test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand a
   await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
   await dialog.getByRole('button', { name: /^Körper/ }).click();
   await dialog.getByRole('button', { name: /Stoiker/ }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
   await page.mouse.move(5, 5);
 
   // ein Trumpf, Laterne 2 von 3: Erlebnis gesperrt mit Stand; voll: offen und oben
@@ -653,17 +663,32 @@ test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Sc
   // im Einstieg gibt es keine Leiste
   await expect(dialog.locator('.trail')).toHaveCount(0);
   await dialog.getByRole('button', { name: /^Starttrumpf/ }).click();
-  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf']);
+  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
   await expect(dialog.locator('.trail [aria-current=step]')).toHaveText('Gruppe');
   await expect(dialog.locator('h2')).toHaveText('Aus welcher Gruppe?');
   await expect(dialog.getByText('Unter „Verschiedene“ stehen die Trümpfe mit zwei oder drei Attributen.')).toBeVisible();
   await dialog.getByRole('button', { name: /^Körper/ }).click();
-  expect(await trail()).toEqual(['done:Starttrumpf', 'done:Gruppe: Körper', 'now:Trumpf']);
+  expect(await trail()).toEqual(['done:Starttrumpf', 'done:Gruppe: Körper', 'now:Trumpf', 'todo:Bestätigen']);
   // Zurück: die Leiste folgt
   await dialog.getByRole('button', { name: '← Zurück' }).click();
-  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf']);
+  expect(await trail()).toEqual(['done:Starttrumpf', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
   await dialog.getByRole('button', { name: /^Körper/ }).click();
-  await dialog.locator('.cards .tc:not(:disabled)').first().click();
+  // Bestätigen (5zw): Karte, Folgen, Hauptknopf mit Fokus; Zurück führt zur Liste; erst der Hauptknopf schickt ab
+  const first = dialog.locator('.cards .tc:not(:disabled)').first();
+  const name = (await first.locator('.tn').textContent())!.trim();
+  await first.click();
+  await expect(dialog.locator('h2')).toHaveText('Diesen Trumpf nehmen?');
+  expect(await trail()).toEqual(['done:Starttrumpf', 'done:Gruppe: Körper', `done:Trumpf: ${name}`, 'now:Bestätigen']);
+  await expect(dialog.locator('.chosen .tcard .tn')).toHaveText(name);
+  await expect(dialog.locator('.after li')).toHaveText(['Der Trumpf kommt in das 1. Trumpffeld.']);
+  await expect(dialog.locator('.changed')).toHaveCount(0);
+  await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Trumpf nehmen' })).toBeFocused();
+  await dialog.getByRole('button', { name: '← Zurück' }).click();
+  await expect(dialog.locator('.cards')).toBeVisible();
+  await first.click();
+  await page.keyboard.press('Enter');
+  await expect(sheet1(page).locator('[data-slot="0"] .tcard .tn')).toHaveText(name);
   await page.mouse.move(5, 5);
 
   // Erlebnis: Grund am Schritt, neue Formulierung in der Leiste; ohne Verbesserung fehlt das Glied
@@ -671,15 +696,22 @@ test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Sc
   await sheet1(page).locator('[data-lantern]').click({ clickCount: 3, delay: 0 });
   await sheet1(page).locator('[data-slot="1"]').click();
   await dialog.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
-  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Stärke', 'todo:Gruppe', 'todo:Trumpf']);
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Stärke', 'todo:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
   await expect(dialog.getByText('Danach wählst du einen Trumpf der Stufe I oder II.')).toBeVisible();
   await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
-  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Gruppe', 'todo:Trumpf']);
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
   await dialog.getByRole('button', { name: '← Zurück' }).click();
   await dialog.getByRole('button', { name: /^II · Peitsche/ }).click();
   await dialog.getByRole('textbox').fill('gute Peitsche');
   await dialog.getByRole('button', { name: 'Weiter', exact: true }).click();
-  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'done:Stärke: gute Peitsche', 'now:Gruppe', 'todo:Trumpf']);
+  expect(await trail()).toEqual(['done:Erlebnis eingetroffen', 'done:Stärke: gute Peitsche', 'now:Gruppe', 'todo:Trumpf', 'todo:Bestätigen']);
+  await dialog.getByRole('button', { name: /^Verstehen/ }).click();
+  await dialog.locator('.cards .tc:not(:disabled)').first().click();
+  await expect(dialog.locator('.after li')).toHaveText(['Stärke II heißt jetzt „gute Peitsche“ und wird als verbessert markiert.', 'Die Erlebnislaterne wird geleert.', 'Der Trumpf kommt in das 2. Trumpffeld.']);
+  // der Bogen ändert sich, während die Bestätigung offen ist (hier: Laterne von anderswo geleert): gesperrt, mit Grund
+  await page.evaluate(() => document.querySelector<HTMLElement>('[data-sheet=seat1] [data-lantern]')!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })));
+  await expect(dialog.getByRole('alert')).toHaveText('Dafür muss die Erlebnislaterne voll sein.');
+  await expect(dialog.getByRole('button', { name: 'Trumpf nehmen' })).toBeDisabled();
 });
 
 test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der Laterne öffnet den Dialog, nur wenn ein Anlass offen ist', async ({ page }) => {
@@ -691,6 +723,7 @@ test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der 
     await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
     await dialog.getByRole('button', { name: group }).click();
     await dialog.locator('.cards .tc:not(:disabled)').filter({ hasText: name }).first().click();
+    await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
     await expect(sheet1(page).locator(`[data-slot="${i}"] .tcard`)).toBeVisible();
     await page.mouse.move(5, 5);
   }
@@ -714,6 +747,11 @@ test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der 
   await dialog.getByRole('button', { name: /^I · / }).click();
   await dialog.getByRole('textbox').fill('gutes Seil');
   await dialog.getByRole('button', { name: 'Weiter' }).click();
+  // Bestätigen ohne Karte: nur die Folgen, Hauptknopf „Stärke verbessern“
+  await expect(dialog.locator('h2')).toHaveText('Stärke verbessern?');
+  await expect(dialog.locator('.chosen')).toHaveCount(0);
+  await expect(dialog.locator('.after li')).toHaveText(['Stärke I heißt jetzt „gutes Seil“ und wird als verbessert markiert.', 'Die Erlebnislaterne wird geleert.']);
+  await dialog.getByRole('button', { name: 'Stärke verbessern' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(sheet1(page).locator('[data-field="strengths.text.0"]')).toHaveValue('gutes Seil');
   // Laterne geleert, Anlass verbraucht: Marke weg
@@ -732,6 +770,7 @@ test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment j
     const inList = page.getByRole('button', { name }).locator('.tcard .tr');
     expect(await inList.evaluate((el) => !el.classList.contains('cut') && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
     await page.getByRole('button', { name }).click();
+    await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
     await expect(slot(i).locator('.tcard')).toHaveCount(1);
   };
   await free(0, /^Verstehen/, /Schreib das auf!/);
@@ -801,6 +840,7 @@ test('Trumpf-Großansicht (5zq): festes Format 5:7, passt ins Fenster, auch der 
     await page.getByRole('button', { name: 'Freie Wahl' }).click();
     await page.getByRole('button', { name: category }).click();
     await page.getByRole('button', { name }).click();
+    await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
     await expect(slot(i).locator('.tcard')).toHaveCount(1);
   }
   const big = page.locator('.big .tcard');

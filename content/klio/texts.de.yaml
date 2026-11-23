@@ -126,6 +126,25 @@ trumpDialog:
     moveAttributePoint: Attributspunkt
     group: Gruppe
     trump: Trumpf
+    confirm: Bestätigen
+  # Bestätigen (5zw, 10.22)
+  confirmTrump: Diesen Trumpf nehmen?
+  confirmImprove: Stärke verbessern?
+  afterTitle: "Das geschieht am Bogen:"
+  take: Trumpf nehmen
+  improve: Stärke verbessern
+  changed: Der Bogen hat sich inzwischen geändert. Die Liste zeigt den aktuellen Stand.
+  after:
+    weakness: "Die Schwäche „{text}“ wird gestrichen."
+    weaknessMarks: Die drei Verbessern-Kästchen werden geleert.
+    strength: "Stärke {n} „{text}“ wird als verbessert markiert."
+    strengthEmpty: "Stärke {n} wird als verbessert markiert."
+    strengthText: "Stärke {n} heißt jetzt „{text}“ und wird als verbessert markiert."
+    lamps: Die Erlebnislaterne wird geleert.
+    attribute: "{attr}: {from} → {to}"
+    newScars: Eine neue Narbe wird verbraucht.
+    slot: "Der Trumpf kommt in das {n}. Trumpffeld."
+    other: "{field} ändert sich."
   weaknessHint: Du hast eine Schwäche überwunden. Welche wird vom Bogen gestrichen? Danach wählst du einen Trumpf der Stufe I.
   improveThen: Danach wählst du einen Trumpf der Stufe I oder II.
   improveOnlyHint: Du hast schon alle Trümpfe, deshalb bleibt es bei der Verbesserung.

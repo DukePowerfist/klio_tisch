@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveText } from '../../src/rules/klio/content/texts';
 import { contextFor } from '../../src/rules/klio/trumps';
-import { anySourceOpen, attributeOptions, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trail, trumpRows } from '../../src/ui/trumpDialog';
+import { anySourceOpen, attributeOptions, consequences, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trail, trumpRows } from '../../src/ui/trumpDialog';
 import { content, fresh, sheet, withSheet } from '../helpers';
 
 const ctxWith = (patch: Parameters<typeof withSheet>[2]) => contextFor(content, sheet(withSheet(fresh(), 'seat1', patch), 'seat1'));
@@ -50,26 +50,78 @@ describe('Trumpf-Dialog', () => {
     expect(trail({ at: 'sources' }, ctx)).toEqual([]);
     // Narbe: Schritt, dann Gruppe, dann Trumpf
     const scar = { kind: 'source' as const, source: source('scar'), improveOnly: false };
-    expect(show(trail({ at: 'step', name: 'moveAttributePoint', required: true, path: scar, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:moveAttributePoint', 'todo:group', 'todo:trump']);
+    expect(show(trail({ at: 'step', name: 'moveAttributePoint', required: true, path: scar, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:moveAttributePoint', 'todo:group', 'todo:trump', 'todo:confirm']);
     const moved = { moveAttribute: { lowered: 'K' as const, raised: 'P' as const } };
-    expect(show(trail({ at: 'categories', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:group', 'todo:trump']);
-    expect(show(trail({ at: 'trumps', path: scar, choices: moved, category: 'P' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'done:group=trumps.categories.P', 'now:trump']);
+    expect(show(trail({ at: 'categories', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:group', 'todo:trump', 'todo:confirm']);
+    expect(show(trail({ at: 'trumps', path: scar, choices: moved, category: 'P' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'done:group=trumps.categories.P', 'now:trump', 'todo:confirm']);
     expect(trail({ at: 'categories', path: scar, choices: moved }, ctx)[0]!.label).toBe('Neue Narbe');
     // Erlebnis: neue Formulierung, sonst der alte Text; ohne Verbesserung fehlt das Glied
     const exp = { kind: 'source' as const, source: source('experience'), improveOnly: false };
     expect(show(trail({ at: 'categories', path: exp, choices: { improveStrength: { index: 1, text: ' gute Peitsche ' } } }, ctx))[1]).toBe('done:improveStrength=gute Peitsche');
     expect(show(trail({ at: 'categories', path: exp, choices: { improveStrength: { index: 1, text: '' } } }, ctx))[1]).toBe('done:improveStrength=Peitsche');
-    expect(show(trail({ at: 'categories', path: exp, choices: {} }, ctx))).toEqual(['done:source', 'now:group', 'todo:trump']);
+    expect(show(trail({ at: 'categories', path: exp, choices: {} }, ctx))).toEqual(['done:source', 'now:group', 'todo:trump', 'todo:confirm']);
     // voller Bogen: nach der Stärke ist Schluss
-    expect(show(trail({ at: 'step', name: 'improveStrength', required: true, path: { ...exp, improveOnly: true }, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:improveStrength']);
+    expect(show(trail({ at: 'step', name: 'improveStrength', required: true, path: { ...exp, improveOnly: true }, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:improveStrength', 'todo:confirm']);
     // Schwäche: gewählte Schwäche mit ihrem Text; sind beide leer, gibt es das Glied nicht
     const weak = { kind: 'source' as const, source: source('weakness'), improveOnly: false };
     expect(show(trail({ at: 'categories', path: weak, choices: { removeWeakness: 0 } }, ctx))[1]).toBe('done:chooseWeaknessToRemove=Kälte');
     const none = ctxWith((b) => { b.weaknessMarks = [true, true, true]; });
-    expect(show(trail({ at: 'categories', path: weak, choices: {} }, none))).toEqual(['done:source', 'now:group', 'todo:trump']);
+    expect(show(trail({ at: 'categories', path: weak, choices: {} }, none))).toEqual(['done:source', 'now:group', 'todo:trump', 'todo:confirm']);
+    // Bestätigen: Gruppe und Name des Trumpfs stehen in der Leiste
+    const stoiker = content.trumps.find((t) => t.id === 'stoiker')!;
+    expect(show(trail({ at: 'confirm', path: scar, choices: moved, trump: stoiker, shown: '' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', `done:group=trumps.categories.${stoiker.category}`, `done:trump=${stoiker.name}`, 'now:confirm']);
+    expect(show(trail({ at: 'confirm', path: { ...exp, improveOnly: true }, choices: { improveStrength: { index: 1, text: '' } }, trump: undefined, shown: '' }, ctx))).toEqual(['done:source', 'done:improveStrength=Peitsche', 'now:confirm']);
     // freie Wahl
-    expect(show(trail({ at: 'categories', path: { kind: 'free' }, choices: {} }, ctx))).toEqual(['done:source', 'now:group', 'todo:trump']);
+    expect(show(trail({ at: 'categories', path: { kind: 'free' }, choices: {} }, ctx))).toEqual(['done:source', 'now:group', 'todo:trump', 'todo:confirm']);
     expect(trail({ at: 'categories', path: { kind: 'free' }, choices: {} }, ctx)[0]!.label).toEqual({ key: 'trumpDialog.free' });
+  });
+
+  it('Bestätigen (5zw): Folgen je Weg aus demselben Plan wie der Befehl, am aktuellen Bogen', () => {
+    const keys = (r: ReturnType<typeof consequences>) => ('lines' in r ? r.lines.map((l) => l.key.replace('trumpDialog.after.', '')) : r);
+    const path = (id: string, improveOnly = false) => ({ kind: 'source' as const, source: source(id), improveOnly });
+    // Starttrumpf: nur das Feld
+    expect(consequences(content, ctxWith((b) => (b.attributes = { K: 2, V: 1, P: 1 })), path('start'), {}, 'standhaft')).toEqual({ lines: [{ key: 'trumpDialog.after.slot', params: { n: 1 } }] });
+    // Schwäche: Text der Schwäche, Kästchen einmal, zweites Feld
+    const weak = ctxWith((b) => { b.trumps[0] = 'anatomie'; b.weaknessMarks = [true, true, true]; b.weaknesses = ['Kälte', 'Höhenangst']; });
+    const w = consequences(content, weak, path('weakness'), { removeWeakness: 1 }, 'standhaft');
+    expect(keys(w)).toEqual(['weakness', 'weaknessMarks', 'slot']);
+    expect('lines' in w && w.lines[0]!.params).toEqual({ text: 'Höhenangst' });
+    expect('lines' in w && w.lines[2]!.params).toEqual({ n: 2 });
+    // derselbe Befehl an einem inzwischen überschriebenen Bogen: die Zeile zeigt den neuen Text
+    const overwritten = ctxWith((b) => { b.trumps[0] = 'anatomie'; b.weaknessMarks = [true, true, true]; b.weaknesses = ['Kälte', 'Platzangst']; });
+    const w2 = consequences(content, overwritten, path('weakness'), { removeWeakness: 1 }, 'standhaft');
+    expect('lines' in w2 && w2.lines[0]!.params).toEqual({ text: 'Platzangst' });
+    // ... und an einem geleerten: nicht mehr gültig
+    const emptied = ctxWith((b) => { b.trumps[0] = 'anatomie'; b.weaknessMarks = [true, true, true]; b.weaknesses = ['Kälte', '']; });
+    expect(consequences(content, emptied, path('weakness'), { removeWeakness: 1 }, 'standhaft')).toEqual({ why: { key: 'reject.invalidChoice' } });
+    // Erlebnis: neue Formulierung, unveränderte, leere Stärke; Laterne einmal
+    const exp = ctxWith((b) => { b.trumps[0] = 'anatomie'; b.lamps = [true, true, true]; b.strengths[1]!.text = 'Peitsche'; });
+    const e1 = consequences(content, exp, path('experience'), { improveStrength: { index: 1, text: 'gute Peitsche' } }, 'stoiker');
+    expect(keys(e1)).toEqual(['strengthText', 'lamps', 'slot']);
+    expect('lines' in e1 && e1.lines[0]!.params).toEqual({ n: 'II', text: 'gute Peitsche' });
+    expect(keys(consequences(content, exp, path('experience'), { improveStrength: { index: 1, text: 'Peitsche' } }, 'stoiker'))).toEqual(['strength', 'lamps', 'slot']);
+    expect(keys(consequences(content, exp, path('experience'), { improveStrength: { index: 0, text: '' } }, 'stoiker'))).toEqual(['strengthEmpty', 'lamps', 'slot']);
+    expect(keys(consequences(content, exp, path('experience'), {}, 'stoiker'))).toEqual(['lamps', 'slot']);
+    // Laterne inzwischen geleert: der Grund des Wegs
+    expect(consequences(content, ctxWith((b) => (b.trumps[0] = 'anatomie')), path('experience'), {}, 'stoiker')).toEqual({ why: { key: 'source.experience.why' } });
+    // voller Bogen: nur verbessern, kein Feld
+    const full = ctxWith((b) => { b.trumps = ['anatomie', 'stoiker', 'huh', 'prognose']; b.lamps = [true, true, true]; });
+    expect(keys(consequences(content, full, path('experience', true), { improveStrength: { index: 0, text: 'Seil' } }, undefined))).toEqual(['strengthText', 'lamps']);
+    // Narbe: beide Attribute mit altem und neuem Wert, Narbe verbraucht
+    const scar = ctxWith((b) => { b.trumps[0] = 'anatomie'; b.newScars = 1; b.attributes = { K: 7, V: 4, P: 5 }; });
+    const trump = content.trumps.find((t) => t.attributes.includes('P') && t.id !== 'anatomie')!.id;
+    const s1 = consequences(content, scar, path('scar'), { moveAttribute: { lowered: 'K', raised: 'P' } }, trump);
+    expect(keys(s1)).toEqual(['attribute', 'attribute', 'newScars', 'slot']);
+    expect('lines' in s1 && s1.lines.slice(0, 2).map((l) => l.params)).toEqual([{ attr: 'Körper', from: 7, to: 6 }, { attr: 'Präsenz', from: 5, to: 6 }]);
+    // freie Wahl: nur das Feld; doppelt und voll werden abgelehnt wie beim Host
+    expect(keys(consequences(content, scar, { kind: 'free' }, {}, 'stoiker'))).toEqual(['slot']);
+    expect(consequences(content, scar, { kind: 'free' }, {}, 'anatomie')).toEqual({ why: { key: 'trumpDialog.why.duplicate' } });
+    expect(consequences(content, full, { kind: 'free' }, {}, 'kraftakt')).toEqual({ why: { key: 'toast.maxTrumps', params: { max: 4 } } });
+    // jede Zeile hat einen Text; keine Änderung fällt in die Auffangzeile
+    for (const r of [w, e1, s1]) for (const l of 'lines' in r ? r.lines : []) {
+      expect(l.key).not.toBe('trumpDialog.after.other');
+      expect(resolveText(content, l.key), l.key).toBeTypeOf('string');
+    }
   });
 
   it('Schritt entfällt, wenn es nichts zu wählen gibt: Schwäche streichen bei zwei leeren (A29)', () => {

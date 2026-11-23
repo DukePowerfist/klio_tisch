@@ -5,7 +5,8 @@ import type { SeatId, TextRef } from '../engine/types';
 import { attrValue, ATTRS, steps, trumpCount, type Attr, type BlockContext, type Choices, type Trump } from '../rules/klio/blocks';
 import { TrumpCategory } from '../rules/klio/content/schema';
 import type { KlioContent } from '../rules/klio/content/validate';
-import { sourceStatus, stepSkipped, stepsOf, trumpProblem, type Source, type StepName } from '../rules/klio/trumps';
+import { resolveText } from '../rules/klio/content/texts';
+import { fullReason, isFull, planChoice, sourceStatus, stepSkipped, stepsOf, trumpProblem, type Source, type StepName } from '../rules/klio/trumps';
 
 export type Category = Trump['category'];
 export const CATEGORIES = TrumpCategory.options;
@@ -19,7 +20,9 @@ export type DialogStep =
   | { at: 'sources' }
   | { at: 'step'; name: StepName; required: boolean; path: SourcePath; choices: Choices; index: number }
   | { at: 'categories'; path: Path; choices: Choices }
-  | { at: 'trumps'; path: Path; choices: Choices; category: Category };
+  | { at: 'trumps'; path: Path; choices: Choices; category: Category }
+  /** Bestätigen (5zw): `trump` fehlt bei „nur verbessern“; `shown` hält die Folgen fest, wie sie beim Öffnen dastanden */
+  | { at: 'confirm'; path: Path; choices: Choices; trump: Trump | undefined; shown: string };
 
 /** `progress`: Stand einer noch offenen Voraussetzung („Erlebnislaterne: 2 von 3“), nur wenn der Weg genau deshalb gesperrt ist */
 export type SourceRow = { source: Source; ok: boolean; why: TextRef | null; improveOnly: boolean; progress: TextRef | null };
@@ -115,16 +118,67 @@ export function trail(step: DialogStep, ctx: BlockContext): TrailItem[] {
       if (!before && !now && stepSkipped(s.step, ctx)) return;
       items.push({ id: s.name, label: { key: `trumpDialog.trail.${s.name}` }, value, state: now ? 'now' : before ? 'done' : 'todo' });
     });
-    if (path.improveOnly) return items;
   }
-  const picking = step.at === 'trumps';
-  items.push({
-    id: 'group', label: { key: 'trumpDialog.trail.group' },
-    value: picking ? { key: `trumps.categories.${step.category}` } : null,
-    state: picking ? 'done' : step.at === 'categories' ? 'now' : 'todo',
-  });
-  items.push({ id: 'trump', label: { key: 'trumpDialog.trail.trump' }, value: null, state: picking ? 'now' : 'todo' });
+  const confirming = step.at === 'confirm';
+  if (path.kind === 'free' || !path.improveOnly) {
+    const category = step.at === 'trumps' ? step.category : confirming ? step.trump?.category : undefined;
+    items.push({
+      id: 'group', label: { key: 'trumpDialog.trail.group' },
+      value: category ? { key: `trumps.categories.${category}` } : null,
+      state: category ? 'done' : step.at === 'categories' ? 'now' : 'todo',
+    });
+    items.push({
+      id: 'trump', label: { key: 'trumpDialog.trail.trump' },
+      value: confirming ? (step.trump?.name ?? null) : null,
+      state: confirming ? 'done' : step.at === 'trumps' ? 'now' : 'todo',
+    });
+  }
+  items.push({ id: 'confirm', label: { key: 'trumpDialog.trail.confirm' }, value: null, state: confirming ? 'now' : 'todo' });
   return items;
+}
+
+/** Was der Befehl am Bogen ändert, als Zeilen für die Bestätigung (5zw, 10.22), oder der Grund, warum er jetzt nicht
+ *  mehr ginge. Gerechnet wird mit demselben Plan wie beim Host (`planChoice`), also immer am aktuellen Bogen: Ändert
+ *  ihn jemand, während die Bestätigung offen ist, ändern sich die Zeilen mit. */
+export function consequences(
+  content: KlioContent, ctx: BlockContext, path: Path, choices: Choices, trump: string | undefined,
+): { lines: TextRef[] } | { why: TextRef } {
+  const cfg = content.trumpSources;
+  const slot: TextRef = { key: 'trumpDialog.after.slot', params: { n: ctx.sheet.trumps.findIndex((t) => t === null) + 1 } };
+  if (path.kind === 'free') {
+    if (isFull(cfg, ctx.sheet)) return { why: fullReason(cfg) };
+    const t = content.trumps.find((x) => x.id === trump);
+    const why = t ? trumpProblem(cfg, 'free', t, ctx, {}) : { key: 'reject.unknownTrump' };
+    return why ? { why } : { lines: [slot] };
+  }
+  const plan = planChoice(cfg, path.source, content.trumps, ctx, choices, trump);
+  if ('why' in plan) return plan;
+
+  const numeral = (i: number) => resolveText(content, `numerals.${i + 1}`) ?? String(i + 1);
+  const lines: TextRef[] = [];
+  const once = new Set<string>();
+  const newText = new Map(plan.changes.flatMap((c) => (c.field.startsWith('strengths.text.') ? [[c.field.slice(15), String(c.value)] as const] : [])));
+  for (const c of plan.changes) {
+    const [list, a, b] = c.field.split('.');
+    if (list === 'weaknesses') lines.push({ key: 'trumpDialog.after.weakness', params: { text: ctx.sheet.weaknesses[Number(a)] ?? '' } });
+    else if (list === 'strengths' && a === 'improved') {
+      const i = Number(b);
+      const text = newText.get(b!);
+      const old = ctx.sheet.strengths[i]?.text ?? '';
+      lines.push(text !== undefined && text !== old
+        ? { key: 'trumpDialog.after.strengthText', params: { n: numeral(i), text } }
+        : { key: old ? 'trumpDialog.after.strength' : 'trumpDialog.after.strengthEmpty', params: { n: numeral(i), text: old } });
+    } else if (list === 'strengths' && a === 'text') continue;
+    else if (list === 'attributes') {
+      const attr = a as Attr;
+      lines.push({ key: 'trumpDialog.after.attribute', params: { attr: ctx.attrNames[attr], from: attrValue(ctx.sheet, attr), to: Number(c.value) } });
+    } else if (list === 'lamps' || list === 'weaknessMarks' || list === 'newScars') {
+      if (!once.has(list)) lines.push({ key: `trumpDialog.after.${list}` });
+      once.add(list);
+    } else lines.push({ key: 'trumpDialog.after.other', params: { field: c.field } });
+  }
+  if (plan.trump !== null) lines.push(slot);
+  return { lines };
 }
 
 /** Der Befehl am Ende des Dialogs. */

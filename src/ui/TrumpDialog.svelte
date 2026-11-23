@@ -17,7 +17,7 @@
   import { session } from './session.svelte';
   import { t, text } from './texts';
   import {
-    CATEGORIES, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trail, trumpRows, type DialogStep, type SourcePath, type SourceRow,
+    CATEGORIES, consequences, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trail, trumpRows, type DialogStep, type Path, type SourcePath, type SourceRow,
   } from './trumpDialog';
   import { STEP_VIEWS } from './trumpSteps';
   import { view } from './view.svelte';
@@ -56,7 +56,13 @@
   function advance(path: SourcePath, choices: Choices, index: number) {
     const next = nextStep(path, choices, index, ctx);
     if (next) go(next);
-    else void submit(finalCommand(seat, path, choices, undefined));
+    else confirm(path, choices, undefined);
+  }
+
+  /** Letzte Ansicht vor dem Befehl (5zw): die Karte und was am Bogen geschieht */
+  const outcome = (path: Path, choices: Choices, trump: string | undefined) => consequences(content, ctx, path, choices, trump);
+  function confirm(path: Path, choices: Choices, trump: (typeof content.trumps)[number] | undefined) {
+    go({ at: 'confirm', path, choices, trump, shown: JSON.stringify(outcome(path, choices, trump?.id)) });
   }
 
   const pickSource = (row: SourceRow) => advance({ kind: 'source', source: row.source, improveOnly: row.improveOnly }, {}, 0);
@@ -70,6 +76,7 @@
     step.at === 'sources' ? t('trumpDialog.title', { seat: seatNo(seat) })
     : step.at === 'step' ? t(`trumpDialog.steps.${step.name}`)
     : step.at === 'categories' ? t('trumpDialog.chooseGroup')
+    : step.at === 'confirm' ? t(step.trump ? 'trumpDialog.confirmTrump' : 'trumpDialog.confirmImprove')
     : t('trumpDialog.chooseFromCategory', { category: t(`trumps.categories.${step.category}`) }),
   );
 </script>
@@ -157,10 +164,33 @@
     </div>
     {@render footer()}
 
+  {:else if step.at === 'confirm'}
+    <!-- Bestätigen (5zw, 10.22): erst hier geht der Befehl hinaus. Die Liste rechnet am aktuellen Bogen. -->
+    {@const out = outcome(step.path, step.choices, step.trump?.id)}
+    <div class="confirm">
+      {#if step.trump}<div class="chosen"><TrumpCard trump={step.trump} size="list" /></div>{/if}
+      <div class="after">
+        <h3 class="dialog-heading">{t('trumpDialog.afterTitle')}</h3>
+        {#if 'lines' in out}
+          <ul>{#each out.lines as line, i (i)}<li>{text(line)}</li>{/each}</ul>
+          {#if JSON.stringify(out) !== step.shown}<p class="note changed" role="status">{t('trumpDialog.changed')}</p>{/if}
+        {:else}
+          <p class="problem" role="alert">{text(out.why)}</p>
+        {/if}
+      </div>
+    </div>
+    {#snippet take()}
+      <button
+        type="button" class="main" disabled={'why' in out} {@attach (el) => el.focus()}
+        onclick={() => submit(finalCommand(seat, step.path, step.choices, step.trump?.id))}
+      >{t(step.trump ? 'trumpDialog.take' : 'trumpDialog.improve')}</button>
+    {/snippet}
+    {@render footer(take)}
+
   {:else}
     <div class="cards">
       {#each rows.filter((r) => r.trump.category === step.category) as row (row.trump.id)}
-        <button class="tc" class:off={!!row.why} disabled={!!row.why} onclick={() => submit(finalCommand(seat, step.path, step.choices, row.trump.id))}>
+        <button class="tc" class:off={!!row.why} disabled={!!row.why} onclick={() => confirm(step.path, step.choices, row.trump)}>
           <TrumpCard trump={row.trump} size="list" />
           {#if row.why}<div class="why problem">{text(row.why)}</div>{/if}
         </button>
@@ -179,6 +209,12 @@
   .trail .now { font-weight: 700; }
   .trail .todo { opacity: 0.5; }
   .trail .done { opacity: 0.85; }
+  /* Bestätigen: Karte links, Folgen rechts; schmal untereinander */
+  .confirm { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: flex-start; margin: 0 0 14px; }
+  .chosen { flex: 0 1 250px; min-width: 200px; }
+  .after { flex: 1 1 260px; min-width: 0; }
+  .after h3 { margin: 0 0 8px; }
+  .after ul { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 5px; font-size: 14px; }
   .later { margin: 4px 0 8px; }
   .hints { display: grid; gap: 3px; margin-top: 14px; }
   .dialog-aside { font-weight: 400; }
