@@ -4,6 +4,7 @@
   // I einfache Linie, II Doppellinie, III kräftige Doppellinie mit Ecken. Farben und Linienstärken sind
   // Gestaltungswerte (theme.css). Kartenkörper (5zp): leichter Papierton, Name und Stufe in Serifenschrift.
   import type { Trump } from '../rules/klio/blocks';
+  import { fitLine } from './fitLine';
   import { t } from './texts';
 
   let { trump, size = 'slot' }: { trump: Trump; size?: 'slot' | 'list' | 'large' } = $props();
@@ -16,6 +17,8 @@
   //   feste Format auf und wächst in die Höhe (.grow), abgeschnitten wird dort nie
   // In der Liste bleibt der Text in fester Größe ganz stehen.
   const FIT = { slot: [10.5, 9], large: [24, 13] } as const;
+  /** kleinste Schrift der Namen im Kopfband, wenn die Schrift des Rechners breiter läuft als ausgemessen (fitLine) */
+  const SEG_MIN = 5;
   let card = $state<HTMLDivElement>();
   let body = $state<HTMLDivElement>();
   let cut = $state(false);
@@ -43,9 +46,10 @@
     <div class="tg">
       <div class="segs">
         {#each trump.attributes as a (a)}
-          <span class="seg" style:background="var(--attr-{a})">{count === 3 ? '' : t(`attributes.${a}`).toUpperCase()}</span>
+          {@const name = count === 3 ? '' : t(`attributes.${a}`).toUpperCase()}
+          <span class="seg" style:background="var(--attr-{a})" {@attach fitLine(name, SEG_MIN)}>{name}</span>
         {/each}
-        {#if count === 3}<span class="all">{t('trumps.allAttributes')}</span>{/if}
+        {#if count === 3}<span class="all" {@attach fitLine(t('trumps.allAttributes'), SEG_MIN)}>{t('trumps.allAttributes')}</span>{/if}
       </div>
       <b>{t(`numerals.${trump.level}`)}</b>
     </div>

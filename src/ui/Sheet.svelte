@@ -12,6 +12,7 @@
   import SheetField from './SheetField.svelte';
   import SheetLantern from './SheetLantern.svelte';
   import TrumpCard from './TrumpCard.svelte';
+  import { fitLine } from './fitLine';
   import { submitOrSay as submit } from './commands';
   import { arrivePlate, arriveSheet } from './animator.svelte';
   import { effects } from './effects.svelte';
@@ -290,7 +291,8 @@
           <!-- Geisterkarte (5zn, 10.19): leerer Umriss einer Trumpfkarte, deutet an, dass hier eine Karte hinkommt -->
           {#if !inert}
             <div class="ghost" aria-hidden="true"><i></i></div>
-            <span class="hint" aria-hidden="true">{canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLockedHint')}</span>
+            {@const hintText = canChoose ? t('sheet.trumpChoose') : t('sheet.trumpLockedHint')}
+            <span class="hint" aria-hidden="true" {@attach fitLine(hintText, 9)}>{hintText}</span>
           {/if}
           <svg class="plus" viewBox="0 0 40 40" aria-hidden="true"><path d={PLUS} /></svg>
         {/if}

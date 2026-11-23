@@ -838,6 +838,41 @@ test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment j
   expect(rmv.x).toBeGreaterThanOrEqual(name.right);
 });
 
+test('Breiter laufende Schrift (anderer Rechner): Namen im Kopfband und „Trumpf wählen“ werden kleiner statt abgeschnitten', async ({ page }) => {
+  // stellt eine breitere Systemschrift nach (DejaVu unter Linux, Georgia unter Windows): Laufweite deutlich erhöht,
+  // schon vor dem ersten Aufbau der Seite
+  await page.addInitScript(() => {
+    const wide = () => {
+      const style = document.createElement('style');
+      style.textContent = '.tcard .tg { letter-spacing: 0.3em !important; } .slot .hint { letter-spacing: 0.22em !important; }';
+      document.head.append(style);
+    };
+    if (document.head) wide();
+    else document.addEventListener('DOMContentLoaded', wide);
+  });
+  await ready(page, true);
+  await page.keyboard.press('1');
+  const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
+  // Geisterkarte: einzeilig, passt, sichtbar kleiner als ausgemessen, aber nicht unter 9 px
+  const hint = slot(0).locator('.hint');
+  await slot(0).hover();
+  await expect(hint).toHaveText('Trumpf wählen');
+  const h = await hint.evaluate((el) => ({ fits: el.scrollWidth <= el.clientWidth && el.getClientRects().length === 1, size: parseFloat(getComputedStyle(el).fontSize) }));
+  expect(h.fits).toBe(true);
+  expect(h.size).toBeLessThan(13.5);
+  expect(h.size).toBeGreaterThanOrEqual(9);
+  // Kopfband: ein, zwei und drei Attribute
+  const picks: [RegExp, RegExp][] = [[/^Verstehen/, /Anatomie/], [/^Verschiedene/, /Denkzettel/], [/^Verschiedene/, /Stresstest/]];
+  for (const [i, [tab, name]] of picks.entries()) {
+    await slot(i).click();
+    await pickTrump(page, 'Freie Wahl', tab, name);
+    await expect(slot(i).locator('.tcard')).toHaveCount(1);
+    expect(await slot(i).locator('.seg, .all').evaluateAll((els) => els.every((el) => el.scrollWidth <= el.clientWidth)), `Feld ${i}`).toBe(true);
+  }
+  // wirklich verkleinert, also war die Probe breit genug
+  expect(await slot(1).locator('.seg').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize))).toBeLessThan(7.2);
+});
+
 test('Trumpf-Großansicht (5zq): festes Format 5:7, passt ins Fenster, auch der längste Text steht ganz da', async ({ page }) => {
   await page.keyboard.press('1');
   const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
