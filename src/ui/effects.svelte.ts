@@ -7,6 +7,7 @@ import { seatNo } from '../engine/zones';
 import type { KlioEvent, KlioEventOf } from '../rules/klio/events';
 import { afterReveal, noteEvents, strikeImpacted } from './animator.svelte';
 import { NOTICE_ARRIVALS } from './arrivals';
+import { effectLevel } from './effectLevel.svelte';
 import { describe, noticeArrival } from './eventText';
 import { Pulse } from './pulse.svelte';
 import { OwnRolls, rolledRows } from './resultRoll';
@@ -16,6 +17,9 @@ import { view } from './view.svelte';
 
 /** so lange gilt ein eigener Eintrag als „gerade bearbeitet“ (Hinweis bei fremder Änderung, 8.2) */
 const EDIT_MS = 5 * 60_000;
+
+/** so lange liegt die Rückseite eines neuen Trumpfs im Feld: etwas länger als `--trump-turn` (theme.css, 5zr) */
+const TRUMP_TURN_MS = 700;
 
 /** Schlüssel eines Feldes am Bogen: `seat1/name` */
 const key = (seat: SeatId, field: string): string => `${seat}/${field}`;
@@ -33,6 +37,9 @@ class Effects {
   pinged(peer: string): void {
     this.pings = new Set([...this.pings].filter((p) => p !== peer));
   }
+  /** gerade gewählte Trümpfe (`seat1/trumps.2`): die Karte dreht sich im Feld einmal um (5zr). Nur am Ereignis, also
+   *  nicht beim Neuladen, beim Import oder beim Wechsel der Ansicht. */
+  dealt = new Pulse<string>();
   /** eigene Textfelder (`seat1/name`), die gerade jemand anderes geändert hat */
   overwritten = new Pulse<string>();
   /** Narben und Tod, die der Bogen erst mit dem Aufprall zeigt (`seat1/scars.heart`, `seat1/dead`; 5k) */
@@ -117,6 +124,9 @@ class Effects {
     // Expedition und Orakel öffnen seit 5zb kein Fenster mehr (10.12): das Blatt rückt über `view.gmRoll` hoch
     // (rolled), die Schachtel spielt ihren Ablauf selbst (OracleBox.svelte)
     if (e.type === 'damageTaken') this.hit.add([e.seat]);
+    // bei „Erlebnis“ mit vier Trümpfen kommt kein Trumpf (`trump` und `slot` sind null); in Stufe „Aus“ keine Rückseite
+    if (e.type === 'trumpChosen' && e.trump !== null && e.slot !== null && effectLevel.level !== 'off')
+      this.dealt.add([key(e.seat, `trumps.${e.slot}`)], new Promise((r) => setTimeout(r, TRUMP_TURN_MS)));
   }
 }
 

@@ -24,5 +24,12 @@
 {/if}
 
 <style>
+  /* richtet sich beim Erscheinen kurz auf (5zr). Die Bewegung liegt auf der Karte, .big zentriert sich selbst über
+     transform. Beim Wechsel von einem Trumpf zum nächsten bleibt die Karte stehen (dasselbe Element). */
+  .big :global(.tcard) { animation: trump-rise var(--trump-rise) ease-out both; }
+  @keyframes -global-trump-rise {
+    from { opacity: 0; transform: perspective(900px) translateY(12px) rotateX(10deg) scale(0.94); }
+    to { opacity: 1; transform: perspective(900px) translateY(0) rotateX(0deg) scale(1); }
+  }
   .big { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3000001; pointer-events: none; filter: drop-shadow(0 14px 40px rgba(0, 0, 0, 0.65)); }
 </style>

@@ -81,6 +81,8 @@
   // Gezeichnete Zeichen (5z): zwei leicht gebogene Striche wie mit dem Stift, statt Zeichen aus einer Computerschrift
   const CROSS = 'M4.5 4 Q10 9.5 15.8 16.2 M15.6 4.4 Q9.5 10.5 4.2 15.6';
   const PLUS = 'M20.5 7 Q19.6 20 20 33.5 M7 20.4 Q20 19.4 33 20';
+  /** Rückseite der Spielkarten, für das Aufdecken eines neuen Trumpfs (5zr); beide im Format 5:7 */
+  const CARD_BACK = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 
   // Narbe und Tod nach einem Treffer erst mit dem Aufprall (5k)
   const checked = (id: string) => !effects.holds(seat, id) && getField(sheet, id) === true;
@@ -277,7 +279,12 @@
         onfocusout={(e) => { if (trump && view.bigTrump?.pinned && view.bigTrump.id === trump.id && !e.currentTarget.contains(e.relatedTarget as Node | null)) view.bigTrump = null; }}
       >
         {#if trump}
-          <TrumpCard {trump} />
+          <!-- neuer Trumpf (5zr): liegt kurz mit der Rückseite der Spielkarten im Feld und dreht sich einmal um -->
+          {@const dealt = effects.dealt.has(`${seat}/trumps.${s.index}`)}
+          <div class="turn" class:dealt>
+            <TrumpCard {trump} />
+            {#if dealt}<i class="tback" style:background-image={CARD_BACK} aria-hidden="true"></i>{/if}
+          </div>
           {#if canRemoveTrump}<button class="rmv" title={t('sheet.trumpRemove')} onclick={(e) => { e.stopPropagation(); void submit({ type: 'trump.remove', seat, slot: s.index }); }}>✕</button>{/if}
         {:else}
           <!-- Geisterkarte (5zn, 10.19): leerer Umriss einer Trumpfkarte, deutet an, dass hier eine Karte hinkommt -->
@@ -369,6 +376,18 @@
     .slot.go:hover .hint { opacity: 0.75; transition-duration: var(--ghost-in); }
     .slot.empty:not(.go, .inert):hover .hint { opacity: 0.6; }
     .slot.go:hover .plus path { stroke-width: 4.4; }
+  }
+  /* Aufdecken eines neuen Trumpfs (5zr): Vorder- und Rückseite Rücken an Rücken, in der Mitte leicht angehoben */
+  .turn { position: absolute; inset: 0; }
+  .turn.dealt { transform-style: preserve-3d; animation: trump-turn var(--trump-turn) ease-in-out both; }
+  .turn.dealt :global(.tcard), .tback { backface-visibility: hidden; }
+  .tback { position: absolute; inset: 0; border-radius: var(--radius-m); background: center / 100% 100% no-repeat; box-shadow: var(--trump-shadow); transform: rotateY(180deg); }
+  /* solange die Karte sich dreht, schwebt kein ✕ über dem Feld */
+  .turn.dealt + .rmv { visibility: hidden; }
+  @keyframes -global-trump-turn {
+    0% { transform: perspective(500px) translateY(0) rotateY(180deg) scale(1); }
+    50% { transform: perspective(500px) translateY(-7px) rotateY(90deg) scale(1.07); }
+    100% { transform: perspective(500px) translateY(0) rotateY(0deg) scale(1); }
   }
   .rmv { display: none; position: absolute; top: 25px; right: 5px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
   .tools .rmv { display: block; }
