@@ -1,8 +1,8 @@
 // Mehrspielerbetrieb über echte WebRTC-Verbindungen (Trystero/Nostr).
 // Braucht Internet und öffentliche Vermittlungsdienste; läuft daher nur mit E2E_NETWORK=1.
 
-import { expect, test, type Page } from '@playwright/test';
-import { buildFreePile, cancelPointer, cardEl, dragFromTo, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, ready, setField, shiftHold, zoneCenter } from './helpers';
+import { expect, test, type Browser, type Page } from '@playwright/test';
+import { buildFreePile, cancelPointer, cardEl, dragFromTo, expectCount, expectInStage, fromMenu, holdOver, makePng, menuButton, menuEntries, nameCharacter, openMenuAndClick, openRoom, openSettings, setField, shiftHold, zoneCenter } from './helpers';
 
 test.skip(!process.env.E2E_NETWORK, 'nur mit E2E_NETWORK=1 (echte Verbindung)');
 test.setTimeout(90_000);
@@ -744,7 +744,7 @@ async function watchToasts(page: Page) {
 }
 
 /** SL mit offenem Raum und Protokoll; liefert Seite, Link und Einträge im Protokoll */
-async function openTable(browser: import('@playwright/test').Browser) {
+async function openTable(browser: Browser) {
   const { gm, link } = await openRoom(browser);
   await fromMenu(gm, 'Protokoll');
   const log = () => gm.getByRole('list', { name: 'Protokoll' }).locator('li').allTextContents();

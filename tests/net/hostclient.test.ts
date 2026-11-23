@@ -278,7 +278,7 @@ describe('Verbindung', () => {
     const { net, host, join } = await setup();
     const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
     await settle(net, host);
-    net.drop = (msg, from) => from === a.transport.self; // kommt nicht mehr an
+    net.drop = (_msg, from) => from === a.transport.self; // kommt nicht mehr an
     const claim = a.client.claim('seat2', 'Ida');
     const cmd = a.client.submit({ type: 'zone.draw', zone: 'deck' });
     await settle(net, host);
@@ -369,7 +369,7 @@ describe('Platz wählen nach dem Beitritt', () => {
     const a = join('spectator', { key: 'browser-a-xxxxxxxxxxxx' });
     await settle(net, host);
     // nach dem Speichern bricht die Verbindung ab: weder Willkommen noch Antwort kommen an
-    net.drop = (msg, from) => from === host.peerId;
+    net.drop = (_msg, from) => from === host.peerId;
     const r = a.client.claim('seat2', 'Ida');
     await settle(net, host);
     net.drop = () => false;

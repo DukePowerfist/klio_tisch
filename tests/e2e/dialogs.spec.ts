@@ -80,8 +80,7 @@ test('Trumpf wählen: beim Durchgehen der Schritte bleibt die Oberkante stehen; 
   // die Liste der Trümpfe ist höher als das Fenster: unten bündig mit dem Rand (12 px), oben so weit wie nötig
   // (die Lage folgt der Höhe einen Frame später, über den ResizeObserver in Modal.svelte)
   await expect.poll(async () => { const r = await rect(); return Math.round(r.y + r.height); }).toBe(900 - 12);
-  const tall = await rect();
-  expect(tall.y).toBeLessThan(first);
+  expect((await rect()).y).toBeLessThan(first);
   await dialog.getByRole('button', { name: '← Zurück' }).click();
   await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toBeVisible();
   // wieder klein: zurück an die Oberkante vom Öffnen

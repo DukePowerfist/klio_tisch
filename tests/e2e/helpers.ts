@@ -120,6 +120,19 @@ export async function expectCount(page: Page, zoneLabel: string, n: number) {
 }
 
 /** Feld eines Bogens ausfüllen und bestätigen. */
+/** Nach einem Ansichtswechsel ohne Bewegung (reducedMotion): die Ansicht gleitet nicht, aber der Zoom passt sich noch
+ *  an. Nicht `settled`: das wartet auf Animationen, und hier läuft keine. */
+export const viewSettled = (page: Page) => page.waitForTimeout(200);
+
+/** Im offenen Trumpf-Dialog: Anlass (oder „Freie Wahl“), Reiter, Karte, „Trumpf nehmen“ (5zw, 5zx). Nur die Klicks;
+ *  was danach am Bogen steht, prüft der Test selbst. */
+export async function pickTrump(page: Page, via: string | RegExp, tab: RegExp, card: RegExp) {
+  await page.getByRole('button', { name: via }).click();
+  await page.getByRole('tab', { name: tab }).click();
+  await page.getByRole('button', { name: card }).click();
+  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+}
+
 export async function setField(page: Page, seat: string, field: string, value: string) {
   const input = page.locator(`[data-sheet=${seat}] [data-field="${field}"]`);
   await input.click();

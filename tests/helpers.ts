@@ -10,6 +10,7 @@ import { validateContent, type KlioContent } from '../src/rules/klio/content/val
 import { sheetOf } from '../src/rules/klio/events';
 import { createKlioRuleset } from '../src/rules/klio/ruleset';
 import type { KlioSheet, KlioState } from '../src/rules/klio/state';
+import type { Rect } from '../src/ui/layout';
 import { readContent } from './content/read';
 
 const validated = validateContent(readContent());
@@ -79,3 +80,6 @@ export function place(state: K, zone: string, cards: string[], faceUp = false): 
   for (const c of ids) next.faceUp[c] = faceUp;
   return next;
 }
+
+/** Zwei Rechtecke überdecken sich (Berührung zählt nicht) */
+export const overlaps = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;

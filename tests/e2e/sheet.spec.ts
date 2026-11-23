@@ -1,9 +1,12 @@
 // Bögen und Trümpfe im lokalen Betrieb (Schritt 3b).
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { dragFromTo, makePng, ready, setField as setSeatField, setPlayers, zoneCenter, zoomIn } from './helpers';
+import { readContent } from '../content/read';
+import { dragFromTo, makePng, pickTrump, ready, setField as setSeatField, setPlayers, zoneCenter, zoomIn } from './helpers';
 
 const sheet1 = (page: Page) => page.locator('[data-sheet=seat1]');
+/** Trümpfe aus dem Inhalt: Zahlen je Gruppe stehen nicht noch einmal im Test */
+const TRUMPS = (readContent() as unknown as { trumps: { category: string }[] }).trumps;
 
 const setField = (page: Page, field: string, value: string) => setSeatField(page, 'seat1', field, value);
 
@@ -357,10 +360,7 @@ async function chooseAnatomie(page: Page) {
   await page.keyboard.press('1');
   await setField(page, 'attributes.V', '3');
   await sheet1(page).locator('[data-slot="0"]').click();
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Verstehen/ }).click();
-  await page.getByRole('button', { name: /Anatomie/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Verstehen/, /Anatomie/);
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await page.mouse.move(5, 5);
 }
@@ -387,10 +387,7 @@ test('Trumpf per Tastatur: Leertaste wählt, Enter heftet die Großansicht an, E
   await setField(page, 'attributes.V', '3');
   await sheet1(page).locator('[data-slot="0"]').focus();
   await page.keyboard.press(' ');
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Verstehen/ }).click();
-  await page.getByRole('button', { name: /Anatomie/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Verstehen/, /Anatomie/);
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await page.mouse.move(5, 5);
   const slot = sheet1(page).locator('[data-slot="0"]');
@@ -419,10 +416,7 @@ test('Trumpf: Starttrumpf wählen, Großansicht, entfernen', async ({ page }) =>
   await page.keyboard.press('1');
   await setField(page, 'attributes.V', '3');
   await sheet1(page).locator('[data-slot="0"]').click();
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Verstehen/ }).click();
-  await page.getByRole('button', { name: /Anatomie/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Verstehen/, /Anatomie/);
   await expect(page.getByRole('status')).toHaveText('Bogen 1: Trumpf „Anatomie“ gewählt');
   await expect(sheet1(page).locator('[data-slot="0"] .tcard')).toContainText('Anatomie');
   await sheet1(page).locator('[data-slot="0"]').click();
@@ -499,10 +493,7 @@ test('Leeres Trumpffeld (5zn): Geisterkarte statt gelbem Kasten, nur beim Überf
 
   // Starttrumpf nehmen: keine Quelle mehr offen. Kein Feld hat eine Karte, die Zeile steht unter dem Plus
   await slot(0).click();
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Körper/ }).click();
-  await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Körper/, /Schnelle Reflexe/);
   await expect(slot(0).locator('.tcard')).toHaveCount(1);
   await expect(slot(0)).not.toHaveAttribute('aria-label');
   await slot(1).hover();
@@ -532,10 +523,7 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await setField(page, 'strengths.text.1', 'Peitsche');
   // erst einen Starttrumpf, dann Lampen markieren
   await sheet1(page).locator('[data-slot="0"]').click();
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Körper/ }).click();
-  await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Körper/, /Schnelle Reflexe/);
   for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
   await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '3');
   await sheet1(page).locator('[data-slot="1"]').click();
@@ -557,10 +545,7 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await setField(page, 'attributes.K', '2');
   await setField(page, 'strengths.text.1', 'Peitsche');
   await sheet1(page).locator('[data-slot="0"]').click();
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Körper/ }).click();
-  await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Körper/, /Schnelle Reflexe/);
   for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
   await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '3');
   await sheet1(page).locator('[data-slot="1"]').click();
@@ -611,10 +596,7 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await page.getByRole('button', { name: 'Zufälliger Trumpf' }).click();
   await expect(page.getByRole('status')).toHaveText(/^Bogen 1: Trumpf „.+“ gewählt$/);
   await sheet1(page).locator('[data-slot="1"]').click();
-  await page.getByRole('button', { name: 'Freie Wahl' }).click();
-  await page.getByRole('tab', { name: /^Verschiedene/ }).click();
-  await page.getByRole('button', { name: /Kraftakt/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, 'Freie Wahl', /^Verschiedene/, /Kraftakt/);
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Kraftakt');
 });
 
@@ -653,7 +635,7 @@ test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand a
   await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne voll: erst eine Stärke verbessern, dann einen Trumpf');
 });
 
-test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Schritt, Reiter statt Gruppenfrage (5zx)', async ({ page }) => {
+test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Schritt, Reiter mit der Zahl der wählbaren (5zx)', async ({ page }) => {
   await page.keyboard.press('1');
   await setField(page, 'attributes.K', '3');
   await setField(page, 'attributes.P', '2');
@@ -677,7 +659,7 @@ test('Trumpf-Dialog, Ablauf (5zv): Wegleiste mit getroffenen Wahlen, Grund je Sc
   // Gruppe: wählbare zuerst, darunter „Nicht wählbar“ mit Grund; die Leiste ändert sich dabei nicht
   await tabs.nth(1).click();
   await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
-  await expect(dialog.locator('.cards .tc')).toHaveCount(11);
+  await expect(dialog.locator('.cards .tc')).toHaveCount(TRUMPS.filter((t) => t.category === 'K').length);
   await expect(dialog.locator('.cards .tc:not(:disabled)')).toHaveCount(await count(1));
   await expect(dialog.getByRole('heading', { name: 'Nicht wählbar' })).toBeVisible();
   expect(await dialog.locator('.cards .tc').evaluateAll((els) => els.map((e) => (e as HTMLButtonElement).disabled).join(''))).toMatch(/^(false)+(true)+$/);
@@ -744,11 +726,11 @@ test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der 
   await page.keyboard.press('1');
   const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
   const mark = sheet1(page).locator('[data-lantern-improve]');
-  for (const [i, group, name] of [[0, /^Körper/, /./], [1, /^Körper/, /./], [2, /^Verstehen/, /./], [3, /^Präsenz/, /./]] as const) {
+  for (const [i, tab] of [/^Körper/, /^Körper/, /^Verstehen/, /^Präsenz/].entries()) {
     await sheet1(page).locator(`[data-slot="${i}"]`).click();
     await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
-    await dialog.getByRole('tab', { name: group }).click();
-    await dialog.locator('.cards .tc:not(:disabled)').filter({ hasText: name }).first().click();
+    await dialog.getByRole('tab', { name: tab }).click();
+    await dialog.locator('.cards .tc:not(:disabled)').first().click();
     await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
     await expect(sheet1(page).locator(`[data-slot="${i}"] .tcard`)).toBeVisible();
     await page.mouse.move(5, 5);
@@ -788,10 +770,10 @@ test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der 
 test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment je Attribut, Text nicht unter 9 px und sonst ausgeblendet', async ({ page }) => {
   await page.keyboard.press('1');
   const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
-  const free = async (i: number, category: RegExp, name: RegExp) => {
+  const free = async (i: number, tab: RegExp, name: RegExp) => {
     await slot(i).click();
     await page.getByRole('button', { name: 'Freie Wahl' }).click();
-    await page.getByRole('tab', { name: category }).click();
+    await page.getByRole('tab', { name: tab }).click();
     // im Auswahlfenster steht der Text immer ganz da, nichts wird ausgeblendet
     const inList = page.getByRole('button', { name }).locator('.tcard .tr');
     expect(await inList.evaluate((el) => !el.classList.contains('cut') && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
@@ -861,12 +843,9 @@ test('Trumpf-Großansicht (5zq): festes Format 5:7, passt ins Fenster, auch der 
   const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
   // die drei längsten Texte (316, 259, 258 Zeichen) und der längste Name (zweizeilig)
   const picks: [RegExp, RegExp][] = [[/^Verstehen/, /Schreib das auf!/], [/^Verstehen/, /Eine Frage der Logik/], [/^Verschiedene/, /Sprechende Tote/], [/^Verschiedene/, /Historischer Positivismus/]];
-  for (const [i, [category, name]] of picks.entries()) {
+  for (const [i, [tab, name]] of picks.entries()) {
     await slot(i).click();
-    await page.getByRole('button', { name: 'Freie Wahl' }).click();
-    await page.getByRole('tab', { name: category }).click();
-    await page.getByRole('button', { name }).click();
-    await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+    await pickTrump(page, 'Freie Wahl', tab, name);
     await expect(slot(i).locator('.tcard')).toHaveCount(1);
   }
   const big = page.locator('.big .tcard');
@@ -914,8 +893,8 @@ test('Bedienelemente: kleine erst ab Zoom 1,3, am eigenen Bogen der Rollenansich
   // Draufsicht bei Zoom 1: kleine verborgen
   await expect(strike('seat1')).toBeHidden();
   // bei 2 wie bei 4 Spielern: ab Zoom 1,3 sichtbar, beim Herauszoomen wieder verborgen
-  for (const players of ['4', '2']) {
-    await setPlayers(page, Number(players));
+  for (const players of [4, 2]) {
+    await setPlayers(page, players);
     await page.mouse.move(800, 450);
     const w0 = (await page.locator('.board').boundingBox())!.width;
     await page.mouse.wheel(0, -200); // Zoom etwa 1,27

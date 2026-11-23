@@ -46,8 +46,13 @@ test('kein Umriss über vollen Notizen (der Host würde ablehnen)', async ({ pag
 
 // ---------- Karte in der Hand in einheitlicher Größe (11.10, Schritt 5za) ----------
 
-/** Breite der obersten Deckkarte in alter Größe (Maßstab 1) */
-const deckCardWidth = async (page: Page) => (await page.locator('.scene > .card').last().boundingBox())!.width;
+/** Breite der obersten Deckkarte in alter Größe (Maßstab 1). Gemessen wird die Karte unter der Mitte des Decks: die
+ *  letzte Karte im DOM ist die mit der höchsten Kennung (Board.svelte sortiert danach) und liegt nach Zügen nicht
+ *  unbedingt im Deck. */
+const deckCardWidth = async (page: Page) => {
+  const deck = await zoneCenter(page, 'DECK');
+  return page.evaluate(({ x, y }) => document.elementFromPoint(x, y)!.closest<HTMLElement>('.scene > .card')!.getBoundingClientRect().width, deck);
+};
 
 test('Deckkarte in der Hand: 0,6 so breit wie im Deck, über dem Filz wie über der Ablage; Umriss liegt über ihr', async ({ page }) => {
   const deck = await zoneCenter(page, 'DECK');

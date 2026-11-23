@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { SEATS, type SeatId } from '../../src/engine/types';
 import { seatVisibleFor } from '../../src/engine/zones';
 import { cardSize, computeLayout, FELT_RIM, freePosAt, placeCards, pointerAt, pointerPosAt, type Layout, type Rect } from '../../src/ui/layout';
-import { content, fresh, lay } from '../helpers';
+import { content, fresh, lay, overlaps } from '../helpers';
 
 const PLAYERS = [1, 2, 3, 4] as const;
 
@@ -18,7 +18,6 @@ const viewsFor = (players: number): { name: string; L: Layout }[] => [
 ];
 const pairsFor = (players: number) => viewsFor(players).flatMap((from) => viewsFor(players).map((to) => ({ from, to })));
 
-const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const grow = (r: Rect, d: number): Rect => ({ x: r.x - d, y: r.y - d, w: r.w + 2 * d, h: r.h + 2 * d });
 const rel = (r: Rect, p: { x: number; y: number }) => ({ x: (p.x - r.x) / r.w, y: (p.y - r.y) / r.h });
 const at = (r: Rect, f: { x: number; y: number }) => ({ x: r.x + f.x * r.w, y: r.y + f.y * r.h });
@@ -76,9 +75,9 @@ describe('Bögen in allen Ansichten (5q): Invarianten', () => {
         const felt = grow(L.middle, FELT_RIM);
         for (const b of shown) {
           const what = `${n} Spieler, ${name}, ${b.seat}`;
-          expect(overlap(b, felt), `${what} über dem Filz`).toBe(false);
+          expect(overlaps(b, felt), `${what} über dem Filz`).toBe(false);
           expect(b.x >= 0 && b.y >= 0 && b.x + b.w <= L.board.w && b.y + b.h <= L.board.h, `${what} über der Kante`).toBe(true);
-          for (const o of shown) if (o !== b) expect(overlap(b, o), `${what} über ${o.seat}`).toBe(false);
+          for (const o of shown) if (o !== b) expect(overlaps(b, o), `${what} über ${o.seat}`).toBe(false);
         }
       }
     }

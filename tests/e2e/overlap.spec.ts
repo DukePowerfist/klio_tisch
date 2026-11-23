@@ -2,14 +2,12 @@
 // der SL-Leiste), „DECK“, Kartenvorschau.
 
 import { expect, test, type Page } from '@playwright/test';
-import { box, drawOracle, expectCount, fromMenu, openMenuAndClick, ready, type Box } from './helpers';
+import { box, drawOracle, expectCount, fromMenu, openMenuAndClick, ready, viewSettled, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
 const apart = (a: Box, b: Box) => a.x >= b.x + b.width || a.x + a.width <= b.x || a.y >= b.y + b.height || a.y + a.height <= b.y;
 const label = (page: Page, text: string) => page.locator('.zone .label').filter({ hasText: new RegExp(`^${text}`) }).first();
-/** Ansicht gleitet nicht (reducedMotion), aber der Zoom passt sich nach dem Wechsel an */
-const settled = (page: Page) => page.waitForTimeout(200);
 
 test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „DECK“ ganz lesbar: beide Fenstergrößen, beide Ansichten, Protokoll offen und zu (5zb)', async ({ page }) => {
   // mit gezogenem Orakel, damit die herausragenden Karten mitzählen
@@ -20,7 +18,7 @@ test('Blatt und Schachtel verdecken „Fortschritt“ und „KREUZ“ nicht, „
       if (log) await fromMenu(page, 'Protokoll');
       for (const key of ['0', '1']) {
         await page.keyboard.press(key);
-        await settled(page);
+        await viewSettled(page);
         const what = `${width} × ${height}, Protokoll ${log}, Taste ${key}`;
         for (const sel of ['[data-expedition-sheet]', '[data-oracle-box] .reach']) {
           const thing = await box(page.locator(sel));
@@ -42,7 +40,7 @@ test('Meldung nach dem Ziehen verdeckt Blatt und Schachtel nicht und steht sonst
   // jede Karte bringt eine neue Meldung, die beim Erscheinen misst
   for (const [i, [width, height]] of ([[1600, 900], [1024, 640], [2400, 900]] as const).entries()) {
     await page.setViewportSize({ width, height });
-    await settled(page);
+    await viewSettled(page);
     await openMenuAndClick(page, 'DECK', 'Ziehen');
     await page.keyboard.press('Escape');
     await expectCount(page, 'ABLAGE', i + 1);

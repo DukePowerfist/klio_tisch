@@ -6,7 +6,7 @@ import type { Actor, SeatId, TableState, ZoneId } from '../../src/engine/types';
 import { computeLayout, type Rect } from '../../src/ui/layout';
 import { MENU_GAP, placeMenu, placePlateMenu, shuffleEffect, stackEntries, TIP_INSET, type Area, type Side, type StackContext } from '../../src/ui/stackMenu';
 import { can } from '../../src/engine/permissions';
-import { content, engine, fresh, GM, place, player, ruleset, SPECTATOR, type K } from '../helpers';
+import { content, engine, fresh, GM, overlaps, place, player, ruleset, SPECTATOR, type K } from '../helpers';
 
 /** Probelauf wie session.predict: Stand danach oder null bei Ablehnung */
 const predictFor = (state: K, actor = GM) => (cmd: { type: string; zone: ZoneId }) => {
@@ -129,7 +129,6 @@ const TARGET: Record<string, ZoneId> = { deck: 'discard', diamonds_easy: 'displa
 const PREFERRED: Record<string, Side> = { deck: 'left', diamonds_easy: 'left', diamonds_medium: 'right', diamonds_hard: 'right', clubs: 'right' };
 const sidesFor = (side: Side): Side[] => (side === 'left' ? ['left', 'right'] : ['right', 'left']);
 
-const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 const inside = (r: Rect, b: Rect) => r.x >= b.x && r.y >= b.y && r.x + r.w <= b.x + b.w && r.y + r.h <= b.y + b.h;
 
 describe('Stapelmenü: Lage am Stapel mit den echten Maßen (10.2)', () => {

@@ -2,7 +2,7 @@
 // neuen Trumpfs und Aufrichten der Großansicht (5zr, 10.20).
 
 import { expect, test } from '@playwright/test';
-import { ready, settled } from '../e2e/helpers';
+import { pickTrump, ready, settled } from '../e2e/helpers';
 
 test('Geisterkarte (5zn): legt sich beim Überfahren ins Feld, auch im ersten freien', async ({ page }) => {
   await ready(page);
@@ -35,10 +35,7 @@ test('Neuer Trumpf (5zr): dreht sich einmal von der Rückseite um, nicht nach de
     return Math.abs(Math.round((Math.atan2(m.m31, m.m11) * 180) / Math.PI));
   });
   await slot.click();
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await page.getByRole('tab', { name: /^Körper/ }).click();
-  await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  await page.getByRole('button', { name: 'Trumpf nehmen' }).click();
+  await pickTrump(page, /^Starttrumpf/, /^Körper/, /Schnelle Reflexe/);
   // unterwegs: Rückseite der Spielkarten im Feld, die Karte steht schräg
   await expect(slot.locator('.turn.dealt')).toHaveCount(1);
   await expect(slot.locator('.tback')).toHaveCSS('background-image', /cards\/back\.webp/);

@@ -81,5 +81,5 @@ test('Aus: Knöpfe geben beim Drücken nicht nach, Fenster wachsen nicht', async
   await page.mouse.up();
   const dialog = page.getByRole('dialog', { name: 'Tisch zurücksetzen?' });
   await expect(dialog).toBeVisible();
-  expect(await dialog.evaluate((e) => getComputedStyle(document.documentElement).getPropertyValue('--pop-from').trim())).toBe('1');
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--pop-from').trim())).toBe('1');
 });

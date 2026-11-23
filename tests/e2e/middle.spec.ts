@@ -1,7 +1,7 @@
 // Gemeinsame Tischmitte (Schritt 5d, ARCHITEKTUR.md 10): Abnahme in der Oberfläche.
 
 import { expect, test, type Page } from '@playwright/test';
-import { box, dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, setPlayers, zoneCenter, type Box } from './helpers';
+import { box, dragFromTo, expectCount, fromMenu, menuButton, openSettings, ready, saveArchive, setPlayers, zoneCenter, viewSettled, type Box } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -14,8 +14,6 @@ async function nearDeck(page: Page) {
 }
 const inside = (c: Box, r: Box, tol = 1) =>
   c.x >= r.x - tol && c.y >= r.y - tol && c.x + c.width <= r.x + r.width + tol && c.y + c.height <= r.y + r.height + tol;
-/** Ansicht gleitet nicht (reducedMotion), aber der Zoom passt sich nach dem Wechsel an */
-const settled = (page: Page) => page.waitForTimeout(200);
 
 test('Frei liegende Karte zwischen den Stapeln liegt in beiden Ansichten und bei jedem Zoom gleich zu ihnen', async ({ page }) => {
   // zwischen Deck und Gefahr, links unter dem Deck
@@ -25,7 +23,7 @@ test('Frei liegende Karte zwischen den Stapeln liegt in beiden Ansichten und bei
   const over = await nearDeck(page);
 
   await page.keyboard.press('2');
-  await settled(page);
+  await viewSettled(page);
   const role = await nearDeck(page);
   expect(role.x).toBeCloseTo(over.x, 2);
   expect(role.y).toBeCloseTo(over.y, 2);
@@ -34,7 +32,7 @@ test('Frei liegende Karte zwischen den Stapeln liegt in beiden Ansichten und bei
   const d = await zoneCenter(page, 'DECK');
   await page.mouse.move(d.x, d.y);
   await page.mouse.wheel(0, -400);
-  await settled(page);
+  await viewSettled(page);
   expect((await zoneCenter(page, 'DECK')).box.width).toBeGreaterThan(d.box.width * 1.3);
   const zoomed = await nearDeck(page);
   expect(zoomed.x).toBeCloseTo(over.x, 2);
@@ -51,7 +49,7 @@ test('Draufsicht: zwischen Bogen und Tischmitte abgelegt liegt die Karte ganz in
   expect(c.x).toBeCloseTo(panel.x, 0);
   // in der Rollenansicht ebenso am linken Rand
   await page.keyboard.press('2');
-  await settled(page);
+  await viewSettled(page);
   const p2 = await box(page.locator('.panel'));
   const c2 = (await free(page).boundingBox())!;
   expect(inside(c2, p2)).toBe(true);
@@ -60,7 +58,7 @@ test('Draufsicht: zwischen Bogen und Tischmitte abgelegt liegt die Karte ganz in
 
 test('Rollenansicht: in der Lücke neben den kleinen Bögen abgelegt liegt die Karte ganz in der Tischmitte am rechten Rand', async ({ page }) => {
   await page.keyboard.press('2');
-  await settled(page);
+  await viewSettled(page);
   const panel = await box(page.locator('.panel'));
   const small = await box(page.locator('[data-sheet=seat1]'));
   expect(small.x).toBeGreaterThan(panel.x + panel.width); // Spalte rechts der Tischmitte
@@ -72,7 +70,7 @@ test('Rollenansicht: in der Lücke neben den kleinen Bögen abgelegt liegt die K
   expect(c.x + c.width).toBeCloseTo(panel.x + panel.width, 0);
   // in der Draufsicht ebenso, nicht über dem Bogen von Spieler 2
   await page.keyboard.press('0');
-  await settled(page);
+  await viewSettled(page);
   const p0 = await box(page.locator('.panel'));
   const c0 = (await free(page).boundingBox())!;
   expect(inside(c0, p0)).toBe(true);
@@ -90,7 +88,7 @@ test('Rollenansicht: kein Bogen unter dem Menüknopf, bei 2 bis 4 Spielern, mit 
         await page.keyboard.press('0');
         await setPlayers(page, Number(players));
         await page.keyboard.press('1');
-        await settled(page);
+        await viewSettled(page);
         const m = (await menu.boundingBox())!;
         const sheets = await page.locator('[data-sheet]').all();
         expect(sheets.length).toBe(Number(players));

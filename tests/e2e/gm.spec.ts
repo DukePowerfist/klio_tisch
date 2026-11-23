@@ -1,7 +1,7 @@
 // SL-Funktionen im lokalen Betrieb (Schritt 3c).
 
 import { expect, test, type Locator } from '@playwright/test';
-import { dragFromTo, expectCount, fixRolls, fromMenu, LONGEST, menuButton, nameCharacter, openMenuAndClick, openSettings, oracleCardName, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
+import { dragFromTo, expectCount, fromMenu, menuButton, nameCharacter, openMenuAndClick, openSettings, oracleCardName, ready, resetTable, setPlayers, shuffleBack, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 

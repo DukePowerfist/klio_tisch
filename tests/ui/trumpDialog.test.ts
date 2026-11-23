@@ -44,15 +44,14 @@ describe('Trumpf-Dialog', () => {
     for (const key of ['trumpDialog.progress.lamps', 'trumpDialog.progress.weaknessMarks']) expect(resolveText(content, key), key).toBeTypeOf('string');
   });
 
-  it('Wegleiste (5zv): Anlass, Schritte mit getroffener Wahl, Gruppe, Trumpf; übergangene und entfallene Schritte fehlen', () => {
+  it('Wegleiste (5zv, 5zx): Anlass, Schritte mit getroffener Wahl, Trumpf, Bestätigen; übergangene und entfallene Schritte fehlen', () => {
     const show = (items: ReturnType<typeof trail>) => items.map((i) => `${i.state}:${i.id}${i.value === null ? '' : `=${typeof i.value === 'string' ? i.value : i.value.key}`}`);
     const ctx = ctxWith((b) => { b.trumps[0] = 'anatomie'; b.newScars = 1; b.lamps = [true, true, true]; b.strengths[1]!.text = 'Peitsche'; b.weaknessMarks = [true, true, true]; b.weaknesses = ['Kälte', '']; });
     expect(trail({ at: 'sources' }, ctx)).toEqual([]);
-    // Narbe: Schritt, dann Gruppe, dann Trumpf
+    // Narbe: Schritt, dann Trumpf, dann Bestätigen
     const scar = { kind: 'source' as const, source: source('scar'), improveOnly: false };
     expect(show(trail({ at: 'step', name: 'moveAttributePoint', required: true, path: scar, choices: {}, index: 0 }, ctx))).toEqual(['done:source', 'now:moveAttributePoint', 'todo:trump', 'todo:confirm']);
     const moved = { moveAttribute: { lowered: 'K' as const, raised: 'P' as const } };
-    expect(show(trail({ at: 'trumps', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:trump', 'todo:confirm']);
     expect(show(trail({ at: 'trumps', path: scar, choices: moved }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', 'now:trump', 'todo:confirm']);
     expect(trail({ at: 'trumps', path: scar, choices: moved }, ctx)[0]!.label).toBe('Neue Narbe');
     // Erlebnis: neue Formulierung, sonst der alte Text; ohne Verbesserung fehlt das Glied
@@ -67,7 +66,7 @@ describe('Trumpf-Dialog', () => {
     expect(show(trail({ at: 'trumps', path: weak, choices: { removeWeakness: 0 } }, ctx))[1]).toBe('done:chooseWeaknessToRemove=Kälte');
     const none = ctxWith((b) => { b.weaknessMarks = [true, true, true]; });
     expect(show(trail({ at: 'trumps', path: weak, choices: {} }, none))).toEqual(['done:source', 'now:trump', 'todo:confirm']);
-    // Bestätigen: Gruppe und Name des Trumpfs stehen in der Leiste
+    // Bestätigen: der Name des Trumpfs steht in der Leiste
     const stoiker = content.trumps.find((t) => t.id === 'stoiker')!;
     expect(show(trail({ at: 'confirm', path: scar, choices: moved, trump: stoiker, shown: '' }, ctx))).toEqual(['done:source', 'done:moveAttributePoint=Körper −1, Präsenz +1', `done:trump=${stoiker.name}`, 'now:confirm']);
     expect(show(trail({ at: 'confirm', path: { ...exp, improveOnly: true }, choices: { improveStrength: { index: 1, text: '' } }, trump: undefined, shown: '' }, ctx))).toEqual(['done:source', 'done:improveStrength=Peitsche', 'now:confirm']);
@@ -141,19 +140,20 @@ describe('Trumpf-Dialog', () => {
     expect(finalCommand('seat1', path, { improveStrength: { index: 0, text: '' } }, undefined)).toEqual({ type: 'trump.choose', seat: 'seat1', source: 'experience', improveStrength: { index: 0, text: '' } });
   });
 
-  it('Kategorien zählen wählbare Trümpfe; ausgegraute haben einen Grund', () => {
+  it('Reiter (5zx) zählen wählbare Trümpfe je Kategorie; gesperrte haben einen Grund', () => {
     const ctx = ctxWith((b) => (b.attributes = { K: 2, V: 1, P: 1 }));
     const start = { kind: 'source' as const, source: source('start'), improveOnly: false };
     const rows = trumpRows(content, ctx, start, {});
     expect(selectableByCategory(rows)).toMatchObject({ K: 4, V: 0 });
     expect(rows.find((r) => r.trump.id === 'stoiker')!.why).toEqual({ key: 'source.start.levelWhy' });
-    expect(selectableByCategory(trumpRows(content, ctx, { kind: 'free' }, {})).V).toBe(11);
+    const inGroup = (c: string) => content.trumps.filter((t) => t.category === c).length;
+    expect(selectableByCategory(trumpRows(content, ctx, { kind: 'free' }, {})).V).toBe(inGroup('V'));
     // Reiter (5zx): „alle wählbaren“ ohne gesperrte; eine Gruppe mit den wählbaren zuerst und den gesperrten samt Grund
     const all = tabRows(rows, 'all');
     expect(all.ok.length).toBe(Object.values(selectableByCategory(rows)).reduce((a, b) => a + b));
     expect(all.off).toEqual([]);
     const k = tabRows(rows, 'K');
-    expect([k.ok.length, k.off.length]).toEqual([4, 7]);
+    expect([k.ok.length, k.off.length]).toEqual([4, inGroup('K') - 4]);
     expect(k.ok.every((r) => r.trump.category === 'K' && !r.why) && k.off.every((r) => r.trump.category === 'K' && r.why)).toBe(true);
     expect(tabRows(rows, 'V')).toMatchObject({ ok: [] });
   });

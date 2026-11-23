@@ -5,7 +5,7 @@ import { seededRng } from '../../src/engine/rng';
 import type { Actor, CardId, CardSource, CardTarget, FreePos } from '../../src/engine/types';
 import { dropHints, dropTarget, inHand } from '../../src/ui/dropHint';
 import { cardRect, cardSize, computeLayout, freeHeaps, lampGap, placeCards, pointerAt, pointerPosAt, zoneAt, type Rect } from '../../src/ui/layout';
-import { content, engine, fresh, GM, lay, layAll, place, player, run, type K } from '../helpers';
+import { content, engine, fresh, GM, lay, layAll, overlaps, place, player, run, type K } from '../helpers';
 
 const L = computeLayout(content, 4, null, null);
 const center = (id: string) => {
@@ -27,7 +27,6 @@ const freeSpot = (): [number, number] => {
   const [x, y] = center('discard');
   return ([[x + 120, y], [x, y + 120], [x - 120, y], [x, y - 120]] as [number, number][]).find(([a, b]) => !zoneAt(L, a, b))!;
 };
-const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 /** wie das Brett: Ziel bestimmen, Probelauf, Umrisse */
 function hints(s: K, cards: string[], from: CardSource, to: CardTarget | null, actor: Actor = GM) {
   if (!to) return [];

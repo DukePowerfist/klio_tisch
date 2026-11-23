@@ -1,7 +1,7 @@
 // Laterne (Schritt 5n, ARCHITEKTUR.md 11.9): Lage, Anzünden und Löschen für alle, Bedienung des Tisches bleibt.
 
 import { expect, test, type Page } from '@playwright/test';
-import { fromMenu, holdOver, openSettings, ready, zoneCenter } from './helpers';
+import { fromMenu, holdOver, openSettings, ready, viewSettled, zoneCenter } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -16,7 +16,7 @@ async function nearDeck(page: Page) {
 test('Laterne links neben dem Zielwert, in beiden Ansichten an derselben Stelle der Tischmitte', async ({ page }) => {
   const over = await nearDeck(page);
   await page.keyboard.press('3');
-  await page.waitForTimeout(200);
+  await viewSettled(page);
   const role = await nearDeck(page);
   expect(role.x).toBeCloseTo(over.x, 2);
   expect(role.y).toBeCloseTo(over.y, 2);

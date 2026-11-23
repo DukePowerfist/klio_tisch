@@ -2,11 +2,10 @@
 
 import { describe, expect, it } from 'vitest';
 import { besideObjects, cardSize, computeLayout, freePosAt, lampGap, oracleRect, oracleScale, rotatedBounds, type Layout, type Rect } from '../../src/ui/layout';
-import { content } from '../helpers';
+import { content, overlaps } from '../helpers';
 
 const E = content.layouts.middle.expedition;
 const O = content.layouts.middle.oracle;
-const overlap = (a: Rect, b: Rect) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 /** Unterkante der Beschriftung einer Tischzone (ZoneView: 4 Abstand, Zeile 20 bzw. klein 17, Rand 2 × 2) */
 const labelBottom = (L: Layout, id: string, small: boolean) => {
   const z = L.zones[id]!;
@@ -61,7 +60,7 @@ describe('Expeditionsblatt in Ruhe (5zb)', () => {
       const top = paper.y - E.lift - corner;
       expect(top, label).toBeGreaterThan(labelBottom(L, 'progress', true));
       const lifted = { ...paper, y: top, h: paper.h };
-      for (const z of L.zoneList.filter((z) => !z.owner)) expect(overlap(lifted, z), `${label}, ${z.id}`).toBe(false);
+      for (const z of L.zoneList.filter((z) => !z.owner)) expect(overlaps(lifted, z), `${label}, ${z.id}`).toBe(false);
     }
   });
 
@@ -97,7 +96,7 @@ describe('Kartenschachtel (5zb)', () => {
       expect(r.x + r.w, label).toBeLessThan(L.middle.x + L.middle.w);
       const clubs = L.zones['clubs']!;
       expect(Math.abs(L.oracle.cx - (clubs.x + clubs.w / 2)), label).toBeLessThan(1);
-      for (const z of L.zoneList.filter((z) => !z.owner)) expect(overlap({ ...r, y: cardTop, h: L.board.h - cardTop }, z), `${label}, ${z.id}`).toBe(false);
+      for (const z of L.zoneList.filter((z) => !z.owner)) expect(overlaps({ ...r, y: cardTop, h: L.board.h - cardTop }, z), `${label}, ${z.id}`).toBe(false);
     }
   });
 
@@ -119,7 +118,7 @@ describe('Freie Karten weichen Blatt und Schachtel aus (5zb, F5, U3)', () => {
     const pos = freePosAt(L, x, y);
     return { x: L.middle.x + pos.x * L.middle.w, y: L.middle.y + pos.y * L.middle.h, ...c };
   };
-  const clear = (r: Rect) => L.obstacles.every((o) => !overlap(r, o));
+  const clear = (r: Rect) => L.obstacles.every((o) => !overlaps(r, o));
   const inMiddle = (r: Rect) => r.x >= L.middle.x - 0.1 && r.y >= L.middle.y - 0.1 && r.x + r.w <= L.middle.x + L.middle.w + 0.1 && r.y + r.h <= L.middle.y + L.middle.h + 0.1;
 
   it('auf das Blatt abgelegt landet die Karte knapp darüber, nicht darauf', () => {
