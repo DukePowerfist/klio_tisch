@@ -5,6 +5,11 @@ import content from 'virtual:klio-content';
 import { RANKS, type CardId, type RankId, type SuitId } from '../engine/types';
 import { cardName, isRed, rankText, SUIT_SYMBOL, t } from './texts';
 
+/** Bild des Blatts, in Ruhe und in der Leselage dasselbe */
+export const EXPEDITION_IMAGE = `${import.meta.env.BASE_URL}assets/sheet/expedition.webp`;
+/** ab so viel Bewegung (Bildschirmpunkte) ist es ein Ziehen am Blatt, sonst ein Klick (wie bei Karten) */
+export const PULL_SLOP = 4;
+
 /** Die Farbe zieht der Stand heute nicht (das Regelwerk nennt keine); kommt sie dazu, reicht sie nur hier durch. */
 export type ExpeditionCard = { entry: string; rank: RankId; suit?: SuitId };
 

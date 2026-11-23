@@ -1,5 +1,5 @@
 // Wege zum Trumpf: liest trump-sources.yaml und setzt die Bausteine zusammen.
-// Genutzt vom Host (Prüfen, Ausführen) und später von der Oberfläche (ausgegraute Karten mit Grund).
+// Genutzt vom Host (Prüfen, Ausführen) und von der Oberfläche (ausgegraute Karten mit Grund).
 
 import type { z } from 'zod';
 import type { Rng, TextRef } from '../../engine/types';

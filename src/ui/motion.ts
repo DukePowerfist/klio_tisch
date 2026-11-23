@@ -3,6 +3,7 @@
 import type { CardId, EngineEvent, TableState, ZoneId } from '../engine/types';
 import { seatZoneId } from '../engine/zones';
 import type { KlioEvent } from '../rules/klio/events';
+import { freeSlot } from './layout';
 
 /** Was eine Karte gerade zeigt: Lage aus dem Stand, wem sie folgt, und ihr Platz im Stand (`CardPlace.slot`) */
 export type Frame = {
@@ -173,7 +174,7 @@ export function heapGrowth(events: readonly { type: string }[], prev: TableState
     const m = new Map<string, number>();
     for (const c of s.free) {
       const p = s.freePos[c];
-      if (p) m.set(`free#${p.anchor}:${p.x}:${p.y}`, (m.get(`free#${p.anchor}:${p.x}:${p.y}`) ?? 0) + 1);
+      if (p) m.set(freeSlot(p), (m.get(freeSlot(p)) ?? 0) + 1);
     }
     return m;
   };
@@ -219,10 +220,11 @@ export function planMove(prev: Frame, next: Frame, t: Timing, cause: Cause = nul
   return t.shift > 0 ? { kind: 'shift', duration: t.shift, easing: t.shiftEase } : JUMP;
 }
 
+const ARC_STEPS = 8;
 /** Bogen als Punkte (Anteil 0–1, Höhe): Parabel, Scheitel in der Mitte des Wegs */
-export function arcPoints(arc: number, steps = 8): { offset: number; y: number }[] {
-  return Array.from({ length: steps + 1 }, (_, i) => {
-    const p = i / steps;
+export function arcPoints(arc: number): { offset: number; y: number }[] {
+  return Array.from({ length: ARC_STEPS + 1 }, (_, i) => {
+    const p = i / ARC_STEPS;
     return { offset: p, y: -4 * arc * p * (1 - p) };
   });
 }

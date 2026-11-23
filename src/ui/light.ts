@@ -76,8 +76,8 @@ export function lightGradient(flame: { x: number; y: number }, light: { reach: n
 const HALO = 0.35;
 
 /** Warmer Schein um die Laterne (wird mit `screen` aufgelegt) */
-export function haloGradient(flame: { x: number; y: number }, strength = HALO): string {
-  const a = (v: number) => +(v * strength).toFixed(3);
+export function haloGradient(flame: { x: number; y: number }): string {
+  const a = (v: number) => +(v * HALO).toFixed(3);
   return `radial-gradient(circle at ${flame.x}px ${flame.y}px, rgba(255, 190, 110, ${a(0.55)}) 0, rgba(255, 160, 80, ${a(0.22)}) 90px, rgba(255, 140, 60, ${a(0.06)}) 260px, transparent 480px)`;
 }
 

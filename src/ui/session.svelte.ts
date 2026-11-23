@@ -162,7 +162,7 @@ class Session {
         this.state = state;
         // Kommen und Gehen vor den Ereignissen, wie beim Client (dort im onChange, der jeden Stand abdeckt)
         this.arrive((a, now) => a.seatsChanged(state.seats, now));
-        this.changed(state, events.map((e) => e.event), cause, own, prev);
+        this.changed(events.map((e) => e.event), cause, own, prev);
       },
       onOnline: (online) => (this.online = online),
       photos,
@@ -376,7 +376,7 @@ class Session {
         this.arrive((a, now) => a.seatsChanged(this.state!.seats, now));
         if (roleChanged) this.roleChanged(link.room, first, client.roleBy);
       },
-      onEvents: (events, cause, own) => this.changed(client.state!, events, cause, own, before),
+      onEvents: (events, cause, own) => this.changed(events, cause, own, before),
       photos,
       onReplaced: (reason) => this.replaced(reason),
       onWarning: (w) => {
@@ -537,8 +537,7 @@ class Session {
 
   /** Neuer Stand mit Ereignissen (`prev` = Stand davor); die Ablage des auslösenden Befehls ist damit bestätigt,
    *  fremde Züge mit bewegten Karten enden (8.3). */
-  private changed(state: KlioTableState, events: Event[], cause: string | undefined, own: boolean, prev: KlioTableState | null): void {
-    this.state = state;
+  private changed(events: Event[], cause: string | undefined, own: boolean, prev: KlioTableState | null): void {
     const moved = movedCards(events, prev);
     if (cause || moved.length) {
       this.remote.confirmed(cause, moved);

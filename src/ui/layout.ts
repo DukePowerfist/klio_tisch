@@ -144,7 +144,7 @@ export function computeLayout(c: KlioContent, players: number, viewRole: SeatId 
   for (const s of SEATS) {
     const sb = sheets[s];
     if (!sb.visible) continue;
-    const k = (SHEET_W * sb.scale) / imgW; // Bildpunkt → Tisch
+    const k = sheetImageScale(sb.scale, imgW);
     for (const t of c.sheet.zones) {
       const r = c.skinPaper.zones[t]!;
       const shape = L.shapes[`seat.${t}`] ?? {};
@@ -262,6 +262,15 @@ export type CardPlace = {
 
 export type Places = Partial<Record<CardId, CardPlace>>;
 
+/** Bildpunkt des Bogenbilds (Breite `imgW`) → Tischpunkte, für einen Bogen im Maßstab `scale` */
+export const sheetImageScale = (scale: number, imgW: number): number => (SHEET_W * scale) / imgW;
+
+/** Platz einer Karte (`CardPlace.slot`): Stelle im Stapel einer Zone bzw. Lage auf dem freien Tisch */
+export const zoneSlot = (zone: ZoneId, i: number): string => `${zone}#${i}`;
+export const freeSlot = (pos: FreePos): string => `free#${pos.anchor}:${pos.x}:${pos.y}`;
+/** Stelle im Stapel aus einem Zonenplatz, sonst 0 */
+export const slotIndex = (slot: string): number => Number(slot.split('#')[1] ?? 0);
+
 /** Stapelung: Zone k bekommt `10 + k · ZONE_Z` bis darunter, frei liegende Karten liegen ab `FREE_Z` darüber */
 const ZONE_Z = 100;
 const FREE_Z = 20000;
@@ -277,13 +286,13 @@ export function placeCards(state: TableState<unknown>, layout: Layout): Places {
     const top = cards.length - 1;
     cards.forEach((card, i) => {
       const stack = z.fanned ? {} : i === top ? { edges: stackEdges(cards.length) } : { under: true as const };
-      out[card] = { x: z.x + i * z.fanX, y: z.y + i * z.fanY, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: `${id}#${i}`, ...stack };
+      out[card] = { x: z.x + i * z.fanX, y: z.y + i * z.fanY, scale: z.scale, rotated: false, z: 10 + k * ZONE_Z + i, slot: zoneSlot(id, i), ...stack };
     });
   });
   state.free.forEach((card, i) => {
     const pos = state.freePos[card];
     const p = pos && pointAt(layout, pos);
-    if (p) out[card] = { ...p, scale: layout.freeCardScale, rotated: true, z: FREE_Z + i, slot: `free#${pos.anchor}:${pos.x}:${pos.y}` };
+    if (p) out[card] = { ...p, scale: layout.freeCardScale, rotated: true, z: FREE_Z + i, slot: freeSlot(pos) };
   });
   return out;
 }
@@ -342,6 +351,15 @@ export function freePosAt(layout: Layout, x: number, y: number, by: readonly [nu
   return { anchor: 'center', ...relIn(layout.middle, at.x, at.y) };
 }
 
+type Point = { x: number; y: number };
+/** liegt ein Rechteck der Größe `size` an der Stelle `p` ganz in `m`? */
+const fitsIn = (m: Rect, p: Point, size: { w: number; h: number }) => p.x >= m.x && p.y >= m.y && p.x + size.w <= m.x + m.w && p.y + size.h <= m.y + m.h;
+/** die Stelle mit dem kürzesten Weg von `from`; ohne Auswahl bleibt es bei `from` */
+const nearest = (options: Point[], from: Point): Point => {
+  const dist = (p: Point) => Math.hypot(p.x - from.x, p.y - from.y);
+  return options.sort((a, b) => dist(a) - dist(b))[0] ?? from;
+};
+
 /** Mindestabstand einer abgelegten Karte zur Laterne (11.9, F3) */
 const LAMP_GAP = 4;
 
@@ -352,10 +370,8 @@ function besideLamp(layout: Layout, r: Rect): { x: number; y: number } {
   const { lamp, middle: m } = layout;
   if (lampGap(lamp, r) >= LAMP_GAP) return r;
   const s = lamp.r + LAMP_GAP;
-  const fits = (p: { x: number; y: number }) => p.x >= m.x && p.y >= m.y && p.x + r.w <= m.x + m.w && p.y + r.h <= m.y + m.h;
-  const options = [{ x: lamp.cx - s - r.w, y: r.y }, { x: lamp.cx + s, y: r.y }, { x: r.x, y: lamp.cy - s - r.h }, { x: r.x, y: lamp.cy + s }].filter(fits);
-  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - r.x, p.y - r.y);
-  return options.sort((a, b) => dist(a) - dist(b))[0] ?? r;
+  const options = [{ x: lamp.cx - s - r.w, y: r.y }, { x: lamp.cx + s, y: r.y }, { x: r.x, y: lamp.cy - s - r.h }, { x: r.x, y: lamp.cy + s }].filter((p) => fitsIn(m, p, r));
+  return nearest(options, r);
 }
 
 /** Mindestabstand einer abgelegten Karte zu Blatt und Schachtel (5zb) */
@@ -370,13 +386,11 @@ export function besideObjects(layout: Layout, r: Rect): { x: number; y: number }
   const free = (p: Rect) => !obstacles.some((o) => hits(p, o, OBJECT_GAP - 0.01)) && lampGap(lamp, p) >= LAMP_GAP;
   if (!obstacles.some((o) => hits(r, o, OBJECT_GAP - 0.01))) return r;
   const g = OBJECT_GAP;
-  const fits = (p: { x: number; y: number }) => p.x >= m.x && p.y >= m.y && p.x + r.w <= m.x + m.w && p.y + r.h <= m.y + m.h;
   const options = obstacles.flatMap((o) => [
     { x: o.x - g - r.w, y: r.y }, { x: o.x + o.w + g, y: r.y }, { x: r.x, y: o.y - g - r.h },
     { x: o.x - g - r.w, y: o.y - g - r.h }, { x: o.x + o.w + g, y: o.y - g - r.h },
-  ]).filter((p) => fits(p) && free({ ...p, w: r.w, h: r.h }));
-  const dist = (p: { x: number; y: number }) => Math.hypot(p.x - r.x, p.y - r.y);
-  return options.sort((a, b) => dist(a) - dist(b))[0] ?? r;
+  ]).filter((p) => fitsIn(m, p, r) && free({ ...p, w: r.w, h: r.h }));
+  return nearest(options, r);
 }
 
 /** Lage des Zeigers für die anderen (8.3), damit sie auch in einer anderen Ansicht über derselben Stelle steht:
@@ -431,7 +445,9 @@ export function freeHeaps(state: Pick<TableState<unknown>, 'free' | 'freePos'>, 
   for (const card of state.free) {
     const p = places[card];
     if (!p || !state.freePos[card] || skip.includes(card)) continue;
-    groups.set(p.slot, [...(groups.get(p.slot) ?? []), card]);
+    const group = groups.get(p.slot);
+    if (group) group.push(card);
+    else groups.set(p.slot, [card]);
   }
   return [...groups].filter(([, cards]) => cards.length >= 2).map(([key, cards]) => ({ key, cards, top: cards.at(-1)!, count: cards.length, edges: stackEdges(cards.length) }));
 }
@@ -445,7 +461,9 @@ export function heapAt(layout: Layout, places: Places, state: Pick<TableState<un
     const card = state.free[i]!;
     const p = places[card];
     if (!p || skip.includes(card) || !inside(cardRect(layout, p), x, y)) continue;
-    return freeHeaps(state, places).some((h) => h.key === p.slot) ? state.freePos[card]! : null;
+    // derselbe Platz wie bei `freeHeaps` ohne `skip`: mindestens zwei Karten mit Lage
+    const same = state.free.filter((c) => state.freePos[c] && places[c]?.slot === p.slot).length;
+    return same >= 2 ? state.freePos[card]! : null;
   }
   return null;
 }

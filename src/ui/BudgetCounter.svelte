@@ -8,11 +8,11 @@
   // gesetzten. Zählen und Sperren macht das Regelwerk (src/rules/klio/budget.ts).
   import { SEATS, type SeatId } from '../engine/types';
   import { seatVisible } from '../engine/zones';
-  import { budgetUnset } from '../rules/klio/budget';
+  import { budgetUnset, DECK } from '../rules/klio/budget';
   import { BUDGET_MAX } from '../rules/klio/state';
   import { submitOrSay as submit } from './commands';
   import { whoColor } from './colors';
-  import type { Rect } from './layout';
+  import { clamp, type Rect } from './layout';
   import { seatNames } from './seatNames';
   import { session } from './session.svelte';
   import { t, text } from './texts';
@@ -24,12 +24,12 @@
   const actor = $derived(session.actor);
   const gm = $derived(actor.role === 'gm');
   /** eigener Platz (Spieler), sonst null */
-  const own = $derived(actor.role === 'player' ? actor.seat : null);
+  const own = $derived(session.ownSeat);
   const mayStart = $derived(gm || (own !== null && session.can({ type: 'budget.start', seat: own })));
   const mayEdit = $derived(b.active && session.can({ type: 'budget.set' }));
   /** noch nicht eingestellt: neutral statt rot, das Deck ist trotzdem gesperrt */
   const unset = $derived(b.active && budgetUnset(b));
-  const blocked = $derived(b.active && !unset ? session.blocked({ type: 'zone.draw', zone: 'deck' }) : null);
+  const blocked = $derived(b.active && !unset ? session.blocked({ type: 'zone.draw', zone: DECK }) : null);
   const who = $derived(b.seat ? seatNames(table, b.seat) : null);
   const seats = $derived(SEATS.filter((s) => seatVisible(s, table)));
 
@@ -65,7 +65,7 @@
 
   function step(d: number) {
     if (!mayEdit) return;
-    const left = Math.max(0, Math.min(BUDGET_MAX, b.left + d));
+    const left = clamp(b.left + d, 0, BUDGET_MAX);
     if (left !== b.left) void submit({ type: 'budget.set', left });
   }
 
@@ -91,7 +91,7 @@
 </script>
 
 <div class="budget control" data-budget data-budget-active={b.active} style:left="{at.x}px" style:top="{at.y}px" style:width="{at.w}px" style:height="{at.h}px" style:--who={b.seat ? whoColor(b.seat) : undefined} onwheel={onWheel}>
-  {#if b.active && mayEdit}
+  {#if mayEdit}
     <button class="arrow up" aria-label={t('budget.up')} title={t('budget.up')} disabled={b.left >= BUDGET_MAX} onclick={() => step(1)}><i></i></button>
   {/if}
   <button
@@ -107,7 +107,7 @@
     onkeydown={onKey}
     data-budget-left={b.active ? b.left : undefined}
   >{b.active ? b.left : '–'}</button>
-  {#if b.active && mayEdit}
+  {#if mayEdit}
     <button class="arrow down" aria-label={t('budget.down')} title={t('budget.down')} disabled={b.left <= 0} onclick={() => step(-1)}><i></i></button>
   {/if}
   {#if b.active}
@@ -165,7 +165,6 @@
   .mod.advantage.set { background: #4f9a5b; }
   .mod.disadvantage.set { background: #c0503a; }
   .mod.set.void { opacity: 0.55; }
-  .mod:disabled { cursor: default; }
   .who { position: absolute; left: 50%; top: 100%; translate: -50% 0; margin-top: 19px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 7px; border: 0;
     border-radius: var(--radius-pill); background: var(--who); color: #1b1b1b; font-size: 11px; font-weight: 600; line-height: 15px; }
   .choose { position: absolute; left: 100%; top: 50%; translate: 8px -50%; display: flex; flex-direction: column; gap: 3px; min-width: 110px; padding: 6px; border-radius: var(--radius-m);

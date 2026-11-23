@@ -11,7 +11,7 @@
   import Modal from './Modal.svelte';
   import { fade, timing } from './animator.svelte';
   import { submitOrSay } from './commands';
-  import { expeditionCards, expeditionIndex } from './expedition';
+  import { EXPEDITION_IMAGE as image, expeditionCards, expeditionIndex, PULL_SLOP as SLOP } from './expedition';
   import { fitBlock } from './fitText';
   import { HAND_FONT, handFont } from './fonts';
   import { session } from './session.svelte';
@@ -25,7 +25,6 @@
   /** Antworten in 14 TP, Fragen in 11 TP; kleiner nur bis 12 TP (S3) */
   const ANSWER = 14;
   const MIN_ANSWER = 12;
-  const image = `${import.meta.env.BASE_URL}assets/sheet/expedition.webp`;
   const size = `width: min(90vw, calc(${E.read * 100}vh * ${pw / ph})); aspect-ratio: ${pw} / ${ph};`;
   /** Länge in TP des Blatts als CSS */
   const tp = (v: number) => `calc(var(--tp) * ${v})`;
@@ -60,12 +59,11 @@
     const to = el.getBoundingClientRect();
     el.style.transformOrigin = '0 0';
     const frames = dir === 'in' ? [{ transform: onto(rest, to) }, { transform: 'none' }] : [{ transform: onto(shown, to) }, { transform: onto(rest, to) }];
-    const a = el.animate(frames, { duration: ms, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: dir === 'out' ? 'forwards' : 'none' });
+    const a = el.animate(frames, { duration: ms, easing: timing().glideEase, fill: dir === 'out' ? 'forwards' : 'none' });
     return a.finished.then(() => undefined, () => undefined);
   }
 
   // ---------- Herunterziehen am Kopf (Teil 2b) ----------
-  const SLOP = 4;
   /** Anteil der Fensterhöhe, ab dem losgelassen die Leselage schließt */
   const CLOSE_AT = 0.2;
   let press: { id: number; y: number; moved: boolean } | null = null;
@@ -122,11 +120,11 @@
     void glide('in');
   });
 
-  // Neu gewürfelte Zeilen blenden kurz ein (wie bisher im Ergebnisfenster, 5t); nicht beim Öffnen
+  // Neu gewürfelte Zeilen blenden kurz ein (5t); nicht beim Öffnen
   const opened = untrack(() => view.gmRoll);
   $effect(() => {
     const r = view.gmRoll;
-    if (!r || r === opened || r.kind !== 'expedition') return;
+    if (!r || r === opened) return;
     for (const i of r.parts) {
       const v = rows[i]?.querySelector<HTMLElement>('.value');
       if (v) fade(v, timing().pop);

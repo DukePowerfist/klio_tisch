@@ -14,7 +14,7 @@ import { BUDGET_MAX, type Budget, type KlioState } from './state';
 
 export const BUDGET_REACTION = 'budget';
 export const DECK: ZoneId = 'deck';
-const NOTES = 'notes';
+export const NOTES = 'notes';
 
 type S = TableState<KlioState>;
 

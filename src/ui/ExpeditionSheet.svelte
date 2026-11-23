@@ -8,6 +8,7 @@
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { timing } from './animator.svelte';
+  import { EXPEDITION_IMAGE as image, PULL_SLOP as SLOP } from './expedition';
   import type { Layout } from './layout';
   import { shadowCss, shadowOver, HEIGHT } from './light';
   import { t } from './texts';
@@ -16,7 +17,6 @@
   let { layout, flame, dragging, scale }: { layout: Layout; flame: Layout['lamp']['flame'] | null; dragging: boolean; scale: number } = $props();
 
   const E = content.layouts.middle.expedition;
-  const image = `${import.meta.env.BASE_URL}assets/sheet/expedition.webp`;
   const paper = $derived(layout.expedition.paper);
   const img = $derived(layout.expedition.img);
   /** Klickfläche: nur der Teil des Papiers über der Brettkante. Reichte der Knopf darunter weiter, scrollte der Browser
@@ -28,8 +28,6 @@
   let nudgeEl: HTMLDivElement;
 
   // ---------- Hochziehen (Teil 2b) ----------
-  /** ab so viel Bewegung (Bildschirmpunkte) ist es ein Ziehen, sonst ein Klick (wie bei Karten) */
-  const SLOP = 4;
   /** Anteil der Fensterhöhe, ab dem losgelassen die Leselage öffnet */
   const OPEN_AT = 0.25;
   let press: { id: number; y: number; moved: boolean } | null = null;
@@ -80,7 +78,7 @@
     const r = view.gmRoll;
     if (r === seen) return;
     seen = r;
-    if (r?.kind !== 'expedition' || dragging || view.expeditionOpen) return;
+    if (!r || dragging || view.expeditionOpen) return;
     const ms = timing().nudge;
     if (ms > 0) nudgeEl.animate([{ translate: '0 0' }, { translate: `0 ${-E.lift}px`, offset: 0.4 }, { translate: '0 0' }], { duration: ms, easing: 'ease-in-out' });
   });
@@ -89,7 +87,7 @@
 <!-- Klickfläche nur das Papier über der Brettkante; das Bild ragt darüber hinaus (durchsichtige Ränder, Büroklammer,
      der Teil unter der Kante), ohne Klicks -->
 <button
-  class="expedition control"
+  class="expedition object control"
   class:dragging
   style:left="{paper.x}px"
   style:top="{paper.y}px"
@@ -122,8 +120,6 @@
   /* über den Zonen und ihren Karten, knapp unter frei liegenden Karten (FREE_Z 20000, U3) und dem Licht */
   .expedition { position: absolute; z-index: 19990; padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% 0; touch-action: none; }
   .expedition:focus:not(:focus-visible) { outline: none; }
-  /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach (wie die Laterne) */
-  .expedition:active { scale: none; }
   .pull, .lift, .nudge { position: absolute; left: 0; top: 0; width: 100%; }
   .pull { transition: translate var(--sheet-glide) ease-out; }
   .pull.pulling { transition: none; }

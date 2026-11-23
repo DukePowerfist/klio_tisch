@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** Rückseite: Bild mit eigenem Rand und abgerundeten Ecken (public/assets/cards); auch für neue Trümpfe am Bogen */
+  export const CARD_BACK = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
+</script>
+
 <script lang="ts">
   // Eine Spielkarte. Lage, Drehung und Größe kommen von außen (layouts.yaml). Drei Ebenen (11.4): `.card` trägt die
   // Endlage, `.lift` Anheben und Stoß, `.inner` das Umklappen; die Bewegung dorthin plant motion.ts.
@@ -5,7 +10,7 @@
   import { suitOf } from '../engine/schemas';
   import type { CardId } from '../engine/types';
   import { appear, cause, cue, cut, events, fade, heapGrew, move, popCount, resize, revealed, shownScale, strike, Tilt, timing, turn, wobble } from './animator.svelte';
-  import { cardSize, type LampBox } from './layout';
+  import { cardSize, slotIndex, type LampBox } from './layout';
   import { HEIGHT, onCard, shadowCss, shadowOver } from './light';
   import { arrival, planMove, planTurn, type Frame } from './motion';
   import { isRed, rankLabel, SUIT_SYMBOL } from './texts';
@@ -45,9 +50,9 @@
    *  (5zj). Immer gesetzt, sichtbar macht ihn die Deckkraft: Beim Verlassen und Loslassen blendet so der kurze Schatten
    *  aus, nicht der lange Ersatzwert `--lift` */
   const OUTLINE = '0 0 1px rgba(0, 0, 0, 0.6)';
+  const rect = $derived({ x, y, ...cardSize({ card: size }, { scale, rotated }) });
   const shadows = $derived.by(() => {
     if (!shaded) return null;
-    const rect = { x, y, ...cardSize({ card: size }, { scale, rotated }) };
     const at = (height: number) => onCard(shadowOver(flame, rect, height), rotated, scale);
     const liftShadow = (h: number) => `${shadowCss(at(h), 0.42)}, ${shadowCss(at(h / 3), 0.3)}`;
     return {
@@ -61,7 +66,6 @@
   const EDGE_STEP = 2.5;
   const edgeList = $derived.by(() => {
     if (!edges) return [];
-    const rect = { x, y, ...cardSize({ card: size }, { scale, rotated }) };
     return Array.from({ length: edges }, (_, i) => edges - i).map((k) => {
       const s = (k * EDGE_STEP) / scale;
       const [dx, dy] = rotated ? [s, -s] : [s, s];
@@ -111,7 +115,7 @@
     void events.seen;
     untrack(() => {
       const c = still ? undefined : cue(card);
-      if (c?.cut) cut(el, lift, c.cut, z, Number(slot.split('#')[1] ?? 0), size.w * scale);
+      if (c?.cut) cut(el, lift, c.cut, z, slotIndex(slot), size.w * scale);
       if (c?.strike !== undefined) strike(el, lift, c.strike);
     });
   });
@@ -142,8 +146,6 @@
       if (shown) shown.faceUp = up;
     });
   });
-  // Rückseite: Bild mit eigenem Rand und abgerundeten Ecken (public/assets/cards)
-  const back = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 </script>
 
 <div bind:this={el} transition:appear={{ still }} class="card" class:dragging class:pending class:red={isRed(card)} class:marked={!!mark} class:hover style:--mark={mark} style:--glow-c={lastMark} style:--face-shadow={shadows?.face} style:--lift-shadow={shadows?.lift} style:width="{size.w}px" style:height="{size.h}px" style:transform style:z-index={lifted ? 400000 + z : z} data-card={card}>
@@ -158,7 +160,7 @@
       <div class="corner bottom">{rank}<br />{suit}</div>
       <div class="glint"></div>
     </div>
-    <div class="face back" style:background-image={back}><div class="glint"></div></div>
+    <div class="face back" style:background-image={CARD_BACK}><div class="glint"></div></div>
   </div>
   </div>
   {#if count >= 2}
@@ -198,10 +200,10 @@
   .corner { position: absolute; left: 6px; top: 4px; font: 700 16px/1.05 Georgia, serif; text-align: center; }
   .corner.bottom { left: auto; top: auto; right: 6px; bottom: 4px; transform: rotate(180deg); }
   .pip { position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; }
-  /* Glanz beim Umklappen: schräger heller Streifen, läuft über die Fläche (animator.svelte.ts) */
   /* freier Haufen (11.12): Kanten wie an den Stapeln (ZoneView.svelte), unter der Vorderseite; Zahl über ihr */
   .edge { position: absolute; inset: 0; box-sizing: border-box; border-radius: var(--radius-card); background: var(--stack-edge); border: 1px solid var(--stack-edge-line); pointer-events: none; }
   .heap { position: absolute; top: 0; width: 0; height: 0; transform-origin: 0 0; pointer-events: none; }
   .count { position: absolute; right: -7px; top: -7px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--heap-count-bg); color: var(--heap-count-ink); font-size: 12px; font-weight: 600; line-height: 18px; white-space: nowrap; }
+  /* Glanz beim Umklappen: schräger heller Streifen, läuft über die Fläche (animator.svelte.ts) */
   .glint { position: absolute; inset: 0; border-radius: inherit; opacity: 0; pointer-events: none; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%) 100% 0 / 300% 100% no-repeat; }
 </style>

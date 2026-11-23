@@ -3,10 +3,10 @@
   // Zeigt nur den Stand an und schickt Befehle; Meldungen und Animationen kommen aus effects.svelte.ts.
   import { untrack } from 'svelte';
   import content from 'virtual:klio-content';
-  import { locate } from '../engine/zones';
+  import { locate, seatZoneId } from '../engine/zones';
   import type { CardId, CardSource, SeatId, ZoneId } from '../engine/types';
   import type { PointerPos } from '../net/presence';
-  import { budgetUnset } from '../rules/klio/budget';
+  import { budgetUnset, DECK, NOTES } from '../rules/klio/budget';
   import { sheetOf } from '../rules/klio/events';
   import BudgetCounter from './BudgetCounter.svelte';
   import Card from './Card.svelte';
@@ -22,7 +22,7 @@
   // Meldungen und Animationen hören ab dem Tisch auf die Ereignisse
   import './effects.svelte';
   import { dropHints, dropTarget, inHand } from './dropHint';
-  import { clamp, computeLayout, FELT_RIM, freeHeaps, freePile, placeCards, pointerAt, pointerPosAt, SHEET_W, zoneAt, type CardPlace, type FreeHeap, type Rect } from './layout';
+  import { clamp, computeLayout, FELT_RIM, freeHeaps, freePile, placeCards, pointerAt, pointerPosAt, sheetImageScale, zoneAt, type CardPlace, type FreeHeap, type Rect } from './layout';
   import { submitOrSay as submit } from './commands';
   import { session, type KlioTableState, type PendingDrop } from './session.svelte';
   import { whoColor } from './colors';
@@ -151,17 +151,20 @@
     if (!drag || !to) return [];
     return dropHints(layout, places, session.predict({ type: 'cards.move', cards: drag.cards, from: drag.from, to }), drag.cards);
   });
+  /** Karten aus einer Zone nehmen vom Regelwerk gesperrt (Kartenbudget, 6a): Grund oder null. Gefragt wird mit einem
+   *  Probezug; die Sperre hängt nur an der Herkunft, als Ziel dient die Ablage */
+  const leaveBlocked = (zone: ZoneId, cards: CardId[] = []) => session.blocked({ type: 'cards.move', cards, from: { zone }, to: { zone: 'discard' } });
   /** Deck vom Kartenbudget gesperrt (6a): Grund oder null */
-  const deckBlocked = $derived(table.game.budget.active ? session.blocked({ type: 'zone.draw', zone: 'deck' }) : null);
+  const deckBlocked = $derived(table.game.budget.active ? session.blocked({ type: 'zone.draw', zone: DECK }) : null);
   /** Forschungsnotizen der handelnden Person (6a): mit Nachteil gesperrt (Schloss), sonst leuchten sie, sobald das Deck
    *  gesperrt ist – mit ihnen darf man trotz ♣ und über das Budget hinaus weiterziehen (Regelwerk S. 8) */
   const notesMark = $derived.by(() => {
     const b = table.game.budget;
     if (!b.active || !b.seat || !layout.sheets[b.seat]?.visible) return null;
-    const zone = `${b.seat}.notes`;
+    const zone = seatZoneId(b.seat, NOTES);
     const box = layout.zones[zone];
     if (!box || !table.zones[zone]?.length) return null;
-    const locked = session.blocked({ type: 'cards.move', cards: [], from: { zone }, to: { zone: 'discard' } });
+    const locked = leaveBlocked(zone);
     if (locked) return { box, locked, title: text(locked) };
     // noch kein Budget eingestellt: nicht auf die Notizen verweisen
     return deckBlocked && !budgetUnset(b) ? { box, locked: null, title: t('budget.notesHint') } : null;
@@ -297,8 +300,7 @@
     if (!where) return false;
     if ('zone' in where) {
       if (!topOrFanned(where)) return false;
-      // vom Regelwerk gesperrt (Kartenbudget, 6a): Probe mit der Ablage als Ziel, wie beim Ziehen
-      if (session.blocked({ type: 'cards.move', cards: [card], from: { zone: where.zone }, to: { zone: 'discard' } })) return false;
+      if (leaveBlocked(where.zone, [card])) return false;
       return session.can({ type: 'cards.move', cards: [card], from: { zone: where.zone }, to: { zone: where.zone } });
     }
     const pos = table.freePos[card];
@@ -420,7 +422,7 @@
       zone,
       anchor: toScreen(stage, box),
       // nicht über das Ziel von „Ziehen“; am Deck auch nicht über den Zähler für das Kartenbudget (6a)
-      avoid: [...(target ? [toScreen(stage, target)] : []), ...(zone === 'deck' ? [toScreen(stage, budgetReach(L.budget))] : [])],
+      avoid: [...(target ? [toScreen(stage, target)] : []), ...(zone === DECK ? [toScreen(stage, budgetReach(L.budget))] : [])],
       area: menuArea(stage),
       sides: box.menu === 'left' ? ['left', 'right'] : ['right', 'left'],
     };
@@ -430,7 +432,7 @@
   function plateMenuAt(seat: SeatId, width: number): PlateMenuAt {
     const box = layout.sheets[seat];
     const plate = content.skinPaper.nameplate;
-    const k = (SHEET_W * box.scale) / content.skinPaper.size[0];
+    const k = sheetImageScale(box.scale, content.skinPaper.size[0]);
     const stage = stageEl!.getBoundingClientRect();
     return { seat, anchor: toScreen(stage, { x: box.x + plate.x * k, y: box.y + plate.y * k, w: width * k, h: plate.h * k }), area: menuArea(stage) };
   }
@@ -531,11 +533,14 @@
         <ZoneView {zone} {flame} count={table.zones[zone.id]?.length ?? 0} card={layout.card} hot={hot === zone.id} mark={openedBy && whoColor(openedBy)} onToggle={() => toggleMenu(zone.id)} />
       {/each}
 
+      {#snippet lock()}
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" /></svg>
+      {/snippet}
       <BudgetCounter at={layout.budget} />
-      {#if deckBlocked && layout.zones['deck']}
-        {@const d = layout.zones['deck']}
+      {#if deckBlocked && layout.zones[DECK]}
+        {@const d = layout.zones[DECK]}
         <div class="deck-lock" style:left="{d.x}px" style:top="{d.y}px" style:width="{d.w}px" style:height="{d.h}px" data-deck-lock title={text(deckBlocked)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" /></svg>
+          {@render lock()}
         </div>
       {/if}
       {#if notesMark}
@@ -543,7 +548,7 @@
         <div class="notes-mark" class:deck-lock={!!notesMark.locked} class:glow={!notesMark.locked} style:left="{d.x}px" style:top="{d.y}px" style:width="{d.w}px" style:height="{d.h}px"
           data-notes-mark={notesMark.locked ? 'locked' : 'glow'} title={notesMark.title}>
           {#if notesMark.locked}
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V7a3 3 0 0 0-6 0z" /></svg>
+            {@render lock()}
           {/if}
         </div>
       {/if}
@@ -551,6 +556,8 @@
       {#each cards as [card, p] (card)}
         {@const off = offsetOf.get(card) ?? remoteOf.get(card)}
         {@const at = off ? inHand(layout, p, off, [off.ax, off.ay]) : p}
+        {@const onTop = heapOf.get(card)}
+        {@const heap = onTop?.top === card ? onTop : null}
         <Card
           {card}
           x={at.x}
@@ -563,8 +570,8 @@
           {flame}
           shaded
           height={heightOf(card, p)}
-          edges={heapOf.get(card)?.top === card ? heapOf.get(card)!.edges : 0}
-          count={heapOf.get(card)?.top === card ? heapOf.get(card)!.count : 0}
+          edges={heap?.edges ?? 0}
+          count={heap?.count ?? 0}
           faceUp={!!table.faceUp[card]}
           dragging={offsetOf.has(card)}
           pending={offsetOf.has(card) && off !== drag}
@@ -597,7 +604,6 @@
   .panel { position: absolute; background: var(--felt) center / cover no-repeat; border-radius: 56px; box-sizing: border-box;
     box-shadow: 0 0 0 calc(var(--felt-rim-w) - 1px) var(--felt-rim), 0 0 0 var(--felt-rim-w) var(--felt-rim-light), inset 0 0 50px rgba(0, 0, 0, 0.5), inset 0 3px 4px rgba(0, 0, 0, 0.5), var(--felt-shadow, 0 3px 8px rgba(0, 0, 0, 0.5)); transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease), width var(--shift) var(--shift-ease), height var(--shift) var(--shift-ease); }
   .ptitle { position: absolute; color: var(--felt-print); font-size: 11px; font-weight: 600; letter-spacing: 2px; opacity: 0.85; pointer-events: none; transition: left var(--shift) var(--shift-ease), top var(--shift) var(--shift-ease); }
-  /* Vorschau der Ablegestelle: über den gezogenen Karten (400000 + z, 11.10), unter dem Licht (450000); blendet ein */
   .table-edge { position: absolute; left: 0; top: 0; overflow: clip; pointer-events: none; }
   .table-edge > :global(*) { pointer-events: auto; }
   /* gesperrtes Deck (6a): abgedunkelt mit Schloss, über den Karten des Decks, unter gezogenen Karten; Klicks gehen durch */
@@ -609,6 +615,7 @@
   @keyframes notes-glow { 0%, 100% { box-shadow: 0 0 6px 2px color-mix(in srgb, var(--pickable-bright) 40%, transparent); outline-color: color-mix(in srgb, var(--pickable-bright) 60%, transparent); }
     50% { box-shadow: 0 0 18px 6px color-mix(in srgb, var(--pickable-bright) 55%, transparent); outline-color: var(--pickable-bright); } }
   @media (prefers-reduced-motion: reduce) { .notes-mark.glow { animation: none; } }
+  /* Vorschau der Ablegestelle: über den gezogenen Karten (400000 + z, 11.10), unter dem Licht (450000); blendet ein */
   .drop-hint { position: absolute; z-index: 440000; box-sizing: border-box; border: 2px dashed var(--drop-hint); background: var(--drop-hint-bg); pointer-events: none; animation: fade-in var(--pop) ease-out; }
   /* Schatten und feiner Rand wie ein Menü: der Schatten der Karte allein ist bei dreifacher Größe zu schwach */
   .preview { position: absolute; pointer-events: none; z-index: 99; border-radius: calc(var(--radius-card) * 3); box-shadow: 0 0 0 1px var(--menu-rim), var(--menu-shadow); }

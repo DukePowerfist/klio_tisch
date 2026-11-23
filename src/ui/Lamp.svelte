@@ -3,7 +3,7 @@
   // das Licht über allen Karten (z 450000), Stapelmenüs und Zeiger darüber; Blatt und Schachtel (5zb) liegen darunter. Ob sie brennt, steht im Stand
   // (`lamp`) und gilt für alle; Anzünden und Löschen laufen am Ereignis `lampChanged`, beim Laden ohne Übergang.
   import { untrack } from 'svelte';
-  import { timing } from './animator.svelte';
+  import { allFinished, timing } from './animator.svelte';
   import { effectLevel } from './effectLevel.svelte';
   import { submitOrSay } from './commands';
   import type { LampBox } from './layout';
@@ -50,7 +50,7 @@
     const opts = { duration, easing: to ? 'linear' : 'ease-in' };
     const anims = [on, glow, ember].map((el) => el.animate(up, opts));
     anims.push(out.animate(down, opts));
-    const r = Promise.all(anims.map((a) => a.finished.catch(() => undefined))).then(() => {
+    const r = allFinished(anims).then(() => {
       if (!to) shadowsLit = false;
       // auch nach einem fremden Ereignis wieder frei für Klicks
       if (running === r) running = null;
@@ -132,7 +132,7 @@
 </script>
 
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein schlichtes Element -->
-<svelte:element this={may ? 'button' : 'div'} bind:this={lampEl} class="lamp" class:control={may} style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px"
+<svelte:element this={may ? 'button' : 'div'} bind:this={lampEl} class="lamp object" class:control={may} style:left="{lamp.x}px" style:top="{lamp.y}px" style:width="{lamp.w}px" style:height="{lamp.h}px"
   title={may ? t(lit ? 'gm.lampOff' : 'gm.lampOn') : undefined} aria-pressed={may ? lit : undefined} onclick={may ? toggle : undefined} role={may ? undefined : 'presentation'} data-lamp data-lit={lit}>
   <img src={image} alt="" draggable="false" />
   <div class="ember" bind:this={ember} style:mask-image={mask} style:opacity={flickered}></div>
@@ -142,15 +142,13 @@
      sonst wäre sie eine isolierte Gruppe, und multiply hätte keinen Hintergrund (11.9). Die z-Werte stehen an den Ebenen. -->
 <div class="light" aria-hidden="true" data-flicker={flicker ? '' : undefined}>
   <div class="out" bind:this={out} style:opacity={lit ? 0 : 1}></div>
-  <div class="on" bind:this={on} style:opacity={opacity} style:background={shade} style:transform-origin="{centre.x}px {centre.y}px"></div>
-  <div class="glow" bind:this={glow} style:opacity={flickered} style:background={halo} style:transform-origin="{centre.x}px {centre.y}px"></div>
+  <div class="on" bind:this={on} style:inset="{-OVER}px" style:opacity={opacity} style:background={shade} style:transform-origin="{centre.x}px {centre.y}px"></div>
+  <div class="glow" bind:this={glow} style:inset="{-OVER}px" style:opacity={flickered} style:background={halo} style:transform-origin="{centre.x}px {centre.y}px"></div>
 </div>
 
 <style>
   .lamp { position: absolute; z-index: 5; padding: 0; border: 0; background: none; border-radius: 50%; }
   button.lamp { cursor: pointer; }
-  /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach (die Regel für alle Knöpfe in theme.css gilt hier nicht) */
-  button.lamp:active { scale: none; }
   /* kein Fokusrahmen nach einem Mausklick (weißer Ring um die Laterne); mit der Tastatur bleibt er */
   button.lamp:focus:not(:focus-visible) { outline: none; }
   .lamp img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; user-select: none;
@@ -160,7 +158,6 @@
     background: radial-gradient(circle at 50.24% 45.61%, #fff6d8 0, #ffcf6a 14%, #ff9a2e 34%, #d9601a 60%); }
   .light { position: absolute; inset: 0; overflow: clip; border-radius: 18px; pointer-events: none; }
   .light > div { position: absolute; inset: 0; }
-  .light > .on, .light > .glow { inset: -120px; } /* OVER */
   .out { z-index: 450000; mix-blend-mode: multiply; background: var(--lamp-out); }
   .on { z-index: 450001; mix-blend-mode: multiply; }
   .glow { z-index: 450002; mix-blend-mode: screen; }

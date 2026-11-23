@@ -8,6 +8,7 @@
   import { fieldParts, getField } from '../rules/klio/fields';
   import type { KlioSheet } from '../rules/klio/state';
   import { contextFor, isFull, trumpById } from '../rules/klio/trumps';
+  import { CARD_BACK } from './Card.svelte';
   import SheetField from './SheetField.svelte';
   import SheetLantern from './SheetLantern.svelte';
   import TrumpCard from './TrumpCard.svelte';
@@ -15,7 +16,7 @@
   import { arrivePlate, arriveSheet } from './animator.svelte';
   import { effects } from './effects.svelte';
   import { SHEET_FONT } from './fitText';
-  import { CONTROLS_ZOOM, SHEET_W, type SheetBox } from './layout';
+  import { CONTROLS_ZOOM, sheetImageScale, type SheetBox } from './layout';
   import { photos } from './photos.svelte';
   import { entriesAt } from './PlateMenu.svelte';
   import { seatNames } from './seatNames';
@@ -32,7 +33,7 @@
 
   const skin = content.skinPaper;
   const [imgW, imgH] = skin.size;
-  const k = $derived((SHEET_W * box.scale) / imgW);
+  const k = $derived(sheetImageScale(box.scale, imgW));
   const seat = $derived(box.seat);
   const image = $derived(`${import.meta.env.BASE_URL}assets/${skin.images[sheet.variant]}`);
   // Namensschild in der Übersicht und auf dem großen Bogen der Rollenansicht (10.1), nicht an den Streifen
@@ -81,8 +82,6 @@
   // Gezeichnete Zeichen (5z): zwei leicht gebogene Striche wie mit dem Stift, statt Zeichen aus einer Computerschrift
   const CROSS = 'M4.5 4 Q10 9.5 15.8 16.2 M15.6 4.4 Q9.5 10.5 4.2 15.6';
   const PLUS = 'M20.5 7 Q19.6 20 20 33.5 M7 20.4 Q20 19.4 33 20';
-  /** Rückseite der Spielkarten, für das Aufdecken eines neuen Trumpfs (5zr); beide im Format 5:7 */
-  const CARD_BACK = `url(${import.meta.env.BASE_URL}assets/cards/back.webp)`;
 
   // Narbe und Tod nach einem Treffer erst mit dem Aufprall (5k)
   const checked = (id: string) => !effects.holds(seat, id) && getField(sheet, id) === true;
@@ -283,7 +282,7 @@
           {@const dealt = effects.dealt.has(`${seat}/trumps.${s.index}`)}
           <div class="turn" class:dealt>
             <TrumpCard {trump} />
-            {#if dealt}<i class="tback" style:background-image={CARD_BACK} aria-hidden="true"></i>{/if}
+            {#if dealt}<!-- Rückseite der Spielkarten (5zr); beide im Format 5:7 --><i class="tback" style:background-image={CARD_BACK} aria-hidden="true"></i>{/if}
           </div>
           {#if canRemoveTrump}<button class="rmv" title={t('sheet.trumpRemove')} onclick={(e) => { e.stopPropagation(); void submit({ type: 'trump.remove', seat, slot: s.index }); }}>✕</button>{/if}
         {:else}

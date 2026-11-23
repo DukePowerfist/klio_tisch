@@ -59,7 +59,7 @@
   style:left="{area.x}px" style:top="{area.y}px" style:width="{area.w}px" style:height="{area.h}px"
 >
   <button
-    class="lantern control"
+    class="lantern object control"
     disabled={!canEdit}
     data-lantern={level}
     aria-label={label}
@@ -116,9 +116,8 @@
   .wrap { position: absolute; }
   .lantern { position: absolute; left: 0; top: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
   .lantern:disabled { cursor: default; }
-  /* kein Eindrücken wie bei den übrigen Knöpfen (theme.css): `scale` isoliert den Knopf, dann verrechnet sich der Schein
-     nicht mehr mit dem Papier (multiply) und liegt für den Moment des Drückens als deckende gelbe Fläche über der Zeichnung */
-  .lantern:active { scale: none; }
+  /* Klasse `object` (theme.css): kein Eindrücken wie bei den übrigen Knöpfen. `scale` isolierte den Knopf, dann verrechnete sich der Schein
+     nicht mehr mit dem Papier (multiply) und läge für den Moment des Drückens als deckende gelbe Fläche über der Zeichnung */
   /* multiply: die Bleistiftstriche der Laterne scheinen durch Schein und Flamme */
   svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; mix-blend-mode: multiply; pointer-events: none; }
   .glass { fill: var(--sheet-lamp); opacity: 0; transition: opacity var(--sheet-lamp-t) ease; }

@@ -17,7 +17,7 @@
   import { tick, untrack } from 'svelte';
   import content from 'virtual:klio-content';
   import { suitOf } from '../engine/schemas';
-  import { timing } from './animator.svelte';
+  import { allFinished as done, timing } from './animator.svelte';
   import { submitOrSay } from './commands';
   import { HAND_FONT, handFont } from './fonts';
   import { oracleRect, oracleScale, type Layout } from './layout';
@@ -92,7 +92,6 @@
   let cardsEl: HTMLDivElement;
   const cardEls = () => [...cardsEl.querySelectorAll<HTMLElement>('[data-oracle-card]')];
   const tagged = (a: Animation, id: string) => ((a.id = id), a);
-  const done = (as: Animation[]) => Promise.all(as.map((a) => a.finished.catch(() => undefined)));
 
   /** Ablauf zum Ereignis: neues Orakel (`next`) bzw. Schachtel schließen (`null`). Ein neues Ereignis mitten im Ablauf
    *  springt ans Ende des alten und beginnt dann. */
@@ -151,7 +150,7 @@
     shownOpen = true;
     await tick();
     if (stale()) return;
-    const rise = cardEls().map((el, i) => tagged(el.animate([{ translate: sunk(i) }, { translate: '0 0' }], { duration: ms.oracleRise, delay: i * ms.oracleRise * 0.6, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)', fill: 'backwards' }), RISE));
+    const rise = cardEls().map((el, i) => tagged(el.animate([{ translate: sunk(i) }, { translate: '0 0' }], { duration: ms.oracleRise, delay: i * ms.oracleRise * 0.6, easing: ms.glideEase, fill: 'backwards' }), RISE));
     await done(rise);
     finish();
   }
@@ -182,7 +181,7 @@
 </script>
 
 <!-- mit Recht ein Knopf (Klasse `control`: kein Verschieben, kein Doppelklick-Zoom), sonst ein Bild mit Beschriftung -->
-<svelte:element this={may ? 'button' : 'div'} class="oracle" class:control={may} role={may ? undefined : 'img'} aria-label={label} title={may ? label : undefined}
+<svelte:element this={may ? 'button' : 'div'} class="oracle object" class:control={may} role={may ? undefined : 'img'} aria-label={label} title={may ? label : undefined}
   onclick={may ? shake : undefined} data-oracle-box data-oracle-open={shownOpen} bind:this={rootEl} style:translate={shownDown ? dropped : undefined}
   style:left="{rect.x}px" style:top="{rect.y}px" style:width="{rect.w}px" style:height="{rect.h}px"
   style:rotate="{O.tilt}deg" style:transform-origin="50% {layout.oracle.bottom - rect.y}px">
@@ -218,8 +217,6 @@
   /* der Knopf selbst ist so groß wie das Bild; treffen lassen nur Schachtel und herausragende Karten */
   button.oracle { cursor: pointer; pointer-events: none; }
   button.oracle:focus:not(:focus-visible) { outline: none; }
-  /* ein Gegenstand, kein Knopf: gibt beim Drücken nicht nach, sie wackelt ja ohnehin (wie die Laterne) */
-  button.oracle:active { scale: none; }
   .inner { position: absolute; left: 0; top: 0; transform-origin: 0 0; transition: translate var(--hover) ease-out; }
   .shake { position: absolute; inset: 0; }
   .reach { position: absolute; left: 0; right: 0; pointer-events: none; }

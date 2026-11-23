@@ -34,7 +34,6 @@
   .row:last-child { border-bottom: none; }
   .text { flex: 1 1 12em; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .desc { font-size: 13px; opacity: 0.7; line-height: 1.35; }
-  .problem { font-size: 13px; color: var(--reason); }
   .titleline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .changed { font-size: 12px; padding: 0 7px; border: 1px solid var(--changed); border-radius: var(--radius-pill); opacity: 0.85; }
   .control { flex: none; max-width: 100%; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; display: flex; align-items: center; gap: 8px; }

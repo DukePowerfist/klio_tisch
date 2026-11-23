@@ -10,6 +10,7 @@
   import { effects } from './effects.svelte';
   import { shouldSend } from './fieldSend';
   import { fitText, textWidth } from './fitText';
+  import { clamp } from './layout';
   import { t } from './texts';
   import { view } from './view.svelte';
 
@@ -101,7 +102,7 @@
     } else if (kind === 'number' && !readonly && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault();
       const n = draft === '' ? 0 : Number(draft);
-      change(String(Math.min(9, Math.max(0, n + (e.key === 'ArrowUp' ? 1 : -1)))));
+      change(String(clamp(n + (e.key === 'ArrowUp' ? 1 : -1), 0, 9)));
     }
   }
 </script>

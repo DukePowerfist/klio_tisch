@@ -80,6 +80,8 @@ describe('Prüfungen schlagen an', () => {
 });
 
 // Gegenprobe mit der alten Datei: Jeder Spieltext steht dort genau so.
+// Ohne die Trümpfe (5zt, ARCHITEKTUR.md 10.22): Ihre Vorlage ist seit e157779 die Klio_Trümpfe_Liste_2.1.docx, 20 Texte
+// stehen bewusst anders als in der alten Datei. Geprüft bleiben Tabellen, Expedition, Orakel, Namen und Wege zum Trumpf.
 // Die alte Datei ist nicht im Repository; ohne sie wird die Prüfung übersprungen.
 const LEGACY = resolve(import.meta.dirname, '../../Kartentisch (3).html');
 
@@ -93,7 +95,6 @@ describe.skipIf(!existsSync(LEGACY))('wortgetreu aus der alten Datei', () => {
     const c = content;
     const gendered = (g: string | { m: string; w: string }) => (typeof g === 'string' ? g : `${g.m}|${g.w}`);
     return [
-      ...c.trumps.flatMap((t) => [t.name, t.text]),
       ...Object.values(c.tables).flatMap((t) => [...Object.values(t.H), ...Object.values(t.S)].map(gendered)),
       ...c.expedition.expedition.flatMap((e) => [e.prompt, ...e.entries]),
       ...Object.values(c.expedition.oracle).flatMap((o) => Object.values(o)),
@@ -102,11 +103,8 @@ describe.skipIf(!existsSync(LEGACY))('wortgetreu aus der alten Datei', () => {
     ];
   }
 
-  // Bewusst an das Regelwerk 2.1 angepasst, steht daher anders in der alten Datei
-  const updated = new Set([content.trumps.find((t) => t.id === 'kuehler-kopf')!.text]);
-
   it('jeder Text kommt in der alten Datei als Zeichenkette vor', () => {
-    const missing = texts().filter((t) => !quoted(t) && !updated.has(t));
+    const missing = texts().filter((t) => !quoted(t));
     expect(missing).toEqual([]);
   });
 

@@ -5,7 +5,7 @@
 import type { EngineEvent, SeatId } from '../engine/types';
 import { seatNo } from '../engine/zones';
 import type { KlioEvent, KlioEventOf } from '../rules/klio/events';
-import { afterReveal, noteEvents, strikeImpacted } from './animator.svelte';
+import { afterReveal, noteEvents, strikeImpacted, timing } from './animator.svelte';
 import { NOTICE_ARRIVALS } from './arrivals';
 import { effectLevel } from './effectLevel.svelte';
 import { describe, noticeArrival } from './eventText';
@@ -18,8 +18,8 @@ import { view } from './view.svelte';
 /** so lange gilt ein eigener Eintrag als „gerade bearbeitet“ (Hinweis bei fremder Änderung, 8.2) */
 const EDIT_MS = 5 * 60_000;
 
-/** so lange liegt die Rückseite eines neuen Trumpfs im Feld: etwas länger als `--trump-turn` (theme.css, 5zr) */
-const TRUMP_TURN_MS = 700;
+/** so viel länger als die Drehung (`--trump-turn`, theme.css, 5zr) liegt die Rückseite eines neuen Trumpfs im Feld */
+const TRUMP_TURN_EXTRA_MS = 100;
 
 /** Schlüssel eines Feldes am Bogen: `seat1/name` */
 const key = (seat: SeatId, field: string): string => `${seat}/${field}`;
@@ -77,7 +77,7 @@ class Effects {
       this.holdDamage(events);
       for (const e of events) {
         if (!own && e.type === 'fieldsChanged') this.foreignChange(e.seat, e.changes);
-        if (e.type === 'expeditionRolled' || e.type === 'oracleDrawn') this.rolled(e, own, prev);
+        if (e.type === 'expeditionRolled') this.rolled(e, own, prev);
         if (!isDamageResult(e)) this.handle(e);
       }
     });
@@ -106,11 +106,10 @@ class Effects {
   }
 
   /** Was nach einem Wurf kurz einblendet (5t P1, seit 5zb in der Leselage des Blatts): am Ereignis, nicht am Text, also
-   *  auch bei gleichem Ergebnis. Expedition: geänderte Zeilen, beim eigenen Wurf dazu die gewürfelte(n); Orakel: beide
-   *  Begriffe (die Schachtel spielt ihren Ablauf am Ereignis selbst). */
-  private rolled(e: KlioEventOf<'expeditionRolled'> | KlioEventOf<'oracleDrawn'>, own: boolean, prev: KlioTableState | null): void {
-    if (e.type === 'oracleDrawn') view.gmRoll = { kind: 'oracle', parts: [0, 1] };
-    else view.gmRoll = { kind: 'expedition', parts: rolledRows(prev?.game.expedition, e.expedition, own ? this.ownRolls.take() : null) };
+   *  auch bei gleichem Ergebnis: geänderte Zeilen, beim eigenen Wurf dazu die gewürfelte(n). Das Blatt rückt darüber auch
+   *  hoch; die Schachtel des Orakels spielt ihren Ablauf am Ereignis selbst (OracleBox.svelte). */
+  private rolled(e: KlioEventOf<'expeditionRolled'>, own: boolean, prev: KlioTableState | null): void {
+    view.gmRoll = { parts: rolledRows(prev?.game.expedition, e.expedition, own ? this.ownRolls.take() : null) };
   }
 
   private handle(e: EngineEvent | KlioEvent): void {
@@ -121,12 +120,10 @@ class Effects {
       if (e.type === 'cardDrawn' && e.faceUp) afterReveal(e.card, say);
       else say();
     }
-    // Expedition und Orakel öffnen seit 5zb kein Fenster mehr (10.12): das Blatt rückt über `view.gmRoll` hoch
-    // (rolled), die Schachtel spielt ihren Ablauf selbst (OracleBox.svelte)
     if (e.type === 'damageTaken') this.hit.add([e.seat]);
     // bei „Erlebnis“ mit vier Trümpfen kommt kein Trumpf (`trump` und `slot` sind null); in Stufe „Aus“ keine Rückseite
     if (e.type === 'trumpChosen' && e.trump !== null && e.slot !== null && effectLevel.level !== 'off')
-      this.dealt.add([key(e.seat, `trumps.${e.slot}`)], new Promise((r) => setTimeout(r, TRUMP_TURN_MS)));
+      this.dealt.add([key(e.seat, `trumps.${e.slot}`)], new Promise((r) => setTimeout(r, timing().trumpTurn + TRUMP_TURN_EXTRA_MS)));
   }
 }
 

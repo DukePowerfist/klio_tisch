@@ -7,6 +7,7 @@
   import { pingRing, pointerOut } from './animator.svelte';
   import { effects } from './effects.svelte';
   import { pointerAt, type Layout, type Places } from './layout';
+  import { FOLLOW_MS } from './motion';
   import { session } from './session.svelte';
   import { whoColor } from './colors';
   import { t } from './texts';
@@ -41,7 +42,7 @@
 </script>
 
 {#each shown as c (c.peer)}
-  <div class="cursor" out:pointerOut style:transform="translate({c.x}px, {c.y}px) scale({1 / scale})" style:--c={c.color} data-cursor={c.peer}>
+  <div class="cursor" out:pointerOut style:transform="translate({c.x}px, {c.y}px) scale({1 / scale})" style:transition-duration="{FOLLOW_MS}ms" style:--c={c.color} data-cursor={c.peer}>
     <i class="ring" bind:this={rings[c.peer]}></i>
     <svg width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path d="M1 1 L1 16 L5 12 L8 19 L11 18 L8 11 L14 11 Z" /></svg>
     <span>{c.text}</span>
@@ -49,7 +50,7 @@
 {/each}
 
 <style>
-  .cursor { position: absolute; left: 0; top: 0; z-index: 600000; pointer-events: none; transform-origin: 0 0; transition: transform 0.08s linear; }
+  .cursor { position: absolute; left: 0; top: 0; z-index: 600000; pointer-events: none; transform-origin: 0 0; transition: transform linear; }
   .ring { position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; box-sizing: border-box; border: 2px solid var(--c); border-radius: 50%; opacity: 0; }
   svg { display: block; fill: var(--c); stroke: #000; stroke-width: 1; }
   span { position: absolute; left: 14px; top: 16px; font-size: 12px; white-space: nowrap; background: var(--c); color: var(--dark-ink); padding: 1px 6px; border-radius: var(--radius-s); }

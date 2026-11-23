@@ -54,9 +54,9 @@ class ViewState {
   expeditionOpen = $state(false);
   /** Regelbuch zum Blättern (5zk, 10.16): rein lokal, jeder öffnet und blättert für sich */
   bookOpen = $state(false);
-  /** letzter Wurf von Expedition bzw. Orakel (5t, seit 5zb am Blatt, 10.12): welche Zeilen der Leselage kurz einblenden,
+  /** letzter Wurf der Expedition (5t, seit 5zb am Blatt, 10.12): welche Zeilen der Leselage kurz einblenden,
    *  wann das Blatt hochrückt; jeder Wurf ein neues Objekt */
-  gmRoll = $state.raw<{ kind: 'expedition' | 'oracle'; parts: number[] } | null>(null);
+  gmRoll = $state.raw<{ parts: number[] } | null>(null);
   /** Rückfrage vor dem Zurücksetzen (Fenster liegen außerhalb des skalierten Tisches, daher hier) */
   confirmReset = $state(false);
   /** offenes Fenster der SL: Raum (Plätze, Link) bzw. Einstellungen (Tisch, Rechte, …) */

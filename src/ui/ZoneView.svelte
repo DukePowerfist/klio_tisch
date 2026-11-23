@@ -49,7 +49,7 @@
     const parts = zone.label.x === null ? [] : [`left:${zone.label.x * 100}%`];
     if (onSheet) return parts.join(';') || undefined;
     const f = fan ? SMALL_LABEL : LABEL;
-    parts.push(`font-size:${f.size}px`, `line-height:${f.line}px`, `margin-top:${LABEL.gap + (edges.length ? edges.length * step : 0)}px`);
+    parts.push(`font-size:${f.size}px`, `line-height:${f.line}px`, `margin-top:${LABEL.gap + edges.length * step}px`);
     return parts.join(';');
   });
   /** Tastatur wie Klick: Enter oder Leertaste öffnen bzw. schließen das Menü (nur am Stapel selbst, ohne Wiederholung) */

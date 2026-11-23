@@ -16,13 +16,15 @@ const HAND = 'hand';
 /** Stapelung während eines Flugs: über den liegenden Karten, unter gezogenen (400000) und dem Stapelmenü */
 const FLYING_Z = 300000;
 
-/** dazu, was nur hier gebraucht wird: Leuchten nach fremden Zügen, Stoß, Ankommen (11.7), Einblenden im Ergebnisfenster (5t),
+/** dazu, was nur hier gebraucht wird: Leuchten nach fremden Zügen, Stoß, Ankommen (11.7), Einblenden von Fenstern, Menüs und neu gewürfelten Zeilen (5t),
  *  Blatt und Schachtel (5zb) */
 type AllTiming = Timing & { glow: number; strikeColor: string; arrive: number; arriveLift: number; arriveEase: string; ping: number; pointerOut: number; pop: number;
   /** Expedition und Orakel am Tisch (5zb) */
   sheetGlide: number; nudge: number; oracleSink: number; oracleShake: number; oracleRise: number; oracleClose: number; oracleDrop: number;
   /** Karte in der Hand (11.10) */
   handResize: number;
+  /** neuer Trumpf dreht sich um (5zr) */
+  trumpTurn: number;
   /** Regelbuch (5zk, 10.16) */
   bookTurn: number };
 let cached: AllTiming | null = null;
@@ -54,9 +56,13 @@ function readTiming(): AllTiming {
     oracleSink: cssMs(v('--oracle-sink')), oracleShake: cssMs(v('--oracle-shake')), oracleRise: cssMs(v('--oracle-rise')),
     oracleClose: cssMs(v('--oracle-close')), oracleDrop: cssMs(v('--oracle-drop')),
     handResize: cssMs(v('--hand-resize')),
+    trumpTurn: cssMs(v('--trump-turn')),
     bookTurn: cssMs(v('--book-turn')),
   };
 }
+/** alle Animationen zu Ende; eine abgebrochene zählt als beendet */
+export const allFinished = (anims: readonly Animation[]): Promise<unknown> => Promise.all(anims.map((a) => a.finished.catch(() => undefined)));
+
 /** Effektstufe gewechselt: Werte neu lesen */
 export const resetTiming = (): void => {
   cached = cachedCut = null;
