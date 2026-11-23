@@ -64,3 +64,23 @@ test('Neuer Trumpf (5zr): dreht sich einmal von der Rückseite um, nicht nach de
   await expect(slot.locator('.tcard')).toContainText('Schnelle Reflexe');
   await expect(slot.locator('.turn.dealt, .tback')).toHaveCount(0);
 });
+
+test('Erlebnislaterne: beim Drücken wird sie nicht eingedrückt, der Schein bleibt mit dem Papier verrechnet', async ({ page }) => {
+  await ready(page);
+  await page.keyboard.press('1');
+  await settled(page);
+  const lantern = page.locator('[data-sheet=seat1] [data-lantern]');
+  await lantern.click();
+  await expect(lantern).toHaveAttribute('data-lantern', '1');
+  await lantern.hover();
+  await page.mouse.down();
+  // `scale` am Knopf würde ihn isolieren: der Schein läge deckend über der Zeichnung statt mit ihr verrechnet
+  expect(await lantern.evaluate((el) => [el.matches(':active'), getComputedStyle(el).scale])).toEqual([true, 'none']);
+  // die Pfeilknöpfe daneben geben weiter nach wie alle Knöpfe
+  await page.mouse.up();
+  const up = page.locator('[data-sheet=seat1] [data-lantern-step=up]');
+  await up.hover();
+  await page.mouse.down();
+  expect(await up.evaluate((el) => getComputedStyle(el).scale)).toBe('0.97');
+  await page.mouse.up();
+});
