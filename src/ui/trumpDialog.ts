@@ -2,7 +2,7 @@
 // am Ende geht ein einziger Befehl an den Host. Die Regeln kommen aus rules/klio (Bausteine, Wege).
 
 import type { SeatId, TextRef } from '../engine/types';
-import { attrValue, ATTRS, steps, type Attr, type BlockContext, type Choices, type Trump } from '../rules/klio/blocks';
+import { attrValue, ATTRS, steps, trumpCount, type Attr, type BlockContext, type Choices, type Trump } from '../rules/klio/blocks';
 import { TrumpCategory } from '../rules/klio/content/schema';
 import type { KlioContent } from '../rules/klio/content/validate';
 import { sourceStatus, stepSkipped, stepsOf, trumpProblem, type Source, type StepName } from '../rules/klio/trumps';
@@ -21,14 +21,36 @@ export type DialogStep =
   | { at: 'categories'; path: Path; choices: Choices }
   | { at: 'trumps'; path: Path; choices: Choices; category: Category };
 
-export type SourceRow = { source: Source; ok: boolean; why: TextRef | null; improveOnly: boolean };
+/** `progress`: Stand einer noch offenen Voraussetzung („Erlebnislaterne: 2 von 3“), nur wenn der Weg genau deshalb gesperrt ist */
+export type SourceRow = { source: Source; ok: boolean; why: TextRef | null; improveOnly: boolean; progress: TextRef | null };
 
 export function sourceRows(content: KlioContent, ctx: BlockContext): SourceRow[] {
   const cfg = content.trumpSources;
   return cfg.trumpSources.map((source) => {
     const st = sourceStatus(cfg, source, ctx);
-    return st.ok ? { source, ok: true, why: null, improveOnly: st.improveOnly } : { source, ok: false, why: st.why, improveOnly: false };
+    if (st.ok) return { source, ok: true, why: null, improveOnly: st.improveOnly, progress: null };
+    // voller Bogen geht der Voraussetzung vor (sourceStatus): dann steht dort dieser Grund, kein Fortschritt
+    const unmet = st.why.key === `source.${source.id}.why`;
+    return { source, ok: false, why: st.why, improveOnly: false, progress: unmet ? sourceProgress(source, ctx) : null };
   });
+}
+
+/** Stand der ersten Kästchenliste, die der Weg voll verlangt und die es noch nicht ist; andere Voraussetzungen haben keinen. */
+export function sourceProgress(source: Source, ctx: BlockContext): TextRef | null {
+  for (const b of source.requires) {
+    if (typeof b === 'string' || !('allMarked' in b)) continue;
+    const list = ctx.sheet[b.allMarked];
+    const n = list.filter(Boolean).length;
+    if (n < list.length) return { key: `trumpDialog.progress.${b.allMarked}`, params: { n, max: list.length } };
+  }
+  return null;
+}
+
+/** Einleitung des Einstiegs (5zu, 10.22): noch kein Trumpf, einige, voll. */
+export function intro(content: KlioContent, ctx: BlockContext): TextRef {
+  const n = trumpCount(ctx.sheet);
+  const max = content.trumpSources.maxTrumps;
+  return { key: n === 0 ? 'trumpDialog.introNone' : n >= max ? 'trumpDialog.introFull' : 'trumpDialog.introSome', params: { n, max } };
 }
 
 /** Ist irgendein Weg offen? (goldenes Plus am leeren Trumpf-Platz) */

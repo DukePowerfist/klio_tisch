@@ -31,8 +31,8 @@ trumpSources:
   - id: experience
     text:
       name: Erlebnis eingetroffen
-      desc: "Alle drei Lampenfelder markiert: eine Stärke verbessern und einen Trumpf der Stufe I oder II wählen."
-      why: Dafür zuerst alle drei Lampenfelder markieren.
+      desc: "Erlebnislaterne voll: eine Stärke verbessern und einen Trumpf der Stufe I oder II wählen."
+      why: Dafür muss die Erlebnislaterne voll sein.
       levelWhy: Nur Stufe I oder II.
     requires: [ { allMarked: lamps } ]
     steps: [ { improveStrength: optional } ]   # freiwillig, solange ein Trumpf folgt (A35)

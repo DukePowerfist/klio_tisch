@@ -37,6 +37,7 @@ describe('Texte', () => {
   it('zusammengesetzte Schlüssel: Schrittüberschriften, Zahlen, Narben, Zonen-Aktionen', () => {
     const keys = [
       ...Object.keys(steps).map((s) => `trumpDialog.steps.${s}`),
+      'trumpDialog.progress.lamps', 'trumpDialog.progress.weaknessMarks',
       ...[1, 2, 3, 4, 5].map((n) => `numerals.${n}`),
       'scars.heart', 'scars.spade',
       'zones.actions.shuffle', 'zones.actions.flip', 'zones.actions.draw',

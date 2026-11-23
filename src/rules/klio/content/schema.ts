@@ -153,7 +153,8 @@ const Label = z.object({ x: z.number(), y: z.number(), font: z.number() }).stric
 /** Erlebnislaterne (5zm, 10.18): ein Füllstand für alle Kästchen der Liste `field` statt einzelner Positionen.
  *  `segments`: Glasabschnitte als Vielecke, unten zuerst. `hit`: Klickfläche. `flame`: Fuß der Flamme (x, y),
  *  Neigung in Grad, je Stand Breite und Höhe. `steps`: Knöpfe zum Füllen und Leeren, Mitte zwischen beiden und
- *  Größe eines Knopfs. `glow`: Mitte und Radius des Scheins um die volle Laterne. */
+ *  Größe eines Knopfs. `glow`: Mitte und Radius des Scheins um die volle Laterne. `improve`: Mitte der Marke
+ *  „Stärke verbessern“, die nur bei vollem Bogen und offenem Anlass erscheint (5zu, 10.22). */
 const SkinPoint = z.tuple([z.number(), z.number()]);
 const Lantern = z.object({
   field: z.string(),
@@ -162,6 +163,7 @@ const Lantern = z.object({
   flame: z.object({ x: z.number(), y: z.number(), rotate: z.number(), sizes: z.array(z.tuple([z.number().positive(), z.number().positive()])).min(1) }).strict(),
   steps: z.object({ x: z.number(), y: z.number(), size: z.number().positive() }).strict(),
   glow: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict(),
+  improve: z.object({ x: z.number(), y: z.number() }).strict(),
 }).strict();
 export type SkinBox = z.infer<typeof Box>;
 export type SkinCheck = z.infer<typeof Check>;

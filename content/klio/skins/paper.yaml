@@ -73,6 +73,7 @@ nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }
 # (Spitze bei 1 am unteren Strich, bei 2 am oberen, bei 3 knapp unter der Kappe).
 # steps: Knöpfe zum Füllen und Leeren rechts daneben (Mitte zwischen beiden, Größe eines Knopfs).
 # glow: Schein um die volle Laterne (Mitte des Glases, Radius).
+# improve: Mitte der Marke „Stärke verbessern“ unter der Laterne (nur bei vollem Bogen und offenem Anlass, 5zu).
 lantern:
   field: lamps
   segments:
@@ -83,3 +84,4 @@ lantern:
   flame: { x: 589.7, y: 897.5, rotate: -5.7, sizes: [ [ 7, 15 ], [ 9.5, 25 ], [ 11, 32 ] ] }
   steps: { x: 620, y: 879, size: 15 }
   glow: { x: 588, y: 878, r: 36 }
+  improve: { x: 591, y: 927 }

@@ -7,7 +7,7 @@
   import type { Snippet } from 'svelte';
   import type { SeatId, TextRef } from '../engine/types';
   import { seatNo } from '../engine/zones';
-  import { trumpCount, type Choices } from '../rules/klio/blocks';
+  import type { Choices } from '../rules/klio/blocks';
   import { sheetOf } from '../rules/klio/events';
   import { contextFor, fullReason, isFull } from '../rules/klio/trumps';
   import DialogHead from './DialogHead.svelte';
@@ -17,7 +17,7 @@
   import { session } from './session.svelte';
   import { t, text } from './texts';
   import {
-    CATEGORIES, finalCommand, nextStep, selectableByCategory, sourceRows, trumpRows, type DialogStep, type SourcePath, type SourceRow,
+    CATEGORIES, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trumpRows, type DialogStep, type SourcePath, type SourceRow,
   } from './trumpDialog';
   import { STEP_VIEWS } from './trumpSteps';
   import { view } from './view.svelte';
@@ -86,8 +86,8 @@
       <button type="button" class="start" onclick={back}>{t('trumpDialog.back')}</button>
     {/if}
     {#if step.at === 'sources'}
-      {#if canFree}<button type="button" onclick={free}>{t('trumpDialog.free')}</button>{/if}
-      <button type="button" onclick={() => submit({ type: 'trump.random', seat })}>{t('trumpDialog.random')}</button>
+      {#if canFree}<button type="button" aria-describedby="trump-free-hint" onclick={free}>{t('trumpDialog.free')}</button>{/if}
+      <button type="button" aria-describedby="trump-random-hint" onclick={() => submit({ type: 'trump.random', seat })}>{t('trumpDialog.random')}</button>
     {:else if step.at === 'step' && !step.required}
       <button type="button" onclick={() => advance(step.path, step.choices, step.index + 1)}>{t('trumpDialog.skipImprove')}</button>
     {/if}
@@ -99,15 +99,33 @@
   <DialogHead {title} onclose={close} />
 
   {#if step.at === 'sources'}
-    <p class="note">{t('trumpDialog.count', { n: trumpCount(sheet), max: cfg.maxTrumps })}</p>
+    <!-- Einstieg (5zu, 10.22): Einleitung, offene Anlässe zuerst, gesperrte darunter mit Grund und Stand -->
+    {@const all = sourceRows(content, ctx)}
+    {@const locked = all.filter((r) => !r.ok)}
+    <p class="intro">{text(intro(content, ctx))}</p>
     <div class="dialog-choices">
-      {#each sourceRows(content, ctx) as row (row.source.id)}
-        <button class="dialog-choice" disabled={!row.ok} onclick={() => pickSource(row)}>
+      {#each all.filter((r) => r.ok) as row (row.source.id)}
+        <button class="dialog-choice" data-source={row.source.id} onclick={() => pickSource(row)}>
           <b>{row.source.text.name}</b>
-          <span class="note">{row.ok ? row.source.text.desc : text(row.why!)}</span>
+          <span class="note">{row.improveOnly ? t('trumpDialog.improveOnly') : row.source.text.desc}</span>
         </button>
       {/each}
     </div>
+    {#if locked.length > 0}
+      <h3 class="dialog-heading later">{t('trumpDialog.later')}</h3>
+      <div class="dialog-choices">
+        {#each locked as row (row.source.id)}
+          <button class="dialog-choice" data-source={row.source.id} disabled>
+            <b>{row.source.text.name}{#if row.progress}<span class="dialog-aside"> · {text(row.progress)}</span>{/if}</b>
+            <span class="note">{text(row.why!)}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+    <p class="note hints">
+      <span id="trump-random-hint"><b>{t('trumpDialog.random')}:</b> {t('trumpDialog.randomHint')}</span>
+      {#if canFree}<span id="trump-free-hint"><b>{t('trumpDialog.free')}:</b> {t('trumpDialog.freeHint')}</span>{/if}
+    </p>
     {@render footer()}
 
   {:else if step.at === 'step'}
@@ -142,6 +160,9 @@
 
 <style>
   p { margin: 0 0 12px; }
+  .later { margin: 4px 0 8px; }
+  .hints { display: grid; gap: 3px; margin-top: 14px; }
+  .dialog-aside { font-weight: 400; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin: 10px 0 12px; }
   .cards .tc { padding: 0; background: none; border: 0; border-radius: var(--menu-radius); text-align: left; }
   .cards .tc:hover:not(:disabled) :global(.tcard) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--pickable) 80%, transparent); }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { resolveText } from '../../src/rules/klio/content/texts';
 import { contextFor } from '../../src/rules/klio/trumps';
-import { anySourceOpen, attributeOptions, finalCommand, nextStep, selectableByCategory, sourceRows, trumpRows } from '../../src/ui/trumpDialog';
+import { anySourceOpen, attributeOptions, finalCommand, intro, nextStep, selectableByCategory, sourceRows, trumpRows } from '../../src/ui/trumpDialog';
 import { content, fresh, sheet, withSheet } from '../helpers';
 
 const ctxWith = (patch: Parameters<typeof withSheet>[2]) => contextFor(content, sheet(withSheet(fresh(), 'seat1', patch), 'seat1'));
@@ -13,6 +14,34 @@ describe('Trumpf-Dialog', () => {
     const one = ctxWith((b) => (b.trumps[0] = 'anatomie'));
     expect(anySourceOpen(content, one)).toBe(false);
     expect(sourceRows(content, one)[0]!.why).toEqual({ key: 'source.start.why' });
+  });
+
+  it('Einstieg (5zu): Einleitung je nach Zahl der Trümpfe', () => {
+    expect(intro(content, ctxWith(() => {})).key).toBe('trumpDialog.introNone');
+    expect(intro(content, ctxWith((b) => (b.trumps[0] = 'anatomie')))).toEqual({ key: 'trumpDialog.introSome', params: { n: 1, max: 4 } });
+    expect(intro(content, ctxWith((b) => (b.trumps = ['anatomie', 'stoiker', 'huh', 'prognose']))).key).toBe('trumpDialog.introFull');
+  });
+
+  it('Einstieg (5zu): Stand nur an einer offenen Voraussetzung, sonst der tatsächliche Sperrgrund', () => {
+    const row = (id: string, patch: Parameters<typeof withSheet>[2]) => sourceRows(content, ctxWith(patch)).find((r) => r.source.id === id)!;
+    // Laterne 2 von 3, Verbessern 1 von 3
+    expect(row('experience', (b) => { b.trumps[0] = 'anatomie'; b.lamps = [true, true, false]; })).toMatchObject({
+      ok: false, why: { key: 'source.experience.why' }, progress: { key: 'trumpDialog.progress.lamps', params: { n: 2, max: 3 } },
+    });
+    expect(row('weakness', (b) => (b.weaknessMarks = [true, false, false])).progress).toEqual({ key: 'trumpDialog.progress.weaknessMarks', params: { n: 1, max: 3 } });
+    // Voraussetzungen ohne Kästchenliste haben keinen Stand
+    expect(row('scar', () => {}).progress).toBeNull();
+    expect(row('start', (b) => (b.trumps[0] = 'anatomie')).progress).toBeNull();
+    // voller Bogen: Narbe vorhanden, gesperrt ist der Weg wegen der vier Trümpfe
+    const full = ['anatomie', 'stoiker', 'huh', 'prognose'];
+    expect(row('scar', (b) => { b.trumps = full; b.newScars = 1; })).toMatchObject({ ok: false, why: { key: 'toast.maxTrumps' }, progress: null });
+    // voller Bogen, Laterne nicht voll: Grund ist der volle Bogen, kein Stand
+    expect(row('weakness', (b) => { b.trumps = full; b.weaknessMarks = [true, false, false]; })).toMatchObject({ why: { key: 'toast.maxTrumps' }, progress: null });
+    // voller Bogen, volle Laterne, alle Stärken verbessert: gesperrt wegen des vollen Bogens
+    expect(row('experience', (b) => { b.trumps = full; b.lamps = [true, true, true]; for (const s of b.strengths) s.improved = true; })).toMatchObject({ ok: false, why: { key: 'toast.maxTrumps' }, progress: null });
+    // voller Bogen, Laterne 2 von 3: die Voraussetzung ist offen, also mit Stand
+    expect(row('experience', (b) => { b.trumps = full; b.lamps = [true, true, false]; })).toMatchObject({ why: { key: 'source.experience.why' }, progress: { params: { n: 2 } } });
+    for (const key of ['trumpDialog.progress.lamps', 'trumpDialog.progress.weaknessMarks']) expect(resolveText(content, key), key).toBeTypeOf('string');
   });
 
   it('Schritt entfällt, wenn es nichts zu wählen gibt: Schwäche streichen bei zwei leeren (A29)', () => {

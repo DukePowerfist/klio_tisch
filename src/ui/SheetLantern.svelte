@@ -10,11 +10,13 @@
   import { submitOrSay as submit } from './commands';
   import { effectLevel } from './effectLevel.svelte';
   import { t } from './texts';
+  import { view } from './view.svelte';
 
   /** `level`: Zahl der gezeigten Lampen (der Bogen hält Felder zurück, solange ein Effekt läuft) */
-  let { seat, level, canEdit }: { seat: SeatId; level: number; canEdit: boolean } = $props();
+  /** `improve`: Marke „Stärke verbessern“ zeigen (voller Bogen, offener Anlass, Recht zur Trumpfwahl; 5zu, 10.22 F8) */
+  let { seat, level, canEdit, improve = false }: { seat: SeatId; level: number; canEdit: boolean; improve?: boolean } = $props();
 
-  const { hit, segments, flame, steps, glow } = content.skinPaper.lantern;
+  const { hit, segments, flame, steps, glow, improve: mark } = content.skinPaper.lantern;
   const max = segments.length;
   const points = segments.map((s) => s.map((p) => p.join(',')).join(' '));
   // Flamme mit dem Fuß im Ursprung, 20 breit und 40 hoch; die Haut gibt je Stand Breite und Höhe
@@ -110,6 +112,15 @@
       ><i></i></button>
     {/each}
   {/if}
+  {#if improve}
+    <!-- bei vier Trümpfen gibt es kein leeres Feld, das den Dialog öffnet: der Einstieg liegt dort, wo der Anlass entsteht -->
+    <button
+      class="improve control"
+      data-lantern-improve
+      style:left="{mark.x - area.x}px" style:top="{mark.y - area.y}px"
+      onclick={(e) => { e.stopPropagation(); view.trumpDialog = seat; }}
+    >{t('sheet.lanternImprove')}</button>
+  {/if}
 </div>
 
 <style>
@@ -135,6 +146,10 @@
   .flicker:has(.halo.on) .sway { animation: lantern-sway 1.9s ease-in-out infinite; }
   @keyframes lantern-halo { 0%, 100% { opacity: 1; } 35% { opacity: 0.8; } 60% { opacity: 0.95; } 80% { opacity: 0.85; } }
   @keyframes lantern-sway { 0%, 100% { transform: scale(1, 1); } 30% { transform: scale(0.97, 1.04) skewX(1.5deg); } 65% { transform: scale(1.02, 0.97) skewX(-1.5deg); } }
+
+  /* Marke „Stärke verbessern“: golden wie das Plus im wählbaren Trumpffeld */
+  .improve { position: absolute; translate: -50% -50%; padding: 1px 7px 2px; border: 1px solid var(--pickable); border-radius: 8px; background: rgba(255, 252, 240, 0.92); color: #7a5a00; font-family: var(--trump-serif); font-weight: 700; font-size: 10px; line-height: 1.1; white-space: nowrap; cursor: pointer; }
+  .improve:hover, .improve:focus-visible { background: var(--pickable); color: #fff; }
 
   /* Knöpfe zum Füllen und Leeren: klein und blass wie der Streichknopf; nur wo der Bogen Bedienelemente zeigt (.tools) */
   .step { position: absolute; display: none; place-items: center; padding: 0; border: 1px solid rgba(0, 0, 0, 0.45); border-radius: 50%; background: rgba(255, 255, 255, 0.75); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity var(--sheet-lamp-t) ease; }

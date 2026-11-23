@@ -89,7 +89,8 @@
   const struck = (id: string) => strikerOf.has(id) && checked(strikerOf.get(id)!);
   const bold = (id: string) => emphasizerOf.has(id) && checked(emphasizerOf.get(id)!);
   const hasEmptySlot = $derived(!isFull(content.trumpSources, sheet));
-  const canChoose = $derived(hasEmptySlot && anySourceOpen(content, contextFor(content, sheet)));
+  const sourceOpen = $derived(anySourceOpen(content, contextFor(content, sheet)));
+  const canChoose = $derived(hasEmptySlot && sourceOpen);
 
   // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
   const may = (type: string) => session.can({ type, seat });
@@ -218,7 +219,7 @@
       {/if}
     {/each}
 
-    <SheetLantern {seat} level={lampIds.filter(checked).length} canEdit={canLamps} />
+    <SheetLantern {seat} level={lampIds.filter(checked).length} canEdit={canLamps} improve={!hasEmptySlot && sourceOpen && canChooseTrump} />
 
     {#if photoBox}
       <button

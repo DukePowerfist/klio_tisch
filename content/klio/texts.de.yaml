@@ -65,6 +65,7 @@ sheet:
   lanternHint: Klick füllt, Rechtsklick leert.
   lanternFill: Laterne füllen
   lanternEmpty: Laterne leeren
+  lanternImprove: Stärke verbessern        # Marke an der vollen Laterne bei vollem Bogen (neu, 5zu)
   trumpChoose: Trumpf wählen
   trumpLocked: Trumpf (noch nicht freigeschaltet)
   trumpLockedHint: noch nicht freigeschaltet   # sichtbare Zeile im gesperrten Feld (neu, 5zn)
@@ -100,7 +101,17 @@ trumpDialog:
     chooseWeaknessToRemove: Welche Schwäche entfällt?
     improveStrength: Welche Stärke verbessern?
     moveAttributePoint: Attributspunkt umverteilen
-  count: "Trümpfe: {n} von {max}"
+  # Einstieg (5zu, 10.22)
+  introNone: Du hast noch keinen Trumpf. Wähle deinen Starttrumpf.
+  introSome: "Du hast {n} von {max} Trümpfen. Einen neuen bekommst du zu einem dieser Anlässe:"
+  introFull: "Du hast {max} von {max} Trümpfen, mehr sind nicht möglich. Ein eingetroffenes Erlebnis verbessert dann nur noch eine Stärke."
+  later: Noch nicht möglich
+  improveOnly: "Du hast schon alle Trümpfe: nur eine Stärke verbessern."
+  progress:                               # Stand einer offenen Voraussetzung, je Kästchenliste
+    lamps: "Erlebnislaterne: {n} von {max}"
+    weaknessMarks: "Verbessern: {n} von {max}"
+  randomHint: nimmt den ersten möglichen Anlass und entscheidet alles Weitere zufällig.
+  freeHint: Wähle einen Trumpf, den du noch nicht hast. Stufe und Attribute sind frei.
   random: Zufälliger Trumpf
   free: Freie Wahl
   back: "← Zurück"

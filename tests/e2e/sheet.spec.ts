@@ -609,6 +609,79 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Kraftakt');
 });
 
+test('Trumpf-Dialog, Einstieg (5zu): Einleitung, offene Anlässe zuerst, Stand an gesperrten, Unterzeilen', async ({ page }) => {
+  await page.keyboard.press('1');
+  const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
+  const sources = () => dialog.locator('[data-source]').evaluateAll((els) => els.map((e) => `${(e as HTMLButtonElement).disabled ? '-' : '+'}${e.getAttribute('data-source')}`));
+  await sheet1(page).locator('[data-slot="0"]').click();
+  await expect(dialog.locator('.intro')).toHaveText('Du hast noch keinen Trumpf. Wähle deinen Starttrumpf.');
+  expect(await sources()).toEqual(['+start', '-weakness', '-experience', '-scar']);
+  await expect(dialog.getByText('Noch nicht möglich')).toBeVisible();
+  await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne: 0 von 3');
+  await expect(dialog.locator('[data-source=experience]')).toContainText('Dafür muss die Erlebnislaterne voll sein.');
+  await expect(dialog.locator('[data-source=weakness]')).toContainText('Verbessern: 0 von 3');
+  await expect(dialog.locator('[data-source=scar] .dialog-aside')).toHaveCount(0);
+  // Unterzeilen erklären die beiden Knöpfe der Reihe am Ende und hängen an ihnen
+  await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toHaveAccessibleDescription(/nimmt den ersten möglichen Anlass/);
+  await expect(dialog.getByRole('button', { name: 'Freie Wahl' })).toHaveAccessibleDescription('Freie Wahl: Wähle einen Trumpf, den du noch nicht hast. Stufe und Attribute sind frei.');
+  await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
+  await dialog.getByRole('button', { name: /^Körper/ }).click();
+  await dialog.getByRole('button', { name: /Stoiker/ }).click();
+  await page.mouse.move(5, 5);
+
+  // ein Trumpf, Laterne 2 von 3: Erlebnis gesperrt mit Stand; voll: offen und oben
+  const lantern = sheet1(page).locator('[data-lantern]');
+  await lantern.click({ clickCount: 2, delay: 0 });
+  await sheet1(page).locator('[data-slot="1"]').click();
+  await expect(dialog.locator('.intro')).toHaveText('Du hast 1 von 4 Trümpfen. Einen neuen bekommst du zu einem dieser Anlässe:');
+  expect(await sources()).toEqual(['-start', '-weakness', '-experience', '-scar']);
+  await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne: 2 von 3');
+  await page.keyboard.press('Escape');
+  await lantern.click();
+  await sheet1(page).locator('[data-slot="1"]').click();
+  expect(await sources()).toEqual(['+experience', '-start', '-weakness', '-scar']);
+  await expect(dialog.locator('[data-source=experience]')).toContainText('Erlebnislaterne voll: eine Stärke verbessern');
+});
+
+test('Trumpf-Dialog bei vollem Bogen (5zu, F8): „Stärke verbessern“ an der Laterne öffnet den Dialog, nur wenn ein Anlass offen ist', async ({ page }) => {
+  await page.keyboard.press('1');
+  const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
+  const mark = sheet1(page).locator('[data-lantern-improve]');
+  for (const [i, group, name] of [[0, /^Körper/, /./], [1, /^Körper/, /./], [2, /^Verstehen/, /./], [3, /^Präsenz/, /./]] as const) {
+    await sheet1(page).locator(`[data-slot="${i}"]`).click();
+    await dialog.getByRole('button', { name: 'Freie Wahl' }).click();
+    await dialog.getByRole('button', { name: group }).click();
+    await dialog.locator('.cards .tc:not(:disabled)').filter({ hasText: name }).first().click();
+    await expect(sheet1(page).locator(`[data-slot="${i}"] .tcard`)).toBeVisible();
+    await page.mouse.move(5, 5);
+  }
+  // voll, aber kein Anlass: keine Marke
+  await expect(mark).toHaveCount(0);
+  const lantern = sheet1(page).locator('[data-lantern]');
+  await lantern.click({ clickCount: 3, delay: 0 });
+  await expect(lantern).toHaveAttribute('data-lantern', '3');
+  await expect(mark).toHaveText('Stärke verbessern');
+  // die Marke liegt im Bogen und verdeckt die Pfeilknöpfe nicht
+  const inside = await mark.evaluate((el) => { const s = el.closest('.sheet')!.getBoundingClientRect(), m = el.getBoundingClientRect(); return m.left >= s.left && m.right <= s.right && m.bottom <= s.bottom; });
+  expect(inside).toBe(true);
+  await mark.click();
+  await expect(dialog.locator('.intro')).toHaveText(/^Du hast 4 von 4 Trümpfen, mehr sind nicht möglich\./);
+  await expect(dialog.locator('[data-source=experience]')).toBeEnabled();
+  await expect(dialog.locator('[data-source=experience]')).toContainText('nur eine Stärke verbessern');
+  // die übrigen Wege nennen den vollen Bogen als Grund, ohne Stand
+  await expect(dialog.locator('[data-source=weakness]')).toContainText('Es sind höchstens 4 Trümpfe möglich.');
+  await expect(dialog.locator('[data-source=weakness] .dialog-aside')).toHaveCount(0);
+  await dialog.locator('[data-source=experience]').click();
+  await dialog.getByRole('button', { name: /^I · / }).click();
+  await dialog.getByRole('textbox').fill('gutes Seil');
+  await dialog.getByRole('button', { name: 'Weiter' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(sheet1(page).locator('[data-field="strengths.text.0"]')).toHaveValue('gutes Seil');
+  // Laterne geleert, Anlass verbraucht: Marke weg
+  await expect(lantern).toHaveAttribute('data-lantern', '0');
+  await expect(mark).toHaveCount(0);
+});
+
 test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment je Attribut, Text nicht unter 9 px und sonst ausgeblendet', async ({ page }) => {
   await page.keyboard.press('1');
   const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
