@@ -54,13 +54,13 @@
   --label-ink: #fff;       /* Beschriftung der Tischzonen */
   --label-bg: rgba(0, 0, 0, 0.45);
   --label-count-bg: rgba(255, 255, 255, 0.22);
-  /* Trumpfkarten: Attributfarben und Rahmenstärke je Stufe */
-  --attr-K: #a8412d;
-  --attr-V: #2d5aa8;
-  --attr-P: #7a3aa0;
-  --trump-border-1: 2px;
-  --trump-border-2: 3.5px;
-  --trump-border-3: 5px;
+  /* Trumpfkarten: Attributfarben (Thema „Expedition“, 10.20 F2; weiße Schrift darauf, Kontrast 7,3 / 7,4 / 9,5) und Rahmenlinien je Stufe */
+  --attr-K: #8f3e2b;   /* Rost */
+  --attr-V: #2e5e55;   /* Tanne */
+  --attr-P: #5b3a5e;   /* Aubergine */
+  --trump-ink: #2b2622;    /* Rahmenlinien und Eckmarke der Trumpfkarte (5zo) */
+  --trump-line: 1.5px;     /* Außenlinie Stufe I und II; Stufe II hat dazu eine Innenlinie */
+  --trump-line-3: 2.5px;   /* Außenlinie Stufe III, dazu Innenlinie und Ecken */
   /* Mauszeiger und Markierung gezogener Karten je Rolle (8.3) */
   --who-gm: #f2f2f2;      /* weiß: nicht mit Gold (Bedienhinweis) zu verwechseln, 8.3 */
   /* wählbare Farben der Plätze (layouts.yaml seatColors, Schritt 5e); die ersten vier wie bisher Platz 1–4 */

@@ -354,10 +354,10 @@
      gegen das Papier. In Ruhe ist sie unsichtbar und wartet etwas höher und schräg; beim Überfahren
      legt sie sich ins Feld. Gesperrte Felder (ohne .go) haben keine Karte, nur die Zeile unter dem Plus. */
   .ghost { position: absolute; inset: 0; box-sizing: border-box; border: 2px solid var(--pickable); border-radius: var(--radius-m); overflow: hidden; mix-blend-mode: multiply; pointer-events: none; opacity: 0; transform: translateY(var(--ghost-shift)) rotate(var(--ghost-tilt)); transition: opacity var(--ghost-out) ease, transform var(--ghost-out) ease; }
-  .ghost i { display: block; height: 20px; background: var(--pickable); }
+  .ghost i { display: block; height: 22px; background: var(--pickable); }
   .hint { position: absolute; pointer-events: none; opacity: 0; color: var(--sheet-label); font-family: system-ui, sans-serif; transition: opacity var(--ghost-out) ease; }
-  .slot.go .hint { left: 6px; right: 6px; top: 24px; font-weight: 700; font-size: 13.5px; line-height: 1.15; white-space: nowrap; }
-  .slot:not(.go) .hint { left: 8px; right: 8px; top: 102px; font-size: 11px; line-height: 1.25; text-align: center; }
+  .slot.go .hint { left: 7px; right: 7px; top: 28px; font-weight: 700; font-size: 13.5px; line-height: 1.15; white-space: nowrap; }
+  .slot:not(.go) .hint { left: 8px; right: 8px; top: 114px; font-size: 11px; line-height: 1.25; text-align: center; }
   .plus path { transition: stroke-width var(--ghost-in) ease; }
   .slot.go.tabbed .ghost, .slot.go:active .ghost { opacity: var(--ghost-on); transform: none; transition-duration: var(--ghost-in); transition-timing-function: ease-out; }
   .slot.go.tabbed .hint { opacity: 0.75; transition-duration: var(--ghost-in); }
@@ -370,7 +370,7 @@
     .slot.empty:not(.go, .inert):hover .hint { opacity: 0.6; }
     .slot.go:hover .plus path { stroke-width: 4.4; }
   }
-  .rmv { display: none; position: absolute; top: 18px; right: 3px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
+  .rmv { display: none; position: absolute; top: 25px; right: 5px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.5); color: #fff; font-size: 10px; line-height: 16px; cursor: pointer; }
   .tools .rmv { display: block; }
   .dead-cross { position: absolute; left: 0; top: 0; pointer-events: none; stroke: var(--danger); }
   .plate { position: absolute; box-sizing: border-box; display: flex; align-items: baseline; gap: 0.35em; padding: 0 0.4em; border-radius: 0.3em; background: color-mix(in srgb, var(--c) 55%, transparent); color: var(--dark-ink); line-height: 1.5; white-space: nowrap; overflow: hidden; font-family: system-ui, sans-serif; pointer-events: none; }

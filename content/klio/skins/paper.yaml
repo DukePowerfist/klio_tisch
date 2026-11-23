@@ -52,10 +52,12 @@ fields:
   # Foto: wie der gezeichnete Rahmen gedreht (Grad, um die Mitte); Innenfläche 52,8 × 77,8 bei Mitte 96,8 | 114,1,
   # etwas größer, damit es unter den Linien endet (die Linien scheinen durch, Sheet.svelte)
   photo: { x: 69.3, y: 74.1, w: 55, h: 80, rotate: -12.4 }
-  trumps.0: { x: 28, y: 690, w: 128, h: 152 }
-  trumps.1: { x: 186, y: 690, w: 128, h: 152 }
-  trumps.2: { x: 344, y: 690, w: 128, h: 152 }
-  trumps.3: { x: 503, y: 690, w: 128, h: 152 }
+  # Trumpffelder (5zo, 10.20 F9): Karte 126 × 176 (5:7 wie die Spielkarten), mittig im gezeichneten Rahmen, über dem
+  # gedruckten „TRUMPF“. Rahmen am Bogenbild gemessen (Innenkante), von Hand gezeichnet, daher je Feld eigene Lage.
+  trumps.0: { x: 28.9, y: 668.8, w: 126, h: 176 }
+  trumps.1: { x: 187.6, y: 666, w: 126, h: 176 }
+  trumps.2: { x: 349, y: 667.5, w: 126, h: 176 }
+  trumps.3: { x: 506.2, y: 667.9, w: 126, h: 176 }
   dead: { x: 0, y: 0, w: 662, h: 936 }
 zones:
   damage: { x: 519.1, y: 125.4, w: 139.4, h: 195.1 }

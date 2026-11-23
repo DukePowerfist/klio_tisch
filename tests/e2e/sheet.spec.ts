@@ -609,6 +609,70 @@ test('Zufälliger Trumpf und freie Wahl', async ({ page }) => {
   await expect(sheet1(page).locator('[data-slot="1"] .tcard')).toContainText('Kraftakt');
 });
 
+test('Trumpfkarte im Feld (5zo): Eckmarke und Rahmenbild je Stufe, ein Segment je Attribut, Text nicht unter 9 px und sonst ausgeblendet', async ({ page }) => {
+  await page.keyboard.press('1');
+  const slot = (i: number) => sheet1(page).locator(`[data-slot="${i}"]`);
+  const free = async (i: number, category: RegExp, name: RegExp) => {
+    await slot(i).click();
+    await page.getByRole('button', { name: 'Freie Wahl' }).click();
+    await page.getByRole('button', { name: category }).click();
+    // im Auswahlfenster steht der Text immer ganz da, nichts wird ausgeblendet
+    const inList = page.getByRole('button', { name }).locator('.tcard .tr');
+    expect(await inList.evaluate((el) => !el.classList.contains('cut') && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+    await page.getByRole('button', { name }).click();
+    await expect(slot(i).locator('.tcard')).toHaveCount(1);
+  };
+  await free(0, /^Verstehen/, /Schreib das auf!/);
+  await free(1, /^Verschiedene/, /Kraftakt/);
+  await free(2, /^Verschiedene/, /Sprechende Tote/);
+  await free(3, /^Körper/, /Schnelle Reflexe/);
+  await page.mouse.move(5, 5);
+
+  // Format 5:7 wie die Spielkarten (F9)
+  const b = (await slot(0).boundingBox())!;
+  expect(b.width / b.height).toBeCloseTo(126 / 176, 2);
+
+  // Stufe: Eckmarke mit der römischen Zahl; Innenlinie erst ab Stufe II, kräftige Außenlinie und Ecken nur bei Stufe III
+  const frame = (i: number) => slot(i).locator('.tcard').evaluate((el) => ({
+    outer: parseFloat(getComputedStyle(el).borderTopWidth),
+    inner: getComputedStyle(el.querySelector('.in')!).borderTopColor !== 'rgba(0, 0, 0, 0)',
+    corners: getComputedStyle(el, '::after').content !== 'none',
+  }));
+  await expect(slot(0).locator('.tg b')).toHaveText('III');
+  await expect(slot(1).locator('.tg b')).toHaveText('II');
+  await expect(slot(3).locator('.tg b')).toHaveText('I');
+  const [f3, f2, f1] = [await frame(0), await frame(1), await frame(3)];
+  expect(f1).toEqual({ outer: f2.outer, inner: false, corners: false });
+  expect(f2).toMatchObject({ inner: true, corners: false });
+  expect(f3).toMatchObject({ inner: true, corners: true });
+  expect(f3.outer).toBeGreaterThan(f2.outer);
+
+  // Kopfband: je Attribut ein Segment in seiner Farbe mit seinem Namen; bei drei Attributen eine Zeile über allen
+  const bg = (l: Locator) => l.evaluateAll((els) => els.map((el) => getComputedStyle(el).backgroundColor));
+  await expect(slot(3).locator('.seg')).toHaveText(['KÖRPER']);
+  await expect(slot(2).locator('.seg')).toHaveText(['PRÄSENZ', 'VERSTEHEN']);
+  expect(new Set(await bg(slot(2).locator('.seg'))).size).toBe(2);
+  await expect(slot(1).locator('.seg')).toHaveText(['', '', '']);
+  expect(new Set(await bg(slot(1).locator('.seg'))).size).toBe(3);
+  await expect(slot(1).locator('.all')).toHaveText('JEDES ATTRIBUT');
+  // die Namen passen in ihr Segment
+  expect(await slot(2).locator('.seg').evaluateAll((els) => els.every((el) => el.scrollWidth <= el.clientWidth))).toBe(true);
+
+  // Text: kurzer Text in voller Größe; der längste wird höchstens bis 9 px verkleinert und läuft dann unten aus
+  const text = (i: number) => slot(i).locator('.tr').evaluate((el) => ({ size: parseFloat(getComputedStyle(el).fontSize), cut: el.classList.contains('cut') }));
+  expect(await text(3)).toEqual({ size: 10.5, cut: false });
+  expect(await text(0)).toEqual({ size: 9, cut: true });
+  await expect(slot(0).locator('.tr')).toContainText('zu verwenden.'); // der ganze Text bleibt im Dokument
+
+  // ✕ liegt unter dem Kopfband und verdeckt weder die Eckmarke noch den Namen
+  await slot(3).hover();
+  const rmv = (await slot(3).locator('.rmv').boundingBox())!;
+  const head = (await slot(3).locator('.tg').boundingBox())!;
+  const name = await slot(3).locator('.tn').evaluate((el) => { const r = document.createRange(); r.selectNodeContents(el); const q = r.getBoundingClientRect(); return { right: q.right }; });
+  expect(rmv.y).toBeGreaterThanOrEqual(head.y + head.height - 0.5);
+  expect(rmv.x).toBeGreaterThanOrEqual(name.right);
+});
+
 test('Foto wird verkleinert gespeichert und bleibt nach Neuladen', async ({ page }) => {
   await page.keyboard.press('1');
   await sheet1(page).locator('input[type=file]').setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: await makePng(page) });

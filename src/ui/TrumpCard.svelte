@@ -1,44 +1,76 @@
 <script lang="ts">
-  // Trumpfkarte wie bisher: Attributfarben (Verlauf bei mehreren), Stufe als römische Zahl und Rahmenstärke.
-  // Farben und Rahmenstärken sind Gestaltungswerte (theme.css).
+  // Trumpfkarte (10.20, Schritt 5zo): Kopfband in den Attributfarben, je Attribut ein Segment mit seinem Namen (bei
+  // drei Attributen „JEDES ATTRIBUT“ über allen), rechts die Eckmarke mit der Stufe. Dazu je Stufe ein Rahmenbild:
+  // I einfache Linie, II Doppellinie, III kräftige Doppellinie mit Ecken. Farben und Linienstärken sind
+  // Gestaltungswerte (theme.css).
   import type { Trump } from '../rules/klio/blocks';
   import { t } from './texts';
 
   let { trump, size = 'slot' }: { trump: Trump; size?: 'slot' | 'list' | 'large' } = $props();
 
-  const colors = $derived(trump.attributes.map((a) => `var(--attr-${a})`));
-  const fill = $derived(`linear-gradient(${colors.length > 1 ? '90deg, ' : ''}${colors.join(', ')}${colors.length > 1 ? '' : `, ${colors[0]}`})`);
-  const label = $derived(trump.attributes.length === 3 ? t('trumps.allAttributes') : trump.attributes.map((a) => t(`attributes.${a}`).toUpperCase()).join(' · '));
+  const count = $derived(trump.attributes.length);
 
-  // Text verkleinern, bis er passt (wie bisher, in halben Pixeln bis 7 px)
+  // Im Feld: Text höchstens bis SLOT_MIN verkleinern (in halben Pixeln); passt er dann noch nicht, läuft er unten
+  // weich aus. Der volle Text steht in der Großansicht. In der Liste und der Großansicht bleibt er immer ganz.
+  const SLOT_MAX = 10.5;
+  const SLOT_MIN = 9;
   let body = $state<HTMLDivElement>();
+  let cut = $state(false);
   $effect(() => {
     if (!body || size !== 'slot') return;
     void trump.text;
-    let f = 11.5;
+    let f = SLOT_MAX;
     body.style.fontSize = `${f}px`;
-    while (body.scrollHeight > body.clientHeight + 1 && f > 7) body.style.fontSize = `${(f -= 0.5)}px`;
+    while (body.scrollHeight > body.clientHeight + 1 && f > SLOT_MIN) body.style.fontSize = `${(f -= 0.5)}px`;
+    cut = body.scrollHeight > body.clientHeight + 1;
   });
 </script>
 
-<div class="tcard {size}" style:--tc={fill} style:--bw="var(--trump-border-{trump.level})">
-  <div class="tg"><span>{label}</span><b>{t(`numerals.${trump.level}`)}</b></div>
-  <div class="tn">{trump.name}</div>
-  <div class="tr" bind:this={body}>{trump.text}</div>
+<div class="tcard {size} l{trump.level} a{count}">
+  <div class="in">
+    <div class="tg">
+      <div class="segs">
+        {#each trump.attributes as a (a)}
+          <span class="seg" style:background="var(--attr-{a})">{count === 3 ? '' : t(`attributes.${a}`).toUpperCase()}</span>
+        {/each}
+        {#if count === 3}<span class="all">{t('trumps.allAttributes')}</span>{/if}
+      </div>
+      <b>{t(`numerals.${trump.level}`)}</b>
+    </div>
+    <div class="tn">{trump.name}</div>
+    <div class="tr" class:cut bind:this={body}>{trump.text}</div>
+  </div>
 </div>
 
 <style>
-  .tcard { position: relative; width: 100%; height: 100%; box-sizing: border-box; border: var(--bw) solid transparent; border-radius: var(--radius-m); background: linear-gradient(var(--paper), var(--paper)) padding-box, var(--tc) border-box; overflow: hidden; font-family: system-ui, sans-serif; color: var(--sheet-ink); display: flex; flex-direction: column; }
-  .tg { background: var(--tc); color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); }
-  .tg b { font-size: 12px; letter-spacing: 0.02em; }
-  .tn { font-weight: 700; font-size: 13.5px; line-height: 1.15; padding: 4px 22px 0 6px; }
-  .tr { padding: 3px 6px 5px; line-height: 1.22; flex: 1; min-height: 0; overflow: hidden; }
-  .list { height: auto; min-height: 150px; }
-  .list .tg { font-size: 11px; } .list .tg b { font-size: 14px; }
+  /* Maße je Größe: --bw Außenlinie, --fp Abstand bis zur Innenlinie, --hh Höhe des Kopfbands, --tab Breite der Eckmarke */
+  .tcard { --bw: var(--trump-line); --fp: 2px; --hh: 19px; --tab: 21px; --rad: var(--radius-m); --lf: 9.5px; --nf: 11.5px;
+    position: relative; width: 100%; height: 100%; box-sizing: border-box; display: flex; border: var(--bw) solid var(--trump-ink); border-radius: var(--rad); padding: var(--fp); background: var(--paper); overflow: hidden; font-family: system-ui, sans-serif; color: var(--sheet-ink); }
+  .in { position: relative; flex: 1; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid transparent; border-radius: calc(var(--rad) - var(--fp) - 1px); overflow: hidden; }
+  .l2 .in, .l3 .in { border-color: var(--trump-ink); }
+  .l3 { --bw: var(--trump-line-3); }
+  /* Ecken der Stufe III: vier kleine Flächen über den Ecken der Innenlinie */
+  .l3::after { content: ''; position: absolute; inset: calc(var(--fp) - 1.5px); pointer-events: none; --c: calc(var(--fp) + 4px); border-radius: 2px;
+    background: linear-gradient(var(--trump-ink), var(--trump-ink)) 0 0 / var(--c) var(--c) no-repeat, linear-gradient(var(--trump-ink), var(--trump-ink)) 100% 0 / var(--c) var(--c) no-repeat,
+      linear-gradient(var(--trump-ink), var(--trump-ink)) 0 100% / var(--c) var(--c) no-repeat, linear-gradient(var(--trump-ink), var(--trump-ink)) 100% 100% / var(--c) var(--c) no-repeat; }
+  .tg { flex: none; height: var(--hh); display: flex; color: #fff; font-size: var(--lf); font-weight: 700; letter-spacing: 0.06em; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); }
+  .segs { position: relative; flex: 1; min-width: 0; display: flex; }
+  .seg { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
+  .a1 .seg { justify-content: flex-start; padding: 0 5px; }
+  .all { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+  .tg b { flex: none; width: var(--tab); display: flex; align-items: center; justify-content: center; background: var(--trump-ink); border-left: 1px solid rgba(255, 255, 255, 0.55); font-size: var(--nf); letter-spacing: 0.02em; text-shadow: none; }
+  .tn { flex: none; font-weight: 700; font-size: 13.5px; line-height: 1.15; padding: 4px 19px 0 5px; }
+  .tr { flex: 1; min-height: 0; overflow: hidden; line-height: 1.24; padding: 3px 5px; }
+  .tr.cut { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent calc(100% - 2px)); mask-image: linear-gradient(#000 calc(100% - 26px), transparent calc(100% - 2px)); }
+  .slot.a2 { --lf: 7.2px; }
+  .slot.a3 { --lf: 8.6px; }
+  .list { --fp: 3px; --hh: 24px; --tab: 28px; --lf: 11px; --nf: 14px; height: auto; min-height: 150px; }
+  .list.a1 .seg { padding: 0 8px; }
   .list .tn { font-size: 16px; padding: 6px 9px 0; }
-  .list .tr { font-size: 13px; padding: 4px 9px 8px; }
-  .large { width: min(420px, 90vw); height: auto; min-height: 300px; border-radius: var(--radius-win); }
-  .large .tg { font-size: 14px; padding: 6px 12px; } .large .tg b { font-size: 20px; }
+  .list .tr { font-size: 13px; line-height: 1.22; padding: 4px 9px 8px; overflow: visible; }
+  .large { --bw: calc(var(--trump-line) + 0.5px); --fp: 5px; --hh: 36px; --tab: 44px; --lf: 14px; --nf: 20px; --rad: var(--radius-win); width: min(420px, 90vw); height: auto; min-height: 300px; }
+  .large.l3 { --bw: calc(var(--trump-line-3) + 1px); }
+  .large.a1 .seg { padding: 0 12px; }
   .large .tn { font-size: 26px; padding: 12px 16px 0; }
-  .large .tr { font-size: 19px; line-height: 1.35; padding: 8px 16px 18px; }
+  .large .tr { font-size: 19px; line-height: 1.35; padding: 8px 16px 18px; overflow: visible; }
 </style>
