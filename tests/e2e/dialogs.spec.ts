@@ -2,7 +2,7 @@
 // feste Oberkante beim Trumpf-Dialog. Platz wählen und Raum brauchen einen Mitspieler und bleiben hier ungeprüft.
 
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { fromMenu, openSettings, ready, setField } from './helpers';
+import { fromMenu, openSettings, ready } from './helpers';
 
 test.beforeEach(async ({ page }) => ready(page));
 
@@ -67,22 +67,31 @@ test('Protokollspalte: × statt Textknopf, schließt', async ({ page }) => {
 
 test('Trumpf wählen: beim Durchgehen der Schritte bleibt die Oberkante stehen; zu hoch rückt es nur so weit wie nötig und kehrt zurück', async ({ page }) => {
   await page.keyboard.press('1');
-  await setField(page, 'seat1', 'attributes.V', '3');
+  // Erlebnis eingetroffen: ein Weg mit einem niedrigen Schritt (Stärke wählen) vor der hohen Trumpfliste
+  await sheet1(page).locator('[data-lantern]').click({ clickCount: 3, delay: 0 });
   await sheet1(page).locator('[data-slot="0"]').click();
   const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
   const rect = async () => (await dialog.boundingBox())!;
   const first = (await rect()).y;
-  await page.getByRole('button', { name: /^Starttrumpf/ }).click();
-  await expect(dialog.locator('h2')).toHaveText('Welchen Trumpf?');
+  // niedriger Schritt: die Oberkante bleibt, wo sie beim Öffnen war. Bewusst nicht an der Trumpfliste geprüft: wie hoch
+  // sie ist, hängt an der Schrift des Rechners (Zeilenumbruch in den Karten), auf GitHub passt schon die kurze nicht.
+  await page.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
+  await expect(dialog.locator('h2')).toHaveText('Welche Stärke verbessern?');
   expect((await rect()).y).toBeCloseTo(first, 0);
-  await page.getByRole('tab', { name: /^Verstehen/ }).click();
-  await expect(dialog.getByRole('tab', { name: /^Verstehen/ })).toHaveAttribute('aria-selected', 'true');
+  await dialog.getByRole('button', { name: 'Ohne Verbesserung weiter' }).click();
+  await expect(dialog.locator('h2')).toHaveText('Welchen Trumpf?');
   // die Liste der Trümpfe ist höher als das Fenster: unten bündig mit dem Rand (12 px), oben so weit wie nötig
   // (die Lage folgt der Höhe einen Frame später, über den ResizeObserver in Modal.svelte)
   await expect.poll(async () => { const r = await rect(); return Math.round(r.y + r.height); }).toBe(900 - 12);
   expect((await rect()).y).toBeLessThan(first);
+  // auch nach dem Wechsel des Reiters (5zx)
+  await page.getByRole('tab', { name: /^Verstehen/ }).click();
+  await expect(dialog.getByRole('tab', { name: /^Verstehen/ })).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(async () => { const r = await rect(); return Math.round(r.y + r.height); }).toBe(900 - 12);
+  // zurück zum niedrigen Schritt und zum Einstieg: wieder an der Oberkante vom Öffnen
+  await dialog.getByRole('button', { name: '← Zurück' }).click();
+  await expect.poll(async () => (await rect()).y).toBeCloseTo(first, 0);
   await dialog.getByRole('button', { name: '← Zurück' }).click();
   await expect(dialog.getByRole('button', { name: 'Zufälliger Trumpf' })).toBeVisible();
-  // wieder klein: zurück an die Oberkante vom Öffnen
   await expect.poll(async () => (await rect()).y).toBeCloseTo(first, 0);
 });

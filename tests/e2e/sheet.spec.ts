@@ -844,7 +844,8 @@ test('Breiter laufende Schrift (anderer Rechner): Namen im Kopfband und „Trump
   await page.addInitScript(() => {
     const wide = () => {
       const style = document.createElement('style');
-      style.textContent = '.tcard .tg { letter-spacing: 0.3em !important; } .slot .hint { letter-spacing: 0.22em !important; }';
+      // maßvoll: auf einem Rechner, dessen Schrift schon breit läuft (GitHub), muss es mit der kleinsten Größe noch passen
+      style.textContent = '.tcard .tg { letter-spacing: 0.16em !important; } .slot .hint { letter-spacing: 0.15em !important; }';
       document.head.append(style);
     };
     if (document.head) wide();
