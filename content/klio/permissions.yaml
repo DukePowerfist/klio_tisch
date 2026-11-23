@@ -8,7 +8,7 @@ player:
   card.flip: allow          # card.flip, zone.flip
   zone.shuffle: allow
   zone.draw: allow
-  sheet.edit: own           # sheet.setText, sheet.toggle, sheet.setNumber
+  sheet.edit: own           # sheet.setText, sheet.toggle, sheet.stepLamps, sheet.setNumber
   sheet.photo: own
   sheet.roll: own
   sheet.replace: own        # sheet.reset, sheet.import: ganzen Bogen leeren oder ersetzen (5j)

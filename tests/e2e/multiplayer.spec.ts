@@ -610,6 +610,31 @@ test('Stapelmenü (5o): Rechte ändern sich bei offenem Menü; Eintrag wird ausg
   await expect(player.locator('[data-zone=deck]')).not.toHaveAttribute('role', 'button');
 });
 
+test('Erlebnislaterne mit Mitspieler (5zm): schnelle Klicks zählen alle; fremder Bogen nur mit dem Recht „für alle“', async ({ browser }) => {
+  const { gm, link } = await openRoom(browser);
+  const player = await (await browser.newContext()).newPage();
+  await joinAs(player, link, 'Ida', 2);
+  await player.keyboard.press('0');
+  const own = player.locator('[data-sheet=seat2] [data-lantern]');
+  const foreign = player.locator('[data-sheet=seat1] [data-lantern]');
+  // drei Klicks, bevor der Host den ersten bestätigt: Endstand 3, auch bei der SL
+  await expect(own).toBeEnabled();
+  await own.evaluate((el: HTMLElement) => { el.click(); el.click(); el.click(); });
+  await expect(own).toHaveAttribute('data-lantern', '3');
+  await expect(gm.locator('[data-sheet=seat2] [data-lantern]')).toHaveAttribute('data-lantern', '3');
+
+  // Voreinstellung „nur eigener Bogen“: fremde Laterne zeigt nur an
+  await expect(foreign).toBeDisabled();
+  await expect(foreign).toHaveAttribute('title', 'Erlebnisse: 0 von 3');
+  const rights = await openSettings(gm, 'Rechte der Spieler');
+  await rights.getByRole('combobox', { name: 'Bogen bearbeiten' }).selectOption('allow');
+  await expect(foreign).toBeEnabled();
+  await foreign.click();
+  await expect(gm.locator('[data-sheet=seat1] [data-lantern]')).toHaveAttribute('data-lantern', '1');
+  await rights.getByRole('combobox', { name: 'Bogen bearbeiten' }).selectOption('deny');
+  await expect(own).toBeDisabled();
+});
+
 test('Trumpf wählen mit Mitspieler (5y, F2 und F3): „Freie Wahl“ nur mit Recht; entzogen mitten in der Wahl steht der Grund im Fenster', async ({ browser }) => {
   const { gm, link } = await openRoom(browser);
   const player = await (await browser.newContext()).newPage();

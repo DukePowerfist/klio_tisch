@@ -42,6 +42,19 @@ export function sheetCommands(deps: Deps) {
       },
     ),
 
+    // Erlebnislaterne (5zm, 10.18): ein Schritt hoch oder runter, Stand immer von unten gefüllt (`lamps.2` zuerst).
+    // Ein Schritt statt eines Zielwerts: Der Host verarbeitet schnelle Klicks der Reihe nach, keiner geht verloren.
+    'sheet.stepLamps': command(
+      z.object({ type: z.literal('sheet.stepLamps'), seat: Seat, delta: z.union([z.literal(1), z.literal(-1)]) }).strict(),
+      'sheet.edit',
+      (cmd, state) => {
+        const { lamps } = sheetOf(state, cmd.seat);
+        const level = Math.max(0, Math.min(lamps.length, lamps.filter(Boolean).length + cmd.delta));
+        const changes: Change[] = lamps.flatMap((on, i) => (on === i >= lamps.length - level ? [] : [{ field: `lamps.${i}`, value: !on }]));
+        return changes.length > 0 ? [{ type: 'fieldsChanged', seat: cmd.seat, changes }] : [];
+      },
+    ),
+
     'sheet.setNumber': command(
       z.object({ type: z.literal('sheet.setNumber'), seat: Seat, field: z.string(), value: z.number().int().min(0).max(9).nullable() }).strict(),
       'sheet.edit',

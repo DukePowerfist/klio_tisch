@@ -61,6 +61,10 @@ sheet:
   photoUnreadable: Das Bild konnte nicht gelesen werden.   # neu
   photoTitle: Foto wählen, ein Bild hierher ziehen oder einfügen (Strg+V)   # neu, 5z
   strike: Untauglich markieren (durchstreichen)
+  lantern: "Erlebnisse: {n} von {max}"       # Laterne am Bogen (neu, 5zm)
+  lanternHint: Klick füllt, Rechtsklick leert.
+  lanternFill: Laterne füllen
+  lanternEmpty: Laterne leeren
   trumpChoose: Trumpf wählen
   trumpLocked: Trumpf (noch nicht freigeschaltet)
   trumpRemove: Trumpf entfernen

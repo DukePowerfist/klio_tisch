@@ -108,7 +108,17 @@ function crossCheck(c: KlioContent, errors: string[]): void {
 
   // Haut: zeichnet jedes Feld und jede Bogenzone, nichts darüber hinaus
   const instances = new Set(sheetFieldInstances(c.sheet));
-  for (const f of instances) if (!(f in c.skinPaper.fields)) err(`skins/paper: Feld ${f} hat keine Position`);
+  // Erlebnislaterne (5zm): deckt alle Kästchen ihrer Liste ab; die haben dann keine eigene Position
+  const lantern = c.skinPaper.lantern;
+  const lanternList = c.sheet.fields[lantern.field];
+  const lanternFields = new Set(lanternList?.kind === 'check' && lanternList.count ? Array.from({ length: lanternList.count }, (_, i) => `${lantern.field}.${i}`) : []);
+  if (lanternFields.size === 0) err(`skins/paper: lantern.field ${lantern.field} ist keine Kästchenliste in sheet.yaml`);
+  else {
+    if (lantern.segments.length !== lanternFields.size) err(`skins/paper: lantern braucht ${lanternFields.size} Abschnitte`);
+    if (lantern.flame.sizes.length !== lanternFields.size) err(`skins/paper: lantern.flame braucht ${lanternFields.size} Größen`);
+  }
+  for (const f of lanternFields) if (f in c.skinPaper.fields) err(`skins/paper: Feld ${f} gehört zur Laterne und hat trotzdem eine Position`);
+  for (const f of instances) if (!lanternFields.has(f) && !(f in c.skinPaper.fields)) err(`skins/paper: Feld ${f} hat keine Position`);
   for (const f of Object.keys(c.skinPaper.fields)) if (!instances.has(f)) err(`skins/paper: unbekanntes Feld ${f}`);
   for (const z of c.sheet.zones) if (!(z in c.skinPaper.zones)) err(`skins/paper: Bogenzone ${z} hat keine Position`);
   // Kästchen, die ein Textfeld durchstreichen oder hervorheben, zeigen auf ein vorhandenes Textfeld
@@ -130,6 +140,12 @@ function crossCheck(c: KlioContent, errors: string[]): void {
     if (!hit) continue;
     for (const [other, o] of rects) if (other !== id && overlap(r, o)) err(`skins/paper: Klickfläche von ${id} reicht in ${other}`);
   }
+  const lanternHit: Rect = { x0: lantern.hit.x, y0: lantern.hit.y, x1: lantern.hit.x + lantern.hit.w, y1: lantern.hit.y + lantern.hit.h };
+  for (const [other, o] of rects) if (overlap(lanternHit, o)) err(`skins/paper: Klickfläche der Laterne reicht in ${other}`);
+  // Knöpfe der Laterne: zwei übereinander um `steps`, in keinem Feld und keinem Kästchen
+  const st = lantern.steps;
+  const lanternSteps: Rect = { x0: st.x - st.size / 2, y0: st.y - st.size, x1: st.x + st.size / 2, y1: st.y + st.size };
+  for (const [other, o] of rects) if (overlap(lanternSteps, o)) err(`skins/paper: Knöpfe der Laterne reichen in ${other}`);
 
   // Ansichten: jede Tischzone hat Form und Lage in der Tischmitte
   for (const z of tableZones) {

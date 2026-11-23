@@ -180,9 +180,9 @@ test('Optik (5z): gezeichnetes Kreuz und Plus, Streichlinie statt Kursiv, verbes
   const f = (id: string) => sheet1(page).locator(`[data-field="${id}"]`);
   const c = (id: string) => sheet1(page).locator(`[data-check="${id}"]`);
   // Kreuz nur am angekreuzten Kästchen
-  await expect(c('lamps.0').locator('svg.mark')).toHaveCount(0);
-  await c('lamps.0').click();
-  await expect(c('lamps.0').locator('svg.mark')).toHaveCount(1);
+  await expect(c('weaknessMarks.0').locator('svg.mark')).toHaveCount(0);
+  await c('weaknessMarks.0').click();
+  await expect(c('weaknessMarks.0').locator('svg.mark')).toHaveCount(1);
   await expect(sheet1(page).locator('[data-slot="0"] svg.plus')).toHaveCount(1);
 
   // Streichlinie über dem Text, ohne Kursiv; ungestrichen keine
@@ -220,11 +220,114 @@ test('Eintragen bleibt nach Neuladen; Attribute nur eine Ziffer', async ({ page 
   await expect(sheet1(page).locator('[data-field="attributes.K"]')).toHaveValue('7');
 });
 
+test('Erlebnislaterne (5zm): Linksklick füllt von unten, Rechtsklick leert, Pfeiltasten, Grenzen 0 und 3', async ({ page }) => {
+  await page.keyboard.press('1');
+  const lantern = sheet1(page).locator('[data-lantern]');
+  const lit = () => lantern.locator('polygon').evaluateAll((ps) => ps.map((p) => p.classList.contains('on')));
+  await expect(lantern).toHaveAttribute('data-lantern', '0');
+  await expect(lantern).toHaveAttribute('aria-label', 'Erlebnisse: 0 von 3');
+  await expect(lantern.locator('.flame')).not.toHaveClass(/(^|\s)on(\s|$)/);
+  // die alten Kästchen gibt es nicht mehr
+  await expect(sheet1(page).locator('[data-check^="lamps."]')).toHaveCount(0);
+
+  await lantern.click();
+  await expect(lantern).toHaveAttribute('data-lantern', '1');
+  // Abschnitte stehen in der Haut unten zuerst
+  expect(await lit()).toEqual([true, false, false]);
+  await expect(lantern.locator('.flame')).toHaveClass(/(^|\s)on(\s|$)/);
+  const flameHeight = async () => (await lantern.locator('.flame').boundingBox())!.height;
+  const small = await flameHeight();
+  // drei schnelle Klicks hintereinander: keiner geht verloren, bei 3 ist Schluss
+  await lantern.click({ clickCount: 3, delay: 0 });
+  await expect(lantern).toHaveAttribute('data-lantern', '3');
+  expect(await lit()).toEqual([true, true, true]);
+  expect(await flameHeight()).toBeGreaterThan(small * 1.8);
+
+  // Rechtsklick leert um eins, ohne Menü des Browsers
+  const prevented = lantern.evaluate((el) => new Promise<boolean>((done) => el.addEventListener('contextmenu', (e) => setTimeout(() => done(e.defaultPrevented)), { once: true })));
+  await lantern.click({ button: 'right' });
+  expect(await prevented).toBe(true);
+  await expect(lantern).toHaveAttribute('data-lantern', '2');
+  expect(await lit()).toEqual([true, true, false]);
+
+  // Pfeiltasten am fokussierten Knopf; die Ansicht bleibt dabei stehen
+  await lantern.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(lantern).toHaveAttribute('data-lantern', '1');
+  await page.keyboard.press('ArrowUp');
+  await expect(lantern).toHaveAttribute('data-lantern', '2');
+  await page.keyboard.press('Enter');
+  await expect(lantern).toHaveAttribute('data-lantern', '3');
+
+  for (let i = 0; i < 4; i++) await lantern.click({ button: 'right' });
+  await expect(lantern).toHaveAttribute('data-lantern', '0');
+  await expect(page.getByRole('status')).toHaveCount(0);
+  // Stand bleibt nach dem Neuladen
+  await lantern.click();
+  await expect(lantern).toHaveAttribute('data-lantern', '1');
+  await ready(page, true);
+  await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '1');
+});
+
+test('Erlebnislaterne (5zm): Knöpfe erscheinen nur in der Nähe, füllen und leeren; volle Laterne leuchtet', async ({ page }) => {
+  await page.keyboard.press('1');
+  const lantern = sheet1(page).locator('[data-lantern]');
+  const up = sheet1(page).locator('[data-lantern-step=up]');
+  const down = sheet1(page).locator('[data-lantern-step=down]');
+  const shown = (l: typeof up) => l.evaluate((el) => getComputedStyle(el).opacity !== '0' && getComputedStyle(el).pointerEvents !== 'none');
+  await page.mouse.move(10, 10);
+  expect(await shown(up)).toBe(false);
+  expect(await shown(down)).toBe(false);
+  // Zeiger über der Laterne: beide da, ▼ bei leerer Laterne aus
+  await lantern.hover();
+  await expect.poll(() => shown(up)).toBe(true);
+  await expect(down).toBeDisabled();
+  // vom Rand der Laterne zum Knopf, ohne dass er verschwindet
+  await up.hover();
+  expect(await shown(up)).toBe(true);
+  for (let i = 0; i < 3; i++) await up.click();
+  await expect(lantern).toHaveAttribute('data-lantern', '3');
+  await expect(up).toBeDisabled();
+  await expect(lantern.locator('.halo')).toHaveClass(/(^|\s)on(\s|$)/);
+  await down.click();
+  await expect(lantern).toHaveAttribute('data-lantern', '2');
+  await expect(lantern.locator('.halo')).not.toHaveClass(/(^|\s)on(\s|$)/);
+  // Zeiger weg: Knöpfe weg, auch nach dem Klick (kein Hängenbleiben am Fokus)
+  await page.mouse.move(10, 10);
+  await expect.poll(() => shown(up)).toBe(false);
+  // Tastaturfokus an der Laterne zeigt sie wieder; die Knöpfe selbst sind kein Tab-Ziel
+  await lantern.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect.poll(() => shown(down)).toBe(true);
+  await expect(up).toHaveAttribute('tabindex', '-1');
+});
+
+test('Erlebnislaterne auf Touch (5zm): Antippen füllt und blendet die Knöpfe ein, bis woanders getippt wird', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ hasTouch: true, baseURL: baseURL!, viewport: { width: 1600, height: 900 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await ready(page);
+  await page.keyboard.press('1');
+  const lantern = sheet1(page).locator('[data-lantern]');
+  const down = sheet1(page).locator('[data-lantern-step=down]');
+  const wrap = lantern.locator('xpath=..');
+  await expect(wrap).not.toHaveClass(/(^|\s)open(\s|$)/);
+  await lantern.tap();
+  await expect(lantern).toHaveAttribute('data-lantern', '1');
+  await expect(wrap).toHaveClass(/(^|\s)open(\s|$)/);
+  await down.tap();
+  await expect(lantern).toHaveAttribute('data-lantern', '0');
+  await expect(wrap).toHaveClass(/(^|\s)open(\s|$)/);
+  // woanders tippen schließt
+  await sheet1(page).locator('[data-field="experiences.0"]').tap();
+  await expect(wrap).not.toHaveClass(/(^|\s)open(\s|$)/);
+  await context.close();
+});
+
 test('Kästchen, Narbe ohne Zähler (5k), Rüstzeug streichen', async ({ page }) => {
   await page.keyboard.press('1'); // eigener Bogen: kleine Bedienelemente ohne Zoom (5b)
-  const lamp = sheet1(page).locator('[data-check="lamps.1"]');
-  await lamp.click();
-  await expect(lamp).toHaveAttribute('aria-pressed', 'true');
+  const mark = sheet1(page).locator('[data-check="weaknessMarks.1"]');
+  await mark.click();
+  await expect(mark).toHaveAttribute('aria-pressed', 'true');
   await sheet1(page).locator('[data-check="scars.heart"]').click();
   await expect(sheet1(page).locator('[data-check="scars.heart"]')).toHaveAttribute('aria-pressed', 'true');
   // eine Zahl „neue Narben“ am Bogen gibt es nicht mehr (ob „Neue Narbe“ offen ist, zeigt der Trumpfdialog)
@@ -336,7 +439,8 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  for (const i of [0, 1, 2]) await sheet1(page).locator(`[data-check="lamps.${i}"]`).click();
+  for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
+  await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '3');
   await sheet1(page).locator('[data-slot="1"]').click();
   await page.getByRole('button', { name: /^Erlebnis eingetroffen/ }).click();
   await page.getByRole('button', { name: /^II · Peitsche/ }).click();
@@ -346,7 +450,8 @@ test('Trumpf: Erlebnis mit Verbesserung und neuer Formulierung', async ({ page }
   await page.getByRole('button', { name: /Stoiker/ }).click();
   await expect(sheet1(page).locator('[data-field="strengths.text.1"]')).toHaveValue('gute Peitsche');
   await expect(sheet1(page).locator('[data-check="strengths.improved.1"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(sheet1(page).locator('[data-check="lamps.0"]')).toHaveAttribute('aria-pressed', 'false');
+  // nach dem Trumpf ist die Laterne leer (clear: lamps)
+  await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '0');
 });
 
 test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „Ohne Verbesserung weiter“ schicken die Formulierung nicht ab', async ({ page }) => {
@@ -357,7 +462,8 @@ test('Trumpf wählen (5y): Knöpfe in einer Reihe am Ende; „Zurück“ und „
   await page.getByRole('button', { name: /^Starttrumpf/ }).click();
   await page.getByRole('button', { name: /^Körper/ }).click();
   await page.getByRole('button', { name: /Schnelle Reflexe/ }).click();
-  for (const i of [0, 1, 2]) await sheet1(page).locator(`[data-check="lamps.${i}"]`).click();
+  for (let i = 0; i < 3; i++) await sheet1(page).locator('[data-lantern]').click();
+  await expect(sheet1(page).locator('[data-lantern]')).toHaveAttribute('data-lantern', '3');
   await sheet1(page).locator('[data-slot="1"]').click();
   const dialog = page.getByRole('dialog', { name: /^Trumpf wählen/ });
   const top = async (name: string) => (await dialog.getByRole('button', { name, exact: true }).boundingBox())!.y;

@@ -9,6 +9,7 @@
   import type { KlioSheet } from '../rules/klio/state';
   import { contextFor, isFull, trumpById } from '../rules/klio/trumps';
   import SheetField from './SheetField.svelte';
+  import SheetLantern from './SheetLantern.svelte';
   import TrumpCard from './TrumpCard.svelte';
   import { submitOrSay as submit } from './commands';
   import { arrivePlate, arriveSheet } from './animator.svelte';
@@ -65,7 +66,10 @@
   // Felder nach Art (sheet.yaml); Lage aus der Haut
   const all = sheetFields(content.sheet);
   const inputs = all.filter((f) => f.kind === 'text' || f.kind === 'number').map((f) => ({ ...f, kind: f.kind as 'text' | 'number', pos: skin.fields[f.id] as SkinBox }));
-  const checks = all.filter((f) => f.kind === 'check').map((f) => ({ ...f, pos: skin.fields[f.id] as SkinCheck }));
+  // Die Kästchen der Erlebnislaterne zeichnet SheetLantern als einen Füllstand (5zm); sie haben keine eigene Position
+  const lampPrefix = `${skin.lantern.field}.`;
+  const lampIds = all.filter((f) => f.kind === 'check' && f.id.startsWith(lampPrefix)).map((f) => f.id);
+  const checks = all.filter((f) => f.kind === 'check' && !f.id.startsWith(lampPrefix)).map((f) => ({ ...f, pos: skin.fields[f.id] as SkinCheck }));
   // Zähler „neue Narben“ (kind: counter) zeigt der Bogen seit 5k nicht mehr: ob „Neue Narbe“ offen ist, steht im Trumpfdialog
   const slots = all.filter((f) => f.kind === 'trumpSlot').map((f) => ({ index: fieldParts(f.id).index!, pos: skin.fields[f.id] as SkinBox }));
   const photoField = all.find((f) => f.kind === 'photo');
@@ -89,6 +93,7 @@
   // Was darf man an diesem Bogen? (9.3: ohne Recht ausgeblendet bzw. nur lesbar)
   const may = (type: string) => session.can({ type, seat });
   const canEdit = $derived(may('sheet.toggle'));
+  const canLamps = $derived(may('sheet.stepLamps'));
   const canPhoto = $derived(may('sheet.setPhoto'));
   const canChooseTrump = $derived(may('trump.choose'));
   const canRemoveTrump = $derived(may('trump.remove'));
@@ -205,6 +210,8 @@
         >{#if on}<svg class="mark" viewBox="0 0 20 20" aria-hidden="true"><path d={CROSS} /></svg>{/if}</button>
       {/if}
     {/each}
+
+    <SheetLantern {seat} level={lampIds.filter(checked).length} canEdit={canLamps} />
 
     {#if photoBox}
       <button

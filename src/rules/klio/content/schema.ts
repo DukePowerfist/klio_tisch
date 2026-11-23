@@ -143,12 +143,26 @@ export const sheetFieldInstances = (sheet: z.infer<typeof SheetFile>): string[] 
 //   name: { x: 146, y: 122, w: 112, h: 25, font: 21 }    # Feld: linke obere Ecke + Größe
 //   photo: { x: 69.3, y: 74.1, w: 55, h: 80, rotate: -12.4 }  # rotate: gedreht um die Mitte, in Grad
 //   scars.heart: { x: 551, y: 93, size: 30, hit: 44 }    # Kästchen: Mittelpunkt + Größe; hit: unsichtbare Klickfläche (5z)
+// lantern: { field: lamps, segments: [...], hit: {...}, flame: {...} }   # Erlebnislaterne als Füllstand (5zm)
 // zones:
 //   damage: { x: 519.2, y: 125.4, w: 139.4, h: 195.1 }   # bisher 380er-Koordinaten, umgerechnet
 // nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }  # Namensschild in der Draufsicht (5b)
 const Box = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number(), font: z.number().optional(), align: z.literal('center').optional(), rotate: z.number().optional() }).strict();
 const Check = z.object({ x: z.number(), y: z.number(), size: z.number(), hit: z.number().positive().optional(), font: z.number().optional(), tone: z.literal('danger').optional() }).strict();
 const Label = z.object({ x: z.number(), y: z.number(), font: z.number() }).strict();
+/** Erlebnislaterne (5zm, 10.18): ein Füllstand für alle Kästchen der Liste `field` statt einzelner Positionen.
+ *  `segments`: Glasabschnitte als Vielecke, unten zuerst. `hit`: Klickfläche. `flame`: Fuß der Flamme (x, y),
+ *  Neigung in Grad, je Stand Breite und Höhe. `steps`: Knöpfe zum Füllen und Leeren, Mitte zwischen beiden und
+ *  Größe eines Knopfs. `glow`: Mitte und Radius des Scheins um die volle Laterne. */
+const SkinPoint = z.tuple([z.number(), z.number()]);
+const Lantern = z.object({
+  field: z.string(),
+  segments: z.array(z.array(SkinPoint).min(3)).min(1),
+  hit: z.object({ x: z.number(), y: z.number(), w: z.number().positive(), h: z.number().positive() }).strict(),
+  flame: z.object({ x: z.number(), y: z.number(), rotate: z.number(), sizes: z.array(z.tuple([z.number().positive(), z.number().positive()])).min(1) }).strict(),
+  steps: z.object({ x: z.number(), y: z.number(), size: z.number().positive() }).strict(),
+  glow: z.object({ x: z.number(), y: z.number(), r: z.number().positive() }).strict(),
+}).strict();
 export type SkinBox = z.infer<typeof Box>;
 export type SkinCheck = z.infer<typeof Check>;
 export const SkinFile = z.object({
@@ -157,6 +171,7 @@ export const SkinFile = z.object({
   fields: z.record(z.string(), z.union([Box, Check, Label])),
   zones: z.record(z.string(), Box),
   nameplate: Box,
+  lantern: Lantern,
 }).strict();
 
 // ---------- book.yaml ----------

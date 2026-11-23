@@ -4,7 +4,7 @@
 # 2.2.pdf“ in doppelter Auflösung (1820 × 2574); Rucksack dort um 2 | 3,5 verschoben (Rüstzeug, collect angepasst).
 # Felder: x, y, w, h (linke obere Ecke + Größe), font, align. Kästchen: x, y = Mitte, size, font, tone;
 # hit = unsichtbare Klickfläche um die Mitte (5z), höchstens bis an Nachbarkästchen und Felder (prüft validate.ts).
-# Die Laternen haben keine: Sie liegen enger, als sie groß sind.
+# Die Erlebnislaterne (lamps.0 bis lamps.2) hat keine Kästchen mehr, sondern den Eintrag `lantern` am Ende (5zm).
 # Beschriftungen ohne Rahmen (Zähler): x, y, font.
 
 size: [ 662, 936 ]
@@ -45,9 +45,6 @@ fields:
   gear.struck.6: { x: 591.5, y: 578, size: 13, hit: 18 }
   scars.heart: { x: 551, y: 93, size: 30, hit: 44, font: 30, tone: danger }
   scars.spade: { x: 547, y: 351, size: 30, hit: 44, font: 30, tone: danger }
-  lamps.0: { x: 586, y: 864, size: 14, font: 13 }
-  lamps.1: { x: 586, y: 879, size: 14, font: 13 }
-  lamps.2: { x: 588, y: 891, size: 14, font: 13 }
   experiences.0: { x: 66, y: 876, w: 160, h: 21, font: 17 }
   experiences.1: { x: 248, y: 876, w: 160, h: 21, font: 17 }
   experiences.2: { x: 412, y: 876, w: 145, h: 21, font: 17 }
@@ -67,3 +64,20 @@ zones:
 # Namensschild in der Draufsicht (ARCHITEKTUR.md 10): freier Streifen links oben über Seil und Fotorahmen.
 # Schrift 26 → bei 4 Spielern und Zoom 1 etwa 13 px auf dem Bildschirm.
 nameplate: { x: 8, y: 8, w: 232, h: 40, font: 26 }
+
+# Erlebnislaterne als Füllstand (5zm, ARCHITEKTUR.md 10.18): deckt alle Kästchen der Liste `field` ab.
+# segments: Glasabschnitte zwischen den gezeichneten Strichen, unten zuerst (gemessen am Bogenbild, in beiden gleich).
+# hit: Klickfläche über die ganze Zeichnung. flame: Fuß auf dem Brenner, Neigung wie die Laterne, je Stand [Breite, Höhe]
+# (Spitze bei 1 am unteren Strich, bei 2 am oberen, bei 3 knapp unter der Kappe).
+# steps: Knöpfe zum Füllen und Leeren rechts daneben (Mitte zwischen beiden, Größe eines Knopfs).
+# glow: Schein um die volle Laterne (Mitte des Glases, Radius).
+lantern:
+  field: lamps
+  segments:
+    - [ [ 578.1, 889.5 ], [ 597.3, 875.9 ], [ 599.4, 883.9 ], [ 600.4, 891.2 ], [ 599.1, 895.9 ], [ 596.5, 896.8 ], [ 583.3, 899.3 ], [ 580, 895.7 ] ]
+    - [ [ 577.2, 876.8 ], [ 596.2, 867.3 ], [ 597.3, 875.9 ], [ 578.1, 889.5 ] ]
+    - [ [ 577, 863.4 ], [ 595.2, 858.4 ], [ 596.2, 867.3 ], [ 577.2, 876.8 ] ]
+  hit: { x: 569, y: 846, w: 44, h: 71 }
+  flame: { x: 589.7, y: 897.5, rotate: -5.7, sizes: [ [ 7, 15 ], [ 9.5, 25 ], [ 11, 32 ] ] }
+  steps: { x: 620, y: 879, size: 15 }
+  glow: { x: 588, y: 878, r: 36 }

@@ -47,6 +47,45 @@ describe('Bogen bearbeiten', () => {
     expect(sheet(t, 'seat1').newScars).toBe(0);
   });
 
+  describe('Erlebnislaterne (5zm): sheet.stepLamps', () => {
+    const lamps = (t: K) => sheet(t, 'seat1').lamps;
+    const step = (t: K, delta: 1 | -1) => run(t, { type: 'sheet.stepLamps', seat: 'seat1', delta });
+
+    it('füllt von unten und leert von oben, ein Ereignis je Schritt', () => {
+      let r = step(s, 1);
+      expect(r.events).toEqual([{ type: 'fieldsChanged', seat: 'seat1', changes: [{ field: 'lamps.2', value: true }] }]);
+      r = step(r.state, 1);
+      expect(lamps(r.state)).toEqual([false, true, true]);
+      r = step(r.state, 1);
+      expect(lamps(r.state)).toEqual([true, true, true]);
+      r = step(r.state, -1);
+      expect(r.events).toEqual([{ type: 'fieldsChanged', seat: 'seat1', changes: [{ field: 'lamps.0', value: false }] }]);
+      expect(lamps(r.state)).toEqual([false, true, true]);
+    });
+
+    it('an den Grenzen 0 und 3 kein Ereignis', () => {
+      expect(step(s, -1).events).toEqual([]);
+      const full = withSheet(s, 'seat1', (b) => (b.lamps = [true, true, true]));
+      expect(step(full, 1).events).toEqual([]);
+    });
+
+    it('alte Stände mit Lücken werden beim Schritt von unten geordnet', () => {
+      const gap = withSheet(s, 'seat1', (b) => (b.lamps = [true, false, false]));
+      expect(lamps(step(gap, 1).state)).toEqual([false, true, true]);
+      expect(lamps(step(gap, -1).state)).toEqual([false, false, false]);
+      const two = withSheet(s, 'seat1', (b) => (b.lamps = [true, false, true]));
+      expect(lamps(step(two, -1).state)).toEqual([false, false, true]);
+    });
+
+    it('nur Schritte um eins; Recht wie die anderen Felder (eigener Bogen)', () => {
+      expectRejected(s, { type: 'sheet.stepLamps', seat: 'seat1', delta: 2 }, 'reject.invalid');
+      expectRejected(s, { type: 'sheet.stepLamps', seat: 'seat1', delta: 0 }, 'reject.invalid');
+      expect(run(s, { type: 'sheet.stepLamps', seat: 'seat1', delta: 1 }, player('seat1')).events).toHaveLength(1);
+      expectRejected(s, { type: 'sheet.stepLamps', seat: 'seat1', delta: 1 }, 'reject.notAllowed', player('seat2'));
+      expectRejected(s, { type: 'sheet.stepLamps', seat: 'seat1', delta: 1 }, 'reject.notAllowed', SPECTATOR);
+    });
+  });
+
   it('ausgeblendeter Bogen ist nicht bearbeitbar', () => {
     const two = run(s, { type: 'table.setPlayers', players: 2 }).state;
     expectRejected(two, { type: 'sheet.setText', seat: 'seat3', field: 'name', value: 'x' }, 'reject.hiddenSeat');
